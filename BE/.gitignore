@@ -181,4 +181,10 @@ desktop.ini
 *.vspscc
 *.vsscc
 *.vspscc
-Migrations/
+**/Migrations/
+# DLL, EXE, pdb, runtime files
+*.dll
+*.exe
+*.pdb
+*.deps.json
+*.runtime.json
