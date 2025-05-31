@@ -181,3 +181,4 @@ desktop.ini
 *.vspscc
 *.vsscc
 *.vspscc
+Migrations/
