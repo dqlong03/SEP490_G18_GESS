@@ -1,0 +1,31 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace GESS.Entity.Entities
+{
+    // 17. ExamService - Đại diện cho nhân viên khảo thí (quản lý kỳ thi)
+    public class ExamService
+    {
+        // Khóa chính, tự động tăng
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int ExamServiceId { get; set; }
+
+        // Khóa ngoại liên kết đến người dùng (User), không được để trống
+        [Required(ErrorMessage = "UserId không được để trống!")]
+        public int UserId { get; set; }
+
+        // Ngày tuyển dụng nhân viên khảo thí, không được để trống
+        [Required(ErrorMessage = "Ngày tuyển dụng không được để trống!")]
+        public DateTime HireDate { get; set; }
+
+        // Ngày kết thúc hợp đồng (có thể để trống nếu nhân viên vẫn đang làm việc)
+        public DateTime? EndDate { get; set; }
+    }
+
+}
