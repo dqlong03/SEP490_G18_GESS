@@ -1,6 +1,7 @@
 ﻿using GESS.Entity.Base;
 using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
+using GESS.Repository.Interface;
 using GESS.Repository.refreshtoken;
 using System;
 using System.Collections.Generic;
@@ -16,11 +17,12 @@ namespace Gess.Repository.Infrastructures
         int SaveChanges();
 
         Task<int> SaveChangesAsync();
-        IBaseRepository<T> BaseRepository<T>() where T : BaseEntity;
-
+        IBaseRepository<T> BaseRepository<T>() where T : class;
 
         //<summary> khai báo IRepository in here</summary>
+        IUserRepository UserRepository { get; }
         IRefreshTokenRepository RefreshTokenRepository { get; }
+        IChapterRepository ChapterRepository { get; }
 
     }
 }

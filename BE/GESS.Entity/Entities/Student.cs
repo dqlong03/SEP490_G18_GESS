@@ -18,7 +18,8 @@ namespace GESS.Entity.Entities
 
         // Khóa ngoại liên kết đến người dùng (User), không được để trống
         [Required(ErrorMessage = "UserId không được để trống!")]
-        public int UserId { get; set; }
+        public Guid UserId { get; set; }
+        public User User { get; set; }
 
         // Ngày nhập học, không được để trống
         [Required(ErrorMessage = "Ngày nhập học không được để trống!")]

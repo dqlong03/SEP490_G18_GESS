@@ -1,0 +1,16 @@
+﻿using Gess.Repository.Infrastructures;
+using GESS.Entity.Entities;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace GESS.Repository.Interface
+{
+    public interface IUserRepository 
+    {
+        public Task<User> GetUserByIdAsync(Guid userId);
+        public Task<List<User>> GetAllUsersAsync();
+    }
+}

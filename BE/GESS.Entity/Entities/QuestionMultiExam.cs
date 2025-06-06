@@ -11,12 +11,12 @@ namespace GESS.Entity.Entities
     public class QuestionMultiExam
     {
         // Khóa ngoại liên kết đến lịch sử thi trắc nghiệm (MultiExamHistory)
-        public int MultiExamHistoryId { get; set; }
-        public MultiExamHistory MultiExamHistory { get; set; }
+        public Guid MultiExamHistoryId { get; set; }
+        public virtual MultiExamHistory MultiExamHistory { get; set; }
 
         // Khóa ngoại liên kết đến câu hỏi trắc nghiệm (MultiQuestion)
-        public Guid MultiQuestionId { get; set; }
-        public MultiQuestion MultiQuestion { get; set; }
+        public int MultiQuestionId { get; set; }
+        public virtual MultiQuestion MultiQuestion { get; set; }
 
         // Thứ tự câu hỏi trong bài thi của sinh viên, không được để trống
         [Required(ErrorMessage = "Thứ tự câu hỏi không được để trống!")]

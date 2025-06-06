@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Gess.Repository.Infrastructures
 {
-    public class BaseRepository<TEntity> : IBaseRepository<TEntity> where TEntity : class, IBaseEntity
+    public class BaseRepository<TEntity> : IBaseRepository<TEntity> where TEntity : class
     {
         protected readonly GessDbContext dataContext;
         protected readonly DbSet<TEntity> dbSet;
@@ -54,6 +54,11 @@ namespace Gess.Repository.Infrastructures
             }
         }
 
+        public async Task<bool> ExistsAsync(Expression<Func<TEntity, bool>> predicate)
+        {
+            return await dbSet.AsNoTracking().AnyAsync(predicate);
+        }
+
         public TEntity Find(params object[] primaryKey)
         {
             return dbSet.Find(primaryKey);
@@ -73,12 +78,18 @@ namespace Gess.Repository.Infrastructures
         {
             return dbSet.Find(id);
         }
-
+        public TEntity GetById(int id)
+        {
+            return dbSet.Find(id);
+        }
         public async Task<TEntity> GetByIdAsync(Guid id)
         {
             return await dbSet.FindAsync(id);
         }
-
+        public async Task<TEntity> GetByIdAsync(int id)
+        {
+            return await dbSet.FindAsync(id);
+        }
         public virtual IQueryable<TEntity> GetQuery()
         {
             return dbSet.AsQueryable();
@@ -103,5 +114,6 @@ namespace Gess.Repository.Infrastructures
         {
             dbSet.Update(entity);
         }
+
     }
 }
