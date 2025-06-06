@@ -4,9 +4,13 @@ using GESS.Common;
 using GESS.Entity.Base;
 using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
+using GESS.Repository.Implement;
+using GESS.Repository.Interface;
 using GESS.Repository.refreshtoken;
 using GESS.Service;
 using GESS.Service.authservice;
+using GESS.Service.chapter;
+using GESS.Service.users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -67,6 +71,15 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>()
 // Đăng ký JWT Service
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IChapterService, ChapterService>();
+
+
+// Đăng ký các repository
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IChapterRepository, ChapterRepository>();
+
+
 
 
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();

@@ -23,7 +23,7 @@ namespace GESS.Entity.Entities
 
         // Đường dẫn ảnh (nếu có), tối đa 200 ký tự
         [StringLength(200, ErrorMessage = "Đường dẫn ảnh không được vượt quá 200 ký tự!")]
-        public string UrlImg { get; set; }
+        public string? UrlImg { get; set; }
 
         // Trạng thái hoạt động của câu hỏi (true = đang hoạt động, false = không hoạt động)
         [Column(TypeName = "BIT")]

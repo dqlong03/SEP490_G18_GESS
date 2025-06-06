@@ -20,5 +20,10 @@ namespace GESS.Entity.Entities
         public bool Gender {get; set; }
         public List<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
         public bool IsActive { get; set; } = true;
+
+        // Navigation properties
+        public Teacher Teacher { get; set; }
+        public Student Student { get; set; }
+        public ExamService ExamService { get; set; }
     }
 }

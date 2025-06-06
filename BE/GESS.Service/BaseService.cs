@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace GESS.Service
 {
-    public class BaseService<TEntity> : IBaseService<TEntity> where TEntity : BaseEntity
+    public class BaseService<TEntity> : IBaseService<TEntity> where TEntity : class
     {
         protected readonly IUnitOfWork _unitOfWork;
         protected readonly IBaseRepository<TEntity> _repository;

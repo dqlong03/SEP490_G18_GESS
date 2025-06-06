@@ -41,6 +41,8 @@ namespace Gess.Repository.Infrastructures
         IEnumerable<TEntity> GetAll();
 
         TEntity GetById(Guid id);
+        TEntity GetById(int id);
+
 
         /// <summary>
         /// Get <paramref name="TEntity"></paramref> from database
@@ -50,8 +52,12 @@ namespace Gess.Repository.Infrastructures
         TEntity Find(params object[] id);
 
         Task<TEntity> GetByIdAsync(Guid id);
+        Task<TEntity> GetByIdAsync(int id);
 
         IQueryable<TEntity> GetQuery();
         IQueryable<TEntity> GetQuery(Expression<Func<TEntity, bool>> where);
+        Task<List<TEntity>> GetAllAsync();
+        Task<bool> ExistsAsync(Expression<Func<TEntity, bool>> predicate);
+
     }
 }
