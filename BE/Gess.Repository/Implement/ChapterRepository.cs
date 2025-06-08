@@ -25,6 +25,12 @@ namespace GESS.Repository.Implement
                 .ToListAsync(); 
             return await chapter; 
         }
+        public async Task<Chapter> GetByIdAsync(int chapterId)
+        {
+            var chapter = await _context.Chapters.Include(c => c.Subject)
+                .FirstOrDefaultAsync(c => c.ChapterId == chapterId);
+            return chapter;
+        }
     }
     
     

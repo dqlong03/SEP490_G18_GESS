@@ -13,7 +13,8 @@ namespace GESS.Service.chapter
         //nhưeng phương thức đặc thù cho Chapter có thể được định nghĩa ở đây và triển khia nó bên ChapterService
         Task<IEnumerable<ChapterListDTO>> GetAllChaptersAsync();
         Task<ChapterCreateDTO> CreateChapterAsync(ChapterCreateDTO chapterCreateDto);
-        Task<ChapterUpdateDTO> UpdateChapterAsync(ChapterUpdateDTO chapterUpdateDto);
+        Task<ChapterUpdateDTO> UpdateChapterAsync(int id,ChapterUpdateDTO chapterUpdateDto);
+        Task<ChapterListDTO> GetChapterById(int chapterId);
 
     }
 }
