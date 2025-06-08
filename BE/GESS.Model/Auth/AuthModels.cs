@@ -1,6 +1,6 @@
 using System;
 
-namespace GESS.Model
+namespace GESS.Model.Auth
 {
     public class LoginModel
     {

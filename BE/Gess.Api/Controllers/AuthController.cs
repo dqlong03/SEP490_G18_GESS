@@ -1,7 +1,7 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Auth;
 using GESS.Entity.Entities;
-using GESS.Model;
+using GESS.Model.Auth;
 using GESS.Service.authservice;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -58,6 +58,20 @@ namespace GESS.Api.Controllers
 
             return Ok(result);
         }
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDTO model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest("Invalid data.");
+
+            var result = await _authService.ResetPasswordAsync(model);
+            if (result)
+            {
+                return Ok("Password has been reset successfully.");
+            }
+            return BadRequest("Password reset failed.");
+        }
+
         [HttpGet("test")]
         [Authorize]
         public IActionResult Test()

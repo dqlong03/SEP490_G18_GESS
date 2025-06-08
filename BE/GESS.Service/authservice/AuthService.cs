@@ -1,8 +1,9 @@
-﻿using GESS.Auth;
+﻿using Gess.Repository.Infrastructures;
+using GESS.Auth;
 using GESS.Entity.Entities;
-using GESS.Model;
-using Gess.Repository.Infrastructures;
+using GESS.Model.Auth;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Memory;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
@@ -18,12 +19,14 @@ namespace GESS.Service.authservice
         private readonly UserManager<User> _userManager;
         private readonly IJwtService _jwtService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMemoryCache _memoryCache;
 
-        public AuthService(UserManager<User> userManager, IJwtService jwtService, IUnitOfWork unitOfWork)
+        public AuthService(UserManager<User> userManager, IJwtService jwtService, IUnitOfWork unitOfWork, IMemoryCache memoryCache)
         {
             _userManager = userManager;
             _jwtService = jwtService;
             _unitOfWork = unitOfWork;
+            _memoryCache = memoryCache;
         }
 
         public async Task<LoginResult> LoginAsync(LoginModel loginModel)
@@ -133,5 +136,37 @@ namespace GESS.Service.authservice
                 RefreshToken = newRefreshToken.Token
             };
         }
+
+        public async Task<bool> ResetPasswordAsync(ResetPasswordDTO model)
+        {
+            // 1. Kiểm tra xác minh OTP
+            if (!_memoryCache.TryGetValue("otp_verified_" + model.Email, out _))
+            {
+                return false; // Chưa xác minh OTP
+            }
+
+            // 2. Kiểm tra mật khẩu nhập lại
+            if (model.NewPassword != model.ConfirmPassword)
+            {
+                return false;
+            }
+
+            // 3. Lấy người dùng theo email
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null) return false;
+
+            // 4. Đặt lại mật khẩu
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
+
+            if (result.Succeeded)
+            {
+                _memoryCache.Remove("otp_verified_" + model.Email); // Xóa cache sau khi đổi mật khẩu
+                return true;
+            }
+
+            return false;
+        }
+
     }
 }

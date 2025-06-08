@@ -4,12 +4,15 @@ using GESS.Common;
 using GESS.Entity.Base;
 using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
+using GESS.Model.Email;
 using GESS.Repository.Implement;
 using GESS.Repository.Interface;
 using GESS.Repository.refreshtoken;
 using GESS.Service;
 using GESS.Service.authservice;
 using GESS.Service.chapter;
+using GESS.Service.email;
+using GESS.Service.otp;
 using GESS.Service.users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -68,17 +71,23 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>()
     .AddEntityFrameworkStores<GessDbContext>()
     .AddDefaultTokenProviders();
 
-// Đăng ký JWT Service
+
+// Đăng ký Service
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IChapterService, ChapterService>();
+builder.Services.AddScoped<IOtpService, OtpService>();
+
 
 
 // Đăng ký các repository
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IChapterRepository, ChapterRepository>();
-
+// Đăng ký EmailService
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.AddScoped<EmailService>();
+builder.Services.AddMemoryCache();
 
 
 

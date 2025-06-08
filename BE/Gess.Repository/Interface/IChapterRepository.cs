@@ -12,5 +12,6 @@ namespace GESS.Repository.Interface
     {
         //những phương thức đặc thù cho Chapter có thể được định nghĩa ở đây và triển khia nó bên ChapterRepository
         public Task<IEnumerable<Chapter>> GetAllChaptersAsync();
+        public Task<Chapter> GetByIdAsync(int chapterId);
     }
 }
