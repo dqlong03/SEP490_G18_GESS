@@ -1,4 +1,5 @@
-﻿using GESS.Model.Email;
+﻿using Gess.Repository.Infrastructures;
+using GESS.Model.Email;
 using GESS.Service.email;
 using Microsoft.Extensions.Caching.Memory;
 using System;
@@ -13,17 +14,23 @@ namespace GESS.Service.otp
     {
         private readonly IMemoryCache _memoryCache;
         private readonly EmailService _emailService;
-
-        public OtpService(IMemoryCache memoryCache, EmailService emailService)
+        private readonly IUnitOfWork _unitOfWork;
+        public OtpService(IMemoryCache memoryCache, EmailService emailService, IUnitOfWork unitOfWork)
         {
             _memoryCache = memoryCache;
             _emailService = emailService;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<bool> SendOtpAsync(string email)
         {
             if (string.IsNullOrEmpty(email)) return false;
-
+            bool isEmailRegistered = await _unitOfWork.UserRepository.IsEmailRegisteredAsync(email);
+            if (!isEmailRegistered)
+            {
+                Console.WriteLine($"Email {email} is not registered.");
+                return false;
+            }
             string otp = GenerateOtp();
             DateTime expiryTime = DateTime.UtcNow.AddMinutes(5);
 
@@ -36,11 +43,12 @@ namespace GESS.Service.otp
                     Otp = otp,
                     ExpiryTime = expiryTime
                 }, TimeSpan.FromMinutes(5));
-
+                Console.WriteLine($"OTP sent successfully to {email}");
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"Error sending OTP to {email}: {ex.Message}, StackTrace: {ex.StackTrace}");
                 return false;
             }
         }
