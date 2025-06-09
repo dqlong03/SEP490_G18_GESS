@@ -32,8 +32,27 @@ namespace GESS.Api.Controllers
             _unitOfWork = unitOfWork;
         }
 
-        [HttpPost("login")]
+
+        [HttpPost("login-google")]
         [AllowAnonymous]
+        public async Task<IActionResult> LoginWithGoogle([FromBody] GoogleLoginModel model)
+        {
+            var result = await _authService.LoginWithGoogleAsync(model);
+
+            if (!result.Success)
+            {
+                return BadRequest(new { message = result.ErrorMessage });
+            }
+
+            return Ok(new
+            {
+                token = result.AccessToken
+            });
+        }
+
+
+        [HttpPost("login")]
+        [AllowAnonymous]        
         public async Task<IActionResult> Login([FromBody] LoginModel loginModel)
         {
             var result = await _authService.LoginAsync(loginModel);
