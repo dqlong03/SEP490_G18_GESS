@@ -29,5 +29,10 @@ namespace GESS.Repository.Implement
            return  _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
 
         }
+
+        public async Task<bool> IsEmailRegisteredAsync(string email)
+        {
+            return await _context.Users.AnyAsync(u => u.Email == email);
+        }
     }
 }

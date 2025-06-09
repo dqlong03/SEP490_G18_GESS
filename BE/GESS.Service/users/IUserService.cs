@@ -12,5 +12,6 @@ namespace GESS.Service.users
     {
         Task<UserListDTO> GetUserByIdAsync(Guid userId);
         Task<List<UserListDTO>> GetAllUsersAsync();
+        Task<bool> IsEmailRegisteredAsync(string email);
     }
 }
