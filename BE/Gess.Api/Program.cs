@@ -89,6 +89,13 @@ builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Emai
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddMemoryCache();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", builder =>
+    {
+        builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+    });
+});
 
 
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
@@ -141,7 +148,7 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = "swagger";
     });
 }
-
+app.UseCors("AllowAll"); 
 app.UseHttpsRedirection();
 
 app.UseAuthentication();

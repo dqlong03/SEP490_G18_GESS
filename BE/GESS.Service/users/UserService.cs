@@ -54,5 +54,15 @@ namespace GESS.Service.users
             }
             ).ToList();
         }
+
+        public async Task<bool> IsEmailRegisteredAsync(string email)
+        {
+            if (string.IsNullOrEmpty(email))
+            {
+                return false;
+            }
+
+            return await _unitOfWork.UserRepository.IsEmailRegisteredAsync(email);
+        }
     }
 }
