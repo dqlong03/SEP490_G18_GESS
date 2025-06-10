@@ -11,11 +11,11 @@ namespace GESS.Entity.Entities
     {
         // Khóa ngoại liên kết đến ngành học (Major)
         public int MajorId { get; set; }
-        public Major Major { get; set; }
+        public Major? Major { get; set; }
 
         // Khóa ngoại liên kết đến giáo viên (Teacher)
-        public Guid TeacherId { get; set; }
-        public Teacher Teacher { get; set; }
+        public Guid? TeacherId { get; set; }
+        public Teacher? Teacher { get; set; }
     }
 
 }

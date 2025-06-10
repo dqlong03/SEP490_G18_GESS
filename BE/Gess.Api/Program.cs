@@ -11,6 +11,7 @@ using GESS.Repository.refreshtoken;
 using GESS.Service;
 using GESS.Service.authservice;
 using GESS.Service.chapter;
+using GESS.Service.teacher;
 using GESS.Service.email;
 using GESS.Service.otp;
 using GESS.Service.users;
@@ -97,13 +98,14 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IChapterService, ChapterService>();
+builder.Services.AddScoped<ITeacherService, TeacherService>();
 builder.Services.AddScoped<IOtpService, OtpService>();
-
 
 
 // Đăng ký các repository
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IChapterRepository, ChapterRepository>();
+builder.Services.AddScoped<ITeacherRepository, TeacherRepository>();
 // Đăng ký EmailService
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddScoped<EmailService>();
