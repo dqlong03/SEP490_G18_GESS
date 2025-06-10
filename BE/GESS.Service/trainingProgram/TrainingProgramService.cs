@@ -44,13 +44,13 @@ namespace GESS.Service.trainingProgram
         public async Task<IEnumerable<TrainingProgramDTO>> GetAllTrainingsAsync(int? majorId, string? name = null, DateTime? fromDate = null, DateTime? toDate = null, int pageNumber = 1, int pageSize = 10)
         {
             var traniningPrograms = await _unitOfWork.TrainingProgramRepository.GetAllTrainingsAsync(majorId,name, fromDate, toDate, pageNumber, pageSize);
-            return traniningPrograms.Select(major => new TrainingProgramDTO
+            return traniningPrograms.Select(trainingProgram => new TrainingProgramDTO
             {
-                TrainingProgramId = major.TrainProId,
-                TrainProName = major.TrainProName,
-                StartDate = major.StartDate,
-                EndDate = major.EndDate,
-                NoCredits = major.NoCredits
+                TrainingProgramId = trainingProgram.TrainProId,
+                TrainProName = trainingProgram.TrainProName,
+                StartDate = trainingProgram.StartDate,
+                EndDate = trainingProgram.EndDate,
+                NoCredits = trainingProgram.NoCredits
             }).ToList();
         }
 
