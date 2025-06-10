@@ -1,4 +1,5 @@
 ﻿using GESS.Entity.Entities;
+using GESS.Model.Subject;
 using GESS.Service.subject;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -14,18 +15,87 @@ namespace GESS.Api.Controllers
         {
             _subjectService = subjectService;
         }
-        [HttpGet("")]
-        public async Task<ActionResult<IEnumerable<Subject>>> GetAllSubjects()
+        //API to get all training programs with optional filters
+        [HttpGet()]
+        public async Task<IActionResult> GetAllSubjectsAsync(string? name = null, int pageNumber = 1, int pageSize = 10)
         {
             try
             {
-                var subjects =  _subjectService.GetAll();
+                var trainingPrograms = await _subjectService.GetAllSubjectsAsync(name, pageNumber, pageSize);
+                return Ok(trainingPrograms);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+        //API to create a new subject
+        [HttpPost()]
+        public async Task<IActionResult> CreateSubjectAsync([FromBody] SubjectCreateDTO subjectCreateDTO)
+        {
+            if (subjectCreateDTO == null)
+            {
+                return BadRequest(new { message = "Dữ liệu không hợp lệ." });
+            }
+            try
+            {
+                var createdSubject = await _subjectService.CreateSubjectAsync(subjectCreateDTO);
+                return StatusCode(201, createdSubject);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+        //API to add subject to training program
+        [HttpPost("AddSubjectToTrainingProgram/{trainingProgramId}/{subjectId}")]
+        public async Task<IActionResult> AddSubjectToTrainingProgramAsync(int trainingProgramId, int subjectId)
+        {
+            try
+            {
+                var result = await _subjectService.AddSubjectToTrainingProgramAsync(trainingProgramId, subjectId);
+                if (result)
+                {
+                    return Ok(new { message = "Môn học đã được thêm vào chương trình đào tạo." });
+                }
+                return BadRequest(new { message = "Lỗi khi thêm môn học vào chương trình đào tạo." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+        //API to get subjects in a training program
+        [HttpGet("TrainingProgram/{trainingProgramId}")]
+        public async Task<IActionResult> GetSubjectsInTrainingProgramAsync(int trainingProgramId, string? name = null, int pageNumber = 1, int pageSize = 10)
+        {
+            try
+            {
+                var subjects = await _subjectService.GetSubjectsInTrainingProgramAsync(trainingProgramId, name, pageNumber, pageSize);
                 return Ok(subjects);
             }
             catch (Exception ex)
             {
-                return NotFound(ex.Message);
+                return BadRequest(new { message = ex.Message });
             }
         }
-    } 
+        //API to update a subject
+        [HttpPut("{subjectId}")]
+        public async Task<IActionResult> UpdateSubjectAsync(int subjectId, [FromBody] SubjectDTO subjectUpdateDTO)
+        {
+            if (subjectUpdateDTO == null)
+            {
+                return BadRequest(new { message = "Dữ liệu không hợp lệ." });
+            }
+            try
+            {
+                var updatedSubject = await _subjectService.UpdateSubjectAsync(subjectId, subjectUpdateDTO);
+                return Ok(updatedSubject);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+    }
 }
