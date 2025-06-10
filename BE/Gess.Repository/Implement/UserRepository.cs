@@ -30,6 +30,7 @@ namespace GESS.Repository.Implement
 
         }
 
+
         public async Task UpdateUserAsync(Guid userId, User user)
         {
             var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
@@ -55,6 +56,11 @@ namespace GESS.Repository.Implement
                 _context.Users.Remove(user);
                 await _context.SaveChangesAsync();
             }
+
+        public async Task<bool> IsEmailRegisteredAsync(string email)
+        {
+            return await _context.Users.AnyAsync(u => u.Email == email);
+
         }
     }
 }
