@@ -12,6 +12,7 @@ using GESS.Service;
 using GESS.Service.authservice;
 using GESS.Service.chapter;
 using GESS.Service.teacher;
+using GESS.Service.major;
 using GESS.Service.email;
 using GESS.Service.otp;
 using GESS.Service.users;
@@ -22,6 +23,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Security.Claims;
 using System.Text;
+using GESS.Service.subject;
+using GESS.Service.trainingProgram;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -99,6 +102,9 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IChapterService, ChapterService>();
 builder.Services.AddScoped<ITeacherService, TeacherService>();
+builder.Services.AddScoped<IMajorService, MajorService>();
+builder.Services.AddScoped<ISubjectService, SubjectService>();
+builder.Services.AddScoped<ITrainingProgramService, TrainingProgramService>();
 builder.Services.AddScoped<IOtpService, OtpService>();
 
 
@@ -106,6 +112,10 @@ builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IChapterRepository, ChapterRepository>();
 builder.Services.AddScoped<ITeacherRepository, TeacherRepository>();
+builder.Services.AddScoped<IMajorRepository, MajorRepository>();
+builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
+builder.Services.AddScoped<ITrainingProgramRepository, TrainingProgramRepository>();
+
 // Đăng ký EmailService
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddScoped<EmailService>();
