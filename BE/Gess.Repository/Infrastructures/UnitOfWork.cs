@@ -17,6 +17,8 @@ namespace Gess.Repository.Infrastructures
         private IRefreshTokenRepository _refreshTokenRepository;
         private IUserRepository _userRepository;
         private IChapterRepository _chapterRepository;
+        private ISubjectRepository _subjectRepository;
+        private IMajorRepository _majorRepository;
         private bool _disposed;
 
 
@@ -24,6 +26,11 @@ namespace Gess.Repository.Infrastructures
         public IRefreshTokenRepository RefreshTokenRepository => _refreshTokenRepository ??= new RefreshTokenRepository(_context);
 
         public IChapterRepository ChapterRepository => _chapterRepository ??= new ChapterRepository(_context);
+
+        public ISubjectRepository SubjectRepository => _subjectRepository ??= new SubjectRepository(_context);
+
+        public IMajorRepository MajorRepository => _majorRepository ??= new MajorRepository(_context);
+        public ITrainingProgramRepository TrainingProgramRepository => new TrainingProgramRepository(_context);
 
         public UnitOfWork(GessDbContext context= null)
         {

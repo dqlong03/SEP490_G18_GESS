@@ -23,6 +23,9 @@ namespace Gess.Repository.Infrastructures
         IUserRepository UserRepository { get; }
         IRefreshTokenRepository RefreshTokenRepository { get; }
         IChapterRepository ChapterRepository { get; }
+        ISubjectRepository SubjectRepository { get; }
+        IMajorRepository MajorRepository { get; }
+        ITrainingProgramRepository TrainingProgramRepository { get; }
 
     }
 }
