@@ -6,4 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\GESS.Entity\GESS.Entity.csproj" />
+  </ItemGroup>
 </Project>

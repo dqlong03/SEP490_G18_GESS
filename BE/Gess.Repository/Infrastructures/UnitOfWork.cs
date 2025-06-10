@@ -4,6 +4,7 @@ using GESS.Entity.Entities;
 using GESS.Repository.Implement;
 using GESS.Repository.Interface;
 using GESS.Repository.refreshtoken;
+using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -17,13 +18,25 @@ namespace Gess.Repository.Infrastructures
         private IRefreshTokenRepository _refreshTokenRepository;
         private IUserRepository _userRepository;
         private IChapterRepository _chapterRepository;
+        private ITeacherRepository _teacherRepository;
+        private readonly UserManager<User> _userManager;
         private bool _disposed;
 
+        public UnitOfWork(GessDbContext context, UserManager<User> userManager = null)
+        {
+            _context = context;
+            _userManager = userManager;
+        }
 
         public IUserRepository UserRepository =>  _userRepository ??= new UserRepository(_context);
         public IRefreshTokenRepository RefreshTokenRepository => _refreshTokenRepository ??= new RefreshTokenRepository(_context);
 
         public IChapterRepository ChapterRepository => _chapterRepository ??= new ChapterRepository(_context);
+
+
+    
+
+        public ITeacherRepository TeacherRepository => _teacherRepository ??= new TeacherRepository(_context, _userManager);
 
         public UnitOfWork(GessDbContext context= null)
         {
