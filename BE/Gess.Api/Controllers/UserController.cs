@@ -1,4 +1,5 @@
-﻿using GESS.Model.User;
+﻿using GESS.Entity.Entities;
+using GESS.Model.User;
 using GESS.Service.users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +15,8 @@ namespace GESS.Api.Controllers
         {
             _userService = userService;
         }
+
+
         [HttpGet("{userId}")]
         public async Task<ActionResult<UserListDTO>> GetUserById(Guid userId)
         {
@@ -27,6 +30,38 @@ namespace GESS.Api.Controllers
                 return NotFound(ex.Message);
             }
         }
+        [HttpPut("{userId}")]
+        public async Task<IActionResult> UpdateUser(Guid userId, [FromBody] UserUpdateRequest request)
+        {
+            if (request == null)
+                return BadRequest("Request body is null.");
+
+            try
+            {
+                var updatedUser = await _userService.UpdateUserAsync(userId, request);
+                return Ok(updatedUser);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
+
+        [HttpDelete("{userId}")]
+        public async Task<IActionResult> DeleteUser(Guid userId)
+        {
+            try
+            {
+                await _userService.DeleteUserAsync(userId);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
+
+
 
         [HttpGet()]
         public async Task<ActionResult<List<UserListDTO>>> GetAllUsers()

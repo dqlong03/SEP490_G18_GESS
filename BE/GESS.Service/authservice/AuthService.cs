@@ -4,6 +4,7 @@ using GESS.Entity.Entities;
 using GESS.Model.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
@@ -11,6 +12,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using Google.Apis.Auth;
 
 namespace GESS.Service.authservice
 {
@@ -20,17 +22,121 @@ namespace GESS.Service.authservice
         private readonly IJwtService _jwtService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMemoryCache _memoryCache;
+        private readonly IConfiguration _configuration;
 
-        public AuthService(UserManager<User> userManager, IJwtService jwtService, IUnitOfWork unitOfWork, IMemoryCache memoryCache)
+
+        public AuthService(UserManager<User> userManager, IJwtService jwtService, IUnitOfWork unitOfWork, IMemoryCache memoryCache, IConfiguration configuration)
         {
             _userManager = userManager;
             _jwtService = jwtService;
             _unitOfWork = unitOfWork;
             _memoryCache = memoryCache;
+            _configuration = configuration;
         }
+
+        // Xử lý đăng nhập với Google
+        public async Task<LoginResult> LoginWithGoogleAsync(GoogleLoginModel model)
+        {
+            try
+            {
+                var payload = await GoogleJsonWebSignature.ValidateAsync(model.IdToken, new GoogleJsonWebSignature.ValidationSettings
+                {
+                    Audience = new[] { _configuration["Authentication:Google:ClientId"] }
+                });
+
+                var user = await _userManager.FindByEmailAsync(payload.Email);
+                if (user == null)
+                {
+                    user = new User
+                    {
+                        UserName = payload.Email,
+                        Email = payload.Email,
+                        EmailConfirmed = true,
+                        FirstName = payload.GivenName,
+                        LastName = payload.FamilyName,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    var result = await _userManager.CreateAsync(user);
+                    if (!result.Succeeded)
+                    {
+                        return new LoginResult { Success = false, ErrorMessage = "Cannot create user" };
+                    }
+                    await _userManager.AddToRoleAsync(user, "Student");
+                }
+
+                // Tạo claims giống LoginAsync
+                var claims = new List<Claim>
+        {
+            new Claim("Username", user.UserName),
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
+
+                var userRoles = await _userManager.GetRolesAsync(user);
+                foreach (var role in userRoles)
+                {
+                    claims.Add(new Claim("Role", role));
+                }
+
+                var accessToken = _jwtService.GenerateAccessToken(claims);
+
+                // Tạo refresh token
+                var refreshToken = new RefreshToken
+                {
+                    Id = Guid.NewGuid(),
+                    Token = Guid.NewGuid().ToString(),
+                    IssuedAt = DateTime.UtcNow,
+                    ExpiresAt = DateTime.UtcNow.AddDays(30),
+                    IsRevoked = false,
+                    UserId = user.Id
+                };
+                _unitOfWork.RefreshTokenRepository.Create(refreshToken);
+                await _unitOfWork.SaveChangesAsync();
+
+                return new LoginResult
+                {
+                    Success = true,
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken.Token
+                };
+            }
+            catch
+            {
+                return new LoginResult { Success = false, ErrorMessage = "Invalid Google token" };
+            }
+        }
+
+
+        //xử lý recaptcha login
+        private async Task<bool> VerifyRecaptchaAsync(string recaptchaToken)
+        {
+            var secretKey = _configuration["Recaptcha:SecretKey"];
+            using var httpClient = new HttpClient();
+            var content = new FormUrlEncodedContent(new[]
+            {
+            new KeyValuePair<string, string>("secret", secretKey),
+            new KeyValuePair<string, string>("response", recaptchaToken)
+        });
+            var response = await httpClient.PostAsync("https://www.google.com/recaptcha/api/siteverify", content);
+            var json = await response.Content.ReadAsStringAsync();
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            return doc.RootElement.GetProperty("success").GetBoolean();
+        }
+
+
 
         public async Task<LoginResult> LoginAsync(LoginModel loginModel)
         {
+            if (string.IsNullOrEmpty(loginModel.RecaptchaToken) || !await VerifyRecaptchaAsync(loginModel.RecaptchaToken))
+            {
+                return new LoginResult
+                {
+                    Success = false,
+                    ErrorMessage = "Xác thực reCAPTCHA thất bại"
+                };
+            }
             if (string.IsNullOrEmpty(loginModel.Username) || string.IsNullOrEmpty(loginModel.Password))
             {
                 return new LoginResult
@@ -52,7 +158,7 @@ namespace GESS.Service.authservice
 
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.Name, user.UserName),
+                new Claim("Username", user.UserName),
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
@@ -60,7 +166,7 @@ namespace GESS.Service.authservice
             var userRoles = await _userManager.GetRolesAsync(user);
             foreach (var role in userRoles)
             {
-                claims.Add(new Claim(ClaimTypes.Role, role));
+                claims.Add(new Claim("Role", role));
             }
 
             var accessToken = _jwtService.GenerateAccessToken(claims);

@@ -17,10 +17,25 @@ namespace GESS.Api.Controllers
         }
 
         [HttpPost("send")]
-        public async Task<IActionResult> SendOtp([FromBody] string email)
+        public async Task<IActionResult> SendOtp([FromBody] EmailDTO emailModel)
         {
-            var result = await _otpService.SendOtpAsync(email);
-            return result ? Ok("OTP sent") : StatusCode(500, "Failed to send OTP");
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Invalid email model" });
+            }
+
+            try
+            {
+                var result = await _otpService.SendOtpAsync(emailModel.Email);
+                return result
+                    ? Ok(new { message = "OTP sent" })
+                    : StatusCode(500, new { message = "Failed to send OTP" });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending OTP: {ex.Message}");
+                return StatusCode(500, new { message = "Internal server error" });
+            }
         }
         [HttpPost("verify")]
         public IActionResult VerifyOtp([FromBody] VerifyOtpDTO request)

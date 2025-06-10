@@ -6,9 +6,14 @@ namespace GESS.Model.Auth
     {
         public string Username { get; set; }
         public string Password { get; set; }
+        public string RecaptchaToken { get; set; }
     }
 
-    
+    public class GoogleLoginModel
+    {
+        public string IdToken { get; set; }
+    }
+
     public class RefreshTokenModel
     {
         public string RefreshToken { get; set; }
