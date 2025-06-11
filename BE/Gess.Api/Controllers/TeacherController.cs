@@ -1,5 +1,6 @@
-﻿using GESS.Model.Teacher;
+﻿    using GESS.Model.Teacher;
 using GESS.Service.teacher;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GESS.Api.Controllers
@@ -48,6 +49,28 @@ namespace GESS.Api.Controllers
         {
             await _teacherService.DeleteTeacherAsync(teacherId);
             return NoContent();
+        }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchTeachers([FromQuery] string keyword)
+        {
+            var teachers = await _teacherService.SearchTeachersAsync(keyword);
+            return Ok(teachers);
+        }
+
+
+        [HttpPost("import")]
+        public async Task<IActionResult> ImportTeachers(IFormFile file)
+        {
+            try
+            {
+                var teachers = await _teacherService.ImportTeachersFromExcelAsync(file);
+                return Ok(new { Count = teachers.Count, Teachers = teachers });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Lỗi khi xử lý file: {ex.Message}");
+            }
         }
     }
 }

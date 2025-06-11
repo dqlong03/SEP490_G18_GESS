@@ -6,6 +6,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+	<ItemGroup>
+		<PackageReference Include="EPPlus" Version="6.0.6" />
+		<PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
+	</ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\GESS.Auth\GESS.Auth.csproj" />
     <ProjectReference Include="..\GESS.Entity\GESS.Entity.csproj" />

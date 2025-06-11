@@ -15,6 +15,7 @@ namespace GESS.Repository.Interface
         Task AddTeacherAsync(Guid userId, TeacherCreationRequest request);
         Task<TeacherResponse> UpdateTeacherAsync(Guid teacherId, TeacherUpdateRequest teacher);
         Task DeleteTeacherAsync(Guid teacherId);
+        Task<List<TeacherResponse>> SearchTeachersAsync(string keyword);
     }
 
 }

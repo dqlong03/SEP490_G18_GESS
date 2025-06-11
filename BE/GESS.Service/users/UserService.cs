@@ -101,6 +101,7 @@ namespace GESS.Service.users
             };
         }
 
+        }
 
         public async Task<bool> IsEmailRegisteredAsync(string email)
         {
