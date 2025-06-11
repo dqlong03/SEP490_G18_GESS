@@ -15,6 +15,9 @@ namespace GESS.Repository.Interface
     {
         public Task<User> GetUserByIdAsync(Guid userId);
         public Task<List<User>> GetAllUsersAsync();
+        public Task UpdateUserAsync(Guid userId, User user);
+        Task DeleteUserAsync(Guid userId);
+        Task<bool> IsEmailRegisteredAsync(string email);
 
     }
 }

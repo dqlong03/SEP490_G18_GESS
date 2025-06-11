@@ -14,55 +14,27 @@ namespace GESS.Entity.Contexts
     {
         public static async Task InitializeAsync(IServiceProvider serviceProvider)
         {
-            // Lấy các service cần thiết
             using var scope = serviceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
-            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
             var context = scope.ServiceProvider.GetRequiredService<GessDbContext>();
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
 
-            // Tạo các role
+            // 1. Tạo dữ liệu cho bảng độc lập
             await SeedRolesAsync(roleManager);
-
-            // Tạo users và gán role
             await SeedUsersAsync(userManager);
-
-            // Tạo dữ liệu mẫu cho các bảng khác
             await SeedMajorsAsync(context);
-            await SeedTrainingProgramsAsync(context);
+            await SeedSemestersAsync(context);
+
+            // 2. Tạo dữ liệu phụ thuộc
+            await SeedTeachersAsync(context);
             await SeedSubjectsAsync(context);
             await SeedChaptersAsync(context);
-            await SeedQuestionsAsync(context);
-            await SeedRoomsAsync(context);
-            await SeedSemestersAsync(context);
-            await SeedCohortsAsync(context);
             await SeedClassesAsync(context);
-            await SeedLevelQuestionsAsync(context);
-            await SeedPracticeExamsAsync(context);
-            await SeedPracticeExamPapersAsync(context);
-            await SeedPracticeAnswersAsync(context);
-            await SeedQuestionPracExamsAsync(context);
-            await SeedPracticeTestQuestionsAsync(context);
-            await SeedNoPEPaperInPEsAsync(context);
-            await SeedApplyTrainingProgramsAsync(context);
-            await SeedSubjectTrainingProgramsAsync(context);
-            await SeedCategoryExamSubjectsAsync(context);
-            await SeedPreconditionSubjectsAsync(context);
-            await SeedNoQuestionInChaptersAsync(context);
-            await SeedFinalExamsAsync(context);
-            await SeedMultiExamHistoriesAsync(context);
-            await SeedMajorTeachersAsync(context);
-            await SeedClassStudentsAsync(context);
-            await SeedCategoryExamsAsync(context);
-            await SeedMultiExamsAsync(context);
-            await SeedMultiAnswersAsync(context);
-            await SeedQuestionMultiExamsAsync(context);
-            await SeedExamSlotsAsync(context);
-            await SeedExamSlotRoomsAsync(context);
         }
 
         private static async Task SeedRolesAsync(RoleManager<IdentityRole<Guid>> roleManager)
         {
-            string[] roles = new[] { "Teacher", "Admin", "Student" };
+            string[] roles = new[] { "Admin", "Trưởng bộ môn", "Giáo viên", "Khảo thí", "Sinh viên" };
             foreach (var role in roles)
             {
                 if (!await roleManager.RoleExistsAsync(role))
@@ -84,12 +56,34 @@ namespace GESS.Entity.Contexts
 
         private static async Task SeedUsersAsync(UserManager<User> userManager)
         {
-            // ThaiNH_Modified_UserProfile_Begin
-            await CreateUser(userManager, "admin@example.com", "Admin User", "Password123!", new DateTime(1980, 1, 1), "1234567890", true, "Admin");
-            await CreateUser(userManager, "teacher1@example.com", "Teacher One", "Password123!", new DateTime(1985, 5, 10), "0987654321", false, "Teacher");
-            await CreateUser(userManager, "student1@example.com", "Student One", "Password123!", new DateTime(2000, 8, 15), "0123456789", true, "Student");
-            // ThaiNH_Modified_UserProfile_End
+            // Admin users
+            await CreateUser(userManager, "admin@example.com", "Nguyễn", "Văn A", "Password123!", new DateTime(1980, 1, 1), "1234567890", true, "Admin");
+            await CreateUser(userManager, "admin2@example.com", "Trần", "Thị B", "Password123!", new DateTime(1982, 3, 15), "1234567891", true, "Admin");
 
+            // Trưởng bộ môn
+            await CreateUser(userManager, "hod1@example.com", "Lê", "Văn C", "Password123!", new DateTime(1983, 5, 10), "0987654321", true, "Trưởng bộ môn");
+            await CreateUser(userManager, "hod2@example.com", "Phạm", "Thị D", "Password123!", new DateTime(1984, 7, 20), "0987654322", false, "Trưởng bộ môn");
+
+            // Giáo viên
+            await CreateUser(userManager, "teacher1@example.com", "Hoàng", "Văn E", "Password123!", new DateTime(1985, 5, 10), "0987654323", true, "Giáo viên");
+            await CreateUser(userManager, "teacher2@example.com", "Vũ", "Thị F", "Password123!", new DateTime(1987, 7, 20), "0987654324", false, "Giáo viên");
+            await CreateUser(userManager, "teacher3@example.com", "Đỗ", "Văn G", "Password123!", new DateTime(1990, 9, 30), "0987654325", true, "Giáo viên");
+            await CreateUser(userManager, "teacher4@example.com", "Ngô", "Văn H", "Password123!", new DateTime(1988, 4, 15), "0987654326", true, "Giáo viên");
+            await CreateUser(userManager, "teacher5@example.com", "Đặng", "Thị I", "Password123!", new DateTime(1989, 6, 25), "0987654327", false, "Giáo viên");
+
+            // Khảo thí
+            await CreateUser(userManager, "exam1@example.com", "Ngô", "Thị H", "Password123!", new DateTime(1986, 6, 15), "0987654328", false, "Khảo thí");
+            await CreateUser(userManager, "exam2@example.com", "Đặng", "Văn I", "Password123!", new DateTime(1988, 8, 25), "0987654329", true, "Khảo thí");
+
+            // Sinh viên
+            await CreateUser(userManager, "student1@example.com", "Phạm", "Minh J", "Password123!", new DateTime(2000, 8, 15), "0123456789", true, "Sinh viên");
+            await CreateUser(userManager, "student2@example.com", "Hoàng", "Anh K", "Password123!", new DateTime(2001, 9, 20), "0123456790", false, "Sinh viên");
+            await CreateUser(userManager, "student3@example.com", "Vũ", "Thị L", "Password123!", new DateTime(2002, 10, 25), "0123456791", true, "Sinh viên");
+            await CreateUser(userManager, "student4@example.com", "Trần", "Văn M", "Password123!", new DateTime(2000, 7, 10), "0123456792", true, "Sinh viên");
+            await CreateUser(userManager, "student5@example.com", "Lê", "Thị N", "Password123!", new DateTime(2001, 11, 5), "0123456793", false, "Sinh viên");
+            await CreateUser(userManager, "student6@example.com", "Nguyễn", "Văn O", "Password123!", new DateTime(2002, 3, 15), "0123456794", true, "Sinh viên");
+            await CreateUser(userManager, "student7@example.com", "Phạm", "Thị P", "Password123!", new DateTime(2000, 5, 20), "0123456795", false, "Sinh viên");
+            await CreateUser(userManager, "student8@example.com", "Hoàng", "Văn Q", "Password123!", new DateTime(2001, 12, 30), "0123456796", true, "Sinh viên");
         }
 
         private static async Task SeedMajorsAsync(GessDbContext context)
@@ -122,30 +116,26 @@ namespace GESS.Entity.Contexts
             }
         }
 
-        private static async Task SeedTrainingProgramsAsync(GessDbContext context)
+        private static async Task SeedSemestersAsync(GessDbContext context)
         {
-            if (!context.TrainingPrograms.Any())
+            if (!context.Semesters.Any())
             {
-                var programs = new List<TrainingProgram>
+                var semesters = new List<Semester>
                 {
-                    new TrainingProgram 
+                    new Semester 
                     { 
-                        TrainProName = "Chương trình CNTT 2023",
+                        SemesterName = "Học kỳ 1 năm 2023-2024",
                         StartDate = new DateTime(2023, 9, 1),
-                        EndDate = new DateTime(2027, 6, 30),
-                        NoCredits = 150,
-                        MajorId = 1 // Liên kết với ngành CNTT
+                        EndDate = new DateTime(2024, 1, 15)
                     },
-                    new TrainingProgram 
+                    new Semester 
                     { 
-                        TrainProName = "Chương trình Điện 2023",
-                        StartDate = new DateTime(2023, 9, 1),
-                        EndDate = new DateTime(2027, 6, 30),
-                        NoCredits = 150,
-                        MajorId = 2 // Liên kết với ngành Điện
+                        SemesterName = "Học kỳ 2 năm 2023-2024",
+                        StartDate = new DateTime(2024, 2, 1),
+                        EndDate = new DateTime(2024, 6, 15)
                     }
                 };
-                await context.TrainingPrograms.AddRangeAsync(programs);
+                await context.Semesters.AddRangeAsync(semesters);
                 await context.SaveChangesAsync();
             }
         }
@@ -193,133 +183,22 @@ namespace GESS.Entity.Contexts
                     { 
                         ChapterName = "Chương 1: Giới thiệu C#",
                         Description = "Chương mở đầu về C#",
-                        SubjectId = 1 // Liên kết với môn Lập trình C#
+                        SubjectId = 1
                     },
                     new Chapter 
                     { 
                         ChapterName = "Chương 2: Cú pháp cơ bản",
                         Description = "Chương về cú pháp cơ bản C#",
-                        SubjectId = 1 // Liên kết với môn Lập trình C#
+                        SubjectId = 1
+                    },
+                    new Chapter 
+                    { 
+                        ChapterName = "Chương 3: Lập trình hướng đối tượng",
+                        Description = "Chương về OOP trong C#",
+                        SubjectId = 1
                     }
                 };
                 await context.Chapters.AddRangeAsync(chapters);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedQuestionsAsync(GessDbContext context)
-        {
-            if (!context.MultiQuestions.Any())
-            {
-                var multiQuestions = new List<MultiQuestion>
-                {
-                    new MultiQuestion
-                    {
-                        Content = "C# là ngôn ngữ lập trình gì?",
-                        IsActive = true,
-                        CreatedBy = "admin",
-                        IsPublic = true,
-                        ChapterId = 1 // Liên kết với Chương 1
-                    }
-                };
-                await context.MultiQuestions.AddRangeAsync(multiQuestions);
-                await context.SaveChangesAsync();
-            }
-
-            if (!context.PracticeQuestions.Any())
-            {
-                var practiceQuestions = new List<PracticeQuestion>
-                {
-                    new PracticeQuestion
-                    {
-                        Content = "Viết chương trình Hello World bằng C#",
-                        IsActive = true,
-                        CreatedBy = "admin",
-                        IsPublic = true,
-                        ChapterId = 1, // Liên kết với Chương 1
-                        CategoryExamId = 1, // Liên kết với CategoryExam
-                        LevelQuestionId = 1, // Liên kết với LevelQuestion
-                        SemesterId = 1 // Liên kết với Semester
-                    }
-                };
-                await context.PracticeQuestions.AddRangeAsync(practiceQuestions);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedRoomsAsync(GessDbContext context)
-        {
-            if (!context.Rooms.Any())
-            {
-                var rooms = new List<Room>
-                {
-                    new Room 
-                    { 
-                        RoomName = "Phòng 101",
-                        Description = "Phòng học CNTT",
-                        Status = "Available",
-                        Capacity = 30
-                    },
-                    new Room 
-                    { 
-                        RoomName = "Phòng 102",
-                        Description = "Phòng học CNTT",
-                        Status = "Available",
-                        Capacity = 40
-                    },
-                    new Room 
-                    { 
-                        RoomName = "Phòng 103",
-                        Description = "Phòng học CNTT",
-                        Status = "Available",
-                        Capacity = 35
-                    }
-                };
-                await context.Rooms.AddRangeAsync(rooms);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedSemestersAsync(GessDbContext context)
-        {
-            if (!context.Semesters.Any())
-            {
-                var semesters = new List<Semester>
-                {
-                    new Semester 
-                    { 
-                        SemesterName = "Học kỳ 1 - 2023",
-                        StartDate = new DateTime(2023, 9, 1),
-                        EndDate = new DateTime(2024, 1, 15)
-                    },
-                    new Semester 
-                    { 
-                        SemesterName = "Học kỳ 2 - 2023",
-                        StartDate = new DateTime(2024, 2, 1),
-                        EndDate = new DateTime(2024, 6, 15)
-                    }
-                };
-                await context.Semesters.AddRangeAsync(semesters);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedCohortsAsync(GessDbContext context)
-        {
-            if (!context.Cohorts.Any())
-            {
-                var cohorts = new List<Cohort>
-                {
-                    new Cohort 
-                    { 
-                        CohortName = "K23"
-                    },
-                    new Cohort 
-                    { 
-                        CohortName = "K24"
-                    }
-                };
-                await context.Cohorts.AddRangeAsync(cohorts);
                 await context.SaveChangesAsync();
             }
         }
@@ -332,17 +211,24 @@ namespace GESS.Entity.Contexts
                 {
                     new Class 
                     { 
-                        ClassName = "SE1601",
-                        TeacherId = Guid.Parse("00000000-0000-0000-0000-000000000001"), // ID của teacher1
-                        SubjectId = 1, // Liên kết với môn Lập trình C#
-                        SemesterId = 1 // Liên kết với Học kỳ 1
+                        ClassName = "Lập trình C# - Nhóm 1",
+                        SubjectId = 1,
+                        TeacherId = context.Users.First(u => u.Email == "teacher1@example.com").Id,
+                        SemesterId = 1
                     },
                     new Class 
                     { 
-                        ClassName = "SE1602",
-                        TeacherId = Guid.Parse("00000000-0000-0000-0000-000000000001"), // ID của teacher1
-                        SubjectId = 2, // Liên kết với môn Cơ sở dữ liệu
-                        SemesterId = 1 // Liên kết với Học kỳ 1
+                        ClassName = "Cơ sở dữ liệu - Nhóm 1",
+                        SubjectId = 2,
+                        TeacherId = context.Users.First(u => u.Email == "teacher2@example.com").Id,
+                        SemesterId = 1
+                    },
+                    new Class 
+                    { 
+                        ClassName = "Mạng máy tính - Nhóm 1",
+                        SubjectId = 3,
+                        TeacherId = context.Users.First(u => u.Email == "teacher3@example.com").Id,
+                        SemesterId = 1
                     }
                 };
                 await context.Classes.AddRangeAsync(classes);
@@ -350,442 +236,76 @@ namespace GESS.Entity.Contexts
             }
         }
 
-        private static async Task SeedLevelQuestionsAsync(GessDbContext context)
+        private static async Task SeedTeachersAsync(GessDbContext context)
         {
-            if (!context.LevelQuestions.Any())
+            if (!context.Teachers.Any())
             {
-                var levels = new List<LevelQuestion>
+                var teachers = new List<Teacher>
                 {
-                    new LevelQuestion { LevelQuestionName = "Dễ" },
-                    new LevelQuestion { LevelQuestionName = "Trung bình" },
-                    new LevelQuestion { LevelQuestionName = "Khó" }
-                };
-                await context.LevelQuestions.AddRangeAsync(levels);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedPracticeExamsAsync(GessDbContext context)
-        {
-            if (!context.PracticeExams.Any())
-            {
-                var exams = new List<PracticeExam>
-                {
-                    new PracticeExam
-                    {
-                        PracExamName = "Kiểm tra giữa kỳ C#",
-                        Duration = 60,
-                        CreateAt = DateTime.Now,
-                        Status = "Draft",
-                        CodeStart = "CS101-MID",
-                        CreateBy = "admin",
-                        SubjectId = 1,
-                        CategoryExamId = 1,
-                        SemesterId = 1
-                    }
-                };
-                await context.PracticeExams.AddRangeAsync(exams);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedPracticeExamPapersAsync(GessDbContext context)
-        {
-            if (!context.PracticeExamPapers.Any())
-            {
-                var papers = new List<PracticeExamPaper>
-                {
-                    new PracticeExamPaper
-                    {
-                        PracExamPaperName = "Đề thi giữa kỳ C# - Đề 1",
-                        NumberQuestion = 5,
-                        CreateAt = DateTime.Now,
-                        Status = "Draft",
-                        CreateBy = "admin",
-                        CategoryExamId = 1,
-                        SubjectId = 1,
-                        SemesterId = 1
-                    }
-                };
-                await context.PracticeExamPapers.AddRangeAsync(papers);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedPracticeAnswersAsync(GessDbContext context)
-        {
-            if (!context.PracticeAnswers.Any())
-            {
-                var answers = new List<PracticeAnswer>
-                {
-                    new PracticeAnswer
-                    {
-                        AnswerContent = "Console.WriteLine(\"Hello World\");",
-                        PracticeQuestionId = 1
-                    }
-                };
-                await context.PracticeAnswers.AddRangeAsync(answers);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedQuestionPracExamsAsync(GessDbContext context)
-        {
-            if (!context.QuestionPracExams.Any())
-            {
-                var questionExams = new List<QuestionPracExam>
-                {
-                    new QuestionPracExam
-                    {
-                        PracExamHistoryId = Guid.NewGuid(),
-                        PracticeQuestionId = 1,
-                        Answer = "Console.WriteLine(\"Hello World\");",
-                        Score = 10
-                    }
-                };
-                await context.QuestionPracExams.AddRangeAsync(questionExams);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedPracticeTestQuestionsAsync(GessDbContext context)
-        {
-            if (!context.PracticeTestQuestions.Any())
-            {
-                var testQuestions = new List<PracticeTestQuestion>
-                {
-                    new PracticeTestQuestion
-                    {
-                        PracExamPaperId = 1,
-                        PracticeQuestionId = 1,
-                        QuestionOrder = 1,
-                        Score = 10
-                    }
-                };
-                await context.PracticeTestQuestions.AddRangeAsync(testQuestions);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedNoPEPaperInPEsAsync(GessDbContext context)
-        {
-            if (!context.NoPEPaperInPEs.Any())
-            {
-                var papers = new List<NoPEPaperInPE>
-                {
-                    new NoPEPaperInPE
-                    {
-                        PracExamId = 1,
-                        PracExamPaperId = 1
-                    }
-                };
-                await context.NoPEPaperInPEs.AddRangeAsync(papers);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedApplyTrainingProgramsAsync(GessDbContext context)
-        {
-            if (!context.ApplyTrainingPrograms.Any())
-            {
-                var programs = new List<ApplyTrainingProgram>
-                {
-                    new ApplyTrainingProgram
-                    {
-                        TrainProId = 1,
-                        CohortId = 1
-                    }
-                };
-                await context.ApplyTrainingPrograms.AddRangeAsync(programs);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedSubjectTrainingProgramsAsync(GessDbContext context)
-        {
-            if (!context.SubjectTrainingPrograms.Any())
-            {
-                var programs = new List<SubjectTrainingProgram>
-                {
-                    new SubjectTrainingProgram
-                    {
-                        SubjectId = 1,
-                        TrainProId = 1
-                    }
-                };
-                await context.SubjectTrainingPrograms.AddRangeAsync(programs);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedCategoryExamSubjectsAsync(GessDbContext context)
-        {
-            if (!context.CategoryExamSubjects.Any())
-            {
-                var subjects = new List<CategoryExamSubject>
-                {
-                    new CategoryExamSubject
-                    {
-                        CategoryExamId = 1,
-                        SubjectId = 1
-                    }
-                };
-                await context.CategoryExamSubjects.AddRangeAsync(subjects);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedPreconditionSubjectsAsync(GessDbContext context)
-        {
-            if (!context.PreconditionSubjects.Any())
-            {
-                var preconditions = new List<PreconditionSubject>
-                {
-                    new PreconditionSubject
-                    {
-                        SubTrainingProgramId = 1,
-                        PreconditionSubjectId = 2
-                    }
-                };
-                await context.PreconditionSubjects.AddRangeAsync(preconditions);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedNoQuestionInChaptersAsync(GessDbContext context)
-        {
-            if (!context.NoQuestionInChapters.Any())
-            {
-                var chapters = new List<NoQuestionInChapter>
-                {
-                    new NoQuestionInChapter
-                    {
-                        MultiExamId = 1,
-                        ChapterId = 1,
-                        NumberQuestion = 5
-                    }
-                };
-                await context.NoQuestionInChapters.AddRangeAsync(chapters);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedFinalExamsAsync(GessDbContext context)
-        {
-            if (!context.FinalExams.Any())
-            {
-                var finalExams = new List<FinalExam>
-                {
-                    new FinalExam
-                    {
-                        MultiExamId = 1,
-                        MultiQuestionId = 1
-                    }
-                };
-                await context.FinalExams.AddRangeAsync(finalExams);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedMultiExamHistoriesAsync(GessDbContext context)
-        {
-            if (!context.MultiExamHistories.Any())
-            {
-                var histories = new List<MultiExamHistory>
-                {
-                    new MultiExamHistory
-                    {
-                        ExamHistoryId = Guid.NewGuid(),
-                        StartTime = DateTime.Now,
-                        EndTime = DateTime.Now.AddHours(1),
-                        Score = 8.5,
-                        CheckIn = true,
-                        StatusExam = "Completed",
-                        IsGrade = true,
-                        ExamSlotRoomId = 1,
-                        StudentId = Guid.Parse("00000000-0000-0000-0000-000000000001"), // ID của student1
-                        MultiExamId = 1
-                    }
-                };
-                await context.MultiExamHistories.AddRangeAsync(histories);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedMajorTeachersAsync(GessDbContext context)
-        {
-            if (!context.MajorTeachers.Any())
-            {
-                var teachers = new List<MajorTeacher>
-                {
-                    new MajorTeacher
-                    {
-                        MajorId = 1,
-                        TeacherId = Guid.Parse("00000000-0000-0000-0000-000000000001") // ID của teacher1
-                    }
-                };
-                await context.MajorTeachers.AddRangeAsync(teachers);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedClassStudentsAsync(GessDbContext context)
-        {
-            if (!context.ClassStudents.Any())
-            {
-                var students = new List<ClassStudent>
-                {
-                    new ClassStudent
-                    {
-                        ClassId = 1,
-                        StudentId = Guid.Parse("00000000-0000-0000-0000-000000000003") // ID của student1
-                    }
-                };
-                await context.ClassStudents.AddRangeAsync(students);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedCategoryExamsAsync(GessDbContext context)
-        {
-            if (!context.CategoryExams.Any())
-            {
-                var categories = new List<CategoryExam>
-                {
-                    new CategoryExam
-                    {
-                        CategoryExamName = "Kiểm tra giữa kỳ"
+                    new Teacher 
+                    { 
+                        TeacherId = context.Users.First(u => u.Email == "teacher1@example.com").Id,
+                        UserId = context.Users.First(u => u.Email == "teacher1@example.com").Id,
+                        HireDate = new DateTime(2020, 9, 1)
                     },
-                    new CategoryExam
-                    {
-                        CategoryExamName = "Kiểm tra cuối kỳ"
-                    }
-                };
-                await context.CategoryExams.AddRangeAsync(categories);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedMultiExamsAsync(GessDbContext context)
-        {
-            if (!context.MultiExams.Any())
-            {
-                var exams = new List<MultiExam>
-                {
-                    new MultiExam
-                    {
-                        MultiExamName = "Kiểm tra giữa kỳ C#",
-                        Duration = 60,
-                        CreateAt = DateTime.Now,
-                        Status = "Draft",
-                        CodeStart = "CS101-MID",
-                        CreateBy = "admin",
-                        SubjectId = 1,
-                        CategoryExamId = 1,
-                        SemesterId = 1,
-                        IsPublish = false
-                    }
-                };
-                await context.MultiExams.AddRangeAsync(exams);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedMultiAnswersAsync(GessDbContext context)
-        {
-            if (!context.MultiAnswers.Any())
-            {
-                var answers = new List<MultiAnswer>
-                {
-                    new MultiAnswer
-                    {
-                        AnswerContent = "Ngôn ngữ lập trình hướng đối tượng",
-                        IsCorrect = true,
-                        MultiQuestionId = 1
+                    new Teacher 
+                    { 
+                        TeacherId = context.Users.First(u => u.Email == "teacher2@example.com").Id,
+                        UserId = context.Users.First(u => u.Email == "teacher2@example.com").Id,
+                        HireDate = new DateTime(2021, 9, 1)
                     },
-                    new MultiAnswer
-                    {
-                        AnswerContent = "Ngôn ngữ lập trình thủ tục",
-                        IsCorrect = false,
-                        MultiQuestionId = 1
+                    new Teacher 
+                    { 
+                        TeacherId = context.Users.First(u => u.Email == "teacher3@example.com").Id,
+                        UserId = context.Users.First(u => u.Email == "teacher3@example.com").Id,
+                        HireDate = new DateTime(2022, 9, 1)
                     },
-                    new MultiAnswer
-                    {
-                        AnswerContent = "Ngôn ngữ đánh dấu",
-                        IsCorrect = false,
-                        MultiQuestionId = 1
+                    new Teacher 
+                    { 
+                        TeacherId = context.Users.First(u => u.Email == "teacher4@example.com").Id,
+                        UserId = context.Users.First(u => u.Email == "teacher4@example.com").Id,
+                        HireDate = new DateTime(2023, 9, 1)
                     },
-                    new MultiAnswer
-                    {
-                        AnswerContent = "Ngôn ngữ truy vấn",
-                        IsCorrect = false,
-                        MultiQuestionId = 1
+                    new Teacher 
+                    { 
+                        TeacherId = context.Users.First(u => u.Email == "teacher5@example.com").Id,
+                        UserId = context.Users.First(u => u.Email == "teacher5@example.com").Id,
+                        HireDate = new DateTime(2023, 9, 1)
                     }
                 };
-                await context.MultiAnswers.AddRangeAsync(answers);
+                await context.Teachers.AddRangeAsync(teachers);
                 await context.SaveChangesAsync();
-            }
-        }
 
-        private static async Task SeedQuestionMultiExamsAsync(GessDbContext context)
-        {
-            if (!context.QuestionMultiExams.Any())
-            {
-                var questionExams = new List<QuestionMultiExam>
+                // Thêm dữ liệu cho bảng MajorTeacher
+                var majorTeachers = new List<MajorTeacher>
                 {
-                    new QuestionMultiExam
-                    {
-                        MultiExamHistoryId = Guid.NewGuid(),
-                        MultiQuestionId = 1,
-                        Score = 10
-                    }
-                };
-                await context.QuestionMultiExams.AddRangeAsync(questionExams);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedExamSlotsAsync(GessDbContext context)
-        {
-            if (!context.ExamSlots.Any())
-            {
-                var slots = new List<ExamSlot>
-                {
-                    new ExamSlot
-                    {
-                        SlotName = "Ca 1",
-                        StartTime = new DateTime(2024, 1, 15, 7, 0, 0),
-                        EndTime = new DateTime(2024, 1, 15, 9, 0, 0)
+                    new MajorTeacher 
+                    { 
+                        TeacherId = context.Users.First(u => u.Email == "teacher1@example.com").Id,
+                        MajorId = 1
                     },
-                    new ExamSlot
-                    {
-                        SlotName = "Ca 2",
-                        StartTime = new DateTime(2024, 1, 15, 9, 30, 0),
-                        EndTime = new DateTime(2024, 1, 15, 11, 30, 0)
+                    new MajorTeacher 
+                    { 
+                        TeacherId = context.Users.First(u => u.Email == "teacher2@example.com").Id,
+                        MajorId = 1
+                    },
+                    new MajorTeacher 
+                    { 
+                        TeacherId = context.Users.First(u => u.Email == "teacher3@example.com").Id,
+                        MajorId = 1
+                    },
+                    new MajorTeacher 
+                    { 
+                        TeacherId = context.Users.First(u => u.Email == "teacher4@example.com").Id,
+                        MajorId = 1
+                    },
+                    new MajorTeacher 
+                    { 
+                        TeacherId = context.Users.First(u => u.Email == "teacher5@example.com").Id,
+                        MajorId = 1
                     }
                 };
-                await context.ExamSlots.AddRangeAsync(slots);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedExamSlotRoomsAsync(GessDbContext context)
-        {
-            if (!context.ExamSlotRooms.Any())
-            {
-                var slotRooms = new List<ExamSlotRoom>
-                {
-                    new ExamSlotRoom
-                    {
-                        ExamSlotId = 1,
-                        RoomId = 1,
-                        SubjectId = 1,
-                        SemesterId = 1,
-                        SupervisorId = Guid.Parse("00000000-0000-0000-0000-000000000001"), // ID của teacher1
-                        ExamGradedId = Guid.Parse("00000000-0000-0000-0000-000000000001") // ID của teacher1
-                    }
-                };
-                await context.ExamSlotRooms.AddRangeAsync(slotRooms);
+                await context.MajorTeachers.AddRangeAsync(majorTeachers);
                 await context.SaveChangesAsync();
             }
         }
@@ -808,12 +328,10 @@ namespace GESS.Entity.Contexts
             bool gender,
             string role)
         {
-            var user = await userManager.FindByEmailAsync(email);
-            if (user == null)
+            if (await userManager.FindByEmailAsync(email) == null)
             {
-                user = new User
+                var user = new User
                 {
-                    Id = Guid.NewGuid(),
                     UserName = email,
                     Email = email,
                     // ThaiNH_Modified_UserProfile_Begin
@@ -827,22 +345,17 @@ namespace GESS.Entity.Contexts
                     DateOfBirth = dateOfBirth,
                     PhoneNumber = phoneNumber,
                     Gender = gender,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
                     EmailConfirmed = true
                 };
 
                 var result = await userManager.CreateAsync(user, password);
-                if (!result.Succeeded)
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(user, role);
+                }
+                else
                 {
                     throw new Exception($"Failed to create user {email}: {string.Join(", ", result.Errors.Select(e => e.Description))}");
-                }
-
-                var roleResult = await userManager.AddToRoleAsync(user, role);
-                if (!roleResult.Succeeded)
-                {
-                    throw new Exception($"Failed to assign role {role} to user {email}: {string.Join(", ", roleResult.Errors.Select(e => e.Description))}");
                 }
             }
         }

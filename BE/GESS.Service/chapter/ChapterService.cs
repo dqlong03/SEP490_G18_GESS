@@ -1,6 +1,7 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Entities;
 using GESS.Model.Chapter;
+using GESS.Model.Subject;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -51,13 +52,44 @@ namespace GESS.Service.chapter
             }).ToList();
         }
 
-        public async Task<ChapterUpdateDTO> UpdateChapterAsync(ChapterUpdateDTO chapterUpdateDTO)
+        
+        public async Task<IEnumerable<ChapterListDTO>> GetAllChapterAsync(string? name, int pageNumber, int pageSize)
         {
-            var chapter = await _unitOfWork.ChapterRepository.GetByIdAsync(chapterUpdateDTO.ChapterId);
+            var chapter = await _unitOfWork.ChapterRepository.GetAllChapterAsync(name, pageNumber, pageSize);
+
+            var chapterDtos = chapter.Select(chapter => new ChapterListDTO
+            {
+                Id = chapter.ChapterId,
+                ChapterName = chapter.ChapterName,
+                Description = chapter.Description,
+                SubjectName = chapter.Subject?.SubjectName ?? "N/A"
+            });
+
+            return chapterDtos;
+        }
+        public async Task<ChapterListDTO> GetChapterById(int chapterId)
+        {
+            var chapter = await _unitOfWork.ChapterRepository.GetByIdAsync(chapterId);
             if (chapter == null)
             {
                 throw new InvalidOperationException("Không tìm thấy chương.");
             }
+            return new ChapterListDTO
+            {
+                Id = chapter.ChapterId,
+                ChapterName = chapter.ChapterName,
+                Description = chapter.Description,
+                SubjectName = chapter.Subject?.SubjectName ?? "N/A"
+            };
+        }
+        public async Task<ChapterUpdateDTO> UpdateChapterAsync(int chapterId, ChapterUpdateDTO chapterUpdateDTO)
+        {
+            var chapter = await _unitOfWork.ChapterRepository.GetByIdAsync(chapterId);
+            if (chapter == null)
+            {
+                throw new InvalidOperationException("Không tìm thấy chương.");
+            }
+
             chapter.ChapterName = chapterUpdateDTO.ChapterName;
             chapter.Description = chapterUpdateDTO.Description;
             chapter.SubjectId = chapterUpdateDTO.SubjectId;
@@ -67,6 +99,7 @@ namespace GESS.Service.chapter
 
             return chapterUpdateDTO;
         }
+
 
         // Implement any specific methods for Chapter here
     }

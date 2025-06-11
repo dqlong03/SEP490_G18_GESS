@@ -4,6 +4,7 @@ using GESS.Entity.Entities;
 using GESS.Repository.Implement;
 using GESS.Repository.Interface;
 using GESS.Repository.refreshtoken;
+using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -22,8 +23,18 @@ namespace Gess.Repository.Infrastructures
         private ICateExamSubRepository _cateSubRepository;
         // ThaiNH_Initialize_End
 
+        private ITeacherRepository _teacherRepository;
+        private IClassRepository _classRepository;
+        private readonly UserManager<User> _userManager;
+        private ISubjectRepository _subjectRepository;
+        private IMajorRepository _majorRepository;
         private bool _disposed;
 
+        public UnitOfWork(GessDbContext context, UserManager<User> userManager = null)
+        {
+            _context = context;
+            _userManager = userManager;
+        }
 
         public IUserRepository UserRepository =>  _userRepository ??= new UserRepository(_context);
         public IRefreshTokenRepository RefreshTokenRepository => _refreshTokenRepository ??= new RefreshTokenRepository(_context);
@@ -33,6 +44,17 @@ namespace Gess.Repository.Infrastructures
         // ThaiNH_Initialize_Begin
         public ICateExamSubRepository CateExamSubRepository => _cateSubRepository ??= new CateExamSubRepository(_context);
         // ThaiNH_Initialize_End
+
+
+    
+
+        public ITeacherRepository TeacherRepository => _teacherRepository ??= new TeacherRepository(_context, _userManager);
+        public IClassRepository ClassRepository => _classRepository ??= new ClassRepository(_context);
+
+        public ISubjectRepository SubjectRepository => _subjectRepository ??= new SubjectRepository(_context);
+
+        public IMajorRepository MajorRepository => _majorRepository ??= new MajorRepository(_context);
+        public ITrainingProgramRepository TrainingProgramRepository => new TrainingProgramRepository(_context);
 
         public UnitOfWork(GessDbContext context= null)
         {
