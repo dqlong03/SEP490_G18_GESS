@@ -14,6 +14,6 @@ namespace GESS.Service.users
         Task<List<UserListDTO>> GetAllUsersAsync();
         Task<UserListDTO> UpdateUserAsync(Guid userId, UserUpdateRequest request);
         Task DeleteUserAsync(Guid userId);
-
+        Task<bool> IsEmailRegisteredAsync(string email);
     }
 }

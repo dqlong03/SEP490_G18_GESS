@@ -20,6 +20,8 @@ namespace Gess.Repository.Infrastructures
         private IChapterRepository _chapterRepository;
         private ITeacherRepository _teacherRepository;
         private readonly UserManager<User> _userManager;
+        private ISubjectRepository _subjectRepository;
+        private IMajorRepository _majorRepository;
         private bool _disposed;
 
         public UnitOfWork(GessDbContext context, UserManager<User> userManager = null)
@@ -37,6 +39,11 @@ namespace Gess.Repository.Infrastructures
     
 
         public ITeacherRepository TeacherRepository => _teacherRepository ??= new TeacherRepository(_context, _userManager);
+
+        public ISubjectRepository SubjectRepository => _subjectRepository ??= new SubjectRepository(_context);
+
+        public IMajorRepository MajorRepository => _majorRepository ??= new MajorRepository(_context);
+        public ITrainingProgramRepository TrainingProgramRepository => new TrainingProgramRepository(_context);
 
         public UnitOfWork(GessDbContext context= null)
         {

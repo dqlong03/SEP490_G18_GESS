@@ -30,6 +30,10 @@ namespace GESS.Api.Controllers
         [HttpPost("CreateChapter")]
         public async Task<ActionResult<ChapterCreateDTO>> CreateChapter([FromBody] ChapterCreateDTO chapterCreateDto)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
             try
             {
                 var createdChapter = await _chapterService.CreateChapterAsync(chapterCreateDto);
@@ -41,12 +45,17 @@ namespace GESS.Api.Controllers
             }
 
         }
-        [HttpPut("UpdateChapter")]
-        public async Task<ActionResult<ChapterUpdateDTO>> UpdateChapter([FromBody] ChapterUpdateDTO chapterUpdateDto)
+        [HttpPut("{id}")]
+        public async Task<ActionResult<ChapterUpdateDTO>> UpdateChapter(int id, [FromBody] ChapterUpdateDTO chapterUpdateDto)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
             try
             {
-                var updatedChapter = await _chapterService.UpdateChapterAsync(chapterUpdateDto);
+                // Gọi service và truyền id riêng
+                var updatedChapter = await _chapterService.UpdateChapterAsync(id, chapterUpdateDto);
                 return Ok(updatedChapter);
             }
             catch (Exception ex)
@@ -54,5 +63,19 @@ namespace GESS.Api.Controllers
                 return BadRequest(ex.Message);
             }
         }
-    }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<ChapterListDTO>> GetChapterById(int id)
+        {
+            try
+            {
+                var chapterDto = await _chapterService.GetChapterById(id);
+                return Ok(chapterDto);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
+    } 
 }

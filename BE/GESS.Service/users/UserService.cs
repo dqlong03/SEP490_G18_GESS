@@ -54,6 +54,7 @@ namespace GESS.Service.users
             }
             ).ToList();
         }
+
         public async Task DeleteUserAsync(Guid userId)
         {
             var user = await _unitOfWork.UserRepository.GetUserByIdAsync(userId);
@@ -98,6 +99,17 @@ namespace GESS.Service.users
                 Gender = user.Gender,
                 IsActive = user.IsActive
             };
+
+
+        public async Task<bool> IsEmailRegisteredAsync(string email)
+        {
+            if (string.IsNullOrEmpty(email))
+            {
+                return false;
+            }
+
+            return await _unitOfWork.UserRepository.IsEmailRegisteredAsync(email);
+
         }
     }
 }

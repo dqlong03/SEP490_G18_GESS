@@ -13,4 +13,9 @@
     <ProjectReference Include="..\Gess.Repository\GESS.Repository.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Google.Apis.Auth" Version="1.69.0" />
+    <PackageReference Include="MailKit" Version="4.2.0" />
+  </ItemGroup>
+
 </Project>

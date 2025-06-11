@@ -87,6 +87,7 @@ namespace GESS.Entity.Contexts
             await CreateUser(userManager, "admin@example.com", "Admin User", "Admin", "Password123!", new DateTime(1980, 1, 1), "1234567890", true, "Admin");
             await CreateUser(userManager, "teacher1@example.com", "Teacher One", "Teacher", "Password123!", new DateTime(1985, 5, 10), "0987654321", false, "Teacher");
             await CreateUser(userManager, "student1@example.com", "Student One", "Student", "Password123!", new DateTime(2000, 8, 15), "0123456789", true, "Student");
+            await CreateUser(userManager, "lekienhg2003@gmail.com", "Student One", "Student", "Abc123!@", new DateTime(2000, 8, 15), "0123456789", true, "Student");
         }
 
         private static async Task SeedMajorsAsync(GessDbContext context)
