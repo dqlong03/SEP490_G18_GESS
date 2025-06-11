@@ -60,6 +60,7 @@ namespace GESS.Repository.Implement
                 NoCredits = subjectCreateDTO.NoCredits
             };
             _context.Subjects.Add(subject);
+            await _context.SaveChangesAsync();
             return await Task.FromResult(subject);
         }
 
@@ -142,6 +143,7 @@ namespace GESS.Repository.Implement
             subject.Course = subjectUpdateDTO.Course;
             subject.NoCredits = subjectUpdateDTO.NoCredits;
             _context.Subjects.Update(subject);
+            await _context.SaveChangesAsync();
             return await Task.FromResult(subject);
         }
     }
