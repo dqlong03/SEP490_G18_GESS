@@ -19,6 +19,16 @@ namespace GESS.Service.trainingProgram
             _unitOfWork = unitOfWork;
         }
 
+        public async Task<int> CountPageAsync(int majorId, string? name, DateTime? fromDate, DateTime? toDate, int pageSize)
+        {
+            var trainingPrograms = await _unitOfWork.TrainingProgramRepository.CountPageAsync(majorId,name, fromDate,toDate, pageSize);
+            if (trainingPrograms <= 0)
+            {
+                throw new InvalidOperationException("Không có dữ liệu để đếm trang.");
+            }
+            return trainingPrograms;
+        }
+
         public Task<TrainingProgramCreateDTO> CreateTrainingProgramAsync(int majorId, TrainingProgramCreateDTO trainingProgramCreateDTO)
         {
             var checkExistTraningProgram = _unitOfWork.TrainingProgramRepository.TrainingProgramExistsAsync(majorId, trainingProgramCreateDTO.TrainProName);

@@ -50,6 +50,28 @@ namespace GESS.Repository.Implement
             return await _context.SaveChangesAsync().ContinueWith(t => t.Result > 0);
         }
 
+        public async Task<int> CountPageAsync(string? name, int pageSize)
+        {
+            var query = _context.Subjects.AsQueryable();
+            // Filter by name if provided
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                var loweredName = name.ToLower();
+                query = query.Where(m =>
+                    m.SubjectName.ToLower().Contains(loweredName) ||
+                    m.Description.ToLower().Contains(loweredName));
+            }
+            // Count total records
+            var count = await query.CountAsync();
+            if (count <= 0)
+            {
+                throw new InvalidOperationException("Không có dữ liệu để đếm trang.");
+            }
+            // Calculate total pages
+            int totalPages = (int)Math.Ceiling((double)count / pageSize);
+            return totalPages;
+        }
+
         public async Task<Subject> CreateSubjectAsync(SubjectCreateDTO subjectCreateDTO)
         {
             var subject = new Subject
@@ -104,7 +126,7 @@ namespace GESS.Repository.Implement
             }
             // Apply pagination
             subjects = subjects.Skip((pageNumber - 1) * pageSize).Take(pageSize);
-            return await subjects.ToListAsync();
+            return await Task.FromResult(subjects.ToList());
         }
 
         public async Task<bool> RemoveSubjectFromTrainingProgramAsync(int trainingProgramId, int subjectId)

@@ -28,6 +28,16 @@ namespace GESS.Service.subject
             return result;
         }
 
+        public async Task <int> CountPageAsync(string? name, int pageSize)
+        {
+            var count = await _unitOfWork.SubjectRepository.CountPageAsync(name, pageSize);
+            if (count <= 0)
+            {
+                throw new Exception("Không có dữ liệu để đếm trang.");
+            }
+            return count;
+        }
+
         public async Task<SubjectDTO> CreateSubjectAsync(SubjectCreateDTO subjectCreateDTO)
         {
             var subject = await _unitOfWork.SubjectRepository.CreateSubjectAsync(subjectCreateDTO);
@@ -40,7 +50,8 @@ namespace GESS.Service.subject
                 SubjectId = subject.SubjectId,
                 SubjectName = subject.SubjectName,
                 Description = subject.Description,
-                Course = subject.Course
+                Course = subject.Course,
+                NoCredits = subject.NoCredits
             };
             return subjectDto;
         }
@@ -54,7 +65,8 @@ namespace GESS.Service.subject
                 SubjectId = subject.SubjectId,
                 SubjectName = subject.SubjectName,
                 Description = subject.Description,
-                Course = subject.Course
+                Course = subject.Course,
+                NoCredits = subject.NoCredits
             });
 
             return subjectDtos;
@@ -72,7 +84,8 @@ namespace GESS.Service.subject
                 SubjectId = subject.SubjectId,
                 SubjectName = subject.SubjectName,
                 Description = subject.Description,
-                Course = subject.Course
+                Course = subject.Course,
+                NoCredits = subject.NoCredits
             });
             return subjectDtos;
         }
@@ -99,7 +112,8 @@ namespace GESS.Service.subject
                 SubjectId = subject.SubjectId,
                 SubjectName = subject.SubjectName,
                 Description = subject.Description,
-                Course = subject.Course
+                Course = subject.Course,
+                NoCredits = subject.NoCredits
             };
             return subjectDto;
         }

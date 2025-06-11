@@ -17,6 +17,16 @@ namespace GESS.Service.major
             _unitOfWork = unitOfWork;
         }
 
+        public async Task<int> CountPageAsync(int? active, string? name, DateTime? fromDate, DateTime? toDate, int pageSize)
+        {
+            var count = await _unitOfWork.MajorRepository.CountPageAsync(active, name, fromDate,toDate, pageSize);
+            if (count <= 0)
+            {
+                throw new Exception("Không có dữ liệu để đếm trang.");
+            }
+            return count;
+        }
+
         public async Task<MajorCreateDTO> CreateMajorAsync(MajorCreateDTO majorCreateDto)
         {
             bool majorExists = _unitOfWork.MajorRepository.ExistsAsync(c => c.MajorName == majorCreateDto.MajorName).Result;
@@ -59,9 +69,9 @@ namespace GESS.Service.major
             return majorDTO;
         }
 
-        public async Task<IEnumerable<MajorUpdateDTO>> GetAllMajorsAsync(string? name = null, DateTime? fromDate = null, DateTime? toDate = null, int pageNumber = 1, int pageSize = 10)
+        public async Task<IEnumerable<MajorUpdateDTO>> GetAllMajorsAsync(int? active, string? name = null, DateTime? fromDate = null, DateTime? toDate = null, int pageNumber = 1, int pageSize = 10)
         {
-            var majors = await _unitOfWork.MajorRepository.GetAllMajorsAsync(name, fromDate, toDate, pageNumber, pageSize);
+            var majors = await _unitOfWork.MajorRepository.GetAllMajorsAsync(active, name, fromDate, toDate, pageNumber, pageSize);
             return majors.Select(major => new MajorUpdateDTO
             {
                 MajorId = major.MajorId,

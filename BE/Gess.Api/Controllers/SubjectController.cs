@@ -29,6 +29,20 @@ namespace GESS.Api.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+        //API count page
+        [HttpGet("CountPage")]
+        public async Task<IActionResult> CountPageAsync(string? name = null, int pageSize = 10)
+        {
+            try
+            {
+                var count = await _subjectService.CountPageAsync(name, pageSize);
+                return Ok(count);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
         //API to create a new subject
         [HttpPost()]
         public async Task<IActionResult> CreateSubjectAsync([FromBody] SubjectCreateDTO subjectCreateDTO)
@@ -59,6 +73,24 @@ namespace GESS.Api.Controllers
                     return Ok(new { message = "Môn học đã được thêm vào chương trình đào tạo." });
                 }
                 return BadRequest(new { message = "Lỗi khi thêm môn học vào chương trình đào tạo." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+        //API to remove subject from training program
+        [HttpDelete("RemoveSubjectFromTrainingProgram/{trainingProgramId}/{subjectId}")]
+        public async Task<IActionResult> RemoveSubjectFromTrainingProgramAsync(int trainingProgramId, int subjectId)
+        {
+            try
+            {
+                var result = await _subjectService.RemoveSubjectFromTrainingProgramAsync(trainingProgramId, subjectId);
+                if (result)
+                {
+                    return Ok(new { message = "Môn học đã được xóa khỏi chương trình đào tạo." });
+                }
+                return BadRequest(new { message = "Lỗi khi xóa môn học khỏi chương trình đào tạo." });
             }
             catch (Exception ex)
             {
