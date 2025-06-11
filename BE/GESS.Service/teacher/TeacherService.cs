@@ -50,8 +50,7 @@ namespace GESS.Service.teacher
                 Email = request.Email,
                 PhoneNumber = request.PhoneNumber,
                 DateOfBirth = request.DateOfBirth,
-                LastName = request.LastName,
-                FirstName = request.FirstName,
+                Fullname = request.Fullname,
                 Gender = request.Gender,
                 IsActive = request.IsActive
             };
@@ -138,12 +137,11 @@ namespace GESS.Service.teacher
                                 Email = worksheet.Cells[row, 2].Text.Trim(),
                                 PhoneNumber = worksheet.Cells[row, 3].Text.Trim(),
                                 DateOfBirth = DateTime.TryParse(worksheet.Cells[row, 4].Text, out var dob) ? dob : DateTime.Now,
-                                LastName = worksheet.Cells[row, 5].Text.Trim(),
-                                FirstName = worksheet.Cells[row, 6].Text.Trim(),
-                                Gender = bool.TryParse(worksheet.Cells[row, 7].Text, out var gender) ? gender : true,
-                                IsActive = bool.TryParse(worksheet.Cells[row, 8].Text, out var isActive) ? isActive : true,
-                                HireDate = DateTime.TryParse(worksheet.Cells[row, 9].Text, out var hireDate) ? hireDate : DateTime.Now,
-                                MajorTeachers = ParseMajorTeachers(worksheet.Cells[row, 10].Text)
+                                Fullname = worksheet.Cells[row, 5].Text.Trim(),
+                                Gender = bool.TryParse(worksheet.Cells[row, 6].Text, out var gender) ? gender : true,
+                                IsActive = bool.TryParse(worksheet.Cells[row, 7].Text, out var isActive) ? isActive : true,
+                                HireDate = DateTime.TryParse(worksheet.Cells[row, 8].Text, out var hireDate) ? hireDate : DateTime.Now,
+                                MajorTeachers = ParseMajorTeachers(worksheet.Cells[row, 9].Text)
                             };
 
                             // Kiểm tra dữ liệu bắt buộc

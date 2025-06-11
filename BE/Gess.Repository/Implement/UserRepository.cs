@@ -37,8 +37,7 @@ namespace GESS.Repository.Implement
             var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
             if (existingUser != null)
             {
-                existingUser.FirstName = user.FirstName;
-                existingUser.LastName = user.LastName;
+                existingUser.Fullname = user.Fullname;
                 existingUser.UserName = user.UserName;
                 existingUser.Email = user.Email;
                 existingUser.PhoneNumber = user.PhoneNumber;

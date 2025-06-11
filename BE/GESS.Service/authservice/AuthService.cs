@@ -52,8 +52,7 @@ namespace GESS.Service.authservice
                         UserName = payload.Email,
                         Email = payload.Email,
                         EmailConfirmed = true,
-                        FirstName = payload.GivenName,
-                        LastName = payload.FamilyName,
+                        Fullname = payload.GivenName,
                         IsActive = true,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow

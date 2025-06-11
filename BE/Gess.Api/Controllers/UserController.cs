@@ -80,7 +80,7 @@ namespace GESS.Api.Controllers
 
         // ThaiNH_AddFunction_Begin
 
-        [HttpPut("{userId}")]
+        [HttpPut("UpdateUserProfile/{userId}")]
         public async Task<IActionResult> UpdateUserProfileAsync(Guid userId, [FromBody] UserProfileDTO dto)
         {
             if (!ModelState.IsValid)
