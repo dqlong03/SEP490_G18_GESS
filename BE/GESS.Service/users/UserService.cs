@@ -156,8 +156,9 @@ namespace GESS.Service.users
                 throw new Exception($"User with ID {userId} not found.");
             }
 
-            user.FirstName = request.FirstName;
-            user.LastName = request.LastName;
+            //user.FirstName = request.FirstName;
+            //user.LastName = request.LastName;
+            user.Fullname = request.Fullname;
             user.UserName = request.UserName;
             user.Email = request.Email;
             user.PhoneNumber = request.PhoneNumber;
@@ -171,8 +172,9 @@ namespace GESS.Service.users
             return new UserListDTO
             {
                 UserId = user.Id,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
+                //FirstName = user.FirstName,
+                //LastName = user.LastName,
+                Fullname = user.Fullname,
                 UserName = user.UserName,
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
