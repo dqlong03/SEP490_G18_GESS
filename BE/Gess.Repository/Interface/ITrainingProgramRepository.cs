@@ -11,6 +11,8 @@ namespace GESS.Repository.Interface
 {
     public interface ITrainingProgramRepository : IBaseRepository<TrainingProgram>
     {
+        Task<int> CountPageAsync(int majorId, string? name, DateTime? fromDate, DateTime? toDate, int pageSize);
+
         // Add training program to major
         public Task<TrainingProgram> CreateTrainingProgramAsync(int majorId, TrainingProgramCreateDTO trainingProgramDto);
         Task<IEnumerable<TrainingProgram>> GetAllTrainingsAsync(int? majorId, string? name = null, DateTime? fromDate = null, DateTime? toDate = null, int pageNumber = 1, int pageSize = 10);

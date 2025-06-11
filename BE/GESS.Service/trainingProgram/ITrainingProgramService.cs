@@ -17,5 +17,6 @@ namespace GESS.Service.trainingProgram
         Task<bool> DeleteTrainingProgramAsync(int trainingProgramId);
         // Update training program
         Task<TrainingProgramDTO> UpdateTrainingProgramAsync(int trainingProgramId, TrainingProgramDTO trainingProgramUpdateDTO);
+        Task<int> CountPageAsync(int majorId, string? name, DateTime? fromDate, DateTime? toDate, int pageSize);
     }
 }

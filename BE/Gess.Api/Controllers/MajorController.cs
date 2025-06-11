@@ -16,16 +16,30 @@ namespace GESS.Api.Controllers
             _majorService = majorService;
         }
         [HttpGet("")]
-        public async Task<ActionResult<IEnumerable<MajorUpdateDTO>>> GetAllMajors(string? name = null, DateTime? fromDate = null, DateTime? toDate = null, int pageNumber = 1, int pageSize = 10)
+        public async Task<ActionResult<IEnumerable<MajorUpdateDTO>>> GetAllMajors(int? active, string? name = null, DateTime? fromDate = null, DateTime? toDate = null, int pageNumber = 1, int pageSize = 10)
         {
             try
             {
-                var subjects = await _majorService.GetAllMajorsAsync(name, fromDate, toDate, pageNumber, pageSize);
+                var subjects = await _majorService.GetAllMajorsAsync(active, name, fromDate, toDate, pageNumber, pageSize);
                 return Ok(subjects);
             }
             catch (Exception ex)
             {
                 return NotFound(ex.Message);
+            }
+        }
+        //API để đếm số trang
+        [HttpGet("CountPage")]
+        public async Task<ActionResult<int>> CountPage(int? active, string? name = null, DateTime? fromDate = null, DateTime? toDate = null, int pageSize = 10)
+        {
+            try
+            {
+                var count = await _majorService.CountPageAsync(active, name, fromDate, toDate, pageSize);
+                return Ok(count);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
             }
         }
         //API để tạo mới ngành

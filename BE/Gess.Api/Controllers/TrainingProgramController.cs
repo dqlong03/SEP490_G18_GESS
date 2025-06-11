@@ -4,6 +4,7 @@ using GESS.Model.TrainingProgram;
 using GESS.Service.trainingProgram;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Drawing.Printing;
 
 namespace GESS.Api.Controllers
 {
@@ -24,6 +25,20 @@ namespace GESS.Api.Controllers
             {
                 var trainingPrograms = await _trainingProgramService.GetAllTrainingsAsync(majorId, name, fromDate, toDate, pageNumber, pageSize);
                 return Ok(trainingPrograms);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+        //API to count total training programs
+        [HttpGet("count/{majorId}")]
+        public async Task<IActionResult> CountTrainingsAsync(int majorId, string? name = null, DateTime? fromDate = null, DateTime? toDate = null,int pageSize = 10)
+        {
+            try
+            {
+                var count = await _trainingProgramService.CountPageAsync(majorId,name, fromDate, toDate, pageSize);
+                return Ok(count);
             }
             catch (Exception ex)
             {

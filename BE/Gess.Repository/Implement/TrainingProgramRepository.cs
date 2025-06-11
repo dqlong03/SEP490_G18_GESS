@@ -20,6 +20,34 @@ namespace GESS.Repository.Implement
             _context = context;
         }
 
+        public async Task<int> CountPageAsync(int majorId, string? name, DateTime? fromDate, DateTime? toDate, int pageSize)
+        {
+            var query = _context.TrainingPrograms.AsQueryable();
+            query = query.Where(tp => tp.MajorId == majorId);
+            // Filter by name if provided
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                query = query.Where(tp => tp.TrainProName.ToLower().Contains(name.ToLower()));
+            }
+            // Filter by date range if provided
+            if (fromDate.HasValue)
+            {
+                query = query.Where(tp => tp.StartDate >= fromDate.Value);
+            }
+            if (toDate.HasValue)
+            {
+                query = query.Where(tp => tp.EndDate <= toDate.Value);
+            }
+            // Count the total number of training programs
+            var totalCount = await query.CountAsync();
+            if (totalCount <= 0)
+            {
+                throw new InvalidOperationException("Không có dữ liệu để đếm trang.");
+            }
+            return totalCount;
+
+        }
+
         public Task<TrainingProgram> CreateTrainingProgramAsync(int majorId, TrainingProgramCreateDTO trainingProgramDto)
         {
             var trainingProgram = new TrainingProgram
