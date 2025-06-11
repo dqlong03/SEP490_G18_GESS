@@ -1,4 +1,4 @@
-﻿using GESS.Model.Teacher;
+﻿    using GESS.Model.Teacher;
 using GESS.Service.teacher;
 using Microsoft.AspNetCore.Mvc;
 
@@ -48,6 +48,13 @@ namespace GESS.Api.Controllers
         {
             await _teacherService.DeleteTeacherAsync(teacherId);
             return NoContent();
+        }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchTeachers([FromQuery] string keyword)
+        {
+            var teachers = await _teacherService.SearchTeachersAsync(keyword);
+            return Ok(teachers);
         }
     }
 }

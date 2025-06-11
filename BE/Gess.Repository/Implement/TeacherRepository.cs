@@ -172,6 +172,44 @@ namespace GESS.Repository.Implement
             }
         }
 
+        
+        public async Task<List<TeacherResponse>> SearchTeachersAsync(string keyword)
+        {
+            keyword = keyword?.ToLower() ?? "";
+            var teachers = await _context.Teachers
+                .Include(t => t.User)
+                .Include(t => t.MajorTeachers)
+                .ThenInclude(mt => mt.Major)
+                .Where(t =>
+                    t.User.UserName.ToLower().Contains(keyword) ||
+                    t.User.Email.ToLower().Contains(keyword) ||
+                    t.User.FirstName.ToLower().Contains(keyword) ||
+                    t.User.LastName.ToLower().Contains(keyword) ||
+                    t.User.PhoneNumber.ToLower().Contains(keyword)
+                )
+                .ToListAsync();
+
+            return teachers.Select(teacher => new TeacherResponse
+            {
+                TeacherId = teacher.TeacherId,
+                UserName = teacher.User.UserName,
+                Email = teacher.User.Email,
+                PhoneNumber = teacher.User.PhoneNumber,
+                DateOfBirth = teacher.User.DateOfBirth,
+                LastName = teacher.User.LastName,
+                FirstName = teacher.User.FirstName,
+                Gender = teacher.User.Gender,
+                IsActive = teacher.User.IsActive,
+                HireDate = teacher.HireDate,
+                MajorTeachers = teacher.MajorTeachers?.Select(mt => new MajorTeacherDto
+                {
+                    MajorId = mt.MajorId,
+                    MajorName = mt.Major?.MajorName
+                }).ToList() ?? new List<MajorTeacherDto>()
+            }).ToList();
+        }
+
+
     }
 
 }

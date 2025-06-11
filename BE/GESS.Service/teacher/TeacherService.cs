@@ -95,6 +95,11 @@ namespace GESS.Service.teacher
         {
             throw new NotImplementedException();
         }
+
+        public async Task<List<TeacherResponse>> SearchTeachersAsync(string keyword)
+        {
+            return await _unitOfWork.TeacherRepository.SearchTeachersAsync(keyword);
+        }
     }
 
 }

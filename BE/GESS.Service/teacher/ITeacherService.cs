@@ -15,6 +15,7 @@ namespace GESS.Service.teacher
         Task<TeacherResponse> UpdateTeacherAsync(Guid teacherId, TeacherUpdateRequest request);
         Task DeleteTeacherAsync(Guid teacherId);
         Task SendResetPasswordEmailAsync(Guid userId, string resetPasswordUrlBase);
+        Task<List<TeacherResponse>> SearchTeachersAsync(string keyword);
 
     }
 
