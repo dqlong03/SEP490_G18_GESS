@@ -19,6 +19,7 @@ namespace Gess.Repository.Infrastructures
         private IUserRepository _userRepository;
         private IChapterRepository _chapterRepository;
         private ITeacherRepository _teacherRepository;
+        private IClassRepository _classRepository;
         private readonly UserManager<User> _userManager;
         private ISubjectRepository _subjectRepository;
         private IMajorRepository _majorRepository;
@@ -39,6 +40,7 @@ namespace Gess.Repository.Infrastructures
     
 
         public ITeacherRepository TeacherRepository => _teacherRepository ??= new TeacherRepository(_context, _userManager);
+        public IClassRepository ClassRepository => _classRepository ??= new ClassRepository(_context);
 
         public ISubjectRepository SubjectRepository => _subjectRepository ??= new SubjectRepository(_context);
 
