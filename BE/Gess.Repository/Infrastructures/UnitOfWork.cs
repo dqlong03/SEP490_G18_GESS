@@ -18,6 +18,11 @@ namespace Gess.Repository.Infrastructures
         private IRefreshTokenRepository _refreshTokenRepository;
         private IUserRepository _userRepository;
         private IChapterRepository _chapterRepository;
+
+        // ThaiNH_Initialize_Begin
+        private ICateExamSubRepository _cateSubRepository;
+        // ThaiNH_Initialize_End
+
         private ITeacherRepository _teacherRepository;
         private IClassRepository _classRepository;
         private readonly UserManager<User> _userManager;
@@ -35,6 +40,10 @@ namespace Gess.Repository.Infrastructures
         public IRefreshTokenRepository RefreshTokenRepository => _refreshTokenRepository ??= new RefreshTokenRepository(_context);
 
         public IChapterRepository ChapterRepository => _chapterRepository ??= new ChapterRepository(_context);
+
+        // ThaiNH_Initialize_Begin
+        public ICateExamSubRepository CateExamSubRepository => _cateSubRepository ??= new CateExamSubRepository(_context);
+        // ThaiNH_Initialize_End
 
 
     

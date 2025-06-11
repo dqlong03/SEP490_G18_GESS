@@ -10,15 +10,18 @@ namespace GESS.Entity.Configs
         {
             builder.HasKey(ces => new { ces.CategoryExamId, ces.SubjectId });
 
+            //ThaiNH_Modified_UserProfile_Begin
             builder.HasOne(ces => ces.CategoryExam)
-                .WithMany(ce => ce.CategoryExamSubjects)
-                .HasForeignKey(ces => ces.CategoryExamId)
-                .OnDelete(DeleteBehavior.Restrict);
+            .WithMany(ce => ce.CategoryExamSubjects)
+            .HasForeignKey(ces => ces.CategoryExamId)
+            .OnDelete(DeleteBehavior.Cascade); // Xóa tất cả CategoryExamSubject khi CategoryExam bị xóa
 
             builder.HasOne(ces => ces.Subject)
                 .WithMany(s => s.CategoryExamSubjects)
                 .HasForeignKey(ces => ces.SubjectId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade); // Xóa tất cả CategoryExamSubject khi Subject bị xóa
+            //ThaiNH_Modified_UserProfile_End
+
         }
     }
-} 
+}

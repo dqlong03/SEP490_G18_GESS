@@ -1,4 +1,5 @@
 using Gess.Repository.Infrastructures;
+using GESS.Api.HandleException;
 using GESS.Auth;
 using GESS.Common;
 using GESS.Entity.Base;
@@ -15,6 +16,7 @@ using GESS.Service.teacher;
 using GESS.Service.major;
 using GESS.Service.email;
 using GESS.Service.otp;
+using GESS.Service.GradeCompoService;
 using GESS.Service.users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -50,6 +52,10 @@ builder.Services.AddCors(options =>
 
 // Add services to the container.
 builder.Services.AddControllers();
+
+// ThaiNH_Initialize_Begin
+builder.Services.AddLogging();
+// ThaiNH_Initialize_End
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -99,6 +105,8 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>()
 // Đăng ký Service
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Đăng ký các service
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IChapterService, ChapterService>();
 builder.Services.AddScoped<ITeacherService, TeacherService>();
@@ -107,6 +115,11 @@ builder.Services.AddScoped<ISubjectService, SubjectService>();
 builder.Services.AddScoped<ITrainingProgramService, TrainingProgramService>();
 builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IClassService, ClassService>();
+
+// ThaiNH_Initialize_Begin
+builder.Services.AddScoped<ICateExamSubService, CateExamSubService>();
+// ThaiNH_Initialize_End
+
 
 
 // Đăng ký các repository
@@ -123,6 +136,10 @@ builder.Services.AddScoped<IClassRepository, ClassRepository>();
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddMemoryCache();
+// ThaiNH_Initialize_Begin
+builder.Services.AddScoped<ICateExamSubRepository, CateExamSubRepository>();
+// ThaiNH_Initialize_End
+
 
 builder.Services.AddCors(options =>
 {
@@ -131,6 +148,7 @@ builder.Services.AddCors(options =>
         builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
     });
 });
+
 
 
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
@@ -188,6 +206,10 @@ app.UseHttpsRedirection();
 
 // Sử dụng CORS trước UseAuthentication/UseAuthorization
 app.UseCors("AllowFrontend");
+
+// ThaiNH_Initialize_Begin
+app.UseMiddleware<ExceptionMiddleware>(); // Register Middleware Exception
+// ThaiNH_Initialize_End
 
 app.UseAuthentication();
 app.UseAuthorization();

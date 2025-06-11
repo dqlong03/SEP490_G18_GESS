@@ -12,6 +12,10 @@ namespace GESS.Service.users
     {
         Task<UserListDTO> GetUserByIdAsync(Guid userId);
         Task<List<UserListDTO>> GetAllUsersAsync();
+
+        // ThaiNH_Add_Begin
+        Task UpdateUserProfileAsync(Guid userId, UserProfileDTO dto);
+        // ThaiNH_Add_End
         Task<UserListDTO> UpdateUserAsync(Guid userId, UserUpdateRequest request);
         Task DeleteUserAsync(Guid userId);
         Task<bool> IsEmailRegisteredAsync(string email);
