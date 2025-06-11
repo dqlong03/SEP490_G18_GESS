@@ -100,6 +100,7 @@ namespace GESS.Service.users
                 IsActive = user.IsActive
             };
 
+        }
 
         public async Task<bool> IsEmailRegisteredAsync(string email)
         {

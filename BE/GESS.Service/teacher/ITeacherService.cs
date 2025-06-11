@@ -1,4 +1,5 @@
 ﻿using GESS.Model.Teacher;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +17,7 @@ namespace GESS.Service.teacher
         Task DeleteTeacherAsync(Guid teacherId);
         Task SendResetPasswordEmailAsync(Guid userId, string resetPasswordUrlBase);
         Task<List<TeacherResponse>> SearchTeachersAsync(string keyword);
-
+        Task<List<TeacherResponse>> ImportTeachersFromExcelAsync(IFormFile file);
     }
 
 }
