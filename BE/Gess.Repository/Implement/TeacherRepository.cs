@@ -39,8 +39,7 @@ namespace GESS.Repository.Implement
                 Email = teacher.User.Email,
                 PhoneNumber = teacher.User.PhoneNumber,
                 DateOfBirth = teacher.User.DateOfBirth,
-                LastName = teacher.User.LastName,
-                FirstName = teacher.User.FirstName,
+                
                 Gender = teacher.User.Gender,
                 IsActive = teacher.User.IsActive,
                 HireDate = teacher.HireDate,
@@ -67,8 +66,7 @@ namespace GESS.Repository.Implement
                 Email = teacher.User.Email,
                 PhoneNumber = teacher.User.PhoneNumber,
                 DateOfBirth = teacher.User.DateOfBirth,
-                LastName = teacher.User.LastName,
-                FirstName = teacher.User.FirstName,
+                Fullname = teacher.User.Fullname,
                 Gender = teacher.User.Gender,
                 IsActive = teacher.User.IsActive,
                 HireDate = teacher.HireDate,
@@ -116,8 +114,7 @@ namespace GESS.Repository.Implement
             existing.User.Email = request.Email;
             existing.User.PhoneNumber = request.PhoneNumber;
             existing.User.DateOfBirth = request.DateOfBirth ?? existing.User.DateOfBirth;
-            existing.User.LastName = request.LastName;
-            existing.User.FirstName = request.FirstName;
+            existing.User.Fullname = request.Fullname;
             existing.User.Gender = request.Gender;
             existing.User.IsActive = request.IsActive;
 
@@ -149,8 +146,7 @@ namespace GESS.Repository.Implement
                 Email = existing.User.Email,
                 PhoneNumber = existing.User.PhoneNumber,
                 DateOfBirth = existing.User.DateOfBirth,
-                LastName = existing.User.LastName,
-                FirstName = existing.User.FirstName,
+                Fullname = existing.User.Fullname,
                 Gender = existing.User.Gender,
                 IsActive = existing.User.IsActive,
                 HireDate = existing.HireDate,
@@ -183,8 +179,7 @@ namespace GESS.Repository.Implement
                 .Where(t =>
                     t.User.UserName.ToLower().Contains(keyword) ||
                     t.User.Email.ToLower().Contains(keyword) ||
-                    t.User.FirstName.ToLower().Contains(keyword) ||
-                    t.User.LastName.ToLower().Contains(keyword) ||
+                    t.User.Fullname.ToLower().Contains(keyword) ||
                     t.User.PhoneNumber.ToLower().Contains(keyword)
                 )
                 .ToListAsync();
@@ -196,8 +191,7 @@ namespace GESS.Repository.Implement
                 Email = teacher.User.Email,
                 PhoneNumber = teacher.User.PhoneNumber,
                 DateOfBirth = teacher.User.DateOfBirth,
-                LastName = teacher.User.LastName,
-                FirstName = teacher.User.FirstName,
+                Fullname = teacher.User.Fullname,
                 Gender = teacher.User.Gender,
                 IsActive = teacher.User.IsActive,
                 HireDate = teacher.HireDate,
