@@ -24,21 +24,22 @@ namespace GESS.Entity.Configs
                 .IsRequired()
                 .HasDefaultValueSql("GETUTCDATE()");
 
-            builder.Property(x => x.FirstName)
-                .HasMaxLength(200);
+            // ThaiNH_Modified_UserProfile_Begin
+            //builder.Property(x => x.FirstName)
+            //    .HasMaxLength(200);
+            //builder.Property(x => x.LastName)
+            //    .HasMaxLength(200);
+            //builder.Property(x => x.DateOfBirth)
+            //    .IsRequired();
+            //    .HasMaxLength(12);
+            //builder.Property(x => x.PhoneNumber)
 
-            builder.Property(x => x.LastName)
-                .HasMaxLength(200);
+            // ThaiNH_Modified_UserProfile_End
 
-            builder.Property(x => x.DateOfBirth)
-                .IsRequired();
 
             builder.Property(x => x.Email)
                 .IsRequired()
                 .HasMaxLength(256);
-
-            builder.Property(x => x.PhoneNumber)
-                .HasMaxLength(15);
 
             builder.Property(x => x.Gender)
                 .IsRequired();

@@ -1,6 +1,7 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
+using GESS.Model.User;
 using GESS.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -29,5 +30,7 @@ namespace GESS.Repository.Implement
            return  _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
 
         }
+
+
     }
 }

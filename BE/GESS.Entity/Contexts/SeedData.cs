@@ -84,9 +84,12 @@ namespace GESS.Entity.Contexts
 
         private static async Task SeedUsersAsync(UserManager<User> userManager)
         {
-            await CreateUser(userManager, "admin@example.com", "Admin User", "Admin", "Password123!", new DateTime(1980, 1, 1), "1234567890", true, "Admin");
-            await CreateUser(userManager, "teacher1@example.com", "Teacher One", "Teacher", "Password123!", new DateTime(1985, 5, 10), "0987654321", false, "Teacher");
-            await CreateUser(userManager, "student1@example.com", "Student One", "Student", "Password123!", new DateTime(2000, 8, 15), "0123456789", true, "Student");
+            // ThaiNH_Modified_UserProfile_Begin
+            await CreateUser(userManager, "admin@example.com", "Admin User", "Password123!", new DateTime(1980, 1, 1), "1234567890", true, "Admin");
+            await CreateUser(userManager, "teacher1@example.com", "Teacher One", "Password123!", new DateTime(1985, 5, 10), "0987654321", false, "Teacher");
+            await CreateUser(userManager, "student1@example.com", "Student One", "Password123!", new DateTime(2000, 8, 15), "0123456789", true, "Student");
+            // ThaiNH_Modified_UserProfile_End
+
         }
 
         private static async Task SeedMajorsAsync(GessDbContext context)
@@ -790,8 +793,15 @@ namespace GESS.Entity.Contexts
         private static async Task CreateUser(
             UserManager<User> userManager,
             string email,
-            string firstName,
-            string lastName,
+
+            // ThaiNH_Modified_Begin
+
+            string fullName,
+            //string firstName,
+            //string lastName,
+
+            // ThaiNH_Modified_End
+
             string password,
             DateTime dateOfBirth,
             string phoneNumber,
@@ -806,8 +816,14 @@ namespace GESS.Entity.Contexts
                     Id = Guid.NewGuid(),
                     UserName = email,
                     Email = email,
-                    FirstName = firstName,
-                    LastName = lastName,
+                    // ThaiNH_Modified_UserProfile_Begin
+
+                    Fullname = fullName,
+                    //FirstName = firstName,
+                    //LastName = lastName,
+
+                    // ThaiNH_Modified_UserProfile_End
+
                     DateOfBirth = dateOfBirth,
                     PhoneNumber = phoneNumber,
                     Gender = gender,

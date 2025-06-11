@@ -24,5 +24,9 @@ namespace Gess.Repository.Infrastructures
         IRefreshTokenRepository RefreshTokenRepository { get; }
         IChapterRepository ChapterRepository { get; }
 
+        // ThaiNH_Initialize_Begin
+        ICateExamSubRepository CateExamSubRepository { get; }
+        // ThaiNH_Initialize_End
+
     }
 }

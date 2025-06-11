@@ -1,4 +1,5 @@
 using Gess.Repository.Infrastructures;
+using GESS.Api.HandleException;
 using GESS.Auth;
 using GESS.Common;
 using GESS.Entity.Base;
@@ -10,6 +11,7 @@ using GESS.Repository.refreshtoken;
 using GESS.Service;
 using GESS.Service.authservice;
 using GESS.Service.chapter;
+using GESS.Service.GradeCompoService;
 using GESS.Service.users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -23,6 +25,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+
+// ThaiNH_Initialize_Begin
+builder.Services.AddLogging();
+// ThaiNH_Initialize_End
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -71,13 +77,25 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>()
 // Đăng ký JWT Service
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Đăng ký các service
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IChapterService, ChapterService>();
+
+// ThaiNH_Initialize_Begin
+builder.Services.AddScoped<ICateExamSubService, CateExamSubService>();
+// ThaiNH_Initialize_End
+
 
 
 // Đăng ký các repository
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IChapterRepository, ChapterRepository>();
+
+// ThaiNH_Initialize_Begin
+builder.Services.AddScoped<ICateExamSubRepository, CateExamSubRepository>();
+// ThaiNH_Initialize_End
+
 
 
 
@@ -134,6 +152,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// ThaiNH_Initialize_Begin
+app.UseMiddleware<ExceptionMiddleware>(); // Register Middleware Exception
+// ThaiNH_Initialize_End
 
 app.UseAuthentication();
 app.UseAuthorization();

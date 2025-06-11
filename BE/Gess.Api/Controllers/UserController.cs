@@ -1,4 +1,5 @@
-﻿using GESS.Model.User;
+﻿using GESS.Common.HandleException;
+using GESS.Model.User;
 using GESS.Service.users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -41,6 +42,27 @@ namespace GESS.Api.Controllers
                 return NotFound(ex.Message);
             }
         }
+
+        // ThaiNH_AddFunction_Begin
+
+        [HttpPut("{userId}")]
+        public async Task<IActionResult> UpdateUserProfileAsync(Guid userId, [FromBody] UserProfileDTO dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                );
+                throw new ValidationException("Dữ liệu đầu vào không hợp lệ.", errors);
+            }
+
+            await _userService.UpdateUserProfileAsync(userId, dto);
+            return NoContent();
+        }
+
+
+        // ThaiNH_AddFunction_End
     }
 }
 

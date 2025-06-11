@@ -12,5 +12,9 @@ namespace GESS.Service.users
     {
         Task<UserListDTO> GetUserByIdAsync(Guid userId);
         Task<List<UserListDTO>> GetAllUsersAsync();
+
+        // ThaiNH_Add_Begin
+        Task UpdateUserProfileAsync(Guid userId, UserProfileDTO dto);
+        // ThaiNH_Add_End
     }
 }

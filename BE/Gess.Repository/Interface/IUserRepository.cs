@@ -6,11 +6,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+
+using GESS.Model.User;
+
 namespace GESS.Repository.Interface
 {
     public interface IUserRepository 
     {
         public Task<User> GetUserByIdAsync(Guid userId);
         public Task<List<User>> GetAllUsersAsync();
+
     }
 }
