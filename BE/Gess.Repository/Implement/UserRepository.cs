@@ -56,6 +56,7 @@ namespace GESS.Repository.Implement
                 _context.Users.Remove(user);
                 await _context.SaveChangesAsync();
             }
+        }
 
         public async Task<bool> IsEmailRegisteredAsync(string email)
         {

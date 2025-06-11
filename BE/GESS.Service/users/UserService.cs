@@ -99,6 +99,7 @@ namespace GESS.Service.users
                 Gender = user.Gender,
                 IsActive = user.IsActive
             };
+        }
 
 
         public async Task<bool> IsEmailRegisteredAsync(string email)
