@@ -14,5 +14,6 @@ namespace GESS.Repository.Interface
         Task<Class> GetByIdAsync(int classId);
      
         Task<bool> ClassExistsAsync(string className);
+        Task<IEnumerable<Class>> GetAllClassAsync(string? name = null, int pageNumber = 1, int pageSize = 5);
     }
 }

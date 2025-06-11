@@ -1,6 +1,7 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Entities;
 using GESS.Model.Chapter;
+using GESS.Model.Subject;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -51,7 +52,21 @@ namespace GESS.Service.chapter
             }).ToList();
         }
 
-      
+        
+        public async Task<IEnumerable<ChapterListDTO>> GetAllChapterAsync(string? name, int pageNumber, int pageSize)
+        {
+            var chapter = await _unitOfWork.ChapterRepository.GetAllChapterAsync(name, pageNumber, pageSize);
+
+            var chapterDtos = chapter.Select(chapter => new ChapterListDTO
+            {
+                Id = chapter.ChapterId,
+                ChapterName = chapter.ChapterName,
+                Description = chapter.Description,
+                SubjectName = chapter.Subject?.SubjectName ?? "N/A"
+            });
+
+            return chapterDtos;
+        }
         public async Task<ChapterListDTO> GetChapterById(int chapterId)
         {
             var chapter = await _unitOfWork.ChapterRepository.GetByIdAsync(chapterId);

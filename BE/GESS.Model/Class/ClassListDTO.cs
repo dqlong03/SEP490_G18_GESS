@@ -11,8 +11,7 @@ namespace GESS.Model.Class
 {
     public class ClassListDTO
     {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        
         public int ClassId { get; set; }
 
         public string ClassName { get; set; }

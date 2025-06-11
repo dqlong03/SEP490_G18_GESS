@@ -1,5 +1,6 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Entities;
+using GESS.Model.Chapter;
 using GESS.Model.Class;
 using System;
 using System.Collections.Generic;
@@ -42,17 +43,21 @@ namespace GESS.Service
             return classCreateDto;
         }
 
-        public async Task<IEnumerable<ClassListDTO>> GetAllClassesAsync()
+        public async Task<IEnumerable<ClassListDTO>> GetAllClassAsync(string? name = null, int pageNumber = 1, int pageSize = 10)
         {
-            var classes = await _unitOfWork.ClassRepository.GetAllClassesAsync();
-            return classes.Select(c => new ClassListDTO
+            var classes = await _unitOfWork.ClassRepository.GetAllClassAsync(name, pageNumber, pageSize);
+
+            var classDtos = classes.Select(c => new ClassListDTO
             {
                 ClassId = c.ClassId,
                 ClassName = c.ClassName,
                 Semester = c.Semester.SemesterName,
                 SubjectName = c.Subject?.SubjectName ?? "N/A"
+            });
 
-            }).ToList();
+            return classDtos;
         }
+
+       
     }
 }

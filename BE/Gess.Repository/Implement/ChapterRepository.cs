@@ -18,6 +18,21 @@ namespace GESS.Repository.Implement
         {
             _context = context;
         }
+        public async Task<IEnumerable<Chapter>> GetAllChapterAsync(string? name = null, int pageNumber = 1, int pageSize = 10)
+        {
+            IQueryable<Chapter> query = _context.Chapters.Include(s => s.Subject);
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                var loweredName = name.ToLower();
+                query = query.Where(m =>
+                    m.ChapterName.ToLower().Contains(loweredName) ||
+                    m.Description.ToLower().Contains(loweredName));
+            }
+            query = query.Skip((pageNumber - 1) * pageSize).Take(pageSize);
+
+            return await query.ToListAsync();
+
+        }
 
         public async Task<IEnumerable<Chapter>> GetAllChaptersAsync()
         {

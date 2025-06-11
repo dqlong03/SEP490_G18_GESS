@@ -14,6 +14,19 @@ namespace GESS.Api.Controllers
         {
             _chapterService = chapterService;
         }
+        [HttpGet("Get-all-chapter")]
+        public async Task<IActionResult> GetAllchapterAsync(string? name = null, int pageNumber = 1, int pageSize = 10)
+        {
+            try
+            {
+                var chapter = await _chapterService.GetAllChapterAsync(name, pageNumber, pageSize);
+                return Ok(chapter);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
         [HttpGet("")]
         public async Task<ActionResult<IEnumerable<ChapterListDTO>>> GetAllChapters()
         {
