@@ -1,5 +1,6 @@
 ﻿using GESS.Entity.Entities;
 using GESS.Model.Chapter;
+using GESS.Model.Subject;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,6 +16,8 @@ namespace GESS.Service.chapter
         Task<ChapterCreateDTO> CreateChapterAsync(ChapterCreateDTO chapterCreateDto);
         Task<ChapterUpdateDTO> UpdateChapterAsync(int id,ChapterUpdateDTO chapterUpdateDto);
         Task<ChapterListDTO> GetChapterById(int chapterId);
+        Task<IEnumerable<ChapterListDTO>> GetAllChapterAsync(string? name = null, int pageNumber = 1, int pageSize = 10);
+
 
     }
 }

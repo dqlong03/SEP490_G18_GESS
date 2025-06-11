@@ -14,17 +14,17 @@ namespace GESS.Api.Controllers
         {
             _classService = classService;
         }
-        [HttpGet("GetAllClasses")]
-        public async Task<IActionResult> GetAllClasses()
+        [HttpGet("GetAllClass")]
+        public async Task<IActionResult> GetAllClassAsync(string? name = null, int pageNumber = 1, int pageSize = 10)
         {
             try
             {
-                var classes = await _classService.GetAllClassesAsync();
+                var classes = await _classService.GetAllClassAsync(name, pageNumber, pageSize);
                 return Ok(classes);
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, $"Internal server error: {ex.Message}");
+                return BadRequest(new { message = ex.Message });
             }
         }
         [HttpPost("CreateClass")]
@@ -37,7 +37,7 @@ namespace GESS.Api.Controllers
             try
             {
                 var createdClass = await _classService.CreateClassAsync(classCreateDto);
-                return CreatedAtAction(nameof(GetAllClasses), new { id = createdClass.ClassName }, createdClass);
+                return CreatedAtAction(nameof(GetAllClassAsync), new { id = createdClass.ClassName }, createdClass);
             }
             catch (Exception ex)
             {

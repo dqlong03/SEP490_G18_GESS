@@ -25,11 +25,29 @@ namespace GESS.Repository.Implement
             return exists;
         }
 
+       
+        public async Task<IEnumerable<Class>> GetAllClassAsync(string? name = null, int pageNumber = 1, int pageSize = 5)
+        {
+            IQueryable<Class> query = _context.Classes.Include(s => s.Subject).Include(se => se.Semester);
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                var loweredName = name.ToLower();
+                query = query.Where(m =>
+                    m.ClassName.ToLower().Contains(loweredName));
+            }
+            query = query.Skip((pageNumber - 1) * pageSize).Take(pageSize);
+
+            return await query.ToListAsync();
+
+        }
+
         public async Task<IEnumerable<Class>> GetAllClassesAsync()
         {
             var classes = _context.Classes.Include(c => c.Subject).Include(c => c.Teacher).Include(c => c.Semester)
                  .ToListAsync();
             return await classes;
         }
+
+        
     }
 }
