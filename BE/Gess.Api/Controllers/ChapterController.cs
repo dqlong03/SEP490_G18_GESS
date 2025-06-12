@@ -14,12 +14,12 @@ namespace GESS.Api.Controllers
         {
             _chapterService = chapterService;
         }
-        [HttpGet("Get-all-chapter")]
-        public async Task<IActionResult> GetAllchapterAsync(string? name = null, int pageNumber = 1, int pageSize = 10)
+        [HttpGet("GetAllChapter/{subjectId}")]
+        public async Task<IActionResult> GetAllchapterAsync(int subjectId ,string? name = null, int pageNumber = 1, int pageSize = 10)
         {
             try
             {
-                var chapter = await _chapterService.GetAllChapterAsync(name, pageNumber, pageSize);
+                var chapter = await _chapterService.GetBySubjectIdAsync(subjectId, name, pageNumber, pageSize);
                 return Ok(chapter);
             }
             catch (Exception ex)
@@ -40,8 +40,8 @@ namespace GESS.Api.Controllers
                 return NotFound(ex.Message);
             }
         }
-        [HttpPost("CreateChapter")]
-        public async Task<ActionResult<ChapterCreateDTO>> CreateChapter([FromBody] ChapterCreateDTO chapterCreateDto)
+        [HttpPost("{subjectId}/CreateChapter")]
+        public async Task<ActionResult<ChapterCreateDTO>> CreateChapter([FromBody] ChapterCreateDTO chapterCreateDto, int subjectId)
         {
             if (!ModelState.IsValid)
             {
@@ -49,7 +49,7 @@ namespace GESS.Api.Controllers
             }
             try
             {
-                var createdChapter = await _chapterService.CreateChapterAsync(chapterCreateDto);
+                var createdChapter = await _chapterService.CreateChapterAsync(chapterCreateDto, subjectId);
                 return CreatedAtAction(nameof(GetAllChapters), new { chaptername = createdChapter.ChapterName }, createdChapter);
             }
             catch (Exception ex)
