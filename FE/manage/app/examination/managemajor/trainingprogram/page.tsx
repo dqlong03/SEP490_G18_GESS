@@ -1,33 +1,40 @@
 'use client';
 
 import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-type Major = {
-  majorId: number;
-  majorName: string;
-  startDate: string; // ISO string
-  endDate?: string | null;
-  isActive: boolean;
-};
-
-type MajorForm = {
-  majorName: string;
+type TrainingProgram = {
+  trainingProgramId: number;
+  trainProName: string;
   startDate: string;
   endDate?: string | null;
-  isActive: boolean;
+  noCredits: number;
 };
 
-const API_URL = 'https://localhost:7074/api/major';
+type TrainingProgramForm = {
+  trainProName: string;
+  startDate: string;
+  endDate?: string | null;
+  noCredits: number;
+};
 
-export default function MajorManager() {
-  const [majors, setMajors] = useState<Major[]>([]);
+const API_URL = 'https://localhost:7074/api/TrainingProgram';
+
+export default function TrainingProgramManager() {
+  // Lấy majorId từ query string
+  const searchParams = useSearchParams();
+  const majorId = Number(searchParams.get('majorId')) || 1;
+
+  const [programs, setPrograms] = useState<TrainingProgram[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<MajorForm>({ majorName: '', startDate: '', endDate: '', isActive: true });
+  const [form, setForm] = useState<TrainingProgramForm>({
+    trainProName: '',
+    startDate: '',
+    endDate: '',
+    noCredits: 0,
+  });
   const [editingId, setEditingId] = useState<number | null>(null);
-
-  // Popup state
   const [showPopup, setShowPopup] = useState(false);
 
   // Pagination & search state
@@ -43,8 +50,8 @@ export default function MajorManager() {
 
   const router = useRouter();
 
-  // Fetch majors with pagination and search
-  const fetchMajors = async () => {
+  // Fetch training programs with pagination and search
+  const fetchPrograms = async () => {
     setLoading(true);
     setError(null);
     try {
@@ -55,10 +62,10 @@ export default function MajorManager() {
       params.append('pageNumber', pageNumber.toString());
       params.append('pageSize', pageSize.toString());
 
-      const res = await fetch(`${API_URL}?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to fetch majors');
+      const res = await fetch(`${API_URL}/${majorId}?${params.toString()}`);
+      if (!res.ok) throw new Error('Failed to fetch training programs');
       const data = await res.json();
-      setMajors(data);
+      setPrograms(data);
 
       const countParams = new URLSearchParams();
       if (searchName) countParams.append('name', searchName);
@@ -66,7 +73,7 @@ export default function MajorManager() {
       if (searchToDate) countParams.append('toDate', searchToDate);
       countParams.append('pageSize', pageSize.toString());
 
-      const countRes = await fetch(`${API_URL}/CountPage?${countParams.toString()}`);
+      const countRes = await fetch(`${API_URL}/count/${majorId}?${countParams.toString()}`);
       if (countRes.ok) {
         const count = await countRes.json();
         setTotalPages(Math.ceil(count / pageSize));
@@ -78,15 +85,15 @@ export default function MajorManager() {
   };
 
   useEffect(() => {
-    fetchMajors();
+    fetchPrograms();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageNumber, searchName, searchFromDate, searchToDate]);
+  }, [pageNumber, searchName, searchFromDate, searchToDate, majorId]);
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type, checked } = e.target as HTMLInputElement;
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type } = e.target;
     setForm((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: type === 'number' ? Number(value) : value,
     }));
   };
 
@@ -98,25 +105,36 @@ export default function MajorManager() {
     try {
       if (editingId === null) {
         // Add
-        const res = await fetch(`${API_URL}/CreateMajor`, {
+        const res = await fetch(`${API_URL}/${majorId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form),
+          body: JSON.stringify({
+            trainProName: form.trainProName,
+            startDate: form.startDate,
+            endDate: form.endDate,
+            noCredits: form.noCredits,
+          }),
         });
-        if (!res.ok) throw new Error('Failed to add major');
+        if (!res.ok) throw new Error('Failed to add training program');
       } else {
         // Update
         const res = await fetch(`${API_URL}/${editingId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form),
+          body: JSON.stringify({
+            trainingProgramId: editingId,
+            trainProName: form.trainProName,
+            startDate: form.startDate,
+            endDate: form.endDate,
+            noCredits: form.noCredits,
+          }),
         });
-        if (!res.ok) throw new Error('Failed to update major');
+        if (!res.ok) throw new Error('Failed to update training program');
       }
-      setForm({ majorName: '', startDate: '', endDate: '', isActive: true });
+      setForm({ trainProName: '', startDate: '', endDate: '', noCredits: 0 });
       setEditingId(null);
       setShowPopup(false);
-      fetchMajors();
+      fetchPrograms();
     } catch (err: any) {
       setError(err.message);
     }
@@ -124,26 +142,26 @@ export default function MajorManager() {
   };
 
   // Handle edit
-  const handleEdit = (major: Major) => {
+  const handleEdit = (program: TrainingProgram) => {
     setForm({
-      majorName: major.majorName,
-      startDate: major.startDate ? major.startDate.substring(0, 10) : '',
-      endDate: major.endDate ? major.endDate.substring(0, 10) : '',
-      isActive: major.isActive,
+      trainProName: program.trainProName,
+      startDate: program.startDate ? program.startDate.substring(0, 10) : '',
+      endDate: program.endDate ? program.endDate.substring(0, 10) : '',
+      noCredits: program.noCredits,
     });
-    setEditingId(major.majorId);
+    setEditingId(program.trainingProgramId);
     setShowPopup(true);
   };
 
   // Handle delete
   const handleDelete = async (id: number) => {
-    if (!confirm('Bạn có chắc muốn xóa ngành này?')) return;
+    if (!confirm('Bạn có chắc muốn xóa chương trình này?')) return;
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete major');
-      fetchMajors();
+      if (!res.ok) throw new Error('Failed to delete training program');
+      fetchPrograms();
     } catch (err: any) {
       setError(err.message);
     }
@@ -154,29 +172,29 @@ export default function MajorManager() {
   const handleSearch = (e: FormEvent) => {
     e.preventDefault();
     setPageNumber(1);
-    fetchMajors();
+    fetchPrograms();
   };
 
   // Popup close
   const closePopup = () => {
     setShowPopup(false);
     setEditingId(null);
-    setForm({ majorName: '', startDate: '', endDate: '', isActive: true });
+    setForm({ trainProName: '', startDate: '', endDate: '', noCredits: 0 });
   };
 
   // Double click handler
-  const handleRowClick = (majorId: number) => {
+  const handleRowClick = (trainingProgramId: number) => {
     const now = Date.now();
-    if (lastClick && lastClick.id === majorId && now - lastClick.time < 400) {
-      router.push(`/examination/managemajor/trainingprogram?majorId=${majorId}`);
+    if (lastClick && lastClick.id === trainingProgramId && now - lastClick.time < 400) {
+      router.push(`/examination/managemajor/trainingprogram/subject?trainingProgramId=${trainingProgramId}`);
     }
-    setLastClick({ id: majorId, time: now });
+    setLastClick({ id: trainingProgramId, time: now });
   };
 
   return (
     <div className="w-full min-h-screen bg-gray-50 font-sans p-0">
-      <div className="max-w-5xl mx-auto py-8 px-2">
-        <h2 className="text-2xl font-bold text-gray-800 mb-3 text-left">Quản lý ngành học</h2>
+      <div className="max-w-4xl mx-auto py-8 px-2">
+        <h2 className="text-2xl font-bold text-gray-800 mb-3 text-left">Quản lý chương trình đào tạo</h2>
         {error && <div className="text-red-600 mb-2">{error}</div>}
 
         {/* Search bar */}
@@ -186,7 +204,7 @@ export default function MajorManager() {
         >
           <input
             type="text"
-            placeholder="Tìm theo tên ngành"
+            placeholder="Tìm theo tên chương trình"
             value={searchName}
             onChange={e => setSearchName(e.target.value)}
             className="border rounded px-3 py-2 text-base focus:ring-2 focus:ring-blue-200 transition w-40"
@@ -228,7 +246,7 @@ export default function MajorManager() {
             onClick={() => {
               setShowPopup(true);
               setEditingId(null);
-              setForm({ majorName: '', startDate: '', endDate: '', isActive: true });
+              setForm({ trainProName: '', startDate: '', endDate: '', noCredits: 0 });
             }}
             className="ml-auto bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold shadow"
           >
@@ -247,14 +265,14 @@ export default function MajorManager() {
               >
                 ×
               </button>
-              <h3 className="text-xl font-bold mb-4 text-gray-700">{editingId === null ? 'Thêm ngành mới' : 'Cập nhật ngành'}</h3>
+              <h3 className="text-xl font-bold mb-4 text-gray-700">{editingId === null ? 'Thêm chương trình' : 'Cập nhật chương trình'}</h3>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block font-semibold mb-1">Tên ngành</label>
+                  <label className="block font-semibold mb-1">Tên chương trình</label>
                   <input
-                    name="majorName"
-                    placeholder="Tên ngành"
-                    value={form.majorName}
+                    name="trainProName"
+                    placeholder="Tên chương trình"
+                    value={form.trainProName}
                     onChange={handleChange}
                     required
                     className="border rounded px-3 py-2 w-full focus:ring-2 focus:ring-blue-200 transition"
@@ -283,15 +301,18 @@ export default function MajorManager() {
                     className="border rounded px-3 py-2 w-full focus:ring-2 focus:ring-blue-200 transition"
                   />
                 </div>
-                <div className="flex items-center gap-2">
+                <div>
+                  <label className="block font-semibold mb-1">Tổng số tín chỉ</label>
                   <input
-                    type="checkbox"
-                    name="isActive"
-                    checked={form.isActive}
+                    name="noCredits"
+                    type="number"
+                    placeholder="Tổng số tín chỉ"
+                    value={form.noCredits}
                     onChange={handleChange}
-                    className="accent-blue-500"
+                    required
+                    min={0}
+                    className="border rounded px-3 py-2 w-full focus:ring-2 focus:ring-blue-200 transition"
                   />
-                  <span className="font-semibold">Đang hoạt động</span>
                 </div>
                 <div className="flex gap-2 mt-2">
                   <button
@@ -320,39 +341,35 @@ export default function MajorManager() {
             <thead>
               <tr className="bg-gray-100 text-gray-700 font-semibold">
                 <th className="py-2 px-2 border-b">ID</th>
-                <th className="py-2 px-2 border-b">Tên ngành</th>
+                <th className="py-2 px-2 border-b">Tên chương trình</th>
                 <th className="py-2 px-2 border-b">Ngày bắt đầu</th>
                 <th className="py-2 px-2 border-b">Ngày kết thúc</th>
-                <th className="py-2 px-2 border-b">Trạng thái</th>
+                <th className="py-2 px-2 border-b">Tín chỉ</th>
                 <th className="py-2 px-2 border-b">Hành động</th>
               </tr>
             </thead>
             <tbody>
-              {majors.map((major) => (
+              {programs.map((program) => (
                 <tr
-                  key={major.majorId}
+                  key={program.trainingProgramId}
                   className="hover:bg-blue-50 cursor-pointer transition"
-                  onClick={() => handleRowClick(major.majorId)}
-                  title="Nhấn đúp để xem chương trình đào tạo"
+                  onClick={() => handleRowClick(program.trainingProgramId)}
+                  title="Nhấn đúp để xem môn học trong chương trình"
                 >
-                  <td className="py-2 px-2 text-center border-b">{major.majorId}</td>
-                  <td className="py-2 px-2 border-b">{major.majorName}</td>
-                  <td className="py-2 px-2 text-center border-b">{major.startDate ? major.startDate.substring(0, 10) : ''}</td>
-                  <td className="py-2 px-2 text-center border-b">{major.endDate ? major.endDate.substring(0, 10) : ''}</td>
-                  <td className="py-2 px-2 text-center border-b">
-                    <span className={`px-2 py-1 rounded text-xs font-bold ${major.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
-                      {major.isActive ? 'Hoạt động' : 'Ngừng'}
-                    </span>
-                  </td>
+                  <td className="py-2 px-2 text-center border-b">{program.trainingProgramId}</td>
+                  <td className="py-2 px-2 border-b">{program.trainProName}</td>
+                  <td className="py-2 px-2 text-center border-b">{program.startDate ? program.startDate.substring(0, 10) : ''}</td>
+                  <td className="py-2 px-2 text-center border-b">{program.endDate ? program.endDate.substring(0, 10) : ''}</td>
+                  <td className="py-2 px-2 text-center border-b">{program.noCredits}</td>
                   <td className="py-2 px-2 text-center border-b">
                     <button
-                      onClick={e => { e.stopPropagation(); handleEdit(major); }}
+                      onClick={e => { e.stopPropagation(); handleEdit(program); }}
                       className="bg-yellow-400 text-white px-3 py-1 rounded hover:bg-yellow-500 transition font-semibold mr-2"
                     >
                       Sửa
                     </button>
                     <button
-                      onClick={e => { e.stopPropagation(); handleDelete(major.majorId); }}
+                      onClick={e => { e.stopPropagation(); handleDelete(program.trainingProgramId); }}
                       className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition font-semibold"
                     >
                       Xóa
@@ -360,19 +377,20 @@ export default function MajorManager() {
                   </td>
                 </tr>
               ))}
-              {majors.length === 0 && (
+              {programs.length === 0 && (
                 <tr>
                   <td colSpan={6} className="text-center py-4 text-gray-500">
-                    Không có ngành nào.
+                    Không có chương trình nào.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+        <div className="mt-5 text-xs text-gray-400 text-left">* Nhấn đúp vào dòng để xem môn học trong chương trình</div>
 
         {/* Pagination */}
-        <div className="mt-4 flex flex-wrap justify-left items-center gap-2 text-base mt-5">
+        <div className="mt-4 flex flex-wrap justify-left items-center gap-2 text-base ">
           <button
             onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
             disabled={pageNumber === 1}
@@ -391,7 +409,6 @@ export default function MajorManager() {
             Trang sau
           </button>
         </div>
-        <div className="mt-2 text-xs text-gray-400 text-left">* Nhấn đúp vào dòng để xem chương trình đào tạo</div>
       </div>
       {/* Tailwind animation for popup */}
       <style jsx global>{`
