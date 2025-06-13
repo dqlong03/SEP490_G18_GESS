@@ -1,0 +1,47 @@
+/* @styles/sidebar.css */
+.sidebar {
+  background-color: rgb(255, 255, 255);
+  padding: 1rem;
+  transition: width 0.3s ease;
+  overflow: hidden;
+  position: relative;
+  z-index: 20;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.sidebar.w-0 {
+  width: 0;
+  padding: 0;
+}
+
+.sidebar-list {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar-link {
+  display: block;
+  padding: 0.5rem 1rem;
+  color: #1f2937;
+  text-decoration: none;
+  border-radius: 0.25rem;
+}
+
+.sidebar-link:hover {
+  background-color: #d1d5db;
+}
+
+@media (min-width: 1024px) {
+  .sidebar {
+    position: static;
+    width: 250px; /* Luôn hiện trên màn hình lớn */
+  }
+}
+
+.fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+}

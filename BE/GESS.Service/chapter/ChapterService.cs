@@ -18,7 +18,7 @@ namespace GESS.Service.chapter
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<ChapterCreateDTO> CreateChapterAsync(ChapterCreateDTO chapterCreateDto)
+        public async Task<ChapterCreateDTO> CreateChapterAsync(ChapterCreateDTO chapterCreateDto, int subjectId)
         {
             bool chapterExists = _unitOfWork.ChapterRepository.ExistsAsync(c => c.ChapterName == chapterCreateDto.ChapterName).Result;
             if (chapterExists)
@@ -30,7 +30,7 @@ namespace GESS.Service.chapter
                
                 ChapterName = chapterCreateDto.ChapterName,
                 Description = chapterCreateDto.Description,
-                SubjectId = chapterCreateDto.SubjectId
+                SubjectId = subjectId
             };
 
             _unitOfWork.ChapterRepository.Create(chapter);
@@ -99,6 +99,22 @@ namespace GESS.Service.chapter
 
             return chapterUpdateDTO;
         }
+
+        public async Task<IEnumerable<ChapterListDTO>> GetBySubjectIdAsync(int subjectId, string? name = null, int pageNumber = 1, int pageSize = 10)
+        {
+            var chapter = await _unitOfWork.ChapterRepository.GetBySubjectIdAsync(subjectId, name, pageNumber, pageSize);
+
+            var chapterDtos = chapter.Select(chapter => new ChapterListDTO
+            {
+                Id = chapter.ChapterId,
+                ChapterName = chapter.ChapterName,
+                Description = chapter.Description,
+                SubjectName = chapter.Subject?.SubjectName ?? "N/A"
+            });
+
+            return chapterDtos;
+        }
+
 
 
         // Implement any specific methods for Chapter here

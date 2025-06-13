@@ -47,9 +47,15 @@ export const useAuthLogic = () => {
 
       const googleResponse = await loginGoogle({ idToken });
       authLogin(googleResponse.token);
-      router.push("/dashboard");
+
+      const decodedToken = jwtDecode<any>(googleResponse.token);
+      if (decodedToken.Role === "Admin") {
+        router.push("/admin/homepage");
+      } else {
+        router.push("/examination/homepage"); // Điều hướng đến trang người dùng bình thường
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || "Đăng nhập với Google thất bại");
+      setError(err.response?.data?.message || "Đăng nhập thất bại");
     }
   };
 

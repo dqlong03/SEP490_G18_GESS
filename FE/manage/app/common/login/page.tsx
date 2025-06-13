@@ -7,6 +7,7 @@ import universitylogo from '@public/uni.png';
 import Image from 'next/image';
 import { useGoogleLogin } from '@react-oauth/google';
 import '@/styles/login.css';
+import Link from 'next/link'; // Đảm bảo đã import Link
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -84,9 +85,9 @@ export default function LoginPage() {
 
           {/* Link quên mật khẩu */}
           <div className="text-sm text-left">
-            <a href="/forgot-password" className="text-indigo-600 hover:text-indigo-500 underline">
-              Quên mật khẩu?
-            </a>
+           <Link href="/common/forgotpass" className="text-indigo-600 hover:text-indigo-500 underline">
+ Quên mật khẩu
+</Link>
           </div>
 
           {/* ReCAPTCHA */}
