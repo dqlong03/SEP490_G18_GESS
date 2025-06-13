@@ -23,6 +23,7 @@ namespace Gess.Repository.Infrastructures
         private ICateExamSubRepository _cateSubRepository;
         // ThaiNH_Initialize_End
 
+        private IExaminationRepository _examinationRepository;
         private ITeacherRepository _teacherRepository;
         private IClassRepository _classRepository;
         private readonly UserManager<User> _userManager;
@@ -45,8 +46,8 @@ namespace Gess.Repository.Infrastructures
         public ICateExamSubRepository CateExamSubRepository => _cateSubRepository ??= new CateExamSubRepository(_context);
         // ThaiNH_Initialize_End
 
+        public IExaminationRepository ExaminationRepository => _examinationRepository ??= new ExaminationRepository(_context, _userManager);
 
-    
 
         public ITeacherRepository TeacherRepository => _teacherRepository ??= new TeacherRepository(_context, _userManager);
         public IClassRepository ClassRepository => _classRepository ??= new ClassRepository(_context);

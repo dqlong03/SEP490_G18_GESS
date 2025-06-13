@@ -11,10 +11,8 @@ namespace GESS.Entity.Entities
     // 17. ExamService - Đại diện cho nhân viên khảo thí (quản lý kỳ thi)
     public class ExamService
     {
-        // Khóa chính, tự động tăng
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int ExamServiceId { get; set; }
+        public Guid ExamServiceId { get; set; }
 
         // Khóa ngoại liên kết đến người dùng (User), không được để trống
         [Required(ErrorMessage = "UserId không được để trống!")]

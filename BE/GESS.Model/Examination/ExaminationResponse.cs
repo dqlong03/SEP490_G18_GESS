@@ -1,15 +1,15 @@
-﻿using GESS.Entity.Entities;
+﻿using GESS.Model.Teacher;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GESS.Model.Teacher
+namespace GESS.Model.Examination
 {
-    public class TeacherResponse
+    public class ExaminationResponse
     {
-        public Guid TeacherId { get; set; }
+        public Guid ExaminationId { get; set; }
         public string UserName { get; set; }
         public string Email { get; set; }
         public string PhoneNumber { get; set; }
@@ -17,8 +17,6 @@ namespace GESS.Model.Teacher
         public string Fullname { get; set; }
         public bool Gender { get; set; }
         public bool IsActive { get; set; }
-
-        public List<MajorTeacherDto> MajorTeachers { get; set; }
         public DateTime HireDate { get; set; }
     }
 }

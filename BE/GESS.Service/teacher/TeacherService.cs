@@ -35,9 +35,9 @@ namespace GESS.Service.teacher
             return teacher;
         }
 
-        public async Task<List<TeacherResponse>> GetAllTeachersAsync()
+        public async Task<List<TeacherResponse>> GetAllTeachersAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageNumber, int pageSize)
         {
-            return await _unitOfWork.TeacherRepository.GetAllTeachersAsync();
+            return await _unitOfWork.TeacherRepository.GetAllTeachersAsync(active, name, fromDate, toDate, pageNumber, pageSize);
         }
 
         public async Task<TeacherResponse> AddTeacherAsync(TeacherCreationRequest request)
@@ -69,12 +69,9 @@ namespace GESS.Service.teacher
             await _userManager.AddToRoleAsync(user, PredefinedRole.TEACHER_ROLE);
 
             // 4. Tạo Teacher
-            await _unitOfWork.TeacherRepository.AddTeacherAsync(user.Id, request);
+            return await _unitOfWork.TeacherRepository.AddTeacherAsync(user.Id, request);
 
-            // 5. Lấy lại teacher vừa tạo
-            var teachers = await _unitOfWork.TeacherRepository.GetAllTeachersAsync();
-            var teacher = teachers.LastOrDefault(t => t.UserName == request.UserName && t.Email == request.Email);
-            return teacher;
+
         }
 
         public async Task<TeacherResponse> UpdateTeacherAsync(Guid teacherId, TeacherUpdateRequest request)
@@ -187,8 +184,15 @@ namespace GESS.Service.teacher
             return majorTeachers;
         }
 
-
-
+        public async Task<int> CountPageAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageSize)
+        {
+            var count = await _unitOfWork.TeacherRepository.CountPageAsync(active, name, fromDate, toDate, pageSize);
+            if (count <= 0)
+            {
+                throw new Exception("Không có dữ liệu để đếm trang.");
+            }
+            return count;
+        }
     }
 
 }

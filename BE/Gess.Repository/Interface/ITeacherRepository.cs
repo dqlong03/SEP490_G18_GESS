@@ -11,11 +11,12 @@ namespace GESS.Repository.Interface
     public interface ITeacherRepository
     {
         Task<TeacherResponse> GetTeacherByIdAsync(Guid teacherId);
-        Task<List<TeacherResponse>> GetAllTeachersAsync();
-        Task AddTeacherAsync(Guid userId, TeacherCreationRequest request);
+        Task<List<TeacherResponse>> GetAllTeachersAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageNumber, int pageSize);
+        Task<TeacherResponse> AddTeacherAsync(Guid userId, TeacherCreationRequest request);
         Task<TeacherResponse> UpdateTeacherAsync(Guid teacherId, TeacherUpdateRequest teacher);
         Task DeleteTeacherAsync(Guid teacherId);
         Task<List<TeacherResponse>> SearchTeachersAsync(string keyword);
+        Task<int> CountPageAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageSize);
     }
 
 }

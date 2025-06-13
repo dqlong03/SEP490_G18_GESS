@@ -37,4 +37,8 @@
     <ProjectReference Include="..\GessCommon\GESS.Common.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Migrations\" />
+  </ItemGroup>
+
 </Project>

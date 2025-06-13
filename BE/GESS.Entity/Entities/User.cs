@@ -23,6 +23,8 @@ namespace GESS.Entity.Entities
         //public string FirstName { get; set; }
         //public string LastName { get; set; }
 
+        public string? Code { get; set; }
+
         // ThaiNH_Modified_UserProfile_End
 
         [Column(TypeName = "DATETIME")]
