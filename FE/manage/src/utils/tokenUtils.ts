@@ -41,6 +41,7 @@ export function getUserRoleFromToken(): string | null {
     }
 
     const decodedPayload = JSON.parse(atob(payload));
+
     return decodedPayload.Role || decodedPayload.role || null;
   } catch (error) {
     console.error("Error decoding token role:", error);

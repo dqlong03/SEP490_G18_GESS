@@ -1,182 +1,192 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { getUserIdFromToken } from '@/utils/tokenUtils';
-
-type User = {
-  userId: string;
-  userName: string;
-  email: string;
-  fullname: string;
-  phoneNumber?: string;
-  gender?: boolean;
-  dateOfBirth?: string | null;
-  isActive?: boolean;
-  isDeleted?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-  [key: string]: any; // Để hiển thị các trường khác nếu có
-};
-
-type UserEditFields = {
-  fullname?: string;
-  phoneNumber?: string;
-  gender?: boolean;
-  dateOfBirth?: string | null;
-};
-
-const API_BASE = 'https://localhost:7074';
+import { useProfile } from '@/hooks/common/profileHook';
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [editMode, setEditMode] = useState(false);
-  const [form, setForm] = useState<UserEditFields>({});
-  const [loading, setLoading] = useState(false);
-
-  const userId = getUserIdFromToken();
-
-  useEffect(() => {
-    if (!userId) return;
-    setLoading(true);
-    fetch(`${API_BASE}/api/User/${userId}`)
-      .then(res => res.json())
-      .then(data => {
-        setUser(data);
-        setForm({
-          fullname: data.fullname,
-          phoneNumber: data.phoneNumber,
-          gender: data.gender,
-          dateOfBirth: data.dateOfBirth ? data.dateOfBirth.slice(0, 10) : '',
-        });
-      })
-      .catch(() => alert('Không thể tải thông tin user'))
-      .finally(() => setLoading(false));
-  }, [userId]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    if (name === 'gender') {
-      setForm({ ...form, gender: value === 'true' });
-    } else {
-      setForm({ ...form, [name]: value });
-    }
-  };
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userId) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/User/${userId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form }),
-      });
-      if (!res.ok) throw new Error('Update failed');
-      const updated = await res.json();
-      setUser(updated);
-      setEditMode(false);
-    } catch {
-      alert('Cập nhật thất bại');
-    }
-    setLoading(false);
-  };
+  const {
+    user,
+    editMode,
+    setEditMode,
+    form,
+    loading,
+    handleChange,
+    handleSave,
+    userId,
+  } = useProfile();
 
   if (!userId) {
-    return <div>Không tìm thấy thông tin người dùng.</div>;
+    return <div className="text-center text-red-500 mt-10">Không tìm thấy thông tin người dùng.</div>;
   }
 
   if (loading && !user) {
-    return <div>Đang tải...</div>;
+    return <div className="text-center mt-10">Đang tải...</div>;
   }
 
   if (!user) {
-    return <div>Không tìm thấy thông tin người dùng.</div>;
+    return <div className="text-center text-red-500 mt-10">Không tìm thấy thông tin người dùng.</div>;
   }
 
-  // Các trường chỉ cho xem
+  // Các trường chỉ xem, loại bỏ userId
   const readonlyFields = Object.entries(user).filter(
     ([key]) =>
-      !['fullname', 'phoneNumber', 'gender', 'dateOfBirth'].includes(key)
+      !['userId', 'fullname', 'phoneNumber', 'gender', 'dateOfBirth', 'userName', 'email', 'isActive'].includes(key)
   );
 
   return (
-    <div style={{ maxWidth: 500, margin: '0 auto', padding: 24 }}>
-      <h1>Thông tin cá nhân</h1>
+    <div className="max-w-2xl mx-auto mt-10 p-10 bg-white rounded-xl shadow-lg">
+      <h1 className="text-3xl font-bold mb-8 text-black opacity-80 text-left">Thông tin cá nhân</h1>
       {!editMode ? (
-        <div>
-          {readonlyFields.map(([key, value]) => (
-            <p key={key}>
-              <b>{key}:</b> {String(value ?? '')}
-            </p>
-          ))}
-          <p>
-            <b>Họ tên:</b> {user.fullname}
-          </p>
-          <p>
-            <b>Số điện thoại:</b> {user.phoneNumber || ''}
-          </p>
-          <p>
-            <b>Giới tính:</b> {user.gender === true ? 'Nam' : user.gender === false ? 'Nữ' : ''}
-          </p>
-          <p>
-            <b>Ngày sinh:</b> {user.dateOfBirth ? String(user.dateOfBirth).slice(0, 10) : ''}
-          </p>
-          <button onClick={() => setEditMode(true)}>Chỉnh sửa</button>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <span className="block text-gray-500 text-sm mb-1">Tên người dùng</span>
+              <span className="font-medium text-lg">{user.userName}</span>
+            </div>
+            <div>
+              <span className="block text-gray-500 text-sm mb-1">Email</span>
+              <span className="font-medium text-lg">{user.email}</span>
+            </div>
+            <div>
+              <span className="block text-gray-500 text-sm mb-1">Trạng thái</span>
+              <span className={`font-medium text-lg ${user.isActive ? 'text-green-600' : 'text-red-600'}`}>
+                {user.isActive ? 'Hoạt động' : 'Không hoạt động'}
+              </span>
+            </div>
+            {readonlyFields.map(([key, value]) => (
+              <div key={key}>
+                <span className="block text-gray-500 text-sm mb-1">{key}</span>
+                <span className="font-medium text-lg">{String(value ?? '')}</span>
+              </div>
+            ))}
+            <div>
+              <span className="block text-gray-500 text-sm mb-1">Họ tên</span>
+              <span className="font-medium text-lg">{user.fullname}</span>
+            </div>
+            <div>
+              <span className="block text-gray-500 text-sm mb-1">Số điện thoại</span>
+              <span className="font-medium text-lg">{user.phoneNumber || ''}</span>
+            </div>
+            <div>
+              <span className="block text-gray-500 text-sm mb-1">Giới tính</span>
+              <span className="font-medium text-lg">
+                {user.gender === true ? 'Nam' : user.gender === false ? 'Nữ' : ''}
+              </span>
+            </div>
+
+            <div>
+              <span className="block text-gray-500 text-sm mb-1">Ngày sinh</span>
+              <span className="font-medium text-lg">
+                {user.dateOfBirth ? String(user.dateOfBirth).slice(0, 10) : ''}
+              </span>
+            </div>
+          </div>
+          <div className="flex justify-end mt-8">
+            <button
+              onClick={() => setEditMode(true)}
+              className="px-8 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition text-lg"
+            >
+              Chỉnh sửa
+            </button>
+          </div>
         </div>
       ) : (
-        <form onSubmit={handleSave}>
-          {readonlyFields.map(([key, value]) => (
-            <div key={key}>
-              <label><b>{key}:</b></label>
-              <input value={String(value ?? '')} disabled style={{ width: '100%' }} />
+        <form onSubmit={handleSave} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-gray-500 text-sm mb-1">Tên người dùng</label>
+              <input
+                value={user.userName}
+                disabled
+                className="w-full p-3 border border-gray-200 rounded bg-gray-100 text-lg"
+              />
             </div>
-          ))}
-          <div>
-            <label>Họ tên:</label>
-            <input
-              name="fullname"
-              value={form.fullname || ''}
-              onChange={handleChange}
-              required
-              style={{ width: '100%' }}
-            />
+            <div>
+              <label className="block text-gray-500 text-sm mb-1">Email</label>
+              <input
+                value={user.email}
+                disabled
+                className="w-full p-3 border border-gray-200 rounded bg-gray-100 text-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-500 text-sm mb-1">Trạng thái</label>
+              <input
+                value={user.isActive ? 'Hoạt động' : 'Không hoạt động'}
+                disabled
+                className="w-full p-3 border border-gray-200 rounded bg-gray-100 text-lg"
+              />
+            </div>
+            {readonlyFields.map(([key, value]) => (
+              <div key={key}>
+                <label className="block text-gray-500 text-sm mb-1">{key}</label>
+                <input
+                  value={String(value ?? '')}
+                  disabled
+                  className="w-full p-3 border border-gray-200 rounded bg-gray-100 text-lg"
+                />
+              </div>
+            ))}
+            <div>
+              <label className="block text-gray-500 text-sm mb-1">Họ tên</label>
+              <input
+                name="fullname"
+                value={form.fullname || ''}
+                onChange={handleChange}
+                required
+                className="w-full p-3 border border-gray-300 rounded text-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-500 text-sm mb-1">Số điện thoại</label>
+              <input
+                name="phoneNumber"
+                value={form.phoneNumber || ''}
+                onChange={handleChange}
+                className="w-full p-3 border border-gray-300 rounded text-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-500 text-sm mb-1">Giới tính</label>
+              <select
+                name="gender"
+                value={form.gender === true ? 'true' : form.gender === false ? 'false' : ''}
+                onChange={handleChange}
+                required
+                className="w-full p-3 border border-gray-300 rounded text-lg"
+              >
+                <option value="">--Chọn--</option>
+                <option value="true">Nam</option>
+                <option value="false">Nữ</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-gray-500 text-sm mb-1">Ngày sinh</label>
+              <input
+                name="dateOfBirth"
+                type="date"
+                value={form.dateOfBirth || ''}
+                onChange={handleChange}
+                className="w-full p-3 border border-gray-300 rounded text-lg"
+              />
+            </div>
           </div>
-          <div>
-            <label>Số điện thoại:</label>
-            <input
-              name="phoneNumber"
-              value={form.phoneNumber || ''}
-              onChange={handleChange}
-              style={{ width: '100%' }}
-            />
-          </div>
-          <div>
-            <label>Giới tính:</label>
-            <select
-              name="gender"
-              value={form.gender === true ? 'true' : form.gender === false ? 'false' : ''}
-              onChange={handleChange}
-              required
-              style={{ width: '100%' }}
+          <div className="flex justify-end space-x-3 mt-8">
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-8 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition text-lg"
             >
-              <option value="">--Chọn--</option>
-              <option value="true">Nam</option>
-              <option value="false">Nữ</option>
-            </select>
+              Lưu
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditMode(false)}
+              disabled={loading}
+              className="px-8 py-3 bg-gray-400 text-white rounded-md hover:bg-gray-500 transition text-lg"
+            >
+              Hủy
+            </button>
           </div>
-          <div>
-            <label>Ngày sinh:</label>
-            <input
-              name="dateOfBirth"
-              type="date"
-              value={form.dateOfBirth || ''}
-              onChange={handleChange}
-              style={{ width: '100%' }}
-            />
-          </div>
-          <button type="submit" disabled={loading}>Lưu</button>
-          <button type="button" onClick={() => setEditMode(false)} disabled={loading}>Hủy</button>
         </form>
       )}
     </div>

@@ -1,177 +1,35 @@
 'use client';
 
-import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
-
-type Major = {
-  majorId: number;
-  majorName: string;
-  startDate: string; // ISO string
-  endDate?: string | null;
-  isActive: boolean;
-};
-
-type MajorForm = {
-  majorName: string;
-  startDate: string;
-  endDate?: string | null;
-  isActive: boolean;
-};
-
-const API_URL = 'https://localhost:7074/api/major';
+import { useMajors } from '@/hooks/examination/manageMajorHook';
 
 export default function MajorManager() {
-  const [majors, setMajors] = useState<Major[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<MajorForm>({ majorName: '', startDate: '', endDate: '', isActive: true });
-  const [editingId, setEditingId] = useState<number | null>(null);
-
-  // Popup state
-  const [showPopup, setShowPopup] = useState(false);
-
-  // Pagination & search state
-  const [pageNumber, setPageNumber] = useState(1);
-  const [pageSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
-  const [searchName, setSearchName] = useState('');
-  const [searchFromDate, setSearchFromDate] = useState('');
-  const [searchToDate, setSearchToDate] = useState('');
-
-  // Double click state
-  const [lastClick, setLastClick] = useState<{ id: number; time: number } | null>(null);
-
-  const router = useRouter();
-
-  // Fetch majors with pagination and search
-  const fetchMajors = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      if (searchName) params.append('name', searchName);
-      if (searchFromDate) params.append('fromDate', searchFromDate);
-      if (searchToDate) params.append('toDate', searchToDate);
-      params.append('pageNumber', pageNumber.toString());
-      params.append('pageSize', pageSize.toString());
-
-      const res = await fetch(`${API_URL}?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to fetch majors');
-      const data = await res.json();
-      setMajors(data);
-
-      const countParams = new URLSearchParams();
-      if (searchName) countParams.append('name', searchName);
-      if (searchFromDate) countParams.append('fromDate', searchFromDate);
-      if (searchToDate) countParams.append('toDate', searchToDate);
-      countParams.append('pageSize', pageSize.toString());
-
-      const countRes = await fetch(`${API_URL}/CountPage?${countParams.toString()}`);
-      if (countRes.ok) {
-        const count = await countRes.json();
-        setTotalPages(Math.ceil(count / pageSize));
-      }
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchMajors();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageNumber, searchName, searchFromDate, searchToDate]);
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type, checked } = e.target as HTMLInputElement;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-  };
-
-  // Handle submit (add or update)
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      if (editingId === null) {
-        // Add
-        const res = await fetch(`${API_URL}/CreateMajor`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form),
-        });
-        if (!res.ok) throw new Error('Failed to add major');
-      } else {
-        // Update
-        const res = await fetch(`${API_URL}/${editingId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form),
-        });
-        if (!res.ok) throw new Error('Failed to update major');
-      }
-      setForm({ majorName: '', startDate: '', endDate: '', isActive: true });
-      setEditingId(null);
-      setShowPopup(false);
-      fetchMajors();
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
-  };
-
-  // Handle edit
-  const handleEdit = (major: Major) => {
-    setForm({
-      majorName: major.majorName,
-      startDate: major.startDate ? major.startDate.substring(0, 10) : '',
-      endDate: major.endDate ? major.endDate.substring(0, 10) : '',
-      isActive: major.isActive,
-    });
-    setEditingId(major.majorId);
-    setShowPopup(true);
-  };
-
-  // Handle delete
-  const handleDelete = async (id: number) => {
-    if (!confirm('Bạn có chắc muốn xóa ngành này?')) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete major');
-      fetchMajors();
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
-  };
-
-  // Handle search
-  const handleSearch = (e: FormEvent) => {
-    e.preventDefault();
-    setPageNumber(1);
-    fetchMajors();
-  };
-
-  // Popup close
-  const closePopup = () => {
-    setShowPopup(false);
-    setEditingId(null);
-    setForm({ majorName: '', startDate: '', endDate: '', isActive: true });
-  };
-
-  // Double click handler
-  const handleRowClick = (majorId: number) => {
-    const now = Date.now();
-    if (lastClick && lastClick.id === majorId && now - lastClick.time < 400) {
-      router.push(`/examination/managemajor/trainingprogram?majorId=${majorId}`);
-    }
-    setLastClick({ id: majorId, time: now });
-  };
+  const {
+    majors,
+    loading,
+    error,
+    form,
+    editingId,
+    showPopup,
+    pageNumber,
+    totalPages,
+    searchName,
+    setSearchName,
+    searchFromDate,
+    setSearchFromDate,
+    searchToDate,
+    setSearchToDate,
+    setPageNumber,
+    handleChange,
+    handleSubmit,
+    handleEdit,
+    handleDelete,
+    handleSearch,
+    closePopup,
+    setShowPopup,
+    setEditingId,
+    setForm,
+    handleRowClick,
+  } = useMajors();
 
   return (
     <div className="w-full min-h-screen bg-gray-50 font-sans p-0">

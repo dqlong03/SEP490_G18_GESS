@@ -1,60 +1,24 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Search } from 'lucide-react';
-import { Switch } from '@headlessui/react';
 import { useRouter } from 'next/navigation';
-
-type User = {
-  userId: string;
-  userName: string;
-  email: string;
-  fullname?: string;
-  phoneNumber?: string;
-  dateOfBirth?: string;
-  gender?: boolean;
-  isActive?: boolean;
-  role?: string; // Nếu API trả về role
-};
-
-const API_BASE = 'https://localhost:7074';
+import { useUsers } from '@hooks/admin/manageUserHook';
 
 export default function ManageUser() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const {
+    filteredUsers,
+    search,
+    setSearch,
+    roleFilter,
+    setRoleFilter,
+    statusFilter,
+    setStatusFilter,
+    roleOptions,
+  } = useUsers();
   const [clickCount, setClickCount] = useState(0);
   const router = useRouter();
 
-  // Lấy danh sách user từ API
-  useEffect(() => {
-    fetch(`${API_BASE}/api/User`)
-      .then(res => res.json())
-      .then(data => setUsers(data || []))
-      .catch(() => setUsers([]));
-  }, []);
-
-  // Lấy danh sách role từ dữ liệu (nếu có)
-  const roleOptions = Array.from(new Set(users.map(u => u.role).filter(Boolean)));
-
-  // Lọc user theo search, role, status
-  const filteredUsers = users.filter(user => {
-    const matchesSearch =
-      user.fullname?.toLowerCase().includes(search.toLowerCase()) ||
-      user.userName?.toLowerCase().includes(search.toLowerCase()) ||
-      user.email?.toLowerCase().includes(search.toLowerCase());
-    const matchesRole = roleFilter ? user.role === roleFilter : true;
-    const matchesStatus =
-      statusFilter === ''
-        ? true
-        : statusFilter === 'active'
-        ? user.isActive
-        : !user.isActive;
-    return matchesSearch && matchesRole && matchesStatus;
-  });
-
-  // Chuyển hướng khi double click
   const handleRowClick = (userId: string) => {
     if (clickCount === 1) {
       router.push(`/admin/manageuser/userinfo/${userId}`);
@@ -67,7 +31,7 @@ export default function ManageUser() {
 
   return (
     <div className="container mx-auto px-4 py-6 fadeIn">
-      {/* Thanh tìm kiếm và filter */}
+      {/* Search and filter bar */}
       <div className="flex flex-wrap gap-4 mb-4">
         <div className="flex items-center bg-white border border-gray-300 rounded-lg flex-1">
           <Search className="ml-4 text-gray-500" />
@@ -79,7 +43,6 @@ export default function ManageUser() {
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        {/* Combobox filter role nếu có */}
         {roleOptions.length > 0 && (
           <select
             className="p-2 border rounded-md"
@@ -92,7 +55,6 @@ export default function ManageUser() {
             ))}
           </select>
         )}
-        {/* Combobox filter trạng thái */}
         <select
           className="p-2 border rounded-md"
           value={statusFilter}
@@ -104,12 +66,10 @@ export default function ManageUser() {
         </select>
       </div>
 
-      {/* Số lượng người dùng */}
       <div className="mb-4 text-sm text-gray-700">
         Số lượng người dùng: <span className="font-semibold">{filteredUsers.length}</span>
       </div>
 
-      {/* Bảng người dùng */}
       <div className="overflow-x-auto bg-white shadow-md rounded-lg">
         <table className="min-w-full table-auto">
           <thead className="bg-gray-100">

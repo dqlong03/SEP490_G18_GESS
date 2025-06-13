@@ -1,116 +1,24 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
-import { useSearchParams } from 'next/navigation';
-
-type Subject = {
-  subjectId: number;
-  subjectName: string;
-  description?: string;
-  course?: string;
-  noCredits: number;
-};
-
-const API_URL = 'https://localhost:7074/api/Subject';
+import { useTrainingProgramSubjects } from '@/hooks/examination/subjectHook';
 
 export default function TrainingProgramSubjectManager() {
-  const searchParams = useSearchParams();
-  const trainingProgramId = Number(searchParams.get('trainingProgramId')) || 1;
-
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [allSubjects, setAllSubjects] = useState<Subject[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Pagination & search state
-  const [pageNumber, setPageNumber] = useState(1);
-  const [pageSize] = useState(10);
-  const [searchName, setSearchName] = useState('');
-
-  // Môn học được chọn để thêm vào chương trình
-  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
-
-  // Lấy danh sách môn học trong chương trình đào tạo
-  const fetchSubjects = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      if (searchName) params.append('name', searchName);
-      params.append('pageNumber', pageNumber.toString());
-      params.append('pageSize', pageSize.toString());
-
-      const res = await fetch(`${API_URL}/TrainingProgram/${trainingProgramId}?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to fetch subjects in training program');
-      const data = await res.json();
-      setSubjects(data);
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
-  };
-
-  // Lấy tất cả môn học để chọn thêm vào chương trình
-  const fetchAllSubjects = async () => {
-    try {
-      const res = await fetch(`${API_URL}?pageNumber=1&pageSize=1000`);
-      if (res.ok) {
-        const data = await res.json();
-        setAllSubjects(data);
-      }
-    } catch {}
-  };
-
-  useEffect(() => {
-    fetchSubjects();
-    fetchAllSubjects();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageNumber, searchName, trainingProgramId]);
-
-  // Thêm môn học vào chương trình đào tạo
-  const handleAddSubject = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!selectedSubjectId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(
-        `${API_URL}/AddSubjectToTrainingProgram/${trainingProgramId}/${selectedSubjectId}`,
-        { method: 'POST' }
-      );
-      if (!res.ok) throw new Error('Failed to add subject to training program');
-      setSelectedSubjectId(null);
-      fetchSubjects();
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
-  };
-
-  // Xóa môn học khỏi chương trình đào tạo
-  const handleDelete = async (subjectId: number) => {
-    if (!confirm('Bạn có chắc muốn xóa môn học này khỏi chương trình?')) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(
-        `${API_URL}/RemoveSubjectFromTrainingProgram/${trainingProgramId}/${subjectId}`,
-        { method: 'DELETE' }
-      );
-      if (!res.ok) throw new Error('Failed to remove subject from training program');
-      fetchSubjects();
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
-  };
-
-  // Tìm kiếm
-  const handleSearch = (e: FormEvent) => {
-    e.preventDefault();
-    setPageNumber(1);
-    fetchSubjects();
-  };
+  const {
+    subjects,
+    allSubjects,
+    loading,
+    error,
+    pageNumber,
+    setPageNumber,
+    pageSize,
+    searchName,
+    setSearchName,
+    selectedSubjectId,
+    setSelectedSubjectId,
+    handleAddSubject,
+    handleDelete,
+    handleSearch,
+  } = useTrainingProgramSubjects();
 
   return (
     <div className="w-full min-h-screen bg-gray-50 font-sans p-0">

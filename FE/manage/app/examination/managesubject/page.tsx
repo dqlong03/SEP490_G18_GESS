@@ -1,182 +1,35 @@
 'use client';
 
-import { useState, useEffect, ChangeEvent, FormEvent, useRef } from 'react';
 import { MoreVertical } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-
-type Subject = {
-  subjectId: number;
-  subjectName: string;
-  description?: string;
-  course?: string;
-  noCredits: number;
-};
-
-type SubjectForm = {
-  subjectName: string;
-  description?: string;
-  course?: string;
-  noCredits: number;
-};
-
-const API_URL = 'https://localhost:7074/api/Subject';
+import { useSubjects } from '@/hooks/examination/manageSubjectHook';
 
 export default function SubjectManager() {
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<SubjectForm>({
-    subjectName: '',
-    description: '',
-    course: '',
-    noCredits: 0,
-  });
-  const [editingId, setEditingId] = useState<number | null>(null);
-
-  // Popup state
-  const [showPopup, setShowPopup] = useState(false);
-
-  // Menu state
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
-  const menuRef = useRef<HTMLDivElement | null>(null);
-
-  // Pagination & search state
-  const [pageNumber, setPageNumber] = useState(1);
-  const [pageSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
-  const [searchName, setSearchName] = useState('');
-
-  const router = useRouter();
-
-  // Fetch subjects with pagination and search
-  const fetchSubjects = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      if (searchName) params.append('name', searchName);
-      params.append('pageNumber', pageNumber.toString());
-      params.append('pageSize', pageSize.toString());
-
-      const res = await fetch(`${API_URL}?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to fetch subjects');
-      const data = await res.json();
-      setSubjects(data);
-
-      // Count page
-      const countParams = new URLSearchParams();
-      if (searchName) countParams.append('name', searchName);
-      countParams.append('pageSize', pageSize.toString());
-      const countRes = await fetch(`${API_URL}/CountPage?${countParams.toString()}`);
-      if (countRes.ok) {
-        const count = await countRes.json();
-        setTotalPages(Math.ceil(count / pageSize));
-      }
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchSubjects();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageNumber, searchName]);
-
-  // Đóng menu khi click ra ngoài
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setOpenMenuId(null);
-      }
-    };
-    if (openMenuId !== null) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [openMenuId]);
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === 'number' ? Number(value) : value,
-    }));
-  };
-
-  // Handle submit (add or update)
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      if (editingId === null) {
-        // Add
-        const res = await fetch(`${API_URL}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form),
-        });
-        if (!res.ok) throw new Error('Failed to add subject');
-      } else {
-        // Update
-        const res = await fetch(`${API_URL}/${editingId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            subjectId: editingId,
-            ...form,
-          }),
-        });
-        if (!res.ok) throw new Error('Failed to update subject');
-      }
-      setForm({ subjectName: '', description: '', course: '', noCredits: 0 });
-      setEditingId(null);
-      setShowPopup(false);
-      fetchSubjects();
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
-  };
-
-  // Handle edit
-  const handleEdit = (subject: Subject) => {
-    setForm({
-      subjectName: subject.subjectName,
-      description: subject.description || '',
-      course: subject.course || '',
-      noCredits: subject.noCredits,
-    });
-    setEditingId(subject.subjectId);
-    setShowPopup(true);
-  };
-
-  // Handle search
-  const handleSearch = (e: FormEvent) => {
-    e.preventDefault();
-    setPageNumber(1);
-    fetchSubjects();
-  };
-
-  // Handle menu actions
-  const handleMenuAction = (action: 'score' | 'chapter', subjectId: number) => {
-    setOpenMenuId(null);
-    if (action === 'score') {
-      router.push(`/examination/managesubject/managescore?subjectId=${subjectId}`);
-    } else if (action === 'chapter') {
-      router.push(`/examination/managesubject/managechapter?subjectId=${subjectId}`);
-    }
-  };
-
-  // Popup close
-  const closePopup = () => {
-    setShowPopup(false);
-    setEditingId(null);
-    setForm({ subjectName: '', description: '', course: '', noCredits: 0 });
-  };
+  const {
+    subjects,
+    loading,
+    error,
+    form,
+    editingId,
+    showPopup,
+    openMenuId,
+    menuRef,
+    pageNumber,
+    pageSize,
+    totalPages,
+    searchName,
+    setSearchName,
+    setPageNumber,
+    handleChange,
+    handleSubmit,
+    handleEdit,
+    handleSearch,
+    handleMenuAction,
+    closePopup,
+    setShowPopup,
+    setEditingId,
+    setForm,
+    setOpenMenuId,
+  } = useSubjects();
 
   return (
     <div className="w-full min-h-screen bg-gray-50 font-sans p-0">

@@ -1,195 +1,35 @@
 'use client';
 
-import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-
-type TrainingProgram = {
-  trainingProgramId: number;
-  trainProName: string;
-  startDate: string;
-  endDate?: string | null;
-  noCredits: number;
-};
-
-type TrainingProgramForm = {
-  trainProName: string;
-  startDate: string;
-  endDate?: string | null;
-  noCredits: number;
-};
-
-const API_URL = 'https://localhost:7074/api/TrainingProgram';
+import { useTrainingPrograms } from '@hooks/examination/trainningProgramHook';
 
 export default function TrainingProgramManager() {
-  // Lấy majorId từ query string
-  const searchParams = useSearchParams();
-  const majorId = Number(searchParams.get('majorId')) || 1;
-
-  const [programs, setPrograms] = useState<TrainingProgram[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<TrainingProgramForm>({
-    trainProName: '',
-    startDate: '',
-    endDate: '',
-    noCredits: 0,
-  });
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [showPopup, setShowPopup] = useState(false);
-
-  // Pagination & search state
-  const [pageNumber, setPageNumber] = useState(1);
-  const [pageSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
-  const [searchName, setSearchName] = useState('');
-  const [searchFromDate, setSearchFromDate] = useState('');
-  const [searchToDate, setSearchToDate] = useState('');
-
-  // Double click state
-  const [lastClick, setLastClick] = useState<{ id: number; time: number } | null>(null);
-
-  const router = useRouter();
-
-  // Fetch training programs with pagination and search
-  const fetchPrograms = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      if (searchName) params.append('name', searchName);
-      if (searchFromDate) params.append('fromDate', searchFromDate);
-      if (searchToDate) params.append('toDate', searchToDate);
-      params.append('pageNumber', pageNumber.toString());
-      params.append('pageSize', pageSize.toString());
-
-      const res = await fetch(`${API_URL}/${majorId}?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to fetch training programs');
-      const data = await res.json();
-      setPrograms(data);
-
-      const countParams = new URLSearchParams();
-      if (searchName) countParams.append('name', searchName);
-      if (searchFromDate) countParams.append('fromDate', searchFromDate);
-      if (searchToDate) countParams.append('toDate', searchToDate);
-      countParams.append('pageSize', pageSize.toString());
-
-      const countRes = await fetch(`${API_URL}/count/${majorId}?${countParams.toString()}`);
-      if (countRes.ok) {
-        const count = await countRes.json();
-        setTotalPages(Math.ceil(count / pageSize));
-      }
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchPrograms();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageNumber, searchName, searchFromDate, searchToDate, majorId]);
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === 'number' ? Number(value) : value,
-    }));
-  };
-
-  // Handle submit (add or update)
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      if (editingId === null) {
-        // Add
-        const res = await fetch(`${API_URL}/${majorId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            trainProName: form.trainProName,
-            startDate: form.startDate,
-            endDate: form.endDate,
-            noCredits: form.noCredits,
-          }),
-        });
-        if (!res.ok) throw new Error('Failed to add training program');
-      } else {
-        // Update
-        const res = await fetch(`${API_URL}/${editingId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            trainingProgramId: editingId,
-            trainProName: form.trainProName,
-            startDate: form.startDate,
-            endDate: form.endDate,
-            noCredits: form.noCredits,
-          }),
-        });
-        if (!res.ok) throw new Error('Failed to update training program');
-      }
-      setForm({ trainProName: '', startDate: '', endDate: '', noCredits: 0 });
-      setEditingId(null);
-      setShowPopup(false);
-      fetchPrograms();
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
-  };
-
-  // Handle edit
-  const handleEdit = (program: TrainingProgram) => {
-    setForm({
-      trainProName: program.trainProName,
-      startDate: program.startDate ? program.startDate.substring(0, 10) : '',
-      endDate: program.endDate ? program.endDate.substring(0, 10) : '',
-      noCredits: program.noCredits,
-    });
-    setEditingId(program.trainingProgramId);
-    setShowPopup(true);
-  };
-
-  // Handle delete
-  const handleDelete = async (id: number) => {
-    if (!confirm('Bạn có chắc muốn xóa chương trình này?')) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete training program');
-      fetchPrograms();
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
-  };
-
-  // Handle search
-  const handleSearch = (e: FormEvent) => {
-    e.preventDefault();
-    setPageNumber(1);
-    fetchPrograms();
-  };
-
-  // Popup close
-  const closePopup = () => {
-    setShowPopup(false);
-    setEditingId(null);
-    setForm({ trainProName: '', startDate: '', endDate: '', noCredits: 0 });
-  };
-
-  // Double click handler
-  const handleRowClick = (trainingProgramId: number) => {
-    const now = Date.now();
-    if (lastClick && lastClick.id === trainingProgramId && now - lastClick.time < 400) {
-      router.push(`/examination/managemajor/trainingprogram/subject?trainingProgramId=${trainingProgramId}`);
-    }
-    setLastClick({ id: trainingProgramId, time: now });
-  };
+  const {
+    programs,
+    loading,
+    error,
+    form,
+    editingId,
+    showPopup,
+    pageNumber,
+    totalPages,
+    searchName,
+    setSearchName,
+    searchFromDate,
+    setSearchFromDate,
+    searchToDate,
+    setSearchToDate,
+    setPageNumber,
+    handleChange,
+    handleSubmit,
+    handleEdit,
+    handleDelete,
+    handleSearch,
+    closePopup,
+    setShowPopup,
+    setEditingId,
+    setForm,
+    handleRowClick,
+  } = useTrainingPrograms();
 
   return (
     <div className="w-full min-h-screen bg-gray-50 font-sans p-0">

@@ -19,6 +19,7 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProp
     window.addEventListener('resize', handleResize);
     handleResize();
     setRole(getUserRoleFromToken());
+    console.log(role);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -42,7 +43,7 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProp
               <li><Link href="/admin/dashboard" className="sidebar-link" onClick={handleClose}>Thống kê hệ thống</Link></li>
             </>
           )}
-          {role === 'Examination' && (
+          {role == 'Examination' && (
             <>
               <li><Link href="/examination/managemajor" className="sidebar-link" onClick={handleClose}>Quản lý ngành</Link></li>
               <li><Link href="/examination/managesubject" className="sidebar-link" onClick={handleClose}>Quản lý môn học</Link></li>

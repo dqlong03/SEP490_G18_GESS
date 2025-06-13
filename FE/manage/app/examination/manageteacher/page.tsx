@@ -1,183 +1,32 @@
 'use client';
 
-import React, { useEffect, useState, ChangeEvent, FormEvent } from 'react';
-
-type Teacher = {
-  teacherId: string;
-  userName: string;
-  email: string;
-  phoneNumber: string;
-  fullName: string;
-  gender: boolean;
-  isActive: boolean;
-  hireDate: string;
-};
-
-type TeacherForm = {
-  userName: string;
-  email: string;
-  phoneNumber: string;
-  fullName: string;
-  gender: boolean;
-  isActive: boolean;
-  hireDate: string;
-};
-
-const API_URL = 'https://localhost:7074/api/Teacher';
+import { useTeachers } from '@/hooks/examination/manageTeacherHook';
 
 export default function TeacherManagementPage() {
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState('');
-  const [form, setForm] = useState<Partial<TeacherForm>>({
-    userName: '',
-    email: '',
-    phoneNumber: '',
-    fullName: '',
-    gender: true,
-    isActive: true,
-    hireDate: '',
-  });
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [showPopup, setShowPopup] = useState(false);
-
-  // Double click state
-  const [lastClick, setLastClick] = useState<{ id: string; time: number } | null>(null);
-
-  // Fetch teachers
-  const fetchTeachers = async (keyword = '') => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (keyword) params.append('keyword', keyword);
-      const url = keyword
-        ? `${API_URL}/search?${params.toString()}`
-        : API_URL;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch teachers');
-      const data = await res.json();
-      setTeachers(data);
-    } catch {
-      alert('Failed to fetch teachers');
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchTeachers();
-  }, []);
-
-  // Handle form input
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type, checked } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-  };
-
-  // Add or update teacher
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      if (editingId) {
-        // Update
-        await fetch(`${API_URL}/${editingId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form),
-        });
-      } else {
-        // Add
-        await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form),
-        });
-      }
-      setForm({
-        userName: '',
-        email: '',
-        phoneNumber: '',
-        fullName: '',
-        gender: true,
-        isActive: true,
-        hireDate: '',
-      });
-      setEditingId(null);
-      setShowPopup(false);
-      fetchTeachers(search);
-    } catch {
-      alert('Failed to save teacher');
-    }
-    setLoading(false);
-  };
-
-  // Edit teacher (open popup)
-  const handleEdit = (teacher: Teacher) => {
-    setForm({
-      userName: teacher.userName,
-      email: teacher.email,
-      phoneNumber: teacher.phoneNumber,
-      fullName: teacher.fullName,
-      gender: teacher.gender,
-      isActive: teacher.isActive,
-      hireDate: teacher.hireDate ? teacher.hireDate.slice(0, 10) : '',
-    });
-    setEditingId(teacher.teacherId);
-    setShowPopup(true);
-  };
-
-  // Double click handler
-  const handleRowClick = (teacher: Teacher) => {
-    const now = Date.now();
-    if (lastClick && lastClick.id === teacher.teacherId && now - lastClick.time < 400) {
-      handleEdit(teacher);
-    }
-    setLastClick({ id: teacher.teacherId, time: now });
-  };
-
-  // Delete teacher
-  const handleDelete = async (id: string) => {
-    if (!confirm('Bạn có chắc muốn xóa giáo viên này?')) return;
-    setLoading(true);
-    try {
-      await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-      fetchTeachers(search);
-    } catch {
-      alert('Failed to delete teacher');
-    }
-    setLoading(false);
-  };
-
-  // Search
-  const handleSearch = (e: FormEvent) => {
-    e.preventDefault();
-    fetchTeachers(search);
-  };
-
-  // Popup close
-  const closePopup = () => {
-    setShowPopup(false);
-    setEditingId(null);
-    setForm({
-      userName: '',
-      email: '',
-      phoneNumber: '',
-      fullName: '',
-      gender: true,
-      isActive: true,
-      hireDate: '',
-    });
-  };
+  const {
+    teachers,
+    loading,
+    search,
+    setSearch,
+    form,
+    editingId,
+    showPopup,
+    handleChange,
+    handleSubmit,
+    handleEdit,
+    handleRowClick,
+    handleDelete,
+    handleSearch,
+    closePopup,
+    setShowPopup,
+    setEditingId,
+    setForm,
+  } = useTeachers();
 
   return (
     <div className="w-full min-h-screen bg-gray-50 font-sans p-0">
       <div className="max-w-3xl mx-auto py-8 px-4">
         <h2 className="text-2xl font-bold text-gray-800 mb-6">Quản lý giáo viên</h2>
-
-        {/* Search bar */}
         <form onSubmit={handleSearch} className="flex flex-wrap gap-2 items-center mb-6">
           <input
             type="text"
@@ -195,7 +44,7 @@ export default function TeacherManagementPage() {
           </button>
           <button
             type="button"
-            onClick={() => { setSearch(''); fetchTeachers(''); }}
+            onClick={() => { setSearch(''); }}
             className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 transition font-semibold"
           >
             Xóa lọc
@@ -217,7 +66,6 @@ export default function TeacherManagementPage() {
           </button>
         </form>
 
-        {/* Popup Add/Edit */}
         {showPopup && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30 animate-fadeIn">
             <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md relative animate-popup">
@@ -330,7 +178,6 @@ export default function TeacherManagementPage() {
           </div>
         )}
 
-        {/* Teacher List */}
         <div className="overflow-x-auto rounded shadow bg-white">
           <table className="min-w-full text-sm md:text-base border border-gray-200">
             <thead>
@@ -383,7 +230,6 @@ export default function TeacherManagementPage() {
           </table>
         </div>
       </div>
-      {/* Tailwind animation for popup */}
       <style jsx global>{`
         @keyframes fadeIn {
           from { opacity: 0 }

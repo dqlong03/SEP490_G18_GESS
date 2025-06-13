@@ -19,6 +19,8 @@ import { ToastContainer } from 'react-toastify'; // Import ToastContainer
 export default function TestPage() {
   const [isSuccess, setIsSuccess] = useState<boolean | null>(null);
 
+  const v = ("Khảo thí" === "Khảo thí");
+
   // Handle button click
   const handleClick = () => {
     // Simulate success or failure randomly
@@ -27,11 +29,12 @@ export default function TestPage() {
 
     if (success) {
       showToast('success', 'Thành công!');
+      console.log(v);
     } else {
       showToast('error', 'Thất bại!');
     }
   };
-
+  
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-100">
       <div className="bg-white p-6 rounded-lg shadow-lg text-center">
@@ -41,6 +44,7 @@ export default function TestPage() {
         >
           {isSuccess === null ? 'Click me' : isSuccess ? 'Thành công' : 'Thất bại'}
         </button>
+        <p>{v}</p>
 
         {/* Toast container to display notifications */}
          <ToastContainer /> {/* Add ToastContainer here */}
