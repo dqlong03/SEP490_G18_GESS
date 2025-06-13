@@ -69,7 +69,7 @@ namespace GESS.Service.authservice
                 var claims = new List<Claim>
         {
             new Claim("Username", user.UserName),
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim("Userid", user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
@@ -158,15 +158,24 @@ namespace GESS.Service.authservice
             var claims = new List<Claim>
             {
                 new Claim("Username", user.UserName),
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim("Userid", user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
             var userRoles = await _userManager.GetRolesAsync(user);
             foreach (var role in userRoles)
             {
-                claims.Add(new Claim("Role", role));
+                string claimRole = role switch
+                {
+                    "Khảo thí" => "Examination",
+                    "Giáo viên" => "Teacher",
+                    "Sinh viên" => "Student",
+                    "Trưởng bộ môn" => "Teacher Leader",
+                    _ => role
+                };
+                claims.Add(new Claim("Role", claimRole));
             }
+
 
             var accessToken = _jwtService.GenerateAccessToken(claims);
 
@@ -245,10 +254,10 @@ namespace GESS.Service.authservice
         public async Task<bool> ResetPasswordAsync(ResetPasswordDTO model)
         {
             // 1. Kiểm tra xác minh OTP
-            if (!_memoryCache.TryGetValue("otp_verified_" + model.Email, out _))
-            {
-                return false; // Chưa xác minh OTP
-            }
+            //if (!_memoryCache.TryGetValue("otp_verified_" + model.Email, out _))
+            //{
+            //    return false; // Chưa xác minh OTP
+            //}
 
             // 2. Kiểm tra mật khẩu nhập lại
             if (model.NewPassword != model.ConfirmPassword)

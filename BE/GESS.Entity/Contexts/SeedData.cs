@@ -74,6 +74,7 @@ namespace GESS.Entity.Contexts
             // Khảo thí
             await CreateUser(userManager, "exam1@example.com", "Ngô Thị H", "Password123!", new DateTime(1986, 6, 15), "0987654328", false, "Khảo thí");
             await CreateUser(userManager, "exam2@example.com", "Đặng Văn I", "Password123!", new DateTime(1988, 8, 25), "0987654329", true, "Khảo thí");
+            await CreateUser(userManager, "tuanvahe140809@fpt.edu.vn", "Đặng Văn I", "Password123!", new DateTime(1988, 8, 25), "0987654329", true, "Khảo thí");
 
             // Sinh viên
             await CreateUser(userManager, "student1@example.com", "Phạm Minh J", "Password123!", new DateTime(2000, 8, 15), "0123456789", true, "Sinh viên");
