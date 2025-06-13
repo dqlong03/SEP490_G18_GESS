@@ -1,24 +1,20 @@
-﻿using GESS.Entity.Entities;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GESS.Model.Teacher
+namespace GESS.Model.Examination
 {
-    public class TeacherResponse
+    public class ExaminationCreationRequest
     {
-        public Guid TeacherId { get; set; }
         public string UserName { get; set; }
         public string Email { get; set; }
         public string PhoneNumber { get; set; }
         public DateTime? DateOfBirth { get; set; }
         public string Fullname { get; set; }
         public bool Gender { get; set; }
-        public bool IsActive { get; set; }
-
-        public List<MajorTeacherDto> MajorTeachers { get; set; }
-        public DateTime HireDate { get; set; }
+        public bool IsActive { get; set; } =true;
+        public DateTime HireDate { get; set; } = DateTime.Now;
     }
 }

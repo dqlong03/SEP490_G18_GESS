@@ -1,5 +1,6 @@
 ﻿using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
+using GESS.Model.Examination;
 using GESS.Model.Teacher;
 using GESS.Repository.Interface;
 using Microsoft.AspNetCore.Identity;
@@ -27,7 +28,7 @@ namespace GESS.Repository.Implement
             var teacher = await _context.Teachers
         .Include(t => t.User)
         .Include(t => t.MajorTeachers)
-        .ThenInclude(mt => mt.Major) // Giả sử MajorTeacher có Major
+        .ThenInclude(mt => mt.Major) 
         .FirstOrDefaultAsync(t => t.TeacherId == teacherId);
 
             if (teacher == null) return null;
@@ -51,13 +52,38 @@ namespace GESS.Repository.Implement
             };
         }
 
-        public async Task<List<TeacherResponse>> GetAllTeachersAsync()
+        public async Task<List<TeacherResponse>> GetAllTeachersAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageNumber, int pageSize)
         {
-            var teachers = await _context.Teachers
-         .Include(t => t.User)
-         .Include(t => t.MajorTeachers)
-         .ThenInclude(mt => mt.Major)
-         .ToListAsync();
+            var query = _context.Teachers
+                .Include(t => t.User)
+                .Include(t => t.MajorTeachers)
+                .ThenInclude(mt => mt.Major)
+                .AsQueryable();
+
+            if (active.HasValue)
+            {
+                query = query.Where(t => t.User.IsActive == active.Value);
+            }
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                query = query.Where(t => t.User.Fullname.ToLower().Contains(name.ToLower()));
+            }
+            if (fromDate.HasValue)
+            {
+                query = query.Where(t => t.HireDate >= fromDate.Value);
+            }
+            if (toDate.HasValue)
+            {
+                query = query.Where(t => t.HireDate <= toDate.Value);
+            }
+
+            var totalCount = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            var teachers = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
 
             return teachers.Select(teacher => new TeacherResponse
             {
@@ -78,7 +104,7 @@ namespace GESS.Repository.Implement
             }).ToList();
         }
 
-        public async Task AddTeacherAsync(Guid userId, TeacherCreationRequest request)
+        public async Task<TeacherResponse> AddTeacherAsync(Guid userId, TeacherCreationRequest request)
         {
             var teacher = new Teacher
             {
@@ -86,10 +112,34 @@ namespace GESS.Repository.Implement
                 MajorTeachers = request.MajorTeachers,
                 HireDate = request.HireDate
             };
-
             await _context.Teachers.AddAsync(teacher);
             await _context.SaveChangesAsync();
+
+            // Lấy lại teacher vừa thêm
+            var entity = await _context.Teachers
+                .Include(t => t.User)
+                .Include(t => t.MajorTeachers).ThenInclude(mt => mt.Major)
+                .FirstOrDefaultAsync(t => t.TeacherId == teacher.TeacherId);
+
+            return new TeacherResponse
+            {
+                TeacherId = entity.TeacherId,
+                UserName = entity.User.UserName,
+                Email = entity.User.Email,
+                PhoneNumber = entity.User.PhoneNumber,
+                DateOfBirth = entity.User.DateOfBirth,
+                Fullname = entity.User.Fullname,
+                Gender = entity.User.Gender,
+                IsActive = entity.User.IsActive,
+                HireDate = entity.HireDate,
+                MajorTeachers = entity.MajorTeachers?.Select(mt => new MajorTeacherDto
+                {
+                    MajorId = mt.MajorId,
+                    MajorName = mt.Major?.MajorName
+                }).ToList() ?? new List<MajorTeacherDto>()
+            };
         }
+
 
         public async Task<TeacherResponse> UpdateTeacherAsync(Guid teacherId, TeacherUpdateRequest request)
         {
@@ -203,7 +253,34 @@ namespace GESS.Repository.Implement
             }).ToList();
         }
 
-
+        public Task<int> CountPageAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageSize)
+        {
+            var query = _context.Teachers.AsQueryable();
+            if (active.HasValue)
+            {
+                query = query.Where(e => e.User.IsActive == active.Value);
+            }
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                query = query.Where(e => e.User.Fullname.ToLower().Contains(name.ToLower()));
+            }
+            if (fromDate.HasValue)
+            {
+                query = query.Where(e => e.HireDate >= fromDate.Value);
+            }
+            if (toDate.HasValue)
+            {
+                query = query.Where(e => e.HireDate <= toDate.Value);
+            }
+            var count = query.Count();
+            if (count <= 0)
+            {
+                throw new InvalidOperationException("Không có dữ liệu để đếm trang.");
+            }
+            // Calculate total pages
+            int totalPages = (int)Math.Ceiling((double)count / pageSize);
+            return Task.FromResult(totalPages);
+        }
     }
 
 }

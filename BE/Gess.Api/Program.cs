@@ -27,6 +27,7 @@ using System.Security.Claims;
 using System.Text;
 using GESS.Service.subject;
 using GESS.Service.trainingProgram;
+using GESS.Service.examination;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -114,6 +115,7 @@ builder.Services.AddScoped<IMajorService, MajorService>();
 builder.Services.AddScoped<ISubjectService, SubjectService>();
 builder.Services.AddScoped<ITrainingProgramService, TrainingProgramService>();
 builder.Services.AddScoped<IOtpService, OtpService>();
+builder.Services.AddScoped<IExaminationService, ExaminationService>();
 builder.Services.AddScoped<IClassService, ClassService>();
 
 // ThaiNH_Initialize_Begin
@@ -126,7 +128,7 @@ builder.Services.AddScoped<ICateExamSubService, CateExamSubService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IChapterRepository, ChapterRepository>();
 builder.Services.AddScoped<ITeacherRepository, TeacherRepository>();
-
+builder.Services.AddScoped<IExaminationRepository, ExaminationRepository>();
 builder.Services.AddScoped<IMajorRepository, MajorRepository>();
 builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
 builder.Services.AddScoped<ITrainingProgramRepository, TrainingProgramRepository>();

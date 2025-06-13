@@ -24,11 +24,12 @@ namespace GESS.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllTeachers()
+        public async Task<IActionResult> GetAllTeachers([FromQuery] bool? active, [FromQuery] string? name, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
-            var teachers = await _teacherService.GetAllTeachersAsync();
+            var teachers = await _teacherService.GetAllTeachersAsync(active, name, fromDate, toDate, pageNumber, pageSize);
             return Ok(teachers);
         }
+
 
         [HttpPost]
         public async Task<IActionResult> AddTeacher([FromBody] TeacherCreationRequest request)

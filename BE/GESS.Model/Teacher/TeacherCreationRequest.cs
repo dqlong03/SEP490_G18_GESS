@@ -15,7 +15,7 @@ namespace GESS.Model.Teacher
         public DateTime DateOfBirth { get; set; }
         public string Fullname { get; set; }
         public bool Gender { get; set; }
-        public bool IsActive { get; set; }
+        public bool IsActive { get; set; } = true;
         public string? Password { get; set; }
 
 
