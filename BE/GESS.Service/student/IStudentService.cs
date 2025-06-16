@@ -19,6 +19,7 @@ namespace GESS.Service.student
         Task<List<StudentResponse>> SearchStudentsAsync(string keyword);
         Task<StudentResponse> UpdateStudentAsync(Guid studentId, StudentUpdateRequest request);
         Task<Student> AddStudentAsync(Guid id, StudentCreateDTO student);
+
         Task<IEnumerable<StudentFileExcel>> StudentFileExcelsAsync(IFormFile file);
     }
 }
