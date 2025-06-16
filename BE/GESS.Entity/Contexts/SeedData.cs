@@ -30,6 +30,9 @@ namespace GESS.Entity.Contexts
             await SeedSubjectsAsync(context);
             await SeedChaptersAsync(context);
             await SeedClassesAsync(context);
+            await SeedCohortsAsync(context);
+            await SeedStudentsAsync(context);
+            await SeedClassStudentsAsync(context);
         }
 
         private static async Task SeedRolesAsync(RoleManager<IdentityRole<Guid>> roleManager)
@@ -307,6 +310,71 @@ namespace GESS.Entity.Contexts
                     }
                 };
                 await context.MajorTeachers.AddRangeAsync(majorTeachers);
+                await context.SaveChangesAsync();
+            }
+        }
+
+        private static async Task SeedCohortsAsync(GessDbContext context)
+        {
+            if (!context.Cohorts.Any())
+            {
+                var cohorts = new List<Cohort>
+                {
+                    new Cohort
+                    {
+                        CohortName = "Khóa 2023-2027"
+                        // Nếu CohortId là identity tự tăng thì không cần set CohortId
+                    }
+                };
+                await context.Cohorts.AddRangeAsync(cohorts);
+                await context.SaveChangesAsync();
+            }
+        }
+
+        private static async Task SeedStudentsAsync(GessDbContext context)
+        {
+            if (!context.Students.Any())
+            {
+                var cohortId = context.Cohorts.First().CohortId;
+                var students = new List<Student>
+                {
+                    new Student
+                    {
+                        StudentId = context.Users.First(u => u.Email == "student1@example.com").Id,
+                        UserId = context.Users.First(u => u.Email == "student1@example.com").Id,
+                        CohortId = cohortId,
+                        EnrollDate = new DateTime(2023, 9, 1)
+                    },
+                    // ... (lặp lại cho các student khác)
+                };
+                await context.Students.AddRangeAsync(students);
+                await context.SaveChangesAsync();
+            }
+        }
+
+        private static async Task SeedClassStudentsAsync(GessDbContext context)
+        {
+            if (!context.ClassStudents.Any())
+            {
+                var classStudents = new List<ClassStudent>();
+                var students = context.Students.ToList();
+                var classes = context.Classes.ToList();
+
+                foreach (var student in students)
+                {
+                    // Gán mỗi student vào 2 lớp ngẫu nhiên
+                    var randomClasses = classes.OrderBy(x => Guid.NewGuid()).Take(2);
+                    foreach (var classItem in randomClasses)
+                    {
+                        classStudents.Add(new ClassStudent
+                        {
+                            StudentId = student.StudentId,
+                            ClassId = classItem.ClassId
+                        });
+                    }
+                }
+
+                await context.ClassStudents.AddRangeAsync(classStudents);
                 await context.SaveChangesAsync();
             }
         }

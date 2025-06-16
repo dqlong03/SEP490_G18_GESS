@@ -24,10 +24,13 @@ namespace GESS.Service
         bool Delete(Guid id);
 
         Task<bool> DeleteAsync(Guid id);
+        Task<bool> DeleteAsync(int id);
 
         TEntity GetById(Guid id);
 
         Task<TEntity> GetByIdAsync(Guid id);
+        Task<TEntity> GetByIdAsync(int id);
+
 
         IEnumerable<TEntity> GetAll();
        

@@ -53,6 +53,14 @@ namespace Gess.Repository.Infrastructures
                 dbSet.Remove(entity);
             }
         }
+        public void Delete(int id)
+        {
+            var entity = dbSet.Find(id);
+            if (entity != null)
+            {
+                dbSet.Remove(entity);
+            }
+        }
 
         public async Task<bool> ExistsAsync(Expression<Func<TEntity, bool>> predicate)
         {

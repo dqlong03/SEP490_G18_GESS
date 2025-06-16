@@ -111,5 +111,20 @@ namespace GESS.Api.Controllers
             }
         }
 
-    }
+        //API để lấy tất cả ngành
+        [HttpGet("GetAllMajors")]
+        public async Task<ActionResult<IEnumerable<MajorListDTO>>> GetAllMajors()
+        {
+            try
+            {
+                var majors = await _majorService.GetAllMajor();
+                return Ok(majors);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(ex.Message);
+            }
+
+        }
+    } 
 }

@@ -35,6 +35,6 @@ namespace Gess.Repository.Infrastructures
         // ThaiNH_Initialize_Begin
         ICateExamSubRepository CateExamSubRepository { get; }
         // ThaiNH_Initialize_End
-
+        IStudentRepository StudentRepository { get; }
     }
 }

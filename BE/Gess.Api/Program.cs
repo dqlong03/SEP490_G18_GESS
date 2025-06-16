@@ -117,7 +117,7 @@ builder.Services.AddScoped<ITrainingProgramService, TrainingProgramService>();
 builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IExaminationService, ExaminationService>();
 builder.Services.AddScoped<IClassService, ClassService>();
-
+builder.Services.AddScoped<IStudentService, StudentService>();
 // ThaiNH_Initialize_Begin
 builder.Services.AddScoped<ICateExamSubService, CateExamSubService>();
 // ThaiNH_Initialize_End
@@ -133,6 +133,7 @@ builder.Services.AddScoped<IMajorRepository, MajorRepository>();
 builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
 builder.Services.AddScoped<ITrainingProgramRepository, TrainingProgramRepository>();
 builder.Services.AddScoped<IClassRepository, ClassRepository>();
+builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 
 // Đăng ký EmailService
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));

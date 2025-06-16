@@ -37,7 +37,44 @@ namespace GESS.Api.Controllers
             try
             {
                 var createdClass = await _classService.CreateClassAsync(classCreateDto);
-                return CreatedAtAction(nameof(GetAllClassAsync), new { id = createdClass.ClassName }, createdClass);
+                return Created("", createdClass);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, $"Internal server error: {ex.Message}");
+            }
+        }
+        //API xóa lớp học
+        [HttpDelete("DeleteClass/{id}")]
+        public async Task<IActionResult> DeleteClass(int id)
+        {
+            try
+            {
+                var classToDelete = await _classService.GetByIdAsync(id);
+                if (classToDelete == null)
+                {
+                    return NotFound(new { message = "Lớp học không tồn tại." });
+                }
+                await _classService.DeleteAsync(id);
+                return Ok("Xóa thành công lớp học");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, $"Internal server error: {ex.Message}");
+            }
+        }
+        //API sửa lớp học
+        [HttpPut("UpdateClass/{id}")]
+        public async Task<IActionResult> UpdateClass(int id, [FromBody] ClassUpdateDTO classUpdateDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            try
+            {
+                var updatedClass = await _classService.UpdateClassAsync(id, classUpdateDto);
+                return Ok(updatedClass);
             }
             catch (Exception ex)
             {

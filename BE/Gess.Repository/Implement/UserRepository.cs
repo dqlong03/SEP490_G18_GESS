@@ -31,6 +31,10 @@ namespace GESS.Repository.Implement
 
         }
 
+        public async Task<User> GetByEmailAsync(string email)
+        {
+            return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        }
 
         public async Task UpdateUserAsync(Guid userId, User user)
         {
@@ -62,6 +66,17 @@ namespace GESS.Repository.Implement
         {
             return await _context.Users.AnyAsync(u => u.Email == email);
 
+        }
+
+        public async Task CreateAsync(User user)
+        {
+            if (user == null)
+            {
+                throw new ArgumentNullException(nameof(user));
+            }
+
+            await _context.Users.AddAsync(user);
+            await _context.SaveChangesAsync();
         }
     }
 }

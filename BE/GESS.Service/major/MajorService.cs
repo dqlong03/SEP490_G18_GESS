@@ -69,6 +69,17 @@ namespace GESS.Service.major
             return majorDTO;
         }
 
+        public Task<IEnumerable<MajorListDTO>> GetAllMajor()
+        {
+            var majors = _unitOfWork.MajorRepository.GetAll().Where(m => m.IsActive).ToList();
+            return Task.FromResult(majors.Select(major => new MajorListDTO
+            {
+                MajorId = major.MajorId,
+                MajorName = major.MajorName,
+               
+            }).AsEnumerable());
+        }
+
         public async Task<IEnumerable<MajorUpdateDTO>> GetAllMajorsAsync(int? active, string? name = null, DateTime? fromDate = null, DateTime? toDate = null, int pageNumber = 1, int pageSize = 10)
         {
             var majors = await _unitOfWork.MajorRepository.GetAllMajorsAsync(active, name, fromDate, toDate, pageNumber, pageSize);
