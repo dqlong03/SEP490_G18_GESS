@@ -1,5 +1,6 @@
 ﻿using GESS.Common.HandleException;
 using GESS.Entity.Entities;
+using GESS.Model.Student;
 using GESS.Model.User;
 using GESS.Service.users;
 using Microsoft.AspNetCore.Http;
@@ -62,15 +63,27 @@ namespace GESS.Api.Controllers
             }
         }
 
-
-
-        [HttpGet()]
-        public async Task<ActionResult<List<UserListDTO>>> GetAllUsers()
+        [HttpGet("CountPage")]
+        public async Task<ActionResult<int>> CountPage(bool? active, string? name = null, DateTime? fromDate = null, DateTime? toDate = null, int pageSize = 10)
         {
             try
             {
-                var users = await _userService.GetAllUsersAsync();
-                return Ok(users);
+                var count = await _userService.CountPageAsync(active, name, fromDate, toDate, pageSize);
+                return Ok(count);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<UserListDTO>>> GetAllUsers(bool? active, string? name = null, DateTime? fromDate = null, DateTime? toDate = null, int pageNumber = 1, int pageSize = 10)
+        {
+            try
+            {
+                var students = await _userService.GetAllUserAsync(active, name, fromDate, toDate, pageNumber, pageSize);
+                return Ok(students);
             }
             catch (Exception ex)
             {
