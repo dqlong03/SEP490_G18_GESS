@@ -28,10 +28,8 @@ namespace GESS.Entity.Entities
         // Ngày kết thúc học (có thể để trống nếu sinh viên vẫn đang học)
         public DateTime? EndDate { get; set; }
 
-        // Khóa ngoại liên kết đến niên khóa (Cohort), không được để trống
-        [Required(ErrorMessage = "Niên khóa không được để trống!")]
-        public int CohortId { get; set; }
-        public Cohort Cohort { get; set; }
+        public int? CohortId { get; set; }
+        public Cohort? Cohort { get; set; }
 
         // Danh sách lớp học mà sinh viên tham gia (qua bảng trung gian ClassStudent)
         public ICollection<ClassStudent> ClassStudents { get; set; }

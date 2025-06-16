@@ -24,12 +24,43 @@ namespace GESS.Entity.Contexts
             await SeedUsersAsync(userManager);
             await SeedMajorsAsync(context);
             await SeedSemestersAsync(context);
+            await SeedCohortsAsync(context);
 
             // 2. Tạo dữ liệu phụ thuộc
             await SeedTeachersAsync(context);
             await SeedSubjectsAsync(context);
             await SeedChaptersAsync(context);
             await SeedClassesAsync(context);
+        }
+
+        private static async Task SeedCohortsAsync(GessDbContext context)
+        {
+            if (!context.Cohorts.Any())
+            {
+                var cohorts = new List<Cohort>
+                {
+                    new Cohort
+                    {
+                        CohortName = "Khóa 2023-2027",
+                        Students = new List<Student>(),
+                        ApplyTrainingPrograms = new List<ApplyTrainingProgram>()
+                    },
+                    new Cohort
+                    {
+                        CohortName = "Khóa 2024-2028",
+                        Students = new List<Student>(),
+                        ApplyTrainingPrograms = new List<ApplyTrainingProgram>()
+                    },
+                    new Cohort
+                    {
+                        CohortName = "Khóa 2025-2029",
+                        Students = new List<Student>(),
+                        ApplyTrainingPrograms = new List<ApplyTrainingProgram>()
+                    }
+                };
+                await context.Cohorts.AddRangeAsync(cohorts);
+                await context.SaveChangesAsync();
+            }
         }
 
         private static async Task SeedRolesAsync(RoleManager<IdentityRole<Guid>> roleManager)

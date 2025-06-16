@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GESS.Model.Examination
+namespace GESS.Model.Student
 {
-    public class ExaminationUpdateRequest
+    public class StudentUpdateRequest
     {
         public string? UserName { get; set; }
         public string? Email { get; set; }
@@ -14,6 +14,12 @@ namespace GESS.Model.Examination
         public DateTime? DateOfBirth { get; set; }
         public string? Fullname { get; set; }
         public bool Gender { get; set; }
-        public bool IsActive { get; set; } 
+        public string? Code { get; set; }
+
+
+        /// <summary>
+        /// Defaults to true, indicating that the student is active.
+        /// </summary>
+        public bool IsActive { get; set; }
     }
 }

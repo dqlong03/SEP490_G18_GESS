@@ -28,7 +28,7 @@ namespace Gess.Repository.Infrastructures
         ISubjectRepository SubjectRepository { get; }
         IMajorRepository MajorRepository { get; }
         ITrainingProgramRepository TrainingProgramRepository { get; }
-
+        IStudentRepository StudentRepository { get; }
         IClassRepository ClassRepository { get; }
 
 
