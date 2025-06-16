@@ -1,4 +1,5 @@
-﻿using GESS.Model.Student;
+﻿using GESS.Entity.Entities;
+using GESS.Model.Student;
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
@@ -6,9 +7,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GESS.Service.Student
+namespace GESS.Service.student
 {
-    public interface IStudentService
+    public interface IStudentService : IBaseService<Student>
     {
 
         Task<StudentResponse> AddStudentAsync(StudentCreationRequest request);
@@ -18,5 +19,8 @@ namespace GESS.Service.Student
         Task<List<StudentResponse>> ImportStudentsFromExcelAsync(IFormFile file);
         Task<List<StudentResponse>> SearchStudentsAsync(string keyword);
         Task<StudentResponse> UpdateStudentAsync(Guid studentId, StudentUpdateRequest request);
+        Task<Student> AddStudentAsync(Guid id, StudentCreateDTO student);
+
+        Task<IEnumerable<StudentFileExcel>> StudentFileExcelsAsync(IFormFile file);
     }
 }

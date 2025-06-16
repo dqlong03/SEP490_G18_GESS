@@ -32,6 +32,9 @@ namespace Gess.Repository.Infrastructures
         /// Change state of entity to modified
         /// </summary>
         /// <param name="entity"></param>
+
+
+        void Delete(int id);
         void Update(TEntity entity);
 
         /// <summary>

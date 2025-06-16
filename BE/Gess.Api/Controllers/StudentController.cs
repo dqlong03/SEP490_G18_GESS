@@ -1,6 +1,6 @@
 ﻿using GESS.Model.Student;
 using GESS.Service.examination;
-using GESS.Service.Student;
+using GESS.Service.student;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -122,6 +122,24 @@ namespace GESS.Api.Controllers
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
+            }
+        }
+        //API đọc danh sách sinh viên từ file Excel
+        [HttpPost("ImportReadStudentsFromExcel")]
+        public async Task<IActionResult> ReadFileStudentsFromExcel(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest("File không hợp lệ.");
+            }
+            try
+            {
+                var result = await _studentService.StudentFileExcelsAsync(file);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, $"Lỗi khi xử lý file: {ex.Message}");
             }
         }
 

@@ -67,6 +67,12 @@ namespace GESS.Service
             return _unitOfWork.SaveChanges() > 0;
         }
 
+        public bool Delete(int id)
+        {
+            _repository.Delete(id);
+            return _unitOfWork.SaveChanges() > 0;
+        }
+
         public async Task<bool> DeleteAsync(Guid id)
         {
             _repository.Delete(id);
@@ -88,6 +94,16 @@ namespace GESS.Service
             return _repository.GetAll();
         }
 
-       
+        public async Task<bool> DeleteAsync(int id)
+        {
+            _repository.Delete(id);
+            return await _unitOfWork.SaveChangesAsync() > 0;
+        }
+
+        public Task<TEntity> GetByIdAsync(int id)
+        {
+            return _repository.GetByIdAsync(id);
+
+        }
     }
 }

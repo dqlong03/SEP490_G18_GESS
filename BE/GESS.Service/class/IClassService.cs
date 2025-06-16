@@ -13,6 +13,7 @@ namespace GESS.Service
     {
         Task<ClassCreateDTO> CreateClassAsync(ClassCreateDTO classCreateDto);
         Task<IEnumerable<ClassListDTO>> GetAllClassAsync(string? name = null, int pageNumber = 1, int pageSize = 10);
+        Task<ClassUpdateDTO> UpdateClassAsync(int ClassId, ClassUpdateDTO classUpdateDto);
 
     }
 }

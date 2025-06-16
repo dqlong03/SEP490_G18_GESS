@@ -1,7 +1,6 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
-using GESS.Model.Student;
 using GESS.Model.User;
 using GESS.Repository.Interface;
 using Microsoft.AspNetCore.Identity;
@@ -37,6 +36,10 @@ namespace GESS.Repository.Implement
 
         }
 
+        public async Task<User> GetByEmailAsync(string email)
+        {
+            return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        }
 
         public async Task UpdateUserAsync(Guid userId, User user)
         {
@@ -162,6 +165,17 @@ namespace GESS.Repository.Implement
             }
 
             return userList;
+        }
+
+        public async Task CreateAsync(User user)
+        {
+            if (user == null)
+            {
+                throw new ArgumentNullException(nameof(user));
+            }
+
+            await _context.Users.AddAsync(user);
+            await _context.SaveChangesAsync();
         }
     }
 }

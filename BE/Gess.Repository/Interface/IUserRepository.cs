@@ -20,5 +20,7 @@ namespace GESS.Repository.Interface
         Task<bool> IsEmailRegisteredAsync(string email);
         Task<int> CountPageAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageSize);
         Task<List<UserListDTO>> GetAllUsersAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageNumber, int pageSize);
+        public Task CreateAsync(User user);
+        public Task<User> GetByEmailAsync(string email);
     }
 }

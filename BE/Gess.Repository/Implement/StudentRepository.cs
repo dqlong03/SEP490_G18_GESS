@@ -1,4 +1,5 @@
-﻿using GESS.Entity.Contexts;
+﻿using Gess.Repository.Infrastructures;
+using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
 using GESS.Model.Examination;
 using GESS.Model.Student;
@@ -13,11 +14,12 @@ using System.Threading.Tasks;
 
 namespace GESS.Repository.Implement
 {
-    public class StudentRepository : IStudentRepository
+    public class StudentRepository : BaseRepository<Student>, IStudentRepository
     {
         private readonly GessDbContext _context;
         private readonly UserManager<User> _userManager;
         public StudentRepository(GessDbContext context, UserManager<User> userManager)
+    : base(context)
         {
             _context = context;
             _userManager = userManager;
@@ -53,7 +55,7 @@ namespace GESS.Repository.Implement
                 EnrollDate = student.EnrollDate,
             };
         }
-
+        
         public Task<int> CountPageAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageSize)
         {
             var query = _context.ExamServices.AsQueryable();
@@ -227,6 +229,32 @@ namespace GESS.Repository.Implement
                 Code = existing.User.Code,
                 EnrollDate = existing.EnrollDate,
             };
+        }
+      
+        public Task<Student> GetStudentbyUserId(Guid userId)
+        {
+            var student = _context.Students
+                .Include(s => s.User)
+                .FirstOrDefaultAsync(s => s.UserId == userId);
+            if (student == null)
+            {
+                throw new InvalidOperationException($"Student with UserId {userId} not found.");
+            }
+            return student;
+        }
+
+        public async Task AddStudent(Guid id, Student student)
+        {
+            var newStudent = new Student
+            {
+                StudentId = id,
+                UserId = student.UserId,
+                CohortId = student.CohortId,
+                EnrollDate = student.EnrollDate
+            };
+
+            await _context.Students.AddAsync(newStudent);
+            await _context.SaveChangesAsync();
         }
     }
 }

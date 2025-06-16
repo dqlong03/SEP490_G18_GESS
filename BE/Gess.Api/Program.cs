@@ -28,7 +28,7 @@ using System.Text;
 using GESS.Service.subject;
 using GESS.Service.trainingProgram;
 using GESS.Service.examination;
-using GESS.Service.Student;
+using GESS.Service.student;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -120,7 +120,6 @@ builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IExaminationService, ExaminationService>();
 builder.Services.AddScoped<IClassService, ClassService>();
 builder.Services.AddScoped<IStudentService, StudentService>();
-
 // ThaiNH_Initialize_Begin
 builder.Services.AddScoped<ICateExamSubService, CateExamSubService>();
 // ThaiNH_Initialize_End
