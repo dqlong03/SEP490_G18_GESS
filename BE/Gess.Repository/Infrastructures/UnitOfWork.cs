@@ -25,6 +25,7 @@ namespace Gess.Repository.Infrastructures
 
         private IExaminationRepository _examinationRepository;
         private ITeacherRepository _teacherRepository;
+        private IStudentRepository _studentRepository;
         private IClassRepository _classRepository;
         private readonly UserManager<User> _userManager;
         private ISubjectRepository _subjectRepository;
@@ -40,6 +41,8 @@ namespace Gess.Repository.Infrastructures
 
         public IUserRepository UserRepository =>  _userRepository ??= new UserRepository(_context);
         public IRefreshTokenRepository RefreshTokenRepository => _refreshTokenRepository ??= new RefreshTokenRepository(_context);
+
+        public IStudentRepository StudentRepository => _studentRepository ??= new StudentRepository(_context, _userManager);
 
         public IChapterRepository ChapterRepository => _chapterRepository ??= new ChapterRepository(_context);
 
