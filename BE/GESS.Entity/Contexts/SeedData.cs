@@ -309,35 +309,35 @@ namespace GESS.Entity.Contexts
                 await context.SaveChangesAsync();
 
                 // Thêm dữ liệu cho bảng MajorTeacher
-                var majorTeachers = new List<MajorTeacher>
-                {
-                    new MajorTeacher 
-                    { 
-                        TeacherId = context.Users.First(u => u.Email == "teacher1@example.com").Id,
-                        MajorId = 1
-                    },
-                    new MajorTeacher 
-                    { 
-                        TeacherId = context.Users.First(u => u.Email == "teacher2@example.com").Id,
-                        MajorId = 1
-                    },
-                    new MajorTeacher 
-                    { 
-                        TeacherId = context.Users.First(u => u.Email == "teacher3@example.com").Id,
-                        MajorId = 1
-                    },
-                    new MajorTeacher 
-                    { 
-                        TeacherId = context.Users.First(u => u.Email == "teacher4@example.com").Id,
-                        MajorId = 1
-                    },
-                    new MajorTeacher 
-                    { 
-                        TeacherId = context.Users.First(u => u.Email == "teacher5@example.com").Id,
-                        MajorId = 1
-                    }
-                };
-                await context.MajorTeachers.AddRangeAsync(majorTeachers);
+                //var majorTeachers = new List<MajorTeacher>
+                //{
+                //    new MajorTeacher 
+                //    { 
+                //        TeacherId = context.Users.First(u => u.Email == "teacher1@example.com").Id,
+                //        MajorId = 1
+                //    },
+                //    new MajorTeacher 
+                //    { 
+                //        TeacherId = context.Users.First(u => u.Email == "teacher2@example.com").Id,
+                //        MajorId = 1
+                //    },
+                //    new MajorTeacher 
+                //    { 
+                //        TeacherId = context.Users.First(u => u.Email == "teacher3@example.com").Id,
+                //        MajorId = 1
+                //    },
+                //    new MajorTeacher 
+                //    { 
+                //        TeacherId = context.Users.First(u => u.Email == "teacher4@example.com").Id,
+                //        MajorId = 1
+                //    },
+                //    new MajorTeacher 
+                //    { 
+                //        TeacherId = context.Users.First(u => u.Email == "teacher5@example.com").Id,
+                //        MajorId = 1
+                //    }
+                //};
+                //await context.MajorTeachers.AddRangeAsync(majorTeachers);
                 await context.SaveChangesAsync();
             }
         }

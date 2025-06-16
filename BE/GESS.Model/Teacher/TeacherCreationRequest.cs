@@ -20,7 +20,8 @@ namespace GESS.Model.Teacher
 
 
         // Teacher properties
-        public ICollection<MajorTeacher> MajorTeachers { get; set; }
+        public int MajorId { get; set; }
+        public string? MajorName { get; set; }
         public DateTime HireDate { get; set; } = DateTime.Now;
     }
 }

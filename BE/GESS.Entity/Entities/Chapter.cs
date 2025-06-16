@@ -29,6 +29,8 @@ namespace GESS.Entity.Entities
         [StringLength(500, ErrorMessage = "Mô tả không được vượt quá 500 ký tự!")]
         public string Description { get; set; }
 
+        public string? Course { get; set; }
+
         // Danh sách câu hỏi trắc nghiệm thuộc chương này
         public ICollection<MultiQuestion> MultiQuestions { get; set; }
 

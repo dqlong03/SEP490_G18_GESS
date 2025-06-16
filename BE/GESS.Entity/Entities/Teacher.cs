@@ -28,7 +28,7 @@ namespace GESS.Entity.Entities
         public DateTime? EndDate { get; set; }
 
         // Danh sách ngành mà giáo viên thuộc về (qua bảng trung gian MajorTeacher)
-        public ICollection<MajorTeacher> MajorTeachers { get; set; }
+        //public ICollection<MajorTeacher> MajorTeachers { get; set; }
 
         // Danh sách lớp học mà giáo viên dạy (qua bảng trung gian Class)
         public ICollection<Class> Classes { get; set; }
@@ -39,10 +39,13 @@ namespace GESS.Entity.Entities
         // Phòng thi và ca thi mà giáo viên này chấm điểm (1 giáo viên chấm 1 phòng/ca)
         public ExamSlotRoom ExamSlotRoomGrader { get; set; }
 
+        public Major Major { get; set; }
+        public int MajorId { get; set; }
+
         // Constructor khởi tạo các danh sách
         public Teacher()
         {
-            MajorTeachers = new List<MajorTeacher>();
+            //MajorTeachers = new List<MajorTeacher>();
             Classes = new List<Class>();
         }
     }

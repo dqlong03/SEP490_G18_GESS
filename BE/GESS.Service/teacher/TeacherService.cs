@@ -121,30 +121,37 @@ namespace GESS.Service.teacher
                     var worksheet = package.Workbook.Worksheets[0];
                     int rowCount = worksheet.Dimension?.Rows ?? 0;
 
-                    if (rowCount < 2)
+                    if (rowCount < 3)
                         throw new Exception("File Excel không chứa dữ liệu hợp lệ.");
 
-                    for (int row = 2; row <= rowCount; row++) // Bỏ qua hàng tiêu đề
+                    for (int row = 3; row <= rowCount; row++) // Bỏ qua hàng tiêu đề
                     {
                         try
                         {
                             var request = new TeacherCreationRequest
                             {
-                                UserName = worksheet.Cells[row, 1].Text.Trim(),
-                                Email = worksheet.Cells[row, 2].Text.Trim(),
-                                PhoneNumber = worksheet.Cells[row, 3].Text.Trim(),
-                                DateOfBirth = DateTime.TryParse(worksheet.Cells[row, 4].Text, out var dob) ? dob : DateTime.Now,
-                                Fullname = worksheet.Cells[row, 5].Text.Trim(),
-                                Gender = bool.TryParse(worksheet.Cells[row, 6].Text, out var gender) ? gender : true,
-                                IsActive = bool.TryParse(worksheet.Cells[row, 7].Text, out var isActive) ? isActive : true,
-                                HireDate = DateTime.TryParse(worksheet.Cells[row, 8].Text, out var hireDate) ? hireDate : DateTime.Now,
-                                MajorTeachers = ParseMajorTeachers(worksheet.Cells[row, 9].Text)
+                                UserName = worksheet.Cells[row, 2].Text.Trim(),
+                                Email = worksheet.Cells[row, 3].Text.Trim(),
+                                PhoneNumber = worksheet.Cells[row, 4].Text.Trim(),
+                                DateOfBirth = DateTime.TryParse(worksheet.Cells[row, 5].Text, out var dob) ? dob : DateTime.Now,
+                                Fullname = worksheet.Cells[row, 6].Text.Trim(),
+                                Gender = bool.TryParse(worksheet.Cells[row, 7].Text, out var gender) ? gender : true,
+                                IsActive = bool.TryParse(worksheet.Cells[row, 8].Text, out var isActive) ? isActive : true,
+                                HireDate = DateTime.TryParse(worksheet.Cells[row, 9].Text, out var hireDate) ? hireDate : DateTime.Now,
+                                MajorName =  worksheet.Cells[row, 10].Text.Trim()
                             };
+
+                            //Check MajorName exsit in system
+                            if (string.IsNullOrWhiteSpace(request.MajorName))
+                            {
+                                //throw exception
+                            }
+
 
                             // Kiểm tra dữ liệu bắt buộc
                             if (string.IsNullOrWhiteSpace(request.UserName) || string.IsNullOrWhiteSpace(request.Email))
                             {
-                                Console.WriteLine($"Bỏ qua hàng {row}: Thiếu UserName hoặc Email.");
+                                Console.WriteLine($"Bỏ qua hàng {row}: Thiếu tên đăng nhập hoặc Email.");
                                 continue;
                             }
 
@@ -165,24 +172,6 @@ namespace GESS.Service.teacher
             return teachers;
         }
 
-        private List<MajorTeacher> ParseMajorTeachers(string majorIdsText)
-        {
-            if (string.IsNullOrWhiteSpace(majorIdsText))
-                return new List<MajorTeacher>();
-
-            var majorIds = majorIdsText.Split(',', StringSplitOptions.RemoveEmptyEntries);
-            var majorTeachers = new List<MajorTeacher>();
-
-            foreach (var id in majorIds)
-            {
-                if (int.TryParse(id.Trim(), out var majorId))
-                {
-                    majorTeachers.Add(new MajorTeacher { MajorId = majorId });
-                }
-            }
-
-            return majorTeachers;
-        }
 
         public async Task<int> CountPageAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageSize)
         {
