@@ -14,9 +14,13 @@ namespace GESS.Entity.Configs
                    .HasForeignKey<Teacher>(t => t.UserId)
                    .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasMany(t => t.MajorTeachers)
-                   .WithOne(mt => mt.Teacher)
-                   .HasForeignKey(mt => mt.TeacherId);
+            //builder.HasMany(t => t.MajorTeachers)
+            //       .WithOne(mt => mt.Teacher)
+            //       .HasForeignKey(mt => mt.TeacherId);
+
+            builder.HasOne(t => t.Major)
+                   .WithMany(m => m.Teachers)
+                   .HasForeignKey(t => t.MajorId);
 
             builder.HasMany(t => t.Classes)
                    .WithOne(c => c.Teacher)

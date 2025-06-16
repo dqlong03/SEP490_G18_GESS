@@ -26,10 +26,8 @@ namespace GESS.Repository.Implement
         public async Task<TeacherResponse> GetTeacherByIdAsync(Guid teacherId)
         {
             var teacher = await _context.Teachers
-        .Include(t => t.User)
-        .Include(t => t.MajorTeachers)
-        .ThenInclude(mt => mt.Major) 
-        .FirstOrDefaultAsync(t => t.TeacherId == teacherId);
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.TeacherId == teacherId);
 
             if (teacher == null) return null;
 
@@ -44,11 +42,7 @@ namespace GESS.Repository.Implement
                 Gender = teacher.User.Gender,
                 IsActive = teacher.User.IsActive,
                 HireDate = teacher.HireDate,
-                MajorTeachers = teacher.MajorTeachers?.Select(mt => new MajorTeacherDto
-                {
-                    MajorId = mt.MajorId,
-                    MajorName = mt.Major?.MajorName 
-                }).ToList() ?? new List<MajorTeacherDto>()
+                MajorName = teacher.Major.MajorName,
             };
         }
 
@@ -56,8 +50,7 @@ namespace GESS.Repository.Implement
         {
             var query = _context.Teachers
                 .Include(t => t.User)
-                .Include(t => t.MajorTeachers)
-                .ThenInclude(mt => mt.Major)
+                .Include(m => m.Major)
                 .AsQueryable();
 
             if (active.HasValue)
@@ -96,11 +89,7 @@ namespace GESS.Repository.Implement
                 Gender = teacher.User.Gender,
                 IsActive = teacher.User.IsActive,
                 HireDate = teacher.HireDate,
-                MajorTeachers = teacher.MajorTeachers?.Select(mt => new MajorTeacherDto
-                {
-                    MajorId = mt.MajorId,
-                    MajorName = mt.Major?.MajorName
-                }).ToList() ?? new List<MajorTeacherDto>()
+                MajorName = teacher.Major.MajorName
             }).ToList();
         }
 
@@ -109,7 +98,7 @@ namespace GESS.Repository.Implement
             var teacher = new Teacher
             {
                 UserId = userId,
-                MajorTeachers = request.MajorTeachers,
+                MajorId = request.MajorId,
                 HireDate = request.HireDate
             };
             await _context.Teachers.AddAsync(teacher);
@@ -118,7 +107,7 @@ namespace GESS.Repository.Implement
             // Lấy lại teacher vừa thêm
             var entity = await _context.Teachers
                 .Include(t => t.User)
-                .Include(t => t.MajorTeachers).ThenInclude(mt => mt.Major)
+                .Include(m => m.Major)
                 .FirstOrDefaultAsync(t => t.TeacherId == teacher.TeacherId);
 
             return new TeacherResponse
@@ -132,11 +121,7 @@ namespace GESS.Repository.Implement
                 Gender = entity.User.Gender,
                 IsActive = entity.User.IsActive,
                 HireDate = entity.HireDate,
-                MajorTeachers = entity.MajorTeachers?.Select(mt => new MajorTeacherDto
-                {
-                    MajorId = mt.MajorId,
-                    MajorName = mt.Major?.MajorName
-                }).ToList() ?? new List<MajorTeacherDto>()
+                MajorName = entity.Major.MajorName
             };
         }
 
@@ -145,8 +130,6 @@ namespace GESS.Repository.Implement
         {
             var existing = await _context.Teachers
                 .Include(t => t.User)
-                .Include(t => t.MajorTeachers)
-                .ThenInclude(mt => mt.Major)
                 .FirstOrDefaultAsync(t => t.TeacherId == teacherId);
 
             if (existing == null)
@@ -174,14 +157,6 @@ namespace GESS.Repository.Implement
                 throw new Exception(string.Join("; ", updateResult.Errors.Select(e => e.Description)));
             }
 
-            // Cập nhật MajorTeachers
-            if (request.MajorTeachers != null)
-            {
-                // Xóa các MajorTeacher hiện có
-                _context.MajorTeachers.RemoveRange(existing.MajorTeachers);
-                // Thêm các MajorTeacher mới
-                existing.MajorTeachers = request.MajorTeachers;
-            }
 
             // Cập nhật HireDate
             existing.HireDate = request.HireDate ?? existing.HireDate;
@@ -200,11 +175,7 @@ namespace GESS.Repository.Implement
                 Gender = existing.User.Gender,
                 IsActive = existing.User.IsActive,
                 HireDate = existing.HireDate,
-                MajorTeachers = existing.MajorTeachers?.Select(mt => new MajorTeacherDto
-                {
-                    MajorId = mt.MajorId,
-                    MajorName = mt.Major?.MajorName
-                }).ToList() ?? new List<MajorTeacherDto>()
+                MajorName = existing.Major.MajorName
             };
         }
 
@@ -224,8 +195,6 @@ namespace GESS.Repository.Implement
             keyword = keyword?.ToLower() ?? "";
             var teachers = await _context.Teachers
                 .Include(t => t.User)
-                .Include(t => t.MajorTeachers)
-                .ThenInclude(mt => mt.Major)
                 .Where(t =>
                     t.User.UserName.ToLower().Contains(keyword) ||
                     t.User.Email.ToLower().Contains(keyword) ||
@@ -245,11 +214,7 @@ namespace GESS.Repository.Implement
                 Gender = teacher.User.Gender,
                 IsActive = teacher.User.IsActive,
                 HireDate = teacher.HireDate,
-                MajorTeachers = teacher.MajorTeachers?.Select(mt => new MajorTeacherDto
-                {
-                    MajorId = mt.MajorId,
-                    MajorName = mt.Major?.MajorName
-                }).ToList() ?? new List<MajorTeacherDto>()
+                MajorName = teacher.Major.MajorName
             }).ToList();
         }
 

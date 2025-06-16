@@ -1,4 +1,5 @@
 ﻿using GESS.Entity.Entities;
+using GESS.Model.Major;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,8 +18,8 @@ namespace GESS.Model.Teacher
         public string Fullname { get; set; }
         public bool Gender { get; set; }
         public bool IsActive { get; set; }
-
-        public List<MajorTeacherDto> MajorTeachers { get; set; }
+        public int? MajorId { get; set; }
+        public string? MajorName { get; set; }
         public DateTime HireDate { get; set; }
     }
 }

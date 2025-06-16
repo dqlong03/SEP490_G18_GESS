@@ -19,7 +19,6 @@ namespace GESS.Entity.Entities
         public int SubjectId { get; set; }
         public Subject Subject { get; set; }
 
-
         // ThaiNH_Modified_UserProfile_Begin
         [Required]
         [Column(TypeName = "DECIMAL(4,1)")]
