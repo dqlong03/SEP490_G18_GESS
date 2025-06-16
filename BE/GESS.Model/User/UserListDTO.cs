@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -26,8 +27,9 @@ namespace GESS.Model.User
         // ThaiNH_Modified_UserProfile_End
      
         public bool Gender { get; set; }
+        public string? Code { get; set; }
+        public List<string> Roles { get; set; } = new List<string>();
         public bool IsActive { get; set; } = true;
 
-       
     }
 }
