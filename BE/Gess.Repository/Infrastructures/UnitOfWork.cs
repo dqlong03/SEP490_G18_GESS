@@ -38,7 +38,7 @@ namespace Gess.Repository.Infrastructures
             _userManager = userManager;
         }
 
-        public IUserRepository UserRepository =>  _userRepository ??= new UserRepository(_context);
+        public IUserRepository UserRepository =>  _userRepository ??= new UserRepository(_context, _userManager);
         public IRefreshTokenRepository RefreshTokenRepository => _refreshTokenRepository ??= new RefreshTokenRepository(_context);
 
         public IStudentRepository StudentRepository => _studentRepository ??= new StudentRepository(_context, _userManager);

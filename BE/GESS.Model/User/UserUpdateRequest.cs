@@ -17,5 +17,7 @@ namespace GESS.Model.User
         public string PhoneNumber { get; set; }
         public bool IsActive { get; set; } = true;
         public bool Gender { get; set; }
+        public string? Code { get; set; } 
+
     }
 }

@@ -32,7 +32,7 @@ namespace GESS.Entity.Contexts
         public DbSet<ExamService> ExamServices { get; set; }
         public DbSet<ClassStudent> ClassStudents { get; set; }
         public DbSet<Semester> Semesters { get; set; }
-        public DbSet<MajorTeacher> MajorTeachers { get; set; }
+        //public DbSet<MajorTeacher> MajorTeachers { get; set; }
         public DbSet<MultiExamHistory> MultiExamHistories { get; set; }
         public DbSet<MultiQuestion> MultiQuestions { get; set; }
         public DbSet<MultiAnswer> MultiAnswers { get; set; }
@@ -78,7 +78,7 @@ namespace GESS.Entity.Contexts
             modelBuilder.ApplyConfiguration(new ExamSlotConfig());
             modelBuilder.ApplyConfiguration(new MultiExamHistoryConfig());
             modelBuilder.ApplyConfiguration(new PracticeExamHistoryConfig());
-            modelBuilder.ApplyConfiguration(new MajorTeacherConfig());
+            //modelBuilder.ApplyConfiguration(new MajorTeacherConfig());
             modelBuilder.ApplyConfiguration(new ClassStudentConfig());
             modelBuilder.ApplyConfiguration(new ApplyTrainingProgramConfig());
             modelBuilder.ApplyConfiguration(new SubjectTrainingProgramConfig());

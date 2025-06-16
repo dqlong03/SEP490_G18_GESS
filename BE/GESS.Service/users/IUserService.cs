@@ -11,7 +11,6 @@ namespace GESS.Service.users
     public interface IUserService
     {
         Task<UserListDTO> GetUserByIdAsync(Guid userId);
-        Task<List<UserListDTO>> GetAllUsersAsync();
 
         // ThaiNH_Add_Begin
         Task UpdateUserProfileAsync(Guid userId, UserProfileDTO dto);
@@ -19,5 +18,7 @@ namespace GESS.Service.users
         Task<UserListDTO> UpdateUserAsync(Guid userId, UserUpdateRequest request);
         Task DeleteUserAsync(Guid userId);
         Task<bool> IsEmailRegisteredAsync(string email);
+        Task<List<UserListDTO>> GetAllUserAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageNumber, int pageSize);
+        Task<int> CountPageAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageSize);
     }
 }

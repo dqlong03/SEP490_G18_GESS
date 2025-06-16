@@ -39,13 +39,15 @@ namespace GESS.Entity.Entities
         public ICollection<TrainingProgram> TrainingPrograms { get; set; }
 
         // Danh sách giáo viên thuộc ngành này (1 ngành có nhiều giáo viên, qua bảng trung gian MajorTeacher)
-        public ICollection<MajorTeacher> MajorTeachers { get; set; }
+        //public ICollection<MajorTeacher> MajorTeachers { get; set; }
 
         // Constructor khởi tạo các danh sách để tránh lỗi NullReferenceException
+
+        public IEnumerable<Teacher> Teachers { get; set; }
         public Major()
         {
             TrainingPrograms = new List<TrainingProgram>();
-            MajorTeachers = new List<MajorTeacher>();
+            Teachers = new List<Teacher>();
         }
     }
 

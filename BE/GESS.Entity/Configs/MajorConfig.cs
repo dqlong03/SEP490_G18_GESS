@@ -13,9 +13,13 @@ namespace GESS.Entity.Configs
                    .WithOne(tp => tp.Major)
                    .HasForeignKey(tp => tp.MajorId);
 
-            builder.HasMany(m => m.MajorTeachers)
-                   .WithOne(mt => mt.Major)
-                   .HasForeignKey(mt => mt.MajorId);
+            //builder.HasMany(m => m.MajorTeachers)
+            //       .WithOne(mt => mt.Major)
+            //       .HasForeignKey(mt => mt.MajorId);
+
+            builder.HasMany(t => t.Teachers)
+                  .WithOne(m => m.Major)
+                  .HasForeignKey(m => m.MajorId);
         }
     }
 } 

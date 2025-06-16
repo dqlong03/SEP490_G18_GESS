@@ -1,6 +1,7 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Common.HandleException;
 using GESS.Entity.Entities;
+using GESS.Model.Student;
 using GESS.Model.User;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -41,41 +42,23 @@ namespace GESS.Service.users
             {
                 throw new Exception($"User with ID {userId} not found.");
             }
+            var roles = await _userManager.GetRolesAsync(user);
 
             return new UserListDTO
             {
                 UserId = user.Id,
-
-                // ThaiNH_Modified_UserProfile_Begin
-
                 Fullname = user.Fullname,
-                //FirstName = user.FirstName,
-                //LastName = user.LastName,
-
-                // ThaiNH_Modified_UserProfile_End
-
                 UserName = user.UserName,
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
                 DateOfBirth = user.DateOfBirth,
                 Gender = user.Gender,
-                IsActive = user.IsActive
+                IsActive = user.IsActive,
+                Code = user.Code,
+                Roles = roles.ToList()
             };
         }
-        public async Task<List<UserListDTO>> GetAllUsersAsync()
-        {
-            var users = await _unitOfWork.UserRepository.GetAllUsersAsync();
-            return users.Select(user => new UserListDTO
-            {
-                UserId = user.Id,
-                Fullname= user.Fullname,
-                UserName = user.UserName,
-                Email = user.Email,
-                PhoneNumber = user.PhoneNumber,
-                DateOfBirth = user.DateOfBirth,
-            }
-            ).ToList();
-        }
+
 
 
         // ThaiNH_AddFunction_Begin
@@ -156,35 +139,45 @@ namespace GESS.Service.users
                 throw new Exception($"User with ID {userId} not found.");
             }
 
-            //user.FirstName = request.FirstName;
-            //user.LastName = request.LastName;
             user.Fullname = request.Fullname;
             user.UserName = request.UserName;
             user.Email = request.Email;
             user.PhoneNumber = request.PhoneNumber;
             user.DateOfBirth = request.DateOfBirth;
             user.Gender = request.Gender;
+            user.Code = request.Code;
+
             user.IsActive = request.IsActive;
 
             await _unitOfWork.UserRepository.UpdateUserAsync(userId, user);
             await _unitOfWork.SaveChangesAsync();
 
+            var roles = await _userManager.GetRolesAsync(user);
+
             return new UserListDTO
             {
                 UserId = user.Id,
-                //FirstName = user.FirstName,
-                //LastName = user.LastName,
                 Fullname = user.Fullname,
                 UserName = user.UserName,
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
                 DateOfBirth = user.DateOfBirth,
                 Gender = user.Gender,
-                IsActive = user.IsActive
+                IsActive = user.IsActive,
+                Code = user.Code,
+                Roles = roles.ToList()
             };
         }
 
-        
+        public async Task<int> CountPageAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageSize)
+        {
+            var count = await _unitOfWork.UserRepository.CountPageAsync(active, name, fromDate, toDate, pageSize);
+            if (count <= 0)
+            {
+                throw new Exception("Không có dữ liệu để đếm trang.");
+            }
+            return count;
+        }
 
         public async Task<bool> IsEmailRegisteredAsync(string email)
         {
@@ -195,6 +188,11 @@ namespace GESS.Service.users
 
             return await _unitOfWork.UserRepository.IsEmailRegisteredAsync(email);
 
+        }
+
+        public async Task<List<UserListDTO>> GetAllUserAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageNumber, int pageSize)
+        {
+            return await _unitOfWork.UserRepository.GetAllUsersAsync(active, name, fromDate, toDate, pageNumber, pageSize);
         }
     }
 }
