@@ -30,6 +30,7 @@ using GESS.Service.trainingProgram;
 using GESS.Service.examination;
 using GESS.Service.Student;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 //Google login
