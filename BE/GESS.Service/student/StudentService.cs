@@ -1,16 +1,16 @@
-﻿using Gess.Repository.Infrastructures;
-using GESS.Common;
-using GESS.Entity.Entities;
+﻿using GESS.Entity.Entities;
+using Gess.Repository.Infrastructures;
 using GESS.Model.Student;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using OfficeOpenXml;
-using Org.BouncyCastle.Asn1.Ocsp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using GESS.Common;
+using Microsoft.AspNetCore.Http;
+using GESS.Model.Teacher;
+using OfficeOpenXml;
 
 namespace GESS.Service.student
 {
@@ -27,6 +27,139 @@ namespace GESS.Service.student
             _userManager = userManager;
             _roleManager = roleManager;
         }
+
+        public async Task<StudentResponse> AddStudentAsync(StudentCreationRequest request)
+        {
+            var defaultPassword = "Abc123@";
+            // 1. Tạo user
+            var user = new User
+            {
+                UserName = request.UserName,
+                Email = request.Email,
+                PhoneNumber = request.PhoneNumber,
+                DateOfBirth = request.DateOfBirth,
+                Fullname = request.Fullname,
+                Gender = request.Gender,
+                Code = request.Code,
+                IsActive = request.IsActive
+            };
+
+            var result = await _userManager.CreateAsync(user, defaultPassword);
+            if (!result.Succeeded)
+                throw new Exception(string.Join("; ", result.Errors.Select(e => e.Description)));
+
+            // 2. Đảm bảo role Student tồn tại
+            if (!await _roleManager.RoleExistsAsync(PredefinedRole.STUDENT_ROLE))
+            {
+                await _roleManager.CreateAsync(new IdentityRole<Guid>(PredefinedRole.STUDENT_ROLE));
+            }
+
+            // 3. Gán role cho user
+            await _userManager.AddToRoleAsync(user, PredefinedRole.STUDENT_ROLE);
+
+            return await _unitOfWork.StudentRepository.AddStudentAsync(user.Id, request);
+
+        }
+
+        public async Task<int> CountPageAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageSize)
+        {
+            var count = await _unitOfWork.StudentRepository.CountPageAsync(active, name, fromDate, toDate, pageSize);
+            if (count <= 0)
+            {
+                throw new Exception("Không có dữ liệu để đếm trang.");
+            }
+            return count;
+        }
+
+        public async Task<List<StudentResponse>> GetAllStudentsAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageNumber, int pageSize)
+        {
+            return await _unitOfWork.StudentRepository.GetAllStudentsAsync(active, name, fromDate, toDate, pageNumber, pageSize);
+        }
+
+        public async Task<StudentResponse> GetStudentByIdAsync(Guid studentId)
+        {
+            var student = await _unitOfWork.StudentRepository.GetStudentByIdAsync(studentId);
+            if (student == null) throw new Exception("Student not found");
+            return student;
+        }
+
+        public async Task<List<StudentResponse>> ImportStudentsFromExcelAsync(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                throw new Exception("Không có file được tải lên.");
+
+            if (!file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+                throw new Exception("Chỉ hỗ trợ file định dạng .xlsx.");
+
+            var students = new List<StudentResponse>();
+
+            // Thiết lập license cho EPPlus
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+            using (var stream = new MemoryStream())
+            {
+                await file.CopyToAsync(stream);
+                using (var package = new ExcelPackage(stream))
+                {
+                    var worksheet = package.Workbook.Worksheets[0];
+                    int rowCount = worksheet.Dimension?.Rows ?? 0;
+
+                    if (rowCount < 2)
+                        throw new Exception("File Excel không chứa dữ liệu hợp lệ.");
+
+                    for (int row = 2; row <= rowCount; row++) // Bỏ qua hàng tiêu đề
+                    {
+                        try
+                        {
+                            var request = new StudentCreationRequest
+                            {
+                                UserName = worksheet.Cells[row, 2].Text.Trim(),
+                                Fullname = worksheet.Cells[row, 3].Text.Trim(),
+                                Gender = worksheet.Cells[row, 4].Text.Trim().ToLower() == "nam",
+                                DateOfBirth = DateTime.TryParse(worksheet.Cells[row, 5].Text, out var dob) ? dob : DateTime.Now,
+                                Email = worksheet.Cells[row, 6].Text.Trim(),
+                                PhoneNumber = worksheet.Cells[row, 7].Text.Trim(),
+                                Code = worksheet.Cells[row, 8].Text.Trim(),
+                            };
+
+                            // Kiểm tra dữ liệu bắt buộc
+                            if (string.IsNullOrWhiteSpace(request.UserName) || string.IsNullOrWhiteSpace(request.Email))
+                            {
+                                Console.WriteLine($"Bỏ qua hàng {row}: Thiếu UserName hoặc Email.");
+                                continue;
+                            }
+
+                            // Gọi phương thức AddTeacherAsync để thêm giáo viên
+                            var student = await AddStudentAsync(request);
+                            students.Add(student);
+                        }
+                        catch (Exception ex)
+                        {
+                            // Ghi log lỗi và tiếp tục xử lý hàng tiếp theo
+                            Console.WriteLine($"Lỗi khi xử lý hàng {row}: {ex.Message}");
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            return students;
+        }
+
+        public async Task<List<StudentResponse>> SearchStudentsAsync(string keyword)
+        {
+            return await _unitOfWork.StudentRepository.SearchStudentsAsync(keyword);
+        }
+
+        public async Task<StudentResponse> UpdateStudentAsync(Guid studentId, StudentUpdateRequest request)
+        {
+            await _unitOfWork.StudentRepository.UpdateStudentAsync(studentId, request);
+            await _unitOfWork.SaveChangesAsync();
+            var student = await _unitOfWork.StudentRepository.GetStudentByIdAsync(studentId);
+            if (student == null) throw new Exception("Student not found");
+            return student;
+        }
+
 
         public async Task<Student> AddStudentAsync(Guid id, StudentCreateDTO student)
         {
@@ -134,7 +267,5 @@ namespace GESS.Service.student
 
             return students;
         }
-
-
     }
 }

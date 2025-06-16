@@ -25,38 +25,6 @@ namespace GESS.Repository.Implement
             _userManager = userManager;
         }
 
-        public async Task AddStudent(Guid id, Student student)
-        {
-            var newStudent = new Student
-            {
-                StudentId = id,
-                UserId = student.UserId,
-                CohortId = student.CohortId,
-                EnrollDate = student.EnrollDate
-            };
-
-            await _context.Students.AddAsync(newStudent);
-            await _context.SaveChangesAsync();
-
-            // Lấy lại entity vừa thêm
-            var entity = await _context.Students
-                .Include(e => e.User)
-                .FirstOrDefaultAsync(e => e.StudentId == student.StudentId);
-
-            return new StudentResponse
-            {
-                StudentId = entity.StudentId,
-                UserName = student.User.UserName,
-                Email = student.User.Email,
-                PhoneNumber = student.User.PhoneNumber,
-                DateOfBirth = student.User.DateOfBirth,
-                Fullname = student.User.Fullname,
-                Gender = student.User.Gender,
-                Code = student.User.Code,
-                IsActive = student.User.IsActive,
-                EnrollDate = student.EnrollDate,
-            };
-        }
         public async Task<StudentResponse> AddStudentAsync(Guid id, StudentCreationRequest request)
         {
             var student = new Student
@@ -87,6 +55,7 @@ namespace GESS.Repository.Implement
                 EnrollDate = student.EnrollDate,
             };
         }
+        
         public Task<int> CountPageAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageSize)
         {
             var query = _context.ExamServices.AsQueryable();
@@ -261,6 +230,7 @@ namespace GESS.Repository.Implement
                 EnrollDate = existing.EnrollDate,
             };
         }
+      
         public Task<Student> GetStudentbyUserId(Guid userId)
         {
             var student = _context.Students
@@ -270,9 +240,21 @@ namespace GESS.Repository.Implement
             {
                 throw new InvalidOperationException($"Student with UserId {userId} not found.");
             }
+            return student;
+        }
+
+        public async Task AddStudent(Guid id, Student student)
+        {
+            var newStudent = new Student
             {
-            {
-            }
+                StudentId = id,
+                UserId = student.UserId,
+                CohortId = student.CohortId,
+                EnrollDate = student.EnrollDate
+            };
+
+            await _context.Students.AddAsync(newStudent);
+            await _context.SaveChangesAsync();
         }
     }
 }

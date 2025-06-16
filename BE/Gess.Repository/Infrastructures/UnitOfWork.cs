@@ -30,7 +30,6 @@ namespace Gess.Repository.Infrastructures
         private readonly UserManager<User> _userManager;
         private ISubjectRepository _subjectRepository;
         private IMajorRepository _majorRepository;
-        private IStudentRepository _studentRepository;
         private bool _disposed;
 
         public UnitOfWork(GessDbContext context, UserManager<User> userManager = null)
@@ -60,7 +59,6 @@ namespace Gess.Repository.Infrastructures
 
         public IMajorRepository MajorRepository => _majorRepository ??= new MajorRepository(_context);
         public ITrainingProgramRepository TrainingProgramRepository => new TrainingProgramRepository(_context);
-        public IStudentRepository StudentRepository => _studentRepository ??= new StudentRepository(_context, _userManager);
 
         public UnitOfWork(GessDbContext context= null)
         {

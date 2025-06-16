@@ -1,6 +1,6 @@
 ﻿using GESS.Model.Student;
 using GESS.Service.examination;
-using GESS.Service.Student;
+using GESS.Service.student;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -126,7 +126,7 @@ namespace GESS.Api.Controllers
         }
         //API đọc danh sách sinh viên từ file Excel
         [HttpPost("ImportReadStudentsFromExcel")]
-        public async Task<IActionResult> ImportStudentsFromExcel(IFormFile file)
+        public async Task<IActionResult> ReadFileStudentsFromExcel(IFormFile file)
         {
             if (file == null || file.Length == 0)
             {

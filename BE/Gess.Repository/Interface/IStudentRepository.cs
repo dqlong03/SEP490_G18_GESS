@@ -1,5 +1,6 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Entities;
+using GESS.Model.Student;
 using System;
 using System.Collections.Generic;
 using System.Linq;

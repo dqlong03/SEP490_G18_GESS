@@ -24,7 +24,6 @@ namespace GESS.Entity.Contexts
             await SeedUsersAsync(userManager);
             await SeedMajorsAsync(context);
             await SeedSemestersAsync(context);
-            await SeedCohortsAsync(context);
 
             // 2. Tạo dữ liệu phụ thuộc
             await SeedTeachersAsync(context);
@@ -345,23 +344,7 @@ namespace GESS.Entity.Contexts
             }
         }
 
-        private static async Task SeedCohortsAsync(GessDbContext context)
-        {
-            if (!context.Cohorts.Any())
-            {
-                var cohorts = new List<Cohort>
-                {
-                    new Cohort
-                    {
-                        CohortName = "Khóa 2023-2027"
-                        // Nếu CohortId là identity tự tăng thì không cần set CohortId
-                    }
-                };
-                await context.Cohorts.AddRangeAsync(cohorts);
-                await context.SaveChangesAsync();
-            }
-        }
-
+       
         private static async Task SeedStudentsAsync(GessDbContext context)
         {
             if (!context.Students.Any())
