@@ -80,6 +80,7 @@ namespace GESS.Service.major
                 EndDate = major.EndDate,
                 IsActive = major.IsActive
             }).ToList();
+        }
 
         public Task<IEnumerable<MajorListDTO>> GetAllMajor()
         {

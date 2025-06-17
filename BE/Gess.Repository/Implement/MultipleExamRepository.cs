@@ -61,7 +61,7 @@ namespace GESS.Repository.Implement
                         var multiExamHistory = new MultiExamHistory
                         {
                             MultiExamId = multiExam.MultiExamId,
-                            StudentId = student.StudentId,
+                            StudentId = (Guid)student.StudentId,
                             Score = 0,
                             StartTime = DateTime.Now,
                             EndTime = DateTime.Now,
