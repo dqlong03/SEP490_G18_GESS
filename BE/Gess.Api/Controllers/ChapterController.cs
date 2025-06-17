@@ -67,7 +67,7 @@ namespace GESS.Api.Controllers
             }
             try
             {
-                // Gọi service và truyền id riêng
+                
                 var updatedChapter = await _chapterService.UpdateChapterAsync(id, chapterUpdateDto);
                 return Ok(updatedChapter);
             }
@@ -90,5 +90,19 @@ namespace GESS.Api.Controllers
                 return NotFound(ex.Message);
             }
         }
-    } 
+        //API Delete Chapter by Id
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteChapter(int id)
+        {
+            try
+            {
+                await _chapterService.DeleteAsync(id);
+                return Ok("Delete chapter success"); // Trả về 204 No Content nếu xóa thành công
+            }
+            catch (Exception ex)
+            {
+                return NotFound(ex.Message); // Trả về 404 Not Found nếu không tìm thấy chương
+            }
+        }
+    }
 }

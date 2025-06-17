@@ -30,6 +30,39 @@ namespace GESS.Entity.Contexts
             await SeedSubjectsAsync(context);
             await SeedChaptersAsync(context);
             await SeedClassesAsync(context);
+            await SeedCohortsAsync(context);
+            await SeedStudentsAsync(context);
+            await SeedClassStudentsAsync(context);
+        }
+
+        private static async Task SeedCohortsAsync(GessDbContext context)
+        {
+            if (!context.Cohorts.Any())
+            {
+                var cohorts = new List<Cohort>
+                {
+                    new Cohort
+                    {
+                        CohortName = "Khóa 2023-2027",
+                        Students = new List<Student>(),
+                        ApplyTrainingPrograms = new List<ApplyTrainingProgram>()
+                    },
+                    new Cohort
+                    {
+                        CohortName = "Khóa 2024-2028",
+                        Students = new List<Student>(),
+                        ApplyTrainingPrograms = new List<ApplyTrainingProgram>()
+                    },
+                    new Cohort
+                    {
+                        CohortName = "Khóa 2025-2029",
+                        Students = new List<Student>(),
+                        ApplyTrainingPrograms = new List<ApplyTrainingProgram>()
+                    }
+                };
+                await context.Cohorts.AddRangeAsync(cohorts);
+                await context.SaveChangesAsync();
+            }
         }
 
         private static async Task SeedRolesAsync(RoleManager<IdentityRole<Guid>> roleManager)
@@ -278,35 +311,84 @@ namespace GESS.Entity.Contexts
                 await context.SaveChangesAsync();
 
                 // Thêm dữ liệu cho bảng MajorTeacher
-                var majorTeachers = new List<MajorTeacher>
+                //var majorTeachers = new List<MajorTeacher>
+                //{
+                //    new MajorTeacher 
+                //    { 
+                //        TeacherId = context.Users.First(u => u.Email == "teacher1@example.com").Id,
+                //        MajorId = 1
+                //    },
+                //    new MajorTeacher 
+                //    { 
+                //        TeacherId = context.Users.First(u => u.Email == "teacher2@example.com").Id,
+                //        MajorId = 1
+                //    },
+                //    new MajorTeacher 
+                //    { 
+                //        TeacherId = context.Users.First(u => u.Email == "teacher3@example.com").Id,
+                //        MajorId = 1
+                //    },
+                //    new MajorTeacher 
+                //    { 
+                //        TeacherId = context.Users.First(u => u.Email == "teacher4@example.com").Id,
+                //        MajorId = 1
+                //    },
+                //    new MajorTeacher 
+                //    { 
+                //        TeacherId = context.Users.First(u => u.Email == "teacher5@example.com").Id,
+                //        MajorId = 1
+                //    }
+                //};
+                //await context.MajorTeachers.AddRangeAsync(majorTeachers);
+                await context.SaveChangesAsync();
+            }
+        }
+
+       
+        private static async Task SeedStudentsAsync(GessDbContext context)
+        {
+            if (!context.Students.Any())
+            {
+                var cohortId = context.Cohorts.First().CohortId;
+                var students = new List<Student>
                 {
-                    new MajorTeacher 
-                    { 
-                        TeacherId = context.Users.First(u => u.Email == "teacher1@example.com").Id,
-                        MajorId = 1
+                    new Student
+                    {
+                        StudentId = context.Users.First(u => u.Email == "student1@example.com").Id,
+                        UserId = context.Users.First(u => u.Email == "student1@example.com").Id,
+                        CohortId = cohortId,
+                        EnrollDate = new DateTime(2023, 9, 1)
                     },
-                    new MajorTeacher 
-                    { 
-                        TeacherId = context.Users.First(u => u.Email == "teacher2@example.com").Id,
-                        MajorId = 1
-                    },
-                    new MajorTeacher 
-                    { 
-                        TeacherId = context.Users.First(u => u.Email == "teacher3@example.com").Id,
-                        MajorId = 1
-                    },
-                    new MajorTeacher 
-                    { 
-                        TeacherId = context.Users.First(u => u.Email == "teacher4@example.com").Id,
-                        MajorId = 1
-                    },
-                    new MajorTeacher 
-                    { 
-                        TeacherId = context.Users.First(u => u.Email == "teacher5@example.com").Id,
-                        MajorId = 1
-                    }
+                    // ... (lặp lại cho các student khác)
                 };
-                await context.MajorTeachers.AddRangeAsync(majorTeachers);
+                await context.Students.AddRangeAsync(students);
+                await context.SaveChangesAsync();
+            }
+        }
+
+        private static async Task SeedClassStudentsAsync(GessDbContext context)
+        {
+            if (!context.ClassStudents.Any())
+            {
+                var classStudents = new List<ClassStudent>();
+                var students = context.Students.ToList();
+                var classes = context.Classes.ToList();
+
+                foreach (var student in students)
+                {
+                    // Gán mỗi student vào 2 lớp ngẫu nhiên
+                    var randomClasses = classes.OrderBy(x => Guid.NewGuid()).Take(2);
+                    foreach (var classItem in randomClasses)
+                    {
+                        classStudents.Add(new ClassStudent
+                        {
+                            StudentId = student.StudentId,
+                            ClassId = classItem.ClassId
+                        });
+                    }
+                }
+
+                await context.ClassStudents.AddRangeAsync(classStudents);
                 await context.SaveChangesAsync();
             }
         }

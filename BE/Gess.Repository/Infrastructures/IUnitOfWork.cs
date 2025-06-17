@@ -31,12 +31,13 @@ namespace Gess.Repository.Infrastructures
         ITrainingProgramRepository TrainingProgramRepository { get; }
         IMultipleExamRepository MultipleExamRepository { get; }
         ICategoryExamRepository CategoryExamRepository { get; }
+        IStudentRepository StudentRepository { get; }
         IClassRepository ClassRepository { get; }
         IMultipleQuestionRepository MultipleQuestionRepository { get; }
 
         // ThaiNH_Initialize_Begin
         ICateExamSubRepository CateExamSubRepository { get; }
         // ThaiNH_Initialize_End
-
+     
     }
 }

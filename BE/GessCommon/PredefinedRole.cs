@@ -8,10 +8,10 @@ namespace GESS.Common
 {
     public class PredefinedRole
     {
-        public const string TEACHER_ROLE = "TEACHER";
-        public const string ADMIN_ROLE = "ADMIN";
-        public const string STUDENT_ROLE = "STUDENT";
-        public const string EXAMINATION_ROLE = "EXAMINATION";
+        public const string TEACHER_ROLE = "Giáo Viên";
+        public const string ADMIN_ROLE = "Quản trị viên";
+        public const string STUDENT_ROLE = "Học sinh";
+        public const string EXAMINATION_ROLE = "Khảo thí";
 
         private PredefinedRole() { }
     }

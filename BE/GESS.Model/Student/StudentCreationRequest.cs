@@ -1,25 +1,25 @@
-﻿using GESS.Entity.Entities;
-using GESS.Model.Major;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GESS.Model.Teacher
+namespace GESS.Model.Student
 {
-    public class TeacherResponse
+    public class StudentCreationRequest
     {
-        public Guid TeacherId { get; set; }
         public string UserName { get; set; }
         public string Email { get; set; }
         public string PhoneNumber { get; set; }
         public DateTime? DateOfBirth { get; set; }
         public string Fullname { get; set; }
         public bool Gender { get; set; }
-        public bool IsActive { get; set; }
-        public int? MajorId { get; set; }
-        public string? MajorName { get; set; }
-        public DateTime HireDate { get; set; }
+        public string Code { get; set; }
+
+        /// <summary>
+        /// Defaults to true, indicating that the student is active.
+        /// </summary>
+        public bool IsActive { get; set; } = true;
+        public DateTime EnrollDate { get; set; } = DateTime.Now;
     }
 }

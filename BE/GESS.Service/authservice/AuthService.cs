@@ -260,13 +260,16 @@ namespace GESS.Service.authservice
             //}
 
             // 2. Kiểm tra mật khẩu nhập lại
+
             if (model.NewPassword != model.ConfirmPassword)
             {
                 return false;
             }
 
             // 3. Lấy người dùng theo email
+            Console.WriteLine(model.Email);
             var user = await _userManager.FindByEmailAsync(model.Email);
+
             if (user == null) return false;
 
             // 4. Đặt lại mật khẩu

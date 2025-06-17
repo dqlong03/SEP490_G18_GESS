@@ -32,6 +32,12 @@ using Microsoft.OpenApi.Models;
 using System.Security.Claims;
 using System.Text;
 
+using GESS.Service.subject;
+using GESS.Service.trainingProgram;
+using GESS.Service.examination;
+using GESS.Service.student;
+
+
 var builder = WebApplication.CreateBuilder(args);
 
 //Google login
@@ -123,7 +129,7 @@ builder.Services.AddScoped<IExaminationService, ExaminationService>();
 builder.Services.AddScoped<IClassService, ClassService>();
 builder.Services.AddScoped<ICategoryExamService, CategoryExamService>();
 builder.Services.AddScoped<IMultipleQuestionService, MultipleQuestionService>();
-
+builder.Services.AddScoped<IStudentService, StudentService>();
 
 // ThaiNH_Initialize_Begin
 builder.Services.AddScoped<ICateExamSubService, CateExamSubService>();
@@ -143,7 +149,7 @@ builder.Services.AddScoped<IClassRepository, ClassRepository>();
 builder.Services.AddScoped<IMultipleExamRepository, MultipleExamRepository>();
 builder.Services.AddScoped<ICategoryExamRepository, CategoryExamRepository>();
 builder.Services.AddScoped<IMultipleQuestionRepository, MultipleQuestionRepository>();
-
+builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 
 
 // Đăng ký EmailService
