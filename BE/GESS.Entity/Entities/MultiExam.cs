@@ -35,15 +35,15 @@ namespace GESS.Entity.Entities
 
         // Trạng thái kỳ thi (VD: "Draft", "Published"), tối đa 20 ký tự
         [StringLength(20, ErrorMessage = "Trạng thái không được vượt quá 20 ký tự!")]
-        public string Status { get; set; }
+        public string ? Status { get; set; }
 
         // Mã để bắt đầu kỳ thi, tối đa 50 ký tự
         [StringLength(50, ErrorMessage = "Mã bắt đầu không được vượt quá 50 ký tự!")]
-        public string CodeStart { get; set; }
+        public string ? CodeStart { get; set; }
 
-        // Người tạo kỳ thi, tối đa 50 ký tự
-        [StringLength(50, ErrorMessage = "Người tạo không được vượt quá 50 ký tự!")]
-        public string CreateBy { get; set; }
+        // Khóa ngoại liên kết đến môn học (Teacher), 1 kỳ thi tạo bởi 1 giáo viên
+        public Guid TeacherId { get; set; }
+        public Teacher Teacher { get; set; }
 
         // Khóa ngoại liên kết đến môn học (Subject), 1 kỳ thi thuộc 1 môn học
         public int SubjectId { get; set; }
