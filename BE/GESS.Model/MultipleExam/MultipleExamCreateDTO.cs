@@ -30,9 +30,7 @@ namespace GESS.Model.MultipleExam
         [Required(ErrorMessage = "Ngày tạo không được để trống!")]
         public DateTime CreateAt { get; set; }
 
-        // Người tạo kỳ thi, tối đa 50 ký tự
-        [StringLength(50, ErrorMessage = "Người tạo không được vượt quá 50 ký tự!")]
-        public string CreateBy { get; set; }
+        public Guid TeacherId { get; set; }
 
         // Khóa ngoại liên kết đến môn học (Subject), 1 kỳ thi thuộc 1 môn học
         public int SubjectId { get; set; }
