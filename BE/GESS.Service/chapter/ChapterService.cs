@@ -115,6 +115,21 @@ namespace GESS.Service.chapter
             return chapterDtos;
         }
 
+        public async Task<IEnumerable<ChapterDTO>> GetChaptersBySubjectId(int subjectId)
+        {
+            var chapters = await _unitOfWork.ChapterRepository.GetChaptersBySubjectId(subjectId);
+            if (chapters == null || !chapters.Any())
+            {
+                throw new InvalidOperationException("Không tìm thấy chương nào cho môn học này.");
+            }
+            return chapters.Select(chapter => new ChapterDTO
+            {
+                Id = chapter.ChapterId,
+                ChapterName = chapter.ChapterName,
+                Description = chapter.Description,
+            }).ToList();
+        }
+
 
 
         // Implement any specific methods for Chapter here

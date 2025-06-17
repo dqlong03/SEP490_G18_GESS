@@ -1,0 +1,17 @@
+﻿using GESS.Entity.Entities;
+using GESS.Model.Major;
+using GESS.Model.MultipleExam;
+using GESS.Model.TrainingProgram;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace GESS.Service.multipleExam
+{
+    public interface IMultipleExamService : IBaseService<MultiExam>
+    {
+        Task<MultipleExamCreateDTO> CreateMultipleExamAsync(MultipleExamCreateDTO multipleExamCreateDto);
+    }
+}

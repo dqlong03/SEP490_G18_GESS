@@ -61,6 +61,5 @@ namespace Gess.Repository.Infrastructures
         IQueryable<TEntity> GetQuery(Expression<Func<TEntity, bool>> where);
         Task<List<TEntity>> GetAllAsync();
         Task<bool> ExistsAsync(Expression<Func<TEntity, bool>> predicate);
-
     }
 }

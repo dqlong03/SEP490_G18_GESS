@@ -72,6 +72,24 @@ namespace GESS.Service.subject
             return subjectDtos;
         }
 
+        public async Task<IEnumerable<SubjectDTO>> GetAllSubjectsByMajorId(int? majorId)
+        {
+            var subjects = await _unitOfWork.SubjectRepository.GetAllSubjectsByMajorId(majorId);
+            if (subjects == null || !subjects.Any())
+            {
+                throw new Exception("Không tìm thấy môn học cho chuyên ngành này.");
+            }
+            var subjectDtos = subjects.Select(subject => new SubjectDTO
+            {
+                SubjectId = subject.SubjectId,
+                SubjectName = subject.SubjectName,
+                Description = subject.Description,
+                Course = subject.Course,
+                NoCredits = subject.NoCredits
+            });
+            return subjectDtos;
+        }
+
         public async Task<IEnumerable<SubjectDTO>> GetSubjectsInTrainingProgramAsync(int trainingProgramId, string? name = null, int pageNumber = 1, int pageSize = 10)
         {
             var subjects = await _unitOfWork.SubjectRepository.GetSubjectsInTrainingProgramAsync(trainingProgramId, name, pageNumber, pageSize);

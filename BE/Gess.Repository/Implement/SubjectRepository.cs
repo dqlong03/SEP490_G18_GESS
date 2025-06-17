@@ -105,6 +105,29 @@ namespace GESS.Repository.Implement
 
         }
 
+        public async Task<IEnumerable<Subject>> GetAllSubjectsByMajorId(int? majorId)
+        {
+            if (!majorId.HasValue)
+                return new List<Subject>();
+
+            var newestTrainingProgram = await _context.TrainingPrograms
+                .Where(tp => tp.MajorId == majorId)
+                .OrderByDescending(tp => tp.StartDate)
+                .FirstOrDefaultAsync();
+
+            if (newestTrainingProgram == null)
+                return new List<Subject>();
+
+            var subjects = await _context.SubjectTrainingPrograms
+                .Where(stp => stp.TrainProId == newestTrainingProgram.TrainProId)
+                .Select(stp => stp.Subject)
+                .Distinct()
+                .ToListAsync();
+
+            return subjects;
+        }
+
+
         public async Task<IEnumerable<Subject>> GetSubjectsInTrainingProgramAsync(int trainingProgramId, string? name = null, int pageNumber = 1, int pageSize = 10)
         {
             var trainingProgram = await _context.TrainingPrograms

@@ -11,12 +11,18 @@ using GESS.Repository.Interface;
 using GESS.Repository.refreshtoken;
 using GESS.Service;
 using GESS.Service.authservice;
+using GESS.Service.categoryExam;
 using GESS.Service.chapter;
-using GESS.Service.teacher;
-using GESS.Service.major;
 using GESS.Service.email;
-using GESS.Service.otp;
+using GESS.Service.examination;
 using GESS.Service.GradeCompoService;
+using GESS.Service.major;
+using GESS.Service.multipleExam;
+using GESS.Service.multipleQuestion;
+using GESS.Service.otp;
+using GESS.Service.subject;
+using GESS.Service.teacher;
+using GESS.Service.trainingProgram;
 using GESS.Service.users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -25,6 +31,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Security.Claims;
 using System.Text;
+
 using GESS.Service.subject;
 using GESS.Service.trainingProgram;
 using GESS.Service.examination;
@@ -115,11 +122,15 @@ builder.Services.AddScoped<IChapterService, ChapterService>();
 builder.Services.AddScoped<ITeacherService, TeacherService>();
 builder.Services.AddScoped<IMajorService, MajorService>();
 builder.Services.AddScoped<ISubjectService, SubjectService>();
+builder.Services.AddScoped<IMultipleExamService, MultipleExamService>();
 builder.Services.AddScoped<ITrainingProgramService, TrainingProgramService>();
 builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IExaminationService, ExaminationService>();
 builder.Services.AddScoped<IClassService, ClassService>();
+builder.Services.AddScoped<ICategoryExamService, CategoryExamService>();
+builder.Services.AddScoped<IMultipleQuestionService, MultipleQuestionService>();
 builder.Services.AddScoped<IStudentService, StudentService>();
+
 // ThaiNH_Initialize_Begin
 builder.Services.AddScoped<ICateExamSubService, CateExamSubService>();
 // ThaiNH_Initialize_End
@@ -135,7 +146,11 @@ builder.Services.AddScoped<IMajorRepository, MajorRepository>();
 builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
 builder.Services.AddScoped<ITrainingProgramRepository, TrainingProgramRepository>();
 builder.Services.AddScoped<IClassRepository, ClassRepository>();
+builder.Services.AddScoped<IMultipleExamRepository, MultipleExamRepository>();
+builder.Services.AddScoped<ICategoryExamRepository, CategoryExamRepository>();
+builder.Services.AddScoped<IMultipleQuestionRepository, MultipleQuestionRepository>();
 builder.Services.AddScoped<IStudentRepository, StudentRepository>();
+
 
 // Đăng ký EmailService
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));

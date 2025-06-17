@@ -16,6 +16,7 @@ namespace GESS.Service.major
         Task<MajorDTO> GetMajorById(int majorId);
         Task<MajorUpdateDTO> DeleteMajorById(int majorId);
         Task<int> CountPageAsync(int? active, string? name, DateTime? fromDate, DateTime? toDate, int pageSize);
+        Task<IEnumerable<MajorUpdateDTO>> GetAllAsync();
         Task<IEnumerable<MajorListDTO>> GetAllMajor();
     }
 }

@@ -1,6 +1,7 @@
 ﻿using GESS.Entity.Base;
 using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
+using GESS.Repository.Implement;
 using GESS.Repository.Interface;
 using GESS.Repository.refreshtoken;
 using System;
@@ -28,9 +29,11 @@ namespace Gess.Repository.Infrastructures
         ISubjectRepository SubjectRepository { get; }
         IMajorRepository MajorRepository { get; }
         ITrainingProgramRepository TrainingProgramRepository { get; }
+        IMultipleExamRepository MultipleExamRepository { get; }
+        ICategoryExamRepository CategoryExamRepository { get; }
         IStudentRepository StudentRepository { get; }
         IClassRepository ClassRepository { get; }
-
+        IMultipleQuestionRepository MultipleQuestionRepository { get; }
 
         // ThaiNH_Initialize_Begin
         ICateExamSubRepository CateExamSubRepository { get; }
