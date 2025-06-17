@@ -66,6 +66,13 @@ namespace GESS.Repository.Implement
             return await query.ToListAsync();
         }
 
+        public async Task<IEnumerable<Chapter>> GetChaptersBySubjectId(int subjectId)
+        {
+            var chapters = await _context.Chapters
+                .Where(c => c.SubjectId == subjectId)
+                .ToListAsync();
+            return chapters;
+        }
     }
 
 

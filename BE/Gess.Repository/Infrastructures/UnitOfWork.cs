@@ -57,6 +57,10 @@ namespace Gess.Repository.Infrastructures
         public IMajorRepository MajorRepository => _majorRepository ??= new MajorRepository(_context);
         public ITrainingProgramRepository TrainingProgramRepository => new TrainingProgramRepository(_context);
 
+        public IMultipleExamRepository MultipleExamRepository => new MultipleExamRepository(_context);
+        public ICategoryExamRepository CategoryExamRepository => new CategoryExamRepository(_context);
+        public IMultipleQuestionRepository MultipleQuestionRepository => new MultipleQuestionRepository(_context);
+
         public UnitOfWork(GessDbContext context= null)
         {
             _context = context;

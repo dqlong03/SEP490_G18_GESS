@@ -23,5 +23,6 @@ namespace GESS.Service.subject
         // Remove subject from training program
         Task<bool> RemoveSubjectFromTrainingProgramAsync(int trainingProgramId, int subjectId);
         Task <int> CountPageAsync(string? name, int pageSize);
+        Task<IEnumerable<SubjectDTO>> GetAllSubjectsByMajorId(int? majorId);
     }
 }
