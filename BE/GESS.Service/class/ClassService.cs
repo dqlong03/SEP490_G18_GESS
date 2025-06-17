@@ -2,6 +2,8 @@
 using GESS.Entity.Entities;
 using GESS.Model.Chapter;
 using GESS.Model.Class;
+using GESS.Model.Student;
+using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,9 +20,10 @@ namespace GESS.Service
             _unitOfWork = unitOfWork;
         }
 
-     
+
         public async Task<ClassCreateDTO> CreateClassAsync(ClassCreateDTO classCreateDto)
         {
+            using var transaction = await _unitOfWork.DataContext.Database.BeginTransactionAsync();
             try
             {
                 // Kiểm tra xem lớp học đã tồn tại chưa
@@ -40,116 +43,136 @@ namespace GESS.Service
                     ClassStudents = new List<ClassStudent>()
                 };
 
-                // Xử lý từng sinh viên trong DTO
                 foreach (var studentDto in classCreateDto.Students)
                 {
-                    Guid studentId;
-
-                    if (studentDto.StudentId.HasValue)
+                    // Kiểm tra đầy đủ thông tin
+                    if (string.IsNullOrEmpty(studentDto.Email) || string.IsNullOrEmpty(studentDto.Code))
                     {
-                        // Trường hợp 1: Sinh viên đã tồn tại
-                        studentId = studentDto.StudentId.Value;
-                        var existingStudent =  _unitOfWork.StudentRepository.GetById(studentId);
-                        if (existingStudent == null)
+                        throw new Exception("Email và mã sinh viên là bắt buộc.");
+                    }
+
+                    // Tìm user theo Code và Email
+                    var existingUser = await _unitOfWork.UserRepository.GetByCodeAndEmailAsync(studentDto.Code, studentDto.Email);
+                    Guid userId;
+
+                    if (existingUser == null)
+                    {
+                        // Tạo user mới với mật khẩu ngẫu nhiên có ít nhất một ký tự đặc biệt
+                        var random = new Random();
+                        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+                        const string specialChars = "!@#$%^&*";
+                        var passwordLength = 12;
+
+                        // Tạo 9 ký tự cơ bản (chữ cái và số)
+                        var basePassword = new string(Enumerable.Repeat(chars, 9)
+                            .Select(s => s[random.Next(s.Length)]).ToArray());
+
+                        // Tạo 3 ký tự đặc biệt
+                        var specialPassword = new string(Enumerable.Repeat(specialChars, 3)
+                            .Select(s => s[random.Next(s.Length)]).ToArray());
+
+                        // Kết hợp và xáo trộn
+                        var randomPassword = basePassword + specialPassword;
+                        randomPassword = new string(randomPassword.OrderBy(x => random.Next()).ToArray());
+
+                        var newUser = new User
                         {
-                            throw new Exception($"Sinh viên với ID {studentId} không tồn tại.");
+                            Id = Guid.NewGuid(),
+                            Email = studentDto.Email,
+                            Code = studentDto.Code,
+                            UserName = studentDto.Email,
+                            Fullname = studentDto.FullName ?? "Không xác định",
+                            Gender = studentDto.Gender ?? true,
+                            DateOfBirth = studentDto.DateOfBirth,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow,
+                            IsActive = true,
+                            IsDeleted = false
+                        };
+
+                        var result = await _unitOfWork.UserManager.CreateAsync(newUser, randomPassword);
+                        if (!result.Succeeded)
+                        {
+                            throw new Exception($"Không thể tạo người dùng: {string.Join(", ", result.Errors.Select(e => e.Description))}");
                         }
+                        userId = newUser.Id;
+
+                        // Gán vai trò "Sinh viên" cho người dùng mới
+                        var roleExists = await _unitOfWork.RoleManager.RoleExistsAsync("Sinh viên");
+                        if (!roleExists)
+                        {
+                            var role = new IdentityRole<Guid>
+                            {
+                                Id = Guid.NewGuid(),
+                                Name = "Sinh viên",
+                                NormalizedName = "SINH VIÊN"
+                            };
+                            var roleResult = await _unitOfWork.RoleManager.CreateAsync(role);
+                            if (!roleResult.Succeeded)
+                            {
+                                throw new Exception($"Không thể tạo vai trò Sinh viên: {string.Join(", ", roleResult.Errors.Select(e => e.Description))}");
+                            }
+                        }
+                        await _unitOfWork.UserManager.AddToRoleAsync(newUser, "Sinh viên");
+                        // (Tùy chọn) Gửi mật khẩu qua email
+                        // await _emailService.SendPasswordAsync(newUser.Email, randomPassword);
                     }
                     else
                     {
-                        // Trường hợp 2: Sinh viên mới, kiểm tra hoặc tạo User trước
-                        if (string.IsNullOrEmpty(studentDto.Email))
-                        {
-                            throw new Exception("Email là bắt buộc đối với sinh viên mới.");
-                        }
-
-                        // Kiểm tra xem User đã tồn tại qua email
-                        var existingUser = await _unitOfWork.UserRepository.IsEmailRegisteredAsync(studentDto.Email);
-                        Guid userId;
-
-                        if (existingUser == null)
-                        {
-                            // Tạo User mới
-                            var newUser = new User
-                            {
-                                Id = Guid.NewGuid(),
-                                Email = studentDto.Email,
-                                UserName = studentDto.Email, // UserName mặc định là email
-                                Fullname = studentDto.FullName ?? "Không xác định",
-                                Gender = studentDto.Gender ?? true, // Mặc định là true nếu null
-                                DateOfBirth = studentDto.DateOfBirth,
-                                CreatedAt = DateTime.UtcNow,
-                                UpdatedAt = DateTime.UtcNow,
-                                IsActive = true,
-                                IsDeleted = false
-                            };
-                            await _unitOfWork.UserRepository.CreateAsync(newUser);
-                            userId = newUser.Id;
-                        }
-                        else
-                        {
-                          
-                            // Lấy user theo email
-                            var user = await _unitOfWork.UserRepository.GetByEmailAsync(studentDto.Email);
-                            if (user == null)
-                                throw new Exception("Không tìm thấy user với email đã đăng ký.");
-                            userId = user.Id;
-                        }
-
-                        // Kiểm tra xem Student đã tồn tại cho User này chưa
-                        var existingStudent = _unitOfWork.StudentRepository.GetById(userId);
-                        if (existingStudent == null)
-                        {
-                            // Tạo Student mới
-                            var newStudent = new Student
-                            {
-                                StudentId = Guid.NewGuid(),
-                                UserId = userId,
-                                CohortId = studentDto.CohirtId ?? 1, // Niên khóa mặc định nếu null
-                                EnrollDate = DateTime.UtcNow
-                            };
-                             _unitOfWork.StudentRepository.Create(newStudent);
-                            studentId = newStudent.StudentId;
-                        }
-                        else
-                        {
-                            studentId = existingStudent.StudentId;
-                        }
+                        userId = existingUser.Id;
                     }
 
-                    // Thêm sinh viên vào lớp học qua ClassStudent
+                    // Tìm student theo userId
+                    var existingStudent = await _unitOfWork.StudentRepository.GetStudentbyUserId(userId);
+                    Guid studentId;
+
+                    if (existingStudent == null)
+                    {
+                        var newStudent = new Student
+                        {
+                            StudentId = Guid.NewGuid(),
+                            UserId = userId,
+                            // CohortId = studentDto.CohortId ?? 1, // Sửa typo: CohirtId -> CohortId (đã sửa trong đoạn trước)
+                            EnrollDate = DateTime.UtcNow
+                        };
+                        _unitOfWork.StudentRepository.Create(newStudent);
+                        studentId = newStudent.StudentId;
+                    }
+                    else
+                    {
+                        studentId = existingStudent.StudentId;
+                    }
+
+                    // Thêm vào class
                     classEntity.ClassStudents.Add(new ClassStudent
                     {
-                        StudentId = studentId
+                        StudentId = studentId,
+                        ClassId = classEntity.ClassId // Đảm bảo ClassId được gán sau khi tạo
                     });
                 }
 
                 // Lưu lớp học
-                 _unitOfWork.ClassRepository.Create(classEntity);
+                _unitOfWork.ClassRepository.Create(classEntity);
                 await _unitOfWork.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 return classCreateDto;
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 throw new Exception($"Lỗi khi tạo lớp học: {ex.Message}", ex);
             }
         }
 
-
-        public async Task<IEnumerable<ClassListDTO>> GetAllClassAsync(string? name = null, int pageNumber = 1, int pageSize = 10)
+        public async Task<IEnumerable<ClassListDTO>> GetAllClassAsync(string? name = null, int? subjectId = null, int? semesterId = null, int pageNumber = 1, int pageSize = 5)
         {
-            var classes = await _unitOfWork.ClassRepository.GetAllClassAsync(name, pageNumber, pageSize);
+            return await _unitOfWork.ClassRepository.GetAllClassAsync(name,subjectId,semesterId, pageNumber, pageSize);
+        }
 
-            var classDtos = classes.Select(c => new ClassListDTO
-            {
-                ClassId = c.ClassId,
-                ClassName = c.ClassName,
-                SemesterName = c.Semester.SemesterName,
-                SubjectName = c.Subject?.SubjectName ?? "N/A"
-            });
-
-            return classDtos;
+        public async Task<int> CountPageAsync(string? name = null, int? subjectId = null, int? semesterId = null, int pageSize = 5)
+        {
+            return await _unitOfWork.ClassRepository.CountPageAsync(name, subjectId, semesterId, pageSize);
         }
 
         public Task<ClassUpdateDTO> UpdateClassAsync(int ClassId, ClassUpdateDTO classUpdateDto)
@@ -176,6 +199,141 @@ namespace GESS.Service
             });
 
 
+        }
+
+        public async Task<IEnumerable<ClassListDTO>> GetAllClassByTeacherIdAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageNumber = 1, int pageSize = 5)
+        {
+            return await _unitOfWork.ClassRepository.GetAllClassByTeacherIdAsync(teacherId,name, subjectId, semesterId, pageNumber, pageSize);
+        }
+
+        public async Task<int> CountPageByTeacherAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageSize = 5)
+        {
+            return await _unitOfWork.ClassRepository.CountPageByTeacherAsync(teacherId, name, subjectId, semesterId, pageSize);
+        }
+        public async Task AddStudentsToClassAsync(AddStudentsToClassRequest request)
+        {
+            using var transaction = await _unitOfWork.DataContext.Database.BeginTransactionAsync();
+            try
+            {
+                var classEntity = await _unitOfWork.ClassRepository.GetByIdAsync(request.ClassId);
+                if (classEntity == null)
+                    throw new Exception("Lớp học không tồn tại.");
+
+                var duplicateStudents = new List<string>();
+
+                foreach (var studentDto in request.Students)
+                {
+                    if (string.IsNullOrEmpty(studentDto.Email) || string.IsNullOrEmpty(studentDto.Code))
+                        throw new Exception("Email và mã sinh viên là bắt buộc.");
+
+                    var existingUser = await _unitOfWork.UserRepository.GetByCodeAndEmailAsync(studentDto.Code, studentDto.Email);
+                    Guid userId;
+
+                    if (existingUser == null)
+                    {
+                        var newUser = new User
+                        {
+                            Id = Guid.NewGuid(),
+                            Email = studentDto.Email,
+                            Code = studentDto.Code,
+                            UserName = studentDto.Email,
+                            Fullname = studentDto.FullName ?? "Không xác định",
+                            Gender = studentDto.Gender ?? true,
+                            DateOfBirth = studentDto.DateOfBirth,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow,
+                            IsActive = true,
+                            IsDeleted = false
+                        };
+
+                        // Tạo mật khẩu ngẫu nhiên
+                        var random = new Random();
+                        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+                        var randomPassword = new string(Enumerable.Repeat(chars, 12)
+                            .Select(s => s[random.Next(s.Length)]).ToArray());
+                        var result = await _unitOfWork.UserManager.CreateAsync(newUser, randomPassword);
+                        if (!result.Succeeded)
+                        {
+                            throw new Exception($"Không thể tạo người dùng: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                        }
+                       
+                        userId = newUser.Id;
+
+                        // Gán vai trò "Student" cho người dùng mới
+                        var roleExists = await _unitOfWork.RoleManager.RoleExistsAsync("Sinh viên");
+                        if (!roleExists)
+                        {
+                            var role = new IdentityRole<Guid>
+                            {
+                                Id = Guid.NewGuid(),
+                                Name = "Sinh viên",
+                                NormalizedName = "SINH VIÊN"
+                            };
+                            var roleResult = await _unitOfWork.RoleManager.CreateAsync(role);
+                            if (!roleResult.Succeeded)
+                            {
+                                throw new Exception($"Không thể tạo vai trò Student: {string.Join(", ", roleResult.Errors.Select(e => e.Description))}");
+                            }
+                        }
+
+                        await _unitOfWork.UserManager.AddToRoleAsync(newUser, "Sinh viên");
+                       
+                    }
+                    else
+                    {
+                        userId = existingUser.Id;
+                    }
+
+                    var existingStudent = await _unitOfWork.StudentRepository.GetStudentbyUserId(userId);
+                    Guid studentId;
+
+                    if (existingStudent == null)
+                    {
+                        var newStudent = new Student
+                        {
+                            StudentId = Guid.NewGuid(),
+                            UserId = userId,
+                            // CohortId = studentDto.CohortId ?? 1,
+                            EnrollDate = DateTime.UtcNow
+                        };
+                        _unitOfWork.StudentRepository.Create(newStudent);
+                        studentId = newStudent.StudentId;
+                    }
+                    else
+                    {
+                        studentId = existingStudent.StudentId;
+                    }
+
+                    // Kiểm tra và thêm sinh viên vào lớp học
+                    var isInClass = await _unitOfWork.ClassRepository.CheckIfStudentInClassAsync(classEntity.ClassId, studentId);
+                    if (isInClass)
+                    {
+                        duplicateStudents.Add($"{studentDto.FullName ?? studentDto.Code} ({studentDto.Email})");
+                    }
+                    else
+                    {
+                        classEntity.ClassStudents.Add(new ClassStudent
+                        {
+                            StudentId = studentId,
+                            ClassId = classEntity.ClassId
+                        });
+                    }
+                }
+
+                // Ném lỗi nếu có sinh viên trùng lặp
+                if (duplicateStudents.Any())
+                {
+                    throw new Exception($"Các sinh viên đã tồn tại trong lớp: {string.Join(", ", duplicateStudents)}");
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
     }
 }

@@ -12,6 +12,7 @@ namespace GESS.Model.Student
         public string UserName { get; set; }
         public string Email { get; set; }
         public string PhoneNumber { get; set; }
+        public string Code { get; set; }
         public DateTime DateOfBirth { get; set; }
         public string Fullname { get; set; }
         public bool Gender { get; set; }
@@ -20,6 +21,6 @@ namespace GESS.Model.Student
 
         public DateTime EnrollDate { get; set; } = DateTime.Now;
         public DateTime? EndDate { get; set; }
-        public int CohortId { get; set; }
+        public int? CohortId { get; set; }
     }
 }

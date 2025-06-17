@@ -129,5 +129,15 @@ namespace GESS.Api.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        //API danh sách môn 
+       
+        [HttpGet("ListSubject")]
+        public async Task<IActionResult> ListSubject()
+        {
+            var listSubject = await _subjectService.ListSubject(); 
+            return Ok(listSubject);
+        }
+
     }
 }

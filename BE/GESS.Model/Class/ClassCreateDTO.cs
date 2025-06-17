@@ -32,7 +32,8 @@ namespace GESS.Model.Class
     }
     public class StudentDTO
     {
-        public Guid? StudentId { get; set; }
+        public Guid StudentId { get; set; }
+        public string? Code { get; set; }
         public string? FullName { get; set; }
         public string? Email { get; set; }
         public bool? Gender { get; set; }

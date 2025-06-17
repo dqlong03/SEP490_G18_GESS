@@ -77,11 +77,14 @@ namespace Gess.Repository.Infrastructures
             return dbSet.AsNoTracking().ToList();
         }
 
+        public async Task<List<TEntity>> GetAllAsync(Func<object, bool> value)
+        {
+            return await dbSet.AsNoTracking().ToListAsync();
+        }
         public async Task<List<TEntity>> GetAllAsync()
         {
             return await dbSet.AsNoTracking().ToListAsync();
         }
-
         public TEntity GetById(Guid id)
         {
             return dbSet.Find(id);

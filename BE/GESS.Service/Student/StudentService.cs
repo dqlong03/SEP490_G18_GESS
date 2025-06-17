@@ -170,6 +170,7 @@ namespace GESS.Service.student
                 UserName = student.UserName,
                 Email = student.Email,
                 PhoneNumber = student.PhoneNumber,
+                Code = student.Code,
                 DateOfBirth = student.DateOfBirth,
                 Fullname = student.Fullname,
                 Gender = student.Gender,
@@ -231,7 +232,7 @@ namespace GESS.Service.student
                     {
                         try
                         {
-                            var genderText = worksheet.Cells[row, 3].Text.Trim().ToLower();
+                            var genderText = worksheet.Cells[row, 4].Text.Trim().ToLower();
                             bool? gender = genderText switch
                             {
                                 "nam" => true,
@@ -242,10 +243,11 @@ namespace GESS.Service.student
                             var student = new StudentFileExcel
                             {
                                 FullName = worksheet.Cells[row, 1].Text.Trim(),
-                                Email = worksheet.Cells[row, 2].Text.Trim(),
+                                Code = worksheet.Cells[row,2].Text.Trim(),
+                                Email = worksheet.Cells[row, 3].Text.Trim(),
                                 Gender = gender,
-                                DateOfBirth = DateTime.TryParse(worksheet.Cells[row, 4].Text, out var dob) ? dob : (DateTime?)null,
-                                CohirtId = int.TryParse(worksheet.Cells[row, 5].Text, out var cohirtId) ? cohirtId : (int?)null
+                                DateOfBirth = DateTime.TryParse(worksheet.Cells[row, 5].Text, out var dob) ? dob : (DateTime?)null,
+                                
                             };
 
                             if (string.IsNullOrWhiteSpace(student.FullName) || string.IsNullOrWhiteSpace(student.Email))
