@@ -42,34 +42,7 @@ namespace GESS.Service.teacher
 
         public async Task<TeacherResponse> AddTeacherAsync(TeacherCreationRequest request)
         {
-            var defaultPassword = "Abc123@";
-            // 1. Tạo user
-            var user = new User
-            {
-                UserName = request.UserName,
-                Email = request.Email,
-                PhoneNumber = request.PhoneNumber,
-                DateOfBirth = request.DateOfBirth,
-                Fullname = request.Fullname,
-                Gender = request.Gender,
-                IsActive = request.IsActive
-            };
-
-            var result = await _userManager.CreateAsync(user, defaultPassword);
-            if (!result.Succeeded)
-                throw new Exception(string.Join("; ", result.Errors.Select(e => e.Description)));
-
-            // 2. Đảm bảo role "Teacher" tồn tại
-            if (!await _roleManager.RoleExistsAsync(PredefinedRole.TEACHER_ROLE))
-            {
-                await _roleManager.CreateAsync(new IdentityRole<Guid>(PredefinedRole.TEACHER_ROLE));
-            }
-
-            // 3. Gán role cho user
-            await _userManager.AddToRoleAsync(user, PredefinedRole.TEACHER_ROLE);
-
-            // 4. Tạo Teacher
-            return await _unitOfWork.TeacherRepository.AddTeacherAsync(user.Id, request);
+            return await _unitOfWork.TeacherRepository.AddTeacherAsync(request);
 
 
         }
@@ -135,24 +108,59 @@ namespace GESS.Service.teacher
                                 PhoneNumber = worksheet.Cells[row, 4].Text.Trim(),
                                 DateOfBirth = DateTime.TryParse(worksheet.Cells[row, 5].Text, out var dob) ? dob : DateTime.Now,
                                 Fullname = worksheet.Cells[row, 6].Text.Trim(),
-                                Gender = bool.TryParse(worksheet.Cells[row, 7].Text, out var gender) ? gender : true,
-                                IsActive = bool.TryParse(worksheet.Cells[row, 8].Text, out var isActive) ? isActive : true,
-                                HireDate = DateTime.TryParse(worksheet.Cells[row, 9].Text, out var hireDate) ? hireDate : DateTime.Now,
-                                MajorName =  worksheet.Cells[row, 10].Text.Trim()
+                                Code = worksheet.Cells[row, 7].Text.Trim(),
+                                Gender = worksheet.Cells[row, 8].Text.Trim().ToLower() == "nam" ? true :
+                                         worksheet.Cells[row, 8].Text.Trim().ToLower() == "nữ" ? false :
+                                         bool.TryParse(worksheet.Cells[row, 8].Text, out var parsedGender) ? parsedGender : true,
+                                MajorName = worksheet.Cells[row, 9].Text.Trim()
                             };
 
-                            //Check MajorName exsit in system
+                            
                             if (string.IsNullOrWhiteSpace(request.MajorName))
                             {
-                                //throw exception
+                                throw new Exception($"Hàng {row}: Tên chuyên ngành không được để trống.");
+                            }
+                            if (!await IsMajorValid(request.MajorName, _unitOfWork))
+                            {
+                                throw new Exception($"Hàng {row}: Tên chuyên ngành '{request.MajorName}' không tồn tại trong hệ thống.");
+                            }
+                            if (string.IsNullOrWhiteSpace(request.PhoneNumber))
+                            {
+                                throw new Exception($"Hàng {row}: Số điện thoại không được để trống.");
                             }
 
+                            if (string.IsNullOrWhiteSpace(request.Fullname))
+                            {
+                                throw new Exception($"Hàng {row}: Họ và tên không được để trống.");
+                            }
+
+                            //Check Gender valid
+                            if (worksheet.Cells[row, 8].Text.Trim().ToLower() != "nam" &&
+                                worksheet.Cells[row, 8].Text.Trim().ToLower() != "nữ" &&
+                                !bool.TryParse(worksheet.Cells[row, 8].Text, out _))
+                            {
+                                throw new Exception($"Hàng {row}: Giới tính không hợp lệ. Chỉ chấp nhận 'Nam', 'Nữ' .");
+                            }
+
+                            if (request.DateOfBirth == default)
+                            {
+                                throw new Exception($"Hàng {row}: Ngày sinh không được để trống.");
+                            }
+
+                            if (await IsUserNameExists(request.UserName, _unitOfWork))
+                            {
+                                throw new Exception($"Hàng {row}: Tên đăng nhập '{request.UserName}' đã tồn tại trong hệ thống.");
+                            }
+
+                            if (string.IsNullOrWhiteSpace(request.Code))
+                            {
+                                throw new Exception($"Hàng {row}: Mã giáo viên không được để trống.");
+                            }
 
                             // Kiểm tra dữ liệu bắt buộc
                             if (string.IsNullOrWhiteSpace(request.UserName) || string.IsNullOrWhiteSpace(request.Email))
                             {
-                                Console.WriteLine($"Bỏ qua hàng {row}: Thiếu tên đăng nhập hoặc Email.");
-                                continue;
+                                throw new Exception($"Hàng {row}: Thiếu tên đăng nhập hoặc Email.");
                             }
 
                             // Gọi phương thức AddTeacherAsync để thêm giáo viên
@@ -162,8 +170,7 @@ namespace GESS.Service.teacher
                         catch (Exception ex)
                         {
                             // Ghi log lỗi và tiếp tục xử lý hàng tiếp theo
-                            Console.WriteLine($"Lỗi khi xử lý hàng {row}: {ex.Message}");
-                            continue;
+                            throw new Exception($"Lỗi khi xử lý hàng {row}: {ex.Message}");
                         }
                     }
                 }
@@ -172,6 +179,14 @@ namespace GESS.Service.teacher
             return teachers;
         }
 
+        private async Task<bool> IsMajorValid(string majorName, IUnitOfWork unitOfWork)
+        {
+            return await unitOfWork.MajorRepository.ExistsAsync(m => m.MajorName == majorName && m.IsActive);
+        }
+        private async Task<bool> IsUserNameExists(string userName, IUnitOfWork unitOfWork)
+        {
+            return await unitOfWork.TeacherRepository.ExistsAsync(t => t.User.UserName == userName && t.User.IsActive);
+        }
 
         public async Task<int> CountPageAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageSize)
         {
