@@ -32,11 +32,9 @@ namespace GESS.Repository.Implement
                 Duration = multipleExamCreateDto.Duration,
                 CategoryExamId = multipleExamCreateDto.CategoryExamId,
                 SemesterId = multipleExamCreateDto.SemesterId,
-                CreateBy = multipleExamCreateDto.CreateBy,
+                TeacherId = multipleExamCreateDto.TeacherId,
                 CreateAt = multipleExamCreateDto.CreateAt,
                 IsPublish = multipleExamCreateDto.IsPublish,
-                Status = "Not yet",
-                CodeStart = "Not yet"
             };
             
             try
@@ -62,13 +60,8 @@ namespace GESS.Repository.Implement
                         {
                             MultiExamId = multiExam.MultiExamId,
                             StudentId = (Guid)student.StudentId,
-                            Score = 0,
-                            StartTime = DateTime.Now,
-                            EndTime = DateTime.Now,
                             IsGrade = false,
                             CheckIn = false,
-                            StatusExam = "Not yet",
-                            ExamSlotRoomId = 8 //Must update
                         };
                         await _context.MultiExamHistories.AddAsync(multiExamHistory);
                         await _context.SaveChangesAsync();
