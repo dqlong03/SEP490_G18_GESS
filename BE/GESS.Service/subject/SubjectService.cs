@@ -108,6 +108,18 @@ namespace GESS.Service.subject
             return subjectDtos;
         }
 
+        public async Task<IEnumerable<SubjectListDTO>> ListSubject()
+        {
+            var subjects = await _unitOfWork.SubjectRepository.GetAllAsync();
+
+            return subjects.Select(s => new SubjectListDTO
+            {
+                SubjectId = s.SubjectId,
+                SubjectName = s.SubjectName
+            });
+        }
+
+
         public async Task<bool> RemoveSubjectFromTrainingProgramAsync(int trainingProgramId, int subjectId)
         {
             var result = await _unitOfWork.SubjectRepository.RemoveSubjectFromTrainingProgramAsync(trainingProgramId, subjectId);

@@ -1,4 +1,5 @@
 ﻿using GESS.Model.Class;
+using GESS.Model.Student;
 using GESS.Service;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -14,12 +15,13 @@ namespace GESS.Api.Controllers
         {
             _classService = classService;
         }
+        //API hiển thị danh sách lớp học thực hiện search, lọc theo semester, subject
         [HttpGet("GetAllClass")]
-        public async Task<IActionResult> GetAllClassAsync(string? name = null, int pageNumber = 1, int pageSize = 10)
+        public async Task<IActionResult> GetAllClassAsync( string? name = null,int? subjectId = null,int? semesterId = null,int pageNumber = 1, int pageSize = 10)
         {
             try
             {
-                var classes = await _classService.GetAllClassAsync(name, pageNumber, pageSize);
+                var classes = await _classService.GetAllClassAsync(name, subjectId, semesterId, pageNumber, pageSize);
                 return Ok(classes);
             }
             catch (Exception ex)
@@ -27,6 +29,7 @@ namespace GESS.Api.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+        //API Tạo lớp học và thêm sinh viên vào luôn
         [HttpPost("CreateClass")]
         public async Task<IActionResult> CreateClass([FromBody] ClassCreateDTO classCreateDto)
         {
@@ -81,5 +84,63 @@ namespace GESS.Api.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, $"Internal server error: {ex.Message}");
             }
         }
+        //API đếm số trang
+        [HttpGet("CountPages")]
+        public async Task<IActionResult> CountPages(string? name = null, int? subjectId = null, int? semesterId = null, int pageSize = 10)
+        {
+            try
+            {
+                var totalPages = await _classService.CountPageAsync(name, subjectId, semesterId, pageSize);
+                return Ok(totalPages);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
+            }
+        }
+        //API lớp của tôi
+        [HttpGet("teacherId")]
+        public async Task<IActionResult> GetAllClassByTeacherIdAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageNumber = 1, int pageSize = 10)
+        {
+            try
+            {
+                var classes = await _classService.GetAllClassByTeacherIdAsync(teacherId,name, subjectId, semesterId, pageNumber, pageSize);
+                return Ok(classes);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+        //API đếm số trang lớp của tôi
+        [HttpGet("CountPagesByTeacher/{teacherId}")]
+        public async Task<IActionResult> CountPagesByTeacher(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageSize = 10)
+        {
+            try
+            {
+                var totalPages = await _classService.CountPageByTeacherAsync(teacherId,name, subjectId, semesterId, pageSize);
+                return Ok(totalPages);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
+            }
+        }
+        //API thêm student vào một lớp đã có
+        [HttpPost("AddStudentsToClass")]
+        public async Task<IActionResult> AddStudentsToClass([FromBody] AddStudentsToClassRequest request)
+        {
+            try
+            {
+                await _classService.AddStudentsToClassAsync(request);
+                return Ok("Thêm sinh viên vào lớp thành công.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+
     }
 }
