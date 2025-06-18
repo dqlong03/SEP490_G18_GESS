@@ -109,24 +109,7 @@ namespace GESS.Api.Controllers
                 return NotFound(ex.Message);
             }
         }
-        //API to get all category exam by subjectId
-        [HttpGet("category_exam/{subjectId}")]
-        public async Task<ActionResult<IEnumerable<CategoryExamDTO>>> GetCategoryExamsBySubjectId(int subjectId)
-        {
-            try
-            {
-                var categories = await _categoryExamService.GetCategoriesBySubjectId(subjectId);
-                if (categories == null || !categories.Any())
-                {
-                    return NotFound("No category exams found for the specified subject.");
-                }
-                return Ok(categories);
-            }
-            catch (Exception ex)
-            {
-                return NotFound(ex.Message);
-            }
-        }
+
         //API to get all practice exam paper by subjectId and categoryId and teacherId
         [HttpGet("exams_paper")]
         public ActionResult<IEnumerable<PracticeExamPaperDTO>> GetAllPracticeExamPapers(int subjectId, int categoryId, Guid teacherId)
