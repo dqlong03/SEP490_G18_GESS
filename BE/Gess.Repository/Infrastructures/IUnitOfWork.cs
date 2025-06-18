@@ -40,6 +40,8 @@ namespace Gess.Repository.Infrastructures
         IPracticeExamPaperRepository PracticeExamPaperRepository { get; }
         ISemesterRepository SemesterRepository { get; }
 
+        IPracticeQuestionsRepository PracticeQuestionsRepository { get; }
+        ILevelQuestionRepository LevelQuestionRepository { get; }
         // ThaiNH_Initialize_Begin
         ICateExamSubRepository CateExamSubRepository { get; }
         // ThaiNH_Initialize_End

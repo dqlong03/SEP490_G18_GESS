@@ -25,19 +25,9 @@ using GESS.Service.student;
 using GESS.Service.subject;
 using GESS.Service.teacher;
 using GESS.Service.trainingProgram;
-using GESS.Service.examination;
-using GESS.Service.GradeCompoService;
-using GESS.Service.major;
 using GESS.Service.multipleExam;
 using GESS.Service.multipleQuestion;
-using GESS.Service.otp;
 using GESS.Service.practiceQuestion;
-using GESS.Service.student;
-using GESS.Service.subject;
-using GESS.Service.subject;
-using GESS.Service.teacher;
-using GESS.Service.trainingProgram;
-using GESS.Service.trainingProgram;
 using GESS.Service.users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -46,11 +36,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Security.Claims;
 using System.Text;
-
-using GESS.Service.subject;
-using GESS.Service.trainingProgram;
-using GESS.Service.examination;
-using GESS.Service.student;
+using GESS.Service.practiceExamPaper;
+using GESS.Service.levelquestion;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -147,12 +134,16 @@ builder.Services.AddScoped<IMultipleQuestionService, MultipleQuestionService>();
 builder.Services.AddScoped<IStudentService, StudentService>();
 builder.Services.AddScoped<IPracticeQuestionService, PracticeQuestionService>();
 
+builder.Services.AddScoped<ILevelQuestionService, LevelQuestionService>();
 
 // ThaiNH_Initialize_Begin
 builder.Services.AddScoped<ICateExamSubService, CateExamSubService>();
 builder.Services.AddScoped<ISemestersService, SemestersService>();
+builder.Services.AddScoped<IPracticeExamPaperService, PracticeExamPaperService>();
+builder.Services.AddScoped<IPracticeQuestionService, PracticeQuestionService>();  
 
 // Đăng ký các repository
+
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IChapterRepository, ChapterRepository>();
 builder.Services.AddScoped<ITeacherRepository, TeacherRepository>();
@@ -168,6 +159,9 @@ builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 builder.Services.AddScoped<ISemesterRepository, SemesterRepository>();
 builder.Services.AddScoped<ICateExamSubRepository, CateExamSubRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+builder.Services.AddScoped<IPracticeExamPaperRepository, PracticeExamPaperRepository>();
+builder.Services.AddScoped<IPracticeQuestionsRepository, PracticeQuestionsRepository>();
+builder.Services.AddScoped<ILevelQuestionRepository, LevelQuestionRepository>();
 
 
 // Đăng ký EmailService

@@ -1,0 +1,88 @@
+[33m184b00b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdevelop_KienLV[m[33m, [m[1;31morigin/develop_KienLV[m[33m)[m Add
+[33m4973bba[m Merge branch 'main' of https://github.com/dqlong03/SEP490_G18_GESS into develop_KienLV
+[33m869d5ce[m Merge pull request #24 from dqlong03/develop_KienLV
+[33me2b1a65[m Merge branch 'main' of https://github.com/dqlong03/SEP490_G18_GESS into develLV :wq
+[33m3ecae68[m Update api Class manage
+[33m4a98d3e[m Merge pull request #23 from dqlong03/dqlong
+[33m738b28e[m update entity: MultiExamHistories and multipleExam
+[33m4645e44[m fix
+[33m6bab776[m Merge pull request #22 from dqlong03/dqlong
+[33m4453dc0[m Merge branch 'main' into dqlong
+[33m56fb7b5[m Create Multiple Exam
+[33mfcb51b0[m Merge pull request #21 from dqlong03/develop_KienLV
+[33m0555b7f[m Resolve merge conflicts with main branch
+[33m757c532[m Merge pull request #20 from develop_DungLV_UserManagement
+[33mbcb2718[m fixbug
+[33mb33a378[m Merge pull request #19 from develop_DungLV_UserManagement
+[33m098c50c[m Modify FolderName
+[33m6d98baf[m Merge pull request #18 from develop_DungLV_UserManagement
+[33mef1f2c0[m Update UserManagement
+[33mbd8ea1e[m update api student
+[33m3175c8f[m Fix casing conflict: rename Student -> student
+[33m6ed173d[m Fix casing conflict with IStudentService.cs
+[33mb93ba87[m update api student
+[33m2c661bc[m Resolve merge conflicts with main branch
+[33mb7a11dc[m Merge pull request from develop_DungLV_UserManagement
+[33m0aea1eb[m[33m ([m[1;31morigin/develop_DungLV_UserManagement[m[33m, [m[1;32mdevelop_DungLV_UserManagement[m[33m)[m Merge branch 'main' into develop_DungLV_UserManagement
+[33mfec99dd[m Done API Chapter, Update API ClassManage
+[33mfe199d9[m Resolve merge conflicts in Program.cs and AuthService.cs
+[33mfa7f84b[m Resolve merge conflict with main branch
+[33m553a035[m Add StudentManagement
+[33mfbfaddd[m Merge branch 'main' into develop_DungLV_UserManagement
+[33m8049429[m Merge pull request #16 from develop_DungLV_UserManagement
+[33md11d842[m[33m ([m[1;31morigin/develop_DungLV[m[33m)[m [DungLV] Add Examination Management Feature and Modify Teacher Management Feature
+[33meea15b3[m Sua Login service generate token tieng anh cho FE
+[33m4286043[m Update FE Examination, Admin page V2
+[33ma18ef52[m Merge branch 'main' of https://github.com/dqlong03/SEP490_G18_GESS
+[33m71f32c5[m Font end khao thi admi, chua tach code V1
+[33mbeae03d[m Merge pull request #15 from dqlong03/develop_KienLV
+[33m243caac[m [KienLV] Update API Chapter
+[33mb12c8ed[m Merge pull request #14 from dqlong03/Develop_ThaiNH_FixUserProfile
+[33mfb25e1a[m[33m ([m[1;31morigin/Develop_ThaiNH_FixUserProfile[m[33m)[m ThaiNH_UserProfile4
+[33m9d49629[m Merge pull request #13 from dqlong03/Develop_ThaiNH_UserProfileMerge
+[33m1b5fb35[m[33m ([m[1;31morigin/Develop_ThaiNH_UserProfileMerge[m[33m)[m ThaiNH_UserProfile3
+[33mdf5af46[m ThaiNH_UserProfile2
+[33md7f8396[m ThaiNH_UserProfile
+[33m6518052[m Merge pull request #12 from dqlong03/dqlong
+[33m65aa53c[m[33m ([m[1;31morigin/dqlong[m[33m)[m update count pagesize
+[33m55fd571[m Merge pull request #11 from dqlong03/dqlong
+[33m7d9767d[m fix subject
+[33m51d754a[m[33m ([m[1;31morigin/Develop_ThaiNH_UserProfile[m[33m)[m ThaiNH_UserProfile,Mark Management
+[33m491293d[m Merge pull request #10 from develop_DungLV
+[33m92e5ebc[m Import file excel: Teacher List
+[33mdfc2747[m Merge pull request #9 from dqlong03/develop_KienLV
+[33m40b30ac[m [KienLV] Update API Chapter
+[33mf398ca8[m Merge pull request #8 from dqlong03/develop_KienLV
+[33m811362f[m [KienLV] init class
+[33m70043cd[m Merge branch 'main' into develop_DungLV_UserManagement
+[33m0086db2[m Search Teacher
+[33m9f9c40a[m Merge pull request #7 from dqlong03/dqlong_Subject
+[33m09e8257[m[33m ([m[1;31morigin/dqlong_Subject[m[33m)[m Subject Management
+[33m6acdc5f[m Merge pull request #6 from dqlong03/dqlong
+[33m090bdbc[m fix conflict
+[33mb589590[m Major and Trainning Program Management
+[33mf7e822c[m CRUD Teacher, CRUD User
+[33mf1a3625[m Merge branch 'main' into develop_DungLV
+[33mca807b1[m CRUD Teacher, CRUD User
+[33m08f6050[m Update gitignore public .env FE len
+[33mc127ca7[m Mau chuc nang login, chia tach code, loi login voi gooogle chua sua
+[33m564d90b[m Merge branch 'main' of https://github.com/dqlong03/SEP490_G18_GESS
+[33m9d09e25[m Update login google and recapcha
+[33ma5ef7f9[m Merge pull request #4 from dqlong03/develop_KienLV
+[33mc9abe20[m [KienLV] update Forgot password
+[33m9d51339[m Merge pull request #3 from dqlong03/develop_KienLV
+[33md1bc1a1[m [KienLV] Forgot password
+[33m644411e[m up first base branch for DungLV
+[33m2f1ce1f[m[33m ([m[1;32mmain[m[33m)[m Khoi tao cau truc fontend
+[33m0192655[m Update gitignore cho fontend
+[33mddeb93b[m Merge pull request #2 from dqlong03/develop_KienLV
+[33m57c248f[m [KienLV] exam CRU Chapter
+[33mb8e8742[m Merge pull request #1 from dqlong03/develop_ThaiNH_InitDB
+[33mdc1ad56[m[33m ([m[1;31morigin/develop_ThaiNH_InitDB[m[33m)[m ThaiNH_Build Base DB
+[33m35af047[m add gitignore
+[33mae3d5d5[m add gitignore
+[33m9aa41b3[m add gitignore
+[33m602d358[m Base Project
+[33m4a13999[m Create FE
+[33maa51ba9[m Create BE
+[33m1c286f3[m Initial commit
