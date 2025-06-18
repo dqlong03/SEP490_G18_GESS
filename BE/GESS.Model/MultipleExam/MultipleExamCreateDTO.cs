@@ -1,6 +1,7 @@
 ﻿using GESS.Entity.Entities;
 using GESS.Model.Class;
 using GESS.Model.NoQuestionInChapter;
+using GESS.Model.Student;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -44,6 +45,6 @@ namespace GESS.Model.MultipleExam
         [Column(TypeName = "BIT")]
         public bool IsPublish { get; set; }
         public ICollection<NoQuestionInChapterDTO> NoQuestionInChapterDTO { get; set; }
-        public ICollection<StudentDTO> StudentDTO { get; set; }
+        public ICollection<StudentExamDTO> StudentExamDTO { get; set; }
     }
 }

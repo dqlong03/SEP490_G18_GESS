@@ -106,24 +106,6 @@ namespace GESS.Api.Controllers
             }
         }
 
-        //API to get category of exam by subjectId
-        [HttpGet("category-exam/{subjectId}")]
-        public async Task<ActionResult<IEnumerable<CategoryExamDTO>>> GetCategoryExamsBySubjectId(int subjectId)
-        {
-            try
-            {
-                var categories = await _categoryExamService.GetCategoriesBySubjectId(subjectId);
-                if (categories == null || !categories.Any())
-                {
-                    return NotFound("No categories found for the specified subject.");
-                }
-                return Ok(categories);
-            }
-            catch (Exception ex)
-            {
-                return NotFound(ex.Message);
-            }
-        }
         //API to get number of question in each chapter and category and level and [IsPublic] and [CreatedBy]
         [HttpGet("question-count")]
         public async Task<int> GetQuestionCount(int? chapterId = null,int? categoryId = null,int? levelId = null,bool? isPublic = null,string? createdBy = null)
