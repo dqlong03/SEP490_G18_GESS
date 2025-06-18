@@ -2,7 +2,7 @@
 using GESS.Service.categoryExam;
 using GESS.Service.chapter;
 using GESS.Service.levelquestion;
-using GESS.Service.practicequestion;
+using GESS.Service.practiceQuestion;
 using GESS.Service.semesters;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

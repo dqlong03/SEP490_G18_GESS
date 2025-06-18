@@ -1,6 +1,8 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Entities;
 using GESS.Model.PracticeQuestionDTO;
+using GESS.Model.Subject;
+using GESS.Model.TrainingProgram;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,8 +18,6 @@ namespace GESS.Service.practicequestion
         {
             _unitOfWork = unitOfWork;
         }
-
-
         public async Task<IEnumerable<PracticeQuestionLitsDTO>> GetAllPracticeQuestionsAsync()
         {
             return await _unitOfWork.PracticeQuestionsRepository.GetAllPracticeQuestionsAsync();
@@ -41,6 +41,7 @@ namespace GESS.Service.practicequestion
             await _unitOfWork.SaveChangesAsync();
             return dto;
         }
-    } 
 
     }
+
+}

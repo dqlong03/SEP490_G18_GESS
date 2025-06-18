@@ -1,5 +1,7 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Entities;
+using GESS.Model.MultipleExam;
+using GESS.Model.TrainingProgram;
 using GESS.Model.PracticeExamPaper;
 using System;
 using System.Collections.Generic;
@@ -21,5 +23,6 @@ namespace GESS.Repository.Interface
             int pageSize = 5
         );
         Task<int> CountPageAsync(string? name = null, int? subjectId = null, int? semesterId = null, int? categoryExamId = null, int pageSize = 5);
+        Task<IEnumerable<PracticeExamPaper>> GetAllPracticeExamPapersAsync(int subjectId, int categoryId, Guid teacherId);
     }
 }

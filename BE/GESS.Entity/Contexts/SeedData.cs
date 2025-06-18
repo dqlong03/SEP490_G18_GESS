@@ -482,7 +482,7 @@ namespace GESS.Entity.Contexts
                         NumberQuestion = 1,
                         CreateAt = DateTime.Now,
                         Status = "Published",
-                        CreateBy = "teacher1@example.com",
+                        //CreateBy = "teacher1@example.com",
                         CategoryExamId = 1,
                         SubjectId = 1,
                         SemesterId = 1
@@ -493,7 +493,7 @@ namespace GESS.Entity.Contexts
                         NumberQuestion = 1,
                         CreateAt = DateTime.Now,
                         Status = "Published",
-                        CreateBy = "teacher2@example.com",
+                        //CreateBy = "teacher2@example.com",
                         CategoryExamId = 2,
                         SubjectId = 1,
                         SemesterId = 1

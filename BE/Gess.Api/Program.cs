@@ -16,6 +16,7 @@ using GESS.Service.categoryExam;
 using GESS.Service.chapter;
 using GESS.Service.email;
 using GESS.Service.examination;
+using GESS.Service.examination;
 using GESS.Service.GradeCompoService;
 using GESS.Service.major;
 using GESS.Service.otp;
@@ -24,15 +25,9 @@ using GESS.Service.student;
 using GESS.Service.subject;
 using GESS.Service.teacher;
 using GESS.Service.trainingProgram;
-using GESS.Service.examination;
-using GESS.Service.GradeCompoService;
-using GESS.Service.major;
 using GESS.Service.multipleExam;
 using GESS.Service.multipleQuestion;
-using GESS.Service.otp;
-using GESS.Service.subject;
-using GESS.Service.teacher;
-using GESS.Service.trainingProgram;
+using GESS.Service.practiceQuestion;
 using GESS.Service.users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -41,13 +36,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Security.Claims;
 using System.Text;
-
-using GESS.Service.subject;
-using GESS.Service.trainingProgram;
-using GESS.Service.examination;
-using GESS.Service.student;
 using GESS.Service.practiceExamPaper;
-using GESS.Service.practicequestion;
 using GESS.Service.levelquestion;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -143,6 +132,8 @@ builder.Services.AddScoped<IClassService, ClassService>();
 builder.Services.AddScoped<ICategoryExamService, CategoryExamService>();
 builder.Services.AddScoped<IMultipleQuestionService, MultipleQuestionService>();
 builder.Services.AddScoped<IStudentService, StudentService>();
+builder.Services.AddScoped<IPracticeQuestionService, PracticeQuestionService>();
+
 builder.Services.AddScoped<ILevelQuestionService, LevelQuestionService>();
 
 // ThaiNH_Initialize_Begin

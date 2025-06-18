@@ -3,6 +3,7 @@ using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
 using GESS.Model.PracticeExamPaper;
 using GESS.Repository.Interface;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,7 +21,13 @@ namespace GESS.Repository.Implement
         {
             _context = context;
         }
-
+        public async Task<IEnumerable<PracticeExamPaper>> GetAllPracticeExamPapersAsync(int subjectId, int categoryId, Guid teacherId)
+        {
+            var practiceExamPapers = await _context.PracticeExamPapers
+                 .Where(p => p.SubjectId == subjectId && p.CategoryExamId == categoryId && p.TeacherId == teacherId)
+                 .ToListAsync();
+            return practiceExamPapers;
+        }
         public async Task<List<ExamPaperListDTO>> GetAllExamPaperListAsync(
             string? searchName = null,
             int? subjectId = null,
@@ -66,18 +73,18 @@ namespace GESS.Repository.Implement
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(x => new ExamPaperListDTO
-                {
+        {
                     PracExamPaperId = x.PracExamPaperId,
                     PracExamPaperName = x.PracExamPaperName,
                     NumberQuestion = x.NumberQuestion,
                     CreateAt = x.CreateAt,
                     Status = x.Status,
-                    CreateBy = x.CreateBy,
+                    //CreateBy = x.CreateBy,
                     CategoryExamName = x.CategoryExam.CategoryExamName,
                     SubjectName = x.Subject.SubjectName,
                     SemesterName = x.Semester.SemesterName
                 })
-                .ToListAsync();
+                 .ToListAsync();
 
             return items;
         }
@@ -101,15 +108,15 @@ namespace GESS.Repository.Implement
             if (semesterId.HasValue)
             {
                 query = query.Where(x => x.SemesterId == semesterId.Value);
-            }
+        }
             if (categoryExamId.HasValue)
             {
                 query = query.Where(x => x.CategoryExamId == categoryExamId.Value);
-            }
-
+    }
+    
             var totalItems = await query.CountAsync();
             return (int)Math.Ceiling((double)totalItems / pageSize);
         }
-
-    }
+    
+}
 }

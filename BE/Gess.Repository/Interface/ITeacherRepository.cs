@@ -1,4 +1,5 @@
-﻿using GESS.Entity.Entities;
+﻿using Gess.Repository.Infrastructures;
+using GESS.Entity.Entities;
 using GESS.Model.Teacher;
 using System;
 using System.Collections.Generic;
@@ -8,11 +9,11 @@ using System.Threading.Tasks;
 
 namespace GESS.Repository.Interface
 {
-    public interface ITeacherRepository
+    public interface ITeacherRepository : IBaseRepository<Teacher>
     {
         Task<TeacherResponse> GetTeacherByIdAsync(Guid teacherId);
         Task<List<TeacherResponse>> GetAllTeachersAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageNumber, int pageSize);
-        Task<TeacherResponse> AddTeacherAsync(Guid userId, TeacherCreationRequest request);
+        Task<TeacherResponse> AddTeacherAsync( TeacherCreationRequest request);
         Task<TeacherResponse> UpdateTeacherAsync(Guid teacherId, TeacherUpdateRequest teacher);
         Task DeleteTeacherAsync(Guid teacherId);
         Task<List<TeacherResponse>> SearchTeachersAsync(string keyword);

@@ -1,4 +1,9 @@
-﻿using System;
+﻿using Gess.Repository.Infrastructures;
+using GESS.Entity.Entities;
+using GESS.Model.PracticeExamPaper;
+using GESS.Model.Subject;
+using GESS.Model.TrainingProgram;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,7 +21,7 @@ namespace GESS.Service.practiceExamPaper
 
         public PracticeExamPaperService(IUnitOfWork unitOfWork) : base(unitOfWork)
         {
-            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<List<ExamPaperListDTO>> GetAllExamPaperListAsync(
@@ -38,10 +43,24 @@ namespace GESS.Service.practiceExamPaper
             }
 
             return result;
-        }
+            }
         public async Task<int> CountPageAsync(string? name = null, int? subjectId = null, int? semesterId = null, int? categoryExamId = null, int pageSize = 5)
-        {
+            {
             return await _unitOfWork.PracticeExamPaperRepository.CountPageAsync(name, subjectId, semesterId, categoryExamId, pageSize);
         }
+        public async Task<IEnumerable<PracticeExamPaperDTO>> GetAllPracticeExamPapers(int subjectId, int categoryId, Guid teacherId)
+        {
+            var practiceExamPapers = await _unitOfWork.PracticeExamPaperRepository.GetAllPracticeExamPapersAsync(subjectId, categoryId, teacherId);
+            if (practiceExamPapers == null || !practiceExamPapers.Any())
+            {
+                return Enumerable.Empty<PracticeExamPaperDTO>();
+            }
+            var practiceExamPaperDtos = practiceExamPapers.Select(paper => new PracticeExamPaperDTO
+            {
+
+            });
+            return practiceExamPaperDtos;
+        }
     }
+
 }

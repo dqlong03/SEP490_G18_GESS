@@ -1,5 +1,7 @@
 ﻿using GESS.Entity.Entities;
 using GESS.Model.PracticeQuestionDTO;
+using GESS.Model.Subject;
+using GESS.Model.TrainingProgram;
 using System;
 using System.Collections.Generic;
 using System.Linq;

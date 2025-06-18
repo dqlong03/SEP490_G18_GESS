@@ -63,8 +63,11 @@ namespace Gess.Repository.Infrastructures
         public IMultipleExamRepository MultipleExamRepository => new MultipleExamRepository(_context);
         public ICategoryExamRepository CategoryExamRepository => new CategoryExamRepository(_context);
         public IMultipleQuestionRepository MultipleQuestionRepository => new MultipleQuestionRepository(_context);
-        public IPracticeExamPaperRepository PracticeExamPaperRepository => _practiceExamPaperRepository ??= new PracticeExamPaperRepository(_context);
         public ILevelQuestionRepository LevelQuestionRepository => _levelQuestionRepository ??= new LevelQuestionRepository(_context);
+        public IPracticeExamRepository PracticeExamRepository => new PracticeExamRepository(_context);
+        public IPracticeExamPaperRepository PracticeExamPaperRepository => new PracticeExamPaperRepository(_context);
+
+
         public UnitOfWork(GessDbContext context= null)
         {
             _context = context;
