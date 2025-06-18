@@ -88,7 +88,29 @@ namespace GESS.Repository.Implement
 
             return items;
         }
+        public async Task<PracticeExamPaper> CreateWithQuestionsAsync(PracticeExamPaper examPaper, List<PracticeQuestion> questions, List<PracticeTestQuestion> testQuestions)
+        {
+            await _context.PracticeExamPapers.AddAsync(examPaper);
+            await _context.PracticeQuestions.AddRangeAsync(questions);
+            await _context.PracticeTestQuestions.AddRangeAsync(testQuestions);
+            await _context.SaveChangesAsync();
+            return examPaper;
+        }
 
+        public async Task<PracticeExamPaper> CreateAsync(PracticeExamPaper entity)
+        {
+            await _context.PracticeExamPapers.AddAsync(entity);
+            await _context.SaveChangesAsync(); 
+            return entity;
+        }
+
+        public async Task<List<PracticeTestQuestion>> CreateTestQuestionsAsync(List<PracticeTestQuestion> testQuestions)
+        {
+            await _context.PracticeTestQuestions.AddRangeAsync(testQuestions);
+            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
+            return testQuestions;
+        }
         public async Task<int> CountPageAsync(string? name = null, int? subjectId = null, int? semesterId = null, int? categoryExamId = null, int pageSize = 5)
         {
             if (pageSize < 1) pageSize = 5;
@@ -117,6 +139,85 @@ namespace GESS.Repository.Implement
             var totalItems = await query.CountAsync();
             return (int)Math.Ceiling((double)totalItems / pageSize);
         }
-    
-}
+        public async Task<List<ListPracticeQuestion>> GetPracticeQuestionsAsync(Guid teacherId)
+        {
+            var questions = await _context.PracticeQuestions
+                .Where(q => q.IsPublic || q.CreatedBy == teacherId)
+                .Include(q => q.LevelQuestion)
+                .Include(q => q.Chapter)
+                .Select(q => new ListPracticeQuestion
+                {
+                    PracticeQuestion = q.PracticeQuestionId,
+                    Content = q.Content,
+                    Level = q.LevelQuestion.LevelQuestionName,
+                    ChapterName = q.Chapter.ChapterName
+                })
+                .ToListAsync();
+
+            return questions;
+        }
+        public async Task<List<ListPracticeQuestion>> GetPublicPracticeQuestionsAsync(string? search = null, int? levelQuestionId = null)
+        {
+            var query = _context.PracticeQuestions
+                .Where(q => q.IsPublic)
+                .Include(q => q.LevelQuestion)
+                .Include(q => q.Chapter)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(q => q.Content.Contains(search));
+            }
+
+            if (levelQuestionId.HasValue)
+            {
+                query = query.Where(q => q.LevelQuestionId == levelQuestionId.Value);
+            }
+
+            return await query
+                .Select(q => new ListPracticeQuestion
+                {
+                    PracticeQuestion = q.PracticeQuestionId,
+                    Content = q.Content,
+                    Level = q.LevelQuestion.LevelQuestionName,
+                    ChapterName = q.Chapter.ChapterName
+                })
+                .ToListAsync();
+        }
+
+
+
+        public async Task<List<ListPracticeQuestion>> GetPrivatePracticeQuestionsAsync(Guid teacherId, string? search = null, int? levelQuestionId = null)
+        {
+            var query = _context.PracticeQuestions
+                .Where(q => !q.IsPublic && q.CreatedBy == teacherId)
+                .Include(q => q.LevelQuestion)
+                .Include(q => q.Chapter)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(q => q.Content.Contains(search));
+            }
+
+            if (levelQuestionId.HasValue)
+            {
+                query = query.Where(q => q.LevelQuestionId == levelQuestionId.Value);
+            }
+
+            return await query
+                .Select(q => new ListPracticeQuestion
+                {
+                    PracticeQuestion = q.PracticeQuestionId,
+                    Content = q.Content,
+                    Level = q.LevelQuestion.LevelQuestionName,
+                    ChapterName = q.Chapter.ChapterName
+                })
+                .ToListAsync();
+        }
+
+
+
+
+    }
 }
