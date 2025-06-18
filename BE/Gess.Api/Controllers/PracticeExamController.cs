@@ -3,6 +3,7 @@ using GESS.Model.Category;
 using GESS.Model.Chapter;
 using GESS.Model.Major;
 using GESS.Model.MultipleExam;
+using GESS.Model.PracticeExam;
 using GESS.Model.PracticeExamPaper;
 using GESS.Model.Subject;
 using GESS.Model.TrainingProgram;
@@ -108,6 +109,24 @@ namespace GESS.Api.Controllers
                 return NotFound(ex.Message);
             }
         }
+        //API to get all category exam by subjectId
+        [HttpGet("category_exam/{subjectId}")]
+        public async Task<ActionResult<IEnumerable<CategoryExamDTO>>> GetCategoryExamsBySubjectId(int subjectId)
+        {
+            try
+            {
+                var categories = await _categoryExamService.GetCategoriesBySubjectId(subjectId);
+                if (categories == null || !categories.Any())
+                {
+                    return NotFound("No category exams found for the specified subject.");
+                }
+                return Ok(categories);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
         //API to get all practice exam paper by subjectId and categoryId and teacherId
         [HttpGet("exams_paper")]
         public ActionResult<IEnumerable<PracticeExamPaperDTO>> GetAllPracticeExamPapers(int subjectId, int categoryId, Guid teacherId)
@@ -120,6 +139,25 @@ namespace GESS.Api.Controllers
             catch (Exception ex)
             {
                 return NotFound(ex.Message);
+            }
+        }
+
+        //API to create a new practice exam
+        [HttpPost("create")]
+        public async Task<ActionResult<PracticeExamCreateDTO>> CreatePracticeExam([FromBody] PracticeExamCreateDTO practiceExamCreateDto)
+        {
+            if (practiceExamCreateDto == null)
+            {
+                return BadRequest("Invalid practice exam data.");
+            }
+            try
+            {
+                var createdExam = await _practiceExamService.CreatePracticeExamAsync(practiceExamCreateDto);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
             }
         }
 
