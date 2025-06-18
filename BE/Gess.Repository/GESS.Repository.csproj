@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\GESS.Entity\GESS.Entity.csproj" />
     <ProjectReference Include="..\GESS.Model\GESS.Model.csproj" />
+    <ProjectReference Include="..\GessCommon\GESS.Common.csproj" />
   </ItemGroup>
 
 </Project>

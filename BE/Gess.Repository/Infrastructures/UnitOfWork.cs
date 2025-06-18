@@ -6,7 +6,6 @@ using GESS.Repository.Interface;
 using GESS.Repository.refreshtoken;
 using Microsoft.AspNetCore.Identity;
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Gess.Repository.Infrastructures
@@ -14,51 +13,50 @@ namespace Gess.Repository.Infrastructures
     public class UnitOfWork : IUnitOfWork
     {
         private readonly GessDbContext _context;
-        public  GessDbContext DataContext => _context;
-        private IRefreshTokenRepository _refreshTokenRepository;
-        private IUserRepository _userRepository;
-        private IChapterRepository _chapterRepository;
-
-        // ThaiNH_Initialize_Begin
-        private ICateExamSubRepository _cateSubRepository;
-        // ThaiNH_Initialize_End
-
-        private IExaminationRepository _examinationRepository;
-        private ITeacherRepository _teacherRepository;
-        private IStudentRepository _studentRepository;
-        private IClassRepository _classRepository;
         private readonly UserManager<User> _userManager;
-        private ISubjectRepository _subjectRepository;
-        private IMajorRepository _majorRepository;
+        private readonly RoleManager<IdentityRole<Guid>> _roleManager;
         private bool _disposed;
 
-        public UnitOfWork(GessDbContext context, UserManager<User> userManager = null)
+        // Lazy initialization cho các repository
+        private IUserRepository _userRepository;
+        private IRefreshTokenRepository _refreshTokenRepository;
+        private IChapterRepository _chapterRepository;
+        private ITeacherRepository _teacherRepository;
+        private IExaminationRepository _examinationRepository;
+        private ISubjectRepository _subjectRepository;
+        private IMajorRepository _majorRepository;
+        private ITrainingProgramRepository _trainingProgramRepository;
+        private IStudentRepository _studentRepository;
+        private IClassRepository _classRepository;
+        private ISemesterRepository _semesterRepository;
+        private ICateExamSubRepository _cateExamSubRepository;
+        
+        public UnitOfWork(GessDbContext context, UserManager<User> userManager, RoleManager<IdentityRole<Guid>> roleManager)
         {
-            _context = context;
-            _userManager = userManager;
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
+            _roleManager = roleManager ?? throw new ArgumentNullException(nameof(roleManager));
         }
 
-        public IUserRepository UserRepository =>  _userRepository ??= new UserRepository(_context, _userManager);
+        public GessDbContext DataContext => _context;
+
+        public IUserRepository UserRepository => _userRepository ??= new UserRepository(_context, _userManager);
         public IRefreshTokenRepository RefreshTokenRepository => _refreshTokenRepository ??= new RefreshTokenRepository(_context);
-
-        public IStudentRepository StudentRepository => _studentRepository ??= new StudentRepository(_context, _userManager);
-
         public IChapterRepository ChapterRepository => _chapterRepository ??= new ChapterRepository(_context);
-
-        // ThaiNH_Initialize_Begin
-        public ICateExamSubRepository CateExamSubRepository => _cateSubRepository ??= new CateExamSubRepository(_context);
-        // ThaiNH_Initialize_End
-
-        public IExaminationRepository ExaminationRepository => _examinationRepository ??= new ExaminationRepository(_context, _userManager);
-
-
         public ITeacherRepository TeacherRepository => _teacherRepository ??= new TeacherRepository(_context, _userManager);
-        public IClassRepository ClassRepository => _classRepository ??= new ClassRepository(_context);
-
+        public IExaminationRepository ExaminationRepository => _examinationRepository ??= new ExaminationRepository(_context, _userManager);
         public ISubjectRepository SubjectRepository => _subjectRepository ??= new SubjectRepository(_context);
-
         public IMajorRepository MajorRepository => _majorRepository ??= new MajorRepository(_context);
-        public ITrainingProgramRepository TrainingProgramRepository => new TrainingProgramRepository(_context);
+        public ITrainingProgramRepository TrainingProgramRepository => _trainingProgramRepository ??= new TrainingProgramRepository(_context);
+        public IStudentRepository StudentRepository => _studentRepository ??= new StudentRepository(_context, _userManager);
+        public IClassRepository ClassRepository => _classRepository ??= new ClassRepository(_context);
+        public ISemesterRepository SemesterRepository => _semesterRepository ??= new SemesterRepository(_context);
+        public ICateExamSubRepository CateExamSubRepository => _cateExamSubRepository ??= new CateExamSubRepository(_context);
+
+        public UserManager<User> UserManager => _userManager;
+        public RoleManager<IdentityRole<Guid>> RoleManager => _roleManager;
+
+        
 
         public IMultipleExamRepository MultipleExamRepository => new MultipleExamRepository(_context);
         public ICategoryExamRepository CategoryExamRepository => new CategoryExamRepository(_context);
@@ -89,7 +87,11 @@ namespace Gess.Repository.Infrastructures
 
         public void Dispose()
         {
-            _context.Dispose();
+            if (!_disposed)
+            {
+                _context.Dispose();
+                _disposed = true;
+            }
         }
     }
 }

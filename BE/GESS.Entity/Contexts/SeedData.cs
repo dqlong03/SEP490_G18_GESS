@@ -280,71 +280,43 @@ namespace GESS.Entity.Contexts
                     { 
                         TeacherId = context.Users.First(u => u.Email == "teacher1@example.com").Id,
                         UserId = context.Users.First(u => u.Email == "teacher1@example.com").Id,
-                        HireDate = new DateTime(2020, 9, 1)
+                        HireDate = new DateTime(2020, 9, 1),
+                        MajorId = 1 // Công nghệ thông tin
                     },
                     new Teacher 
                     { 
                         TeacherId = context.Users.First(u => u.Email == "teacher2@example.com").Id,
                         UserId = context.Users.First(u => u.Email == "teacher2@example.com").Id,
-                        HireDate = new DateTime(2021, 9, 1)
+                        HireDate = new DateTime(2021, 9, 1),
+                        MajorId = 1 // Công nghệ thông tin
                     },
                     new Teacher 
                     { 
                         TeacherId = context.Users.First(u => u.Email == "teacher3@example.com").Id,
                         UserId = context.Users.First(u => u.Email == "teacher3@example.com").Id,
-                        HireDate = new DateTime(2022, 9, 1)
+                        HireDate = new DateTime(2022, 9, 1),
+                        MajorId = 2 // Kỹ thuật điện
                     },
                     new Teacher 
                     { 
                         TeacherId = context.Users.First(u => u.Email == "teacher4@example.com").Id,
                         UserId = context.Users.First(u => u.Email == "teacher4@example.com").Id,
-                        HireDate = new DateTime(2023, 9, 1)
+                        HireDate = new DateTime(2023, 9, 1),
+                        MajorId = 2 // Kỹ thuật điện
                     },
                     new Teacher 
                     { 
                         TeacherId = context.Users.First(u => u.Email == "teacher5@example.com").Id,
                         UserId = context.Users.First(u => u.Email == "teacher5@example.com").Id,
-                        HireDate = new DateTime(2023, 9, 1)
+                        HireDate = new DateTime(2023, 9, 1),
+                        MajorId = 3 // Cơ khí
                     }
                 };
                 await context.Teachers.AddRangeAsync(teachers);
                 await context.SaveChangesAsync();
-
-                // Thêm dữ liệu cho bảng MajorTeacher
-                //var majorTeachers = new List<MajorTeacher>
-                //{
-                //    new MajorTeacher 
-                //    { 
-                //        TeacherId = context.Users.First(u => u.Email == "teacher1@example.com").Id,
-                //        MajorId = 1
-                //    },
-                //    new MajorTeacher 
-                //    { 
-                //        TeacherId = context.Users.First(u => u.Email == "teacher2@example.com").Id,
-                //        MajorId = 1
-                //    },
-                //    new MajorTeacher 
-                //    { 
-                //        TeacherId = context.Users.First(u => u.Email == "teacher3@example.com").Id,
-                //        MajorId = 1
-                //    },
-                //    new MajorTeacher 
-                //    { 
-                //        TeacherId = context.Users.First(u => u.Email == "teacher4@example.com").Id,
-                //        MajorId = 1
-                //    },
-                //    new MajorTeacher 
-                //    { 
-                //        TeacherId = context.Users.First(u => u.Email == "teacher5@example.com").Id,
-                //        MajorId = 1
-                //    }
-                //};
-                //await context.MajorTeachers.AddRangeAsync(majorTeachers);
-                await context.SaveChangesAsync();
             }
         }
 
-       
         private static async Task SeedStudentsAsync(GessDbContext context)
         {
             if (!context.Students.Any())
@@ -396,15 +368,7 @@ namespace GESS.Entity.Contexts
         private static async Task CreateUser(
             UserManager<User> userManager,
             string email,
-
-            // ThaiNH_Modified_Begin
-
             string fullName,
-            //string firstName,
-            //string lastName,
-
-            // ThaiNH_Modified_End
-
             string password,
             DateTime dateOfBirth,
             string phoneNumber,
@@ -417,14 +381,7 @@ namespace GESS.Entity.Contexts
                 {
                     UserName = email,
                     Email = email,
-                    // ThaiNH_Modified_UserProfile_Begin
-
                     Fullname = fullName,
-                    //FirstName = firstName,
-                    //LastName = lastName,
-
-                    // ThaiNH_Modified_UserProfile_End
-
                     DateOfBirth = dateOfBirth,
                     PhoneNumber = phoneNumber,
                     Gender = gender,

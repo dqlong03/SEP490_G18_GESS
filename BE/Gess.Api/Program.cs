@@ -1,3 +1,4 @@
+
 using Gess.Repository.Infrastructures;
 using GESS.Api.HandleException;
 using GESS.Auth;
@@ -15,6 +16,15 @@ using GESS.Service.categoryExam;
 using GESS.Service.chapter;
 using GESS.Service.email;
 using GESS.Service.examination;
+using GESS.Service.examination;
+using GESS.Service.GradeCompoService;
+using GESS.Service.major;
+using GESS.Service.otp;
+using GESS.Service.semesters;
+using GESS.Service.student;
+using GESS.Service.subject;
+using GESS.Service.teacher;
+using GESS.Service.trainingProgram;
 using GESS.Service.examination;
 using GESS.Service.GradeCompoService;
 using GESS.Service.major;
@@ -37,10 +47,14 @@ using Microsoft.OpenApi.Models;
 using System.Security.Claims;
 using System.Text;
 
+using GESS.Service.subject;
+using GESS.Service.trainingProgram;
+using GESS.Service.examination;
+using GESS.Service.student;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//Google login
+// Google login
 builder.Services.AddAuthentication()
     .AddGoogle(options =>
     {
@@ -56,24 +70,22 @@ builder.Services.AddCors(options =>
         {
             policy.WithOrigins("http://localhost:3000") // Thay bằng domain của frontend Next.js
                   .AllowAnyHeader()
-                  .AllowAnyMethod();
+                  .AllowAnyMethod()
+                  .AllowCredentials(); // Nếu cần gửi cookie hoặc token
         });
 });
 
-// Add services to the container.
+// Add services to the container
 builder.Services.AddControllers();
 
-// ThaiNH_Initialize_Begin
+// Thêm logging
 builder.Services.AddLogging();
-// ThaiNH_Initialize_End
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// Cấu hình Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "GESS API", Version = "v1" });
-    
-    // Thêm cấu hình JWT Authentication cho Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
@@ -82,7 +94,6 @@ builder.Services.AddSwaggerGen(c =>
         Type = SecuritySchemeType.ApiKey,
         Scheme = "Bearer"
     });
-
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -98,8 +109,15 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-// Đăng ký IUnitOfWork
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+// Đăng ký IUnitOfWork với factory delegate
+builder.Services.AddScoped<IUnitOfWork>(provider =>
+{
+    var context = provider.GetRequiredService<GessDbContext>();
+    var userManager = provider.GetRequiredService<UserManager<User>>();
+    var roleManager = provider.GetRequiredService<RoleManager<IdentityRole<Guid>>>(); // Sửa thành IdentityRole<Guid>
+    return new UnitOfWork(context, userManager, roleManager);
+});
 builder.Services.AddScoped<IBaseService<BaseEntity>, BaseService<BaseEntity>>();
 
 // Đăng ký DbContext
@@ -111,12 +129,9 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>()
     .AddEntityFrameworkStores<GessDbContext>()
     .AddDefaultTokenProviders();
 
-
 // Đăng ký Service
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
-
-// Đăng ký các service
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IChapterService, ChapterService>();
 builder.Services.AddScoped<ITeacherService, TeacherService>();
@@ -135,9 +150,7 @@ builder.Services.AddScoped<IPracticeQuestionService, PracticeQuestionService>();
 
 // ThaiNH_Initialize_Begin
 builder.Services.AddScoped<ICateExamSubService, CateExamSubService>();
-// ThaiNH_Initialize_End
-
-
+builder.Services.AddScoped<ISemestersService, SemestersService>();
 
 // Đăng ký các repository
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -152,28 +165,16 @@ builder.Services.AddScoped<IMultipleExamRepository, MultipleExamRepository>();
 builder.Services.AddScoped<ICategoryExamRepository, CategoryExamRepository>();
 builder.Services.AddScoped<IMultipleQuestionRepository, MultipleQuestionRepository>();
 builder.Services.AddScoped<IStudentRepository, StudentRepository>();
+builder.Services.AddScoped<ISemesterRepository, SemesterRepository>();
+builder.Services.AddScoped<ICateExamSubRepository, CateExamSubRepository>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
 
 // Đăng ký EmailService
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddMemoryCache();
-// ThaiNH_Initialize_Begin
-builder.Services.AddScoped<ICateExamSubRepository, CateExamSubRepository>();
-// ThaiNH_Initialize_End
 
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll", builder =>
-    {
-        builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
-    });
-});
-
-
-
-builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 // Cấu hình JWT Authentication
 builder.Services.AddAuthentication(options =>
 {
@@ -192,14 +193,14 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = Constants.Audience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Constants.SecretKey))
     };
-
-   
 });
 
 // Khởi tạo Constants
 Constants.Initialize(builder.Configuration);
 
 var app = builder.Build();
+
+// Seed dữ liệu
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -213,7 +214,8 @@ using (var scope = app.Services.CreateScope())
         logger.LogError(ex, "An error occurred while seeding the database.");
     }
 }
-// Configure the HTTP request pipeline.
+
+// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -223,7 +225,12 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = "swagger";
     });
 }
-app.UseCors("AllowAll"); 
+
+app.UseHsts();
+app.UseHttpsRedirection();
+
+// Sử dụng CORS
+app.UseCors("AllowFrontend");
 app.UseHttpsRedirection();
 
 // Sử dụng CORS trước UseAuthentication/UseAuthorization

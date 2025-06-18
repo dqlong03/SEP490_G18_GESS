@@ -24,5 +24,6 @@ namespace GESS.Service.subject
         Task<bool> RemoveSubjectFromTrainingProgramAsync(int trainingProgramId, int subjectId);
         Task <int> CountPageAsync(string? name, int pageSize);
         Task<IEnumerable<SubjectDTO>> GetAllSubjectsByMajorId(int? majorId);
+        Task<IEnumerable<SubjectListDTO>> ListSubject();
     }
 }
