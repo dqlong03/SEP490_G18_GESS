@@ -46,6 +46,7 @@ using GESS.Service.subject;
 using GESS.Service.trainingProgram;
 using GESS.Service.examination;
 using GESS.Service.student;
+using GESS.Service.exam;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -140,6 +141,7 @@ builder.Services.AddScoped<IClassService, ClassService>();
 builder.Services.AddScoped<ICategoryExamService, CategoryExamService>();
 builder.Services.AddScoped<IMultipleQuestionService, MultipleQuestionService>();
 builder.Services.AddScoped<IStudentService, StudentService>();
+builder.Services.AddScoped<IExamService, GESS.Service.exam.ExamService>();
 
 // ThaiNH_Initialize_Begin
 builder.Services.AddScoped<ICateExamSubService, CateExamSubService>();
@@ -161,7 +163,7 @@ builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 builder.Services.AddScoped<ISemesterRepository, SemesterRepository>();
 builder.Services.AddScoped<ICateExamSubRepository, CateExamSubRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
-
+builder.Services.AddScoped<IExamRepository, ExamRepository>();
 
 // Đăng ký EmailService
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));

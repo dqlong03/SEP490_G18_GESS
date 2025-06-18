@@ -38,8 +38,8 @@ namespace GESS.Entity.Entities
         public string CodeStart { get; set; }
 
         // Người tạo kỳ thi, tối đa 50 ký tự
-        [StringLength(50, ErrorMessage = "Người tạo không được vượt quá 50 ký tự!")]
-        public string CreateBy { get; set; }
+        public Guid TeacherId { get; set; }
+        public Teacher Teacher { get; set; }
 
         // Khóa ngoại liên kết đến danh mục kỳ thi (CategoryExam), 1 kỳ thi thuộc 1 danh mục
         public int CategoryExamId { get; set; }
