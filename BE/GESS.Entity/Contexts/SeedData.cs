@@ -543,7 +543,7 @@ namespace GESS.Entity.Contexts
                         CreateAt = DateTime.Now,
                         Status = "Published",
                         CodeStart = "C#MID1",
-                        CreateBy = "teacher1@example.com",
+                        //TeacherId = "teacher1@example.com",
                         CategoryExamId = 1, // Thi giữa kỳ
                         SubjectId = 1, // Lập trình C#
                         SemesterId = 1 // Học kỳ 1
@@ -555,7 +555,7 @@ namespace GESS.Entity.Contexts
                         CreateAt = DateTime.Now,
                         Status = "Published",
                         CodeStart = "C#FINAL1",
-                        CreateBy = "teacher2@example.com",
+                        //TeacherId = "b3b7e2a5-9e51-4ad1-a944-2e3392d18f7a",
                         CategoryExamId = 2, // Thi cuối kỳ
                         SubjectId = 1, // Lập trình C#
                         SemesterId = 1 // Học kỳ 1
