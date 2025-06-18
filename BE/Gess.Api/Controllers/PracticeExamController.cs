@@ -3,6 +3,8 @@ using GESS.Model.Category;
 using GESS.Model.Chapter;
 using GESS.Model.Major;
 using GESS.Model.MultipleExam;
+using GESS.Model.PracticeExam;
+using GESS.Model.PracticeExamPaper;
 using GESS.Model.Subject;
 using GESS.Model.TrainingProgram;
 using GESS.Repository.Interface;
@@ -11,6 +13,8 @@ using GESS.Service.chapter;
 using GESS.Service.major;
 using GESS.Service.multipleExam;
 using GESS.Service.multipleQuestion;
+using GESS.Service.practiceExam;
+using GESS.Service.practiceExamPaper;
 using GESS.Service.subject;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -20,22 +24,22 @@ namespace GESS.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class MultipleExamController : ControllerBase
+    public class PracticeExamController : ControllerBase
     {
-        private readonly IMultipleExamService _multipleExamService;
+        private readonly IPracticeExamService _practiceExamService;
+        private readonly IPracticeExamPaperService _practiceExamPaperService;
         private readonly IMajorService _majorService;
         private readonly ISubjectService _subjectService;
         private readonly ICategoryExamService _categoryExamService;
         private readonly IChapterService _chapterService;
-        private readonly IMultipleQuestionService _multipleQuestionService;
-        public MultipleExamController(IMultipleExamService multipleExamService, ISubjectService subjectService, IMajorService majorService, ICategoryExamService categoryExamService, IChapterService chapterService, IMultipleQuestionService questionService)
+        public PracticeExamController(IPracticeExamService practiceExamService, IPracticeExamPaperService practiceExamPaperService, ISubjectService subjectService, IMajorService majorService, ICategoryExamService categoryExamService, IChapterService chapterService)
         {
-            _multipleExamService = multipleExamService;
+            _practiceExamService = practiceExamService;
+            _practiceExamPaperService = practiceExamPaperService;
             _majorService = majorService;
             _subjectService = subjectService;
             _categoryExamService = categoryExamService;
             _chapterService = chapterService;
-            _multipleQuestionService = questionService;
         }
         //API to get all Major
         [HttpGet("major")]
@@ -105,9 +109,8 @@ namespace GESS.Api.Controllers
                 return NotFound(ex.Message);
             }
         }
-
-        //API to get category of exam by subjectId
-        [HttpGet("category-exam/{subjectId}")]
+        //API to get all category exam by subjectId
+        [HttpGet("category_exam/{subjectId}")]
         public async Task<ActionResult<IEnumerable<CategoryExamDTO>>> GetCategoryExamsBySubjectId(int subjectId)
         {
             try
@@ -115,7 +118,7 @@ namespace GESS.Api.Controllers
                 var categories = await _categoryExamService.GetCategoriesBySubjectId(subjectId);
                 if (categories == null || !categories.Any())
                 {
-                    return NotFound("No categories found for the specified subject.");
+                    return NotFound("No category exams found for the specified subject.");
                 }
                 return Ok(categories);
             }
@@ -124,33 +127,39 @@ namespace GESS.Api.Controllers
                 return NotFound(ex.Message);
             }
         }
-        //API to get number of question in each chapter and category and level and [IsPublic] and [CreatedBy]
-        [HttpGet("question-count")]
-        public async Task<int> GetQuestionCount(int? chapterId = null,int? categoryId = null,int? levelId = null,bool? isPublic = null,string? createdBy = null)
+        //API to get all practice exam paper by subjectId and categoryId and teacherId
+        [HttpGet("exams_paper")]
+        public ActionResult<IEnumerable<PracticeExamPaperDTO>> GetAllPracticeExamPapers(int subjectId, int categoryId, Guid teacherId)
         {
             try
             {
-                var questionCounts = await _multipleQuestionService.GetQuestionCount(chapterId, categoryId, levelId, isPublic, createdBy);
-                return questionCounts;
+                var exams = _practiceExamPaperService.GetAllPracticeExamPapers(subjectId, categoryId, teacherId);
+                return Ok(exams);
             }
             catch (Exception ex)
             {
-                return 0;
+                return NotFound(ex.Message);
             }
         }
-        //API to create a new multiple exam
+
+        //API to create a new practice exam
         [HttpPost("create")]
-        public async Task<ActionResult<MultipleExamCreateDTO>> CreateMultipleExam(MultipleExamCreateDTO multipleExamCreateDto)
+        public async Task<ActionResult<PracticeExamCreateDTO>> CreatePracticeExam([FromBody] PracticeExamCreateDTO practiceExamCreateDto)
         {
+            if (practiceExamCreateDto == null)
+            {
+                return BadRequest("Invalid practice exam data.");
+            }
             try
             {
-                var createdExam = await _multipleExamService.CreateMultipleExamAsync(multipleExamCreateDto);
-                return multipleExamCreateDto;
+                var createdExam = await _practiceExamService.CreatePracticeExamAsync(practiceExamCreateDto);
+                return Ok();
             }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
         }
+
     }
 } 

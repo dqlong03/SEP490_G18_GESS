@@ -30,7 +30,9 @@ namespace Gess.Repository.Infrastructures
         private IClassRepository _classRepository;
         private ISemesterRepository _semesterRepository;
         private ICateExamSubRepository _cateExamSubRepository;
-        
+        private IPracticeExamPaperRepository _practiceExamPaperRepository;
+        private IPracticeQuestionsRepository _practiceQuestionsRepository;
+        private ILevelQuestionRepository _levelQuestionRepository;
         public UnitOfWork(GessDbContext context, UserManager<User> userManager, RoleManager<IdentityRole<Guid>> roleManager)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -52,7 +54,7 @@ namespace Gess.Repository.Infrastructures
         public IClassRepository ClassRepository => _classRepository ??= new ClassRepository(_context);
         public ISemesterRepository SemesterRepository => _semesterRepository ??= new SemesterRepository(_context);
         public ICateExamSubRepository CateExamSubRepository => _cateExamSubRepository ??= new CateExamSubRepository(_context);
-
+        public IPracticeQuestionsRepository PracticeQuestionsRepository => _practiceQuestionsRepository ??= new PracticeQuestionsRepository(_context);
         public UserManager<User> UserManager => _userManager;
         public RoleManager<IdentityRole<Guid>> RoleManager => _roleManager;
 
@@ -61,6 +63,10 @@ namespace Gess.Repository.Infrastructures
         public IMultipleExamRepository MultipleExamRepository => new MultipleExamRepository(_context);
         public ICategoryExamRepository CategoryExamRepository => new CategoryExamRepository(_context);
         public IMultipleQuestionRepository MultipleQuestionRepository => new MultipleQuestionRepository(_context);
+        public ILevelQuestionRepository LevelQuestionRepository => _levelQuestionRepository ??= new LevelQuestionRepository(_context);
+        public IPracticeExamRepository PracticeExamRepository => new PracticeExamRepository(_context);
+        public IPracticeExamPaperRepository PracticeExamPaperRepository => new PracticeExamPaperRepository(_context);
+
 
         public UnitOfWork(GessDbContext context= null)
         {

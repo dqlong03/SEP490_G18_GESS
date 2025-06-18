@@ -20,5 +20,6 @@ namespace GESS.Service.chapter
 
         Task<IEnumerable<ChapterListDTO>> GetBySubjectIdAsync(int subjectId, string? name = null, int pageNumber = 1, int pageSize = 10);
         Task<IEnumerable<ChapterDTO>> GetChaptersBySubjectId(int subjectId);
+        Task<IEnumerable<ChapterList>> GetListChapter();
     }
 }
