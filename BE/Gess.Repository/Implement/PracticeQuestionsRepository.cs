@@ -20,7 +20,7 @@ namespace GESS.Repository.Implement
             _context = context;
         }
 
-        public async Task<IEnumerable<PracticeQuestionLitsDTO>> GetAllPracticeQuestionsAsync() // Fix return type to match DTO
+        public async Task<IEnumerable<PracticeQuestionLitsDTO>> GetAllPracticeQuestionsAsync(int chapterId)
         {
             var practiceQuestions = await _context.PracticeQuestions
                 .Include(q => q.Chapter)
@@ -28,9 +28,9 @@ namespace GESS.Repository.Implement
                 .Include(q => q.LevelQuestion)
                 .Include(q => q.Semester)
                 .Include(q => q.PracticeAnswer)
+                .Where(q => q.ChapterId == chapterId) 
                 .ToListAsync();
 
-           
             return practiceQuestions.Select(q => new PracticeQuestionLitsDTO
             {
                 PracticeQuestionId = q.PracticeQuestionId,

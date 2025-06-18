@@ -27,12 +27,12 @@ namespace GESS.Api.Controllers
             _levelQuestionService = levelQuestionService;
         }
         //API lấy danh sách câu hỏi thực hành
-        [HttpGet("GetAllPracticeQuestions")]
-        public async Task<IActionResult> GetAllPracticeQuestions()
+        [HttpGet("GetAllPracticeQuestions/{chapterId}")]
+        public async Task<IActionResult> GetAllPracticeQuestions(int chapterId)
         {
             try
             {
-                var result = await _practiceQuestionService.GetAllPracticeQuestionsAsync();
+                var result = await _practiceQuestionService.GetAllPracticeQuestionsAsync(chapterId);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -42,24 +42,13 @@ namespace GESS.Api.Controllers
             }
         }
         //API tạo câu hỏi thực hành
-        [HttpPost("CreatePracticeQuestion")]
-        public async Task<IActionResult> CreatePracticeQuestion([FromBody] PracticeQuestionCreateDTO dto)
+        [HttpPost("CreatePracticeQuestion/{chapterId}")]
+        public async Task<IActionResult> CreatePracticeQuestion(int chapterId, [FromBody] PracticeQuestionCreateDTO dto)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest("Invalid data.");
-            }
-            try
-            {
-                var result = await _practiceQuestionService.PracticeQuestionCreateAsync(dto);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-
-                return StatusCode(StatusCodes.Status500InternalServerError, "Lỗi tạo câu hỏi");
-            }
+            var result = await _practiceQuestionService.PracticeQuestionCreateAsync(chapterId, dto);
+            return Ok(result);
         }
+
         // API lấy danh sách chương (dùng trong dropdown, v.v.)
         [HttpGet("GetListChapter/{subjectId}")]
         public async Task<IActionResult> GetListChapter(int subjectId)
@@ -124,7 +113,29 @@ namespace GESS.Api.Controllers
 
 
         }
-    }
+        //AP đọc file excel
+        [HttpPost("ReadExcel")]
+        public async Task<IActionResult> ReadExcel(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest("File không hợp lệ.");
+            }
+            try
+            {
+                var result = await _practiceQuestionService.PracticeQuestionReadExcel(file);
+                if (result == null)
+                {
+                    return BadRequest("Không thể đọc file Excel.");
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Lỗi khi đọc file Excel: " + ex.Message);
+            }
+        }
+    } 
 }
 
 

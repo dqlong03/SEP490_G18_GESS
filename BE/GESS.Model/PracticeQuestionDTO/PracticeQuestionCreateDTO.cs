@@ -20,9 +20,8 @@ namespace GESS.Model.PracticeQuestionDTO
         [Required(ErrorMessage = "Trạng thái hoạt động là bắt buộc.")]
         public bool IsActive { get; set; }
 
-        [Required(ErrorMessage = "Người tạo là bắt buộc.")]
-        [StringLength(50, ErrorMessage = "Tên người tạo không được vượt quá 50 ký tự.")]
-        public string CreatedBy { get; set; }
+        
+        public Guid CreatedBy { get; set; }
 
         [Required(ErrorMessage = "Trạng thái công khai là bắt buộc.")]
         public bool IsPublic { get; set; }
@@ -39,4 +38,16 @@ namespace GESS.Model.PracticeQuestionDTO
         [Required(ErrorMessage = "Học kỳ là bắt buộc.")]
         public int SemesterId { get; set; }
     }
+    public class PracticeQuestionCreateNoChapterDTO
+    {
+        public string Content { get; set; }
+        public string UrlImg { get; set; }
+        public bool IsActive { get; set; }
+        public Guid CreatedBy { get; set; }
+        public bool IsPublic { get; set; }
+        public int CategoryExamId { get; set; }
+        public int LevelQuestionId { get; set; }
+        public int SemesterId { get; set; }
+    }
+
 }

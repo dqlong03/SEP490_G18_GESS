@@ -41,8 +41,13 @@ namespace GESS.Entity.Entities
         public bool IsActive { get; set; } = true;
 
         // Navigation properties
+        public ICollection<PracticeQuestion> PracticeQuestions { get; set; }
         public Teacher Teacher { get; set; }
         public Student Student { get; set; }
         public ExamService ExamService { get; set; }
+        public User()
+        {
+            PracticeQuestions = new List<PracticeQuestion>();
+        }
     }
 }
