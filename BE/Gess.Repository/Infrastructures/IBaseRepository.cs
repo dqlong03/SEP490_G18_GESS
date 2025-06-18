@@ -19,6 +19,8 @@ namespace Gess.Repository.Infrastructures
         /// Change state of entity to deleted
         /// </summary>
         /// <param name="entity"></param>
+
+        Task CreateAsync(TEntity entity);
         void Delete(TEntity entity);
 
         /// <summary>

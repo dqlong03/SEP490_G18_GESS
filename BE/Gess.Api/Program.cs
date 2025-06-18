@@ -46,6 +46,9 @@ using GESS.Service.subject;
 using GESS.Service.trainingProgram;
 using GESS.Service.examination;
 using GESS.Service.student;
+using GESS.Service.practiceExamPaper;
+using GESS.Service.practicequestion;
+using GESS.Service.levelquestion;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -140,12 +143,16 @@ builder.Services.AddScoped<IClassService, ClassService>();
 builder.Services.AddScoped<ICategoryExamService, CategoryExamService>();
 builder.Services.AddScoped<IMultipleQuestionService, MultipleQuestionService>();
 builder.Services.AddScoped<IStudentService, StudentService>();
+builder.Services.AddScoped<ILevelQuestionService, LevelQuestionService>();
 
 // ThaiNH_Initialize_Begin
 builder.Services.AddScoped<ICateExamSubService, CateExamSubService>();
 builder.Services.AddScoped<ISemestersService, SemestersService>();
+builder.Services.AddScoped<IPracticeExamPaperService, PracticeExamPaperService>();
+builder.Services.AddScoped<IPracticeQuestionService, PracticeQuestionService>();  
 
 // Đăng ký các repository
+
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IChapterRepository, ChapterRepository>();
 builder.Services.AddScoped<ITeacherRepository, TeacherRepository>();
@@ -161,6 +168,9 @@ builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 builder.Services.AddScoped<ISemesterRepository, SemesterRepository>();
 builder.Services.AddScoped<ICateExamSubRepository, CateExamSubRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+builder.Services.AddScoped<IPracticeExamPaperRepository, PracticeExamPaperRepository>();
+builder.Services.AddScoped<IPracticeQuestionsRepository, PracticeQuestionsRepository>();
+builder.Services.AddScoped<ILevelQuestionRepository, LevelQuestionRepository>();
 
 
 // Đăng ký EmailService

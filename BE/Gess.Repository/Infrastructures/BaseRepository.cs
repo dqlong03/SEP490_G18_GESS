@@ -40,6 +40,11 @@ namespace Gess.Repository.Infrastructures
             dbSet.Add(entity);
         }
 
+        public async Task CreateAsync(TEntity entity)
+        {
+            await dbSet.AddAsync(entity);
+        }
+
         public void Delete(TEntity entity)
         {
             dbSet.Remove(entity);

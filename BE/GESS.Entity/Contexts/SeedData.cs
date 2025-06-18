@@ -19,20 +19,36 @@ namespace GESS.Entity.Contexts
             var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
 
-            // 1. Tạo dữ liệu cho bảng độc lập
-            await SeedRolesAsync(roleManager);
-            await SeedUsersAsync(userManager);
-            await SeedMajorsAsync(context);
-            await SeedSemestersAsync(context);
+            try
+            {
+                // 1. Tạo dữ liệu cơ bản không phụ thuộc
+                await SeedRolesAsync(roleManager);
+                await SeedUsersAsync(userManager);
+                await SeedMajorsAsync(context);
+                await SeedSemestersAsync(context);
+                await SeedCohortsAsync(context);
 
-            // 2. Tạo dữ liệu phụ thuộc
-            await SeedTeachersAsync(context);
-            await SeedSubjectsAsync(context);
-            await SeedChaptersAsync(context);
-            await SeedClassesAsync(context);
-            await SeedCohortsAsync(context);
-            await SeedStudentsAsync(context);
-            await SeedClassStudentsAsync(context);
+                // 2. Tạo dữ liệu CategoryExam và Subject (cần thiết cho nhiều bảng khác)
+                await SeedCategoryExamDataAsync(context);
+
+                // 3. Tạo dữ liệu phụ thuộc vào User và Major
+                await SeedTeachersAsync(context);
+                await SeedStudentsAsync(context);
+
+                // 4. Tạo dữ liệu phụ thuộc vào Subject và Teacher
+                await SeedChaptersAsync(context);
+                await SeedClassesAsync(context);
+
+                // 5. Tạo dữ liệu phụ thuộc vào Class và Student
+                await SeedClassStudentsAsync(context);
+
+                // 6. Tạo dữ liệu cho phần thi tự luận (phụ thuộc vào CategoryExam, Subject, Chapter)
+                await SeedPracticeExamDataAsync(context);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"An error occurred while seeding the database: {ex.Message}", ex);
+            }
         }
 
         private static async Task SeedCohortsAsync(GessDbContext context)
@@ -397,6 +413,334 @@ namespace GESS.Entity.Contexts
                 {
                     throw new Exception($"Failed to create user {email}: {string.Join(", ", result.Errors.Select(e => e.Description))}");
                 }
+            }
+        }
+
+        private static async Task SeedPracticeExamDataAsync(GessDbContext context)
+        {
+            // 1. Seed LevelQuestion
+            if (!context.LevelQuestions.Any())
+            {
+                var levelQuestions = new List<LevelQuestion>
+                {
+                    new LevelQuestion { LevelQuestionName = "Dễ" },
+                    new LevelQuestion { LevelQuestionName = "Trung bình" },
+                    new LevelQuestion { LevelQuestionName = "Khó" }
+                };
+                await context.LevelQuestions.AddRangeAsync(levelQuestions);
+                await context.SaveChangesAsync();
+            }
+
+            // 2. Seed PracticeQuestions
+            if (!context.PracticeQuestions.Any())
+            {
+                var practiceQuestions = new List<PracticeQuestion>
+                {
+                    new PracticeQuestion
+                    {
+                        Content = "Câu hỏi 1: Giải thích khái niệm về lập trình hướng đối tượng trong C#",
+                        CategoryExamId = 1,
+                        LevelQuestionId = 1,
+                        SemesterId = 1,
+                        ChapterId = 1,
+                        IsActive = true,
+                        CreatedBy = "teacher1@example.com",
+                        IsPublic = true,
+                        PracticeAnswer = new PracticeAnswer
+                        {
+                            AnswerContent = "OOP là phương pháp lập trình dựa trên đối tượng..."
+                        }
+                    },
+                    new PracticeQuestion
+                    {
+                        Content = "Câu hỏi 2: Phân biệt interface và abstract class trong C#",
+                        CategoryExamId = 2,
+                        LevelQuestionId = 2,
+                        SemesterId = 1,
+                        ChapterId = 2,
+                        IsActive = true,
+                        CreatedBy = "teacher2@example.com",
+                        IsPublic = true,
+                        PracticeAnswer = new PracticeAnswer
+                        {
+                            AnswerContent = "Interface chỉ chứa khai báo, abstract class có thể chứa cả phương thức có thân..."
+                        }
+                    }
+                };
+                await context.PracticeQuestions.AddRangeAsync(practiceQuestions);
+                await context.SaveChangesAsync();
+            }
+
+            // 3. Seed PracticeExamPapers
+            if (!context.PracticeExamPapers.Any())
+            {
+                var practiceExamPapers = new List<PracticeExamPaper>
+                {
+                    new PracticeExamPaper
+                    {
+                        PracExamPaperName = "Đề thi giữa kỳ C# - Đề 1",
+                        NumberQuestion = 1,
+                        CreateAt = DateTime.Now,
+                        Status = "Published",
+                        CreateBy = "teacher1@example.com",
+                        CategoryExamId = 1,
+                        SubjectId = 1,
+                        SemesterId = 1
+                    },
+                    new PracticeExamPaper
+                    {
+                        PracExamPaperName = "Đề thi cuối kỳ C# - Đề 1",
+                        NumberQuestion = 1,
+                        CreateAt = DateTime.Now,
+                        Status = "Published",
+                        CreateBy = "teacher2@example.com",
+                        CategoryExamId = 2,
+                        SubjectId = 1,
+                        SemesterId = 1
+                    }
+                };
+                await context.PracticeExamPapers.AddRangeAsync(practiceExamPapers);
+                await context.SaveChangesAsync();
+            }
+
+            // 4. Lấy lại ID thực tế
+            var practiceQuestionsList = await context.PracticeQuestions.ToListAsync();
+            var practiceExamPapersList = await context.PracticeExamPapers.ToListAsync();
+
+            // 5. Seed PracticeTestQuestions
+            if (!context.PracticeTestQuestions.Any())
+            {
+                var practiceTestQuestions = new List<PracticeTestQuestion>
+                {
+                    new PracticeTestQuestion
+                    {
+                        PracExamPaperId = practiceExamPapersList[0].PracExamPaperId,
+                        PracticeQuestionId = practiceQuestionsList[0].PracticeQuestionId,
+                        QuestionOrder = 1,
+                        Score = 5.0
+                    },
+                    new PracticeTestQuestion
+                    {
+                        PracExamPaperId = practiceExamPapersList[1].PracExamPaperId,
+                        PracticeQuestionId = practiceQuestionsList[1].PracticeQuestionId,
+                        QuestionOrder = 1,
+                        Score = 5.0
+                    }
+                };
+                await context.PracticeTestQuestions.AddRangeAsync(practiceTestQuestions);
+                await context.SaveChangesAsync();
+            }
+
+            // 6. Seed PracticeExam
+            if (!context.PracticeExams.Any())
+            {
+                var practiceExams = new List<PracticeExam>
+                {
+                    new PracticeExam
+                    {
+                        PracExamName = "Kỳ thi giữa kỳ C# - Ca 1",
+                        Duration = 90,
+                        CreateAt = DateTime.Now,
+                        Status = "Published",
+                        CodeStart = "C#MID1",
+                        CreateBy = "teacher1@example.com",
+                        CategoryExamId = 1, // Thi giữa kỳ
+                        SubjectId = 1, // Lập trình C#
+                        SemesterId = 1 // Học kỳ 1
+                    },
+                    new PracticeExam
+                    {
+                        PracExamName = "Kỳ thi cuối kỳ C# - Ca 1",
+                        Duration = 120,
+                        CreateAt = DateTime.Now,
+                        Status = "Published",
+                        CodeStart = "C#FINAL1",
+                        CreateBy = "teacher2@example.com",
+                        CategoryExamId = 2, // Thi cuối kỳ
+                        SubjectId = 1, // Lập trình C#
+                        SemesterId = 1 // Học kỳ 1
+                    }
+                };
+                await context.PracticeExams.AddRangeAsync(practiceExams);
+                await context.SaveChangesAsync();
+            }
+
+            // 7. Seed NoPEPaperInPE
+            if (!context.NoPEPaperInPEs.Any())
+            {
+                var noPEPaperInPEs = new List<NoPEPaperInPE>
+                {
+                    new NoPEPaperInPE
+                    {
+                        PracExamId = 1, // Kỳ thi giữa kỳ
+                        PracExamPaperId = 1 // Đề thi giữa kỳ
+                    },
+                    new NoPEPaperInPE
+                    {
+                        PracExamId = 2, // Kỳ thi cuối kỳ
+                        PracExamPaperId = 2 // Đề thi cuối kỳ
+                    }
+                };
+                await context.NoPEPaperInPEs.AddRangeAsync(noPEPaperInPEs);
+                await context.SaveChangesAsync();
+            }
+        }
+
+        private static async Task SeedCategoryExamDataAsync(GessDbContext context)
+        {
+            try
+            {
+                // 1. Seed CategoryExam
+                if (!context.CategoryExams.Any())
+                {
+                    var categoryExamList = new List<CategoryExam>
+                    {
+                        new CategoryExam { CategoryExamName = "Thi giữa kỳ" },
+                        new CategoryExam { CategoryExamName = "Thi cuối kỳ" },
+                        new CategoryExam { CategoryExamName = "Thi thử" },
+                        new CategoryExam { CategoryExamName = "Thi kiểm tra" },
+                        new CategoryExam { CategoryExamName = "Thi đánh giá năng lực" }
+                    };
+                    await context.CategoryExams.AddRangeAsync(categoryExamList);
+                    await context.SaveChangesAsync();
+                }
+
+                // 2. Seed Subjects
+                if (!context.Subjects.Any())
+                {
+                    var subjectList = new List<Subject>
+                    {
+                        new Subject 
+                        { 
+                            SubjectName = "Lập trình C#",
+                            Description = "Môn học về lập trình C# cơ bản đến nâng cao",
+                            Course = "CS101",
+                            NoCredits = 3
+                        },
+                        new Subject 
+                        { 
+                            SubjectName = "Cơ sở dữ liệu",
+                            Description = "Môn học về thiết kế và quản lý cơ sở dữ liệu",
+                            Course = "CS102",
+                            NoCredits = 3
+                        },
+                        new Subject 
+                        { 
+                            SubjectName = "Mạng máy tính",
+                            Description = "Môn học về nguyên lý và ứng dụng mạng máy tính",
+                            Course = "CS103",
+                            NoCredits = 3
+                        }
+                    };
+                    await context.Subjects.AddRangeAsync(subjectList);
+                    await context.SaveChangesAsync();
+                }
+
+                // 3. Verify that both CategoryExam and Subject data exist and get their IDs
+                var existingCategoryExams = await context.CategoryExams.ToListAsync();
+                var existingSubjects = await context.Subjects.ToListAsync();
+
+                if (!existingCategoryExams.Any() || !existingSubjects.Any())
+                {
+                    throw new Exception("Failed to seed CategoryExam or Subject data");
+                }
+
+                // 4. Seed CategoryExamSubject using actual IDs from the database
+                if (!context.CategoryExamSubjects.Any())
+                {
+                    var categoryExamSubjects = new List<CategoryExamSubject>();
+                    
+                    // Lấy các loại thi
+                    var midtermExam = existingCategoryExams.FirstOrDefault(c => c.CategoryExamName == "Thi giữa kỳ");
+                    var finalExam = existingCategoryExams.FirstOrDefault(c => c.CategoryExamName == "Thi cuối kỳ");
+                    var practiceExam = existingCategoryExams.FirstOrDefault(c => c.CategoryExamName == "Thi thử");
+                    var testExam = existingCategoryExams.FirstOrDefault(c => c.CategoryExamName == "Thi kiểm tra");
+                    var assessmentExam = existingCategoryExams.FirstOrDefault(c => c.CategoryExamName == "Thi đánh giá năng lực");
+
+                    if (midtermExam == null || finalExam == null || practiceExam == null || testExam == null || assessmentExam == null)
+                    {
+                        throw new Exception("One or more CategoryExam types are missing");
+                    }
+
+                    // Lấy các môn học
+                    var csharpSubject = existingSubjects.FirstOrDefault(s => s.SubjectName == "Lập trình C#");
+                    var dbSubject = existingSubjects.FirstOrDefault(s => s.SubjectName == "Cơ sở dữ liệu");
+                    var networkSubject = existingSubjects.FirstOrDefault(s => s.SubjectName == "Mạng máy tính");
+
+                    if (csharpSubject == null || dbSubject == null || networkSubject == null)
+                    {
+                        throw new Exception("One or more Subjects are missing");
+                    }
+
+                    // Lập trình C#
+                    categoryExamSubjects.Add(new CategoryExamSubject 
+                    { 
+                        CategoryExamId = midtermExam.CategoryExamId, 
+                        SubjectId = csharpSubject.SubjectId, 
+                        GradeComponent = 30.0m, 
+                        IsDelete = false 
+                    });
+                    categoryExamSubjects.Add(new CategoryExamSubject 
+                    { 
+                        CategoryExamId = finalExam.CategoryExamId, 
+                        SubjectId = csharpSubject.SubjectId, 
+                        GradeComponent = 70.0m, 
+                        IsDelete = false 
+                    });
+
+                    // Cơ sở dữ liệu
+                    categoryExamSubjects.Add(new CategoryExamSubject 
+                    { 
+                        CategoryExamId = midtermExam.CategoryExamId, 
+                        SubjectId = dbSubject.SubjectId, 
+                        GradeComponent = 30.0m, 
+                        IsDelete = false 
+                    });
+                    categoryExamSubjects.Add(new CategoryExamSubject 
+                    { 
+                        CategoryExamId = finalExam.CategoryExamId, 
+                        SubjectId = dbSubject.SubjectId, 
+                        GradeComponent = 50.0m, 
+                        IsDelete = false 
+                    });
+                    categoryExamSubjects.Add(new CategoryExamSubject 
+                    { 
+                        CategoryExamId = practiceExam.CategoryExamId, 
+                        SubjectId = dbSubject.SubjectId, 
+                        GradeComponent = 20.0m, 
+                        IsDelete = false 
+                    });
+
+                    // Mạng máy tính
+                    categoryExamSubjects.Add(new CategoryExamSubject 
+                    { 
+                        CategoryExamId = midtermExam.CategoryExamId, 
+                        SubjectId = networkSubject.SubjectId, 
+                        GradeComponent = 25.0m, 
+                        IsDelete = false 
+                    });
+                    categoryExamSubjects.Add(new CategoryExamSubject 
+                    { 
+                        CategoryExamId = finalExam.CategoryExamId, 
+                        SubjectId = networkSubject.SubjectId, 
+                        GradeComponent = 65.0m, 
+                        IsDelete = false 
+                    });
+                    categoryExamSubjects.Add(new CategoryExamSubject 
+                    { 
+                        CategoryExamId = testExam.CategoryExamId, 
+                        SubjectId = networkSubject.SubjectId, 
+                        GradeComponent = 10.0m, 
+                        IsDelete = false 
+                    });
+
+                    await context.CategoryExamSubjects.AddRangeAsync(categoryExamSubjects);
+                    await context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error seeding CategoryExam data: {ex.Message}", ex);
             }
         }
     }
