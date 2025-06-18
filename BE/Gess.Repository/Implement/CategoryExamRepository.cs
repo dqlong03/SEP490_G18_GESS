@@ -25,7 +25,7 @@ namespace GESS.Repository.Implement
         {
             var query = _context.CategoryExamSubjects
                 .Include(ces => ces.CategoryExam)
-                .Where(ces => ces.SubjectId == subjectId)
+                .Where(ces => ces.SubjectId == subjectId && ces.IsDelete==false)
                 .Select(ces => ces.CategoryExam)
                 .AsNoTracking();
             return await Task.FromResult(query.AsEnumerable());
