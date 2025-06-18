@@ -11,6 +11,6 @@ namespace GESS.Repository.Interface
 {
     public interface IPracticeQuestionsRepository : IBaseRepository<PracticeQuestion>
     {
-        Task<IEnumerable<PracticeQuestionLitsDTO>> GetAllPracticeQuestionsAsync();
+        Task<IEnumerable<PracticeQuestionLitsDTO>> GetAllPracticeQuestionsAsync(int chapterId);
     }
 }

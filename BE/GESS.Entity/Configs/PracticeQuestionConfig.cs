@@ -32,6 +32,11 @@ namespace GESS.Entity.Configs
             builder.HasMany(pq => pq.QuestionPracExams)
                    .WithOne(qpe => qpe.PracticeQuestion)
                    .HasForeignKey(qpe => qpe.PracticeQuestionId);
+            builder.HasOne(pq => pq.User)
+       .WithMany(u => u.PracticeQuestions)
+       .HasForeignKey(pq => pq.CreatedBy)
+       .OnDelete(DeleteBehavior.Restrict);
+
         }
     }
 } 

@@ -2,6 +2,7 @@
 using GESS.Model.PracticeQuestionDTO;
 using GESS.Model.Subject;
 using GESS.Model.TrainingProgram;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +13,8 @@ namespace GESS.Service.practicequestion
 {
     public interface IPracticeQuestionService : IBaseService<PracticeQuestion>
     {
-        Task<IEnumerable<PracticeQuestionLitsDTO>> GetAllPracticeQuestionsAsync();
-        Task<PracticeQuestionCreateDTO> PracticeQuestionCreateAsync(PracticeQuestionCreateDTO practiceQuestionCreateDTO);
+        Task<IEnumerable<PracticeQuestionLitsDTO>> GetAllPracticeQuestionsAsync(int chapterId);
+        Task<PracticeQuestionCreateDTO> PracticeQuestionCreateAsync(int chapterId, PracticeQuestionCreateDTO practiceQuestionCreateDTO);
+        Task<IEnumerable< PracticeQuestionReadExcel>> PracticeQuestionReadExcel(IFormFile file);
     }
 }

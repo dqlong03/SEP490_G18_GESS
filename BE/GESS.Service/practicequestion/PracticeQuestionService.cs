@@ -3,6 +3,8 @@ using GESS.Entity.Entities;
 using GESS.Model.PracticeQuestionDTO;
 using GESS.Model.Subject;
 using GESS.Model.TrainingProgram;
+using Microsoft.AspNetCore.Http;
+using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,11 +20,11 @@ namespace GESS.Service.practicequestion
         {
             _unitOfWork = unitOfWork;
         }
-        public async Task<IEnumerable<PracticeQuestionLitsDTO>> GetAllPracticeQuestionsAsync()
+        public async Task<IEnumerable<PracticeQuestionLitsDTO>> GetAllPracticeQuestionsAsync(int chapterId)
         {
-            return await _unitOfWork.PracticeQuestionsRepository.GetAllPracticeQuestionsAsync();
+            return await _unitOfWork.PracticeQuestionsRepository.GetAllPracticeQuestionsAsync(chapterId);
         }
-        public async Task<PracticeQuestionCreateDTO> PracticeQuestionCreateAsync(PracticeQuestionCreateDTO dto)
+        public async Task<PracticeQuestionCreateDTO> PracticeQuestionCreateAsync(int chapterId, PracticeQuestionCreateDTO dto)
         {
             var practiceQuestion = new PracticeQuestion
             {
@@ -31,16 +33,64 @@ namespace GESS.Service.practicequestion
                 IsActive = dto.IsActive,
                 CreatedBy = dto.CreatedBy,
                 IsPublic = dto.IsPublic,
-                ChapterId = dto.ChapterId,
                 CategoryExamId = dto.CategoryExamId,
                 LevelQuestionId = dto.LevelQuestionId,
-                SemesterId = dto.SemesterId
+                SemesterId = dto.SemesterId,
+                ChapterId = chapterId 
             };
 
             await _unitOfWork.PracticeQuestionsRepository.CreateAsync(practiceQuestion);
             await _unitOfWork.SaveChangesAsync();
             return dto;
         }
+
+        public async Task<IEnumerable<PracticeQuestionReadExcel>> PracticeQuestionReadExcel(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return null;
+
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+            using (var stream = new MemoryStream())
+            {
+                await file.CopyToAsync(stream);
+                stream.Position = 0;
+
+                using (var package = new ExcelPackage(stream))
+                {
+                    var worksheet = package.Workbook.Worksheets[0]; 
+                    if (worksheet == null || worksheet.Dimension == null)
+                        return null;
+
+                    var rowCount = worksheet.Dimension.Rows;
+                    var results = new List<PracticeQuestionReadExcel>();
+
+                    var levelMapping = new Dictionary<string, int>
+                {
+                { "Dễ", 1 },
+                { "Trung bình", 2 },
+                { "Khó", 3 }
+                   };
+
+                    for (int row = 3; row <= rowCount; row++)
+                    {
+                        if (!string.IsNullOrWhiteSpace(worksheet.Cells[row, 1].Text))
+                        {
+                            var item = new PracticeQuestionReadExcel
+                            {
+                                Content = worksheet.Cells[row, 1].Text,
+                                UrlImg = worksheet.Cells[row, 2].Text,
+                                LevelQuestion = levelMapping.TryGetValue(worksheet.Cells[row, 3].Text.Trim(), out int level) ? level : 0
+                            };
+                            results.Add(item);
+                        }
+                    }
+
+                    return await Task.FromResult(results.Any() ? results : null);
+                }
+            }
+        }
+
 
     }
 

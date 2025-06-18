@@ -29,9 +29,8 @@ namespace GESS.Entity.Entities
         [Column(TypeName = "BIT")]
         public bool IsActive { get; set; }
 
-        // Người tạo câu hỏi, tối đa 50 ký tự
-        [StringLength(50, ErrorMessage = "Người tạo không được vượt quá 50 ký tự!")]
-        public string CreatedBy { get; set; }
+        public Guid CreatedBy { get; set; }
+        public User User { get; set; }
 
         // Trạng thái công khai (true = công khai, false = không công khai)
         [Column(TypeName = "BIT")]
