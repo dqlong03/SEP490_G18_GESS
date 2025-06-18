@@ -1,4 +1,5 @@
-﻿using GESS.Model.Exam;
+﻿using Gess.Repository.Infrastructures;
+using GESS.Model.Exam;
 using GESS.Repository.Interface;
 using System;
 using System.Collections.Generic;
@@ -10,11 +11,12 @@ namespace GESS.Service.exam
 {
     public class ExamService : IExamService
     {
-        private readonly IExamRepository _examRepository;
-        public ExamService(IExamRepository examRepository)
+        private readonly IUnitOfWork _unitOfWork;
+        public ExamService(IUnitOfWork unitOfWork) 
         {
-            _examRepository = examRepository;
+            _unitOfWork = unitOfWork;
         }
+
 
         public async Task<(List<ExamListResponse> Data, int TotalCount)> GetTeacherExamsAsync(
             Guid teacherId,
@@ -22,13 +24,22 @@ namespace GESS.Service.exam
             int pageSize,
             int? majorId,
             int? semesterId,
+           // string? gradeComponent,
             int? subjectId,
             string? examType,
             string? searchName)
         {
-            return await _examRepository.GetTeacherExamsAsync(
-                teacherId, pageNumber, pageSize, majorId, semesterId, subjectId, examType, searchName);
+            return await _unitOfWork.ExamRepository.GetTeacherExamsAsync(
+                teacherId, pageNumber, pageSize, majorId, semesterId, subjectId, examType, searchName
+                //, gradeComponent
+                );
         }
+
+        public Task<bool> UpdatePracticeExamAsync(PracticeExamUpdateDTO dto)
+             => _unitOfWork.ExamRepository.UpdatePracticeExamAsync(dto);
+
+        public Task<bool> UpdateMultiExamAsync(MultiExamUpdateDTO dto)
+               => _unitOfWork.ExamRepository.UpdateMultiExamAsync(dto);
     }
 
 }

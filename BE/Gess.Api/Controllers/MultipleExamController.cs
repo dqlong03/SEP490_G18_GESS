@@ -126,7 +126,7 @@ namespace GESS.Api.Controllers
         }
         //API to get number of question in each chapter and category and level and [IsPublic] and [CreatedBy]
         [HttpGet("question-count")]
-        public async Task<int> GetQuestionCount(int? chapterId = null,int? categoryId = null,int? levelId = null,bool? isPublic = null,string? createdBy = null)
+        public async Task<int> GetQuestionCount(int? chapterId = null,int? categoryId = null,int? levelId = null,bool? isPublic = null,Guid? createdBy = null)
         {
             try
             {

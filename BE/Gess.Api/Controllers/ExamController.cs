@@ -1,4 +1,5 @@
-﻿using GESS.Service.exam;
+﻿using GESS.Model.Exam;
+using GESS.Service.exam;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -36,6 +37,24 @@ namespace GESS.Api.Controllers
                 PageSize = pageSize,
                 Data = data
             });
+        }
+
+        [HttpPut("practice")]
+        public async Task<IActionResult> UpdatePracticeExam([FromBody] PracticeExamUpdateDTO dto)
+        {
+            var result = await _examService.UpdatePracticeExamAsync(dto);
+            if (!result)
+                return BadRequest("PracticeExam cannot be updated (not found or already started).");
+            return Ok("PracticeExam updated successfully.");
+        }
+
+        [HttpPut("multi")]
+        public async Task<IActionResult> UpdateMultiExam([FromBody] MultiExamUpdateDTO dto)
+        {
+            var result = await _examService.UpdateMultiExamAsync(dto);
+            if (!result)
+                return BadRequest("MultiExam cannot be updated (not found or already started).");
+            return Ok("MultiExam updated successfully.");
         }
     }
 }

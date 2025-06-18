@@ -16,7 +16,12 @@ namespace GESS.Repository.Interface
             int? majorId,
             int? semesterId,
             int? subjectId,
+           // string? gradeComponent,
             string? examType,
             string? searchName);
+
+        Task<bool> UpdatePracticeExamAsync(PracticeExamUpdateDTO dto);
+        Task<bool> UpdateMultiExamAsync(MultiExamUpdateDTO dto);
     }
+
 }

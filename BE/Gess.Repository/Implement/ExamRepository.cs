@@ -27,6 +27,7 @@ namespace GESS.Repository.Implement
             int? majorId,
             int? semesterId,
             int? subjectId,
+           // string? gradeComponent,
             string? examType,
             string? searchName)
         {
@@ -35,13 +36,16 @@ namespace GESS.Repository.Implement
                 .Where(e => !majorId.HasValue || e.Teacher.MajorId == majorId)
                 .Where(e => !semesterId.HasValue || e.SemesterId == semesterId)
                 .Where(e => !subjectId.HasValue || e.SubjectId == subjectId)
+               // .Where(e => string.IsNullOrEmpty(gradeComponent) || e.GradeComponent == gradeComponent)
                 .Where(e => string.IsNullOrEmpty(searchName) || e.MultiExamName.Contains(searchName))
                 .Select(e => new ExamListResponse
                 {
+                    ExamId = e.MultiExamId,
                     SemesterName = e.Semester.SemesterName,
                     ExamName = e.MultiExamName,
                     ExamType = e.CategoryExam.CategoryExamName,
-                    StatusExam = e.MultiExamHistories.Any(),
+                    //StatusExam = e.MultiExamHistories.Any(),
+                    StatusExam = e.Status,
                     CreateDate = e.CreateAt
                 });
 
@@ -53,10 +57,12 @@ namespace GESS.Repository.Implement
                 .Where(e => string.IsNullOrEmpty(searchName) || e.PracExamName.Contains(searchName))
                 .Select(e => new ExamListResponse
                 {
+                    ExamId = e.PracExamId,
                     SemesterName = e.Semester.SemesterName,
                     ExamName = e.PracExamName,
                     ExamType = e.CategoryExam.CategoryExamName,
-                    StatusExam = e.PracticeExamHistories.Any(),
+                    //StatusExam = e.PracticeExamHistories.Any(),
+                    StatusExam = e.Status,
                     CreateDate = e.CreateAt
                 });
 
@@ -76,5 +82,44 @@ namespace GESS.Repository.Implement
 
             return (data, totalCount);
         }
+
+        public async Task<bool> UpdatePracticeExamAsync(PracticeExamUpdateDTO dto)
+        {
+            var exam = await _context.PracticeExams.FirstOrDefaultAsync(e => e.PracExamId == dto.PracExamId);
+            if (exam == null || exam.Status.ToLower() != "chưa thi") // chỉ cho sửa khi chưa thi
+                return false;
+
+            exam.PracExamName = dto.PracExamName;
+            exam.Duration = dto.Duration;
+            exam.CreateAt = dto.CreateAt;
+            exam.CategoryExamId = dto.CategoryExamId;
+            exam.SubjectId = dto.SubjectId;
+            exam.SemesterId = dto.SemesterId;
+            // Cập nhật các trường khác nếu cần
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> UpdateMultiExamAsync(MultiExamUpdateDTO dto)
+        {
+            var exam = await _context.MultiExams.FirstOrDefaultAsync(e => e.MultiExamId == dto.MultiExamId);
+            if (exam == null || exam.Status.ToLower() != "chưa thi") // chỉ cho sửa khi chưa thi
+                return false;
+
+            exam.MultiExamName = dto.MultiExamName;
+            exam.NumberQuestion = dto.NumberQuestion;
+            exam.Duration = dto.Duration;
+            exam.CreateAt = dto.CreateAt;
+            exam.CategoryExamId = dto.CategoryExamId;
+            exam.SubjectId = dto.SubjectId;
+            exam.SemesterId = dto.SemesterId;
+            // Cập nhật các trường khác nếu cần
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+
     }
 }
