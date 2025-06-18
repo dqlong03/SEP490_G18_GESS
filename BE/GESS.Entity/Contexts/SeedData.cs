@@ -555,17 +555,25 @@ namespace GESS.Entity.Contexts
             // 7. Seed NoPEPaperInPE
             if (!context.NoPEPaperInPEs.Any())
             {
+                var practiceExams = await context.PracticeExams.ToListAsync();
+                var practiceExamPapers = await context.PracticeExamPapers.ToListAsync();
+
+                if (!practiceExams.Any() || !practiceExamPapers.Any())
+                {
+                    throw new Exception("Required data for NoPEPaperInPE seeding is missing");
+                }
+
                 var noPEPaperInPEs = new List<NoPEPaperInPE>
                 {
                     new NoPEPaperInPE
                     {
-                        PracExamId = 1, // Kỳ thi giữa kỳ
-                        PracExamPaperId = 1 // Đề thi giữa kỳ
+                        PracExamId = practiceExams[0].PracExamId,
+                        PracExamPaperId = practiceExamPapers[0].PracExamPaperId
                     },
                     new NoPEPaperInPE
                     {
-                        PracExamId = 2, // Kỳ thi cuối kỳ
-                        PracExamPaperId = 2 // Đề thi cuối kỳ
+                        PracExamId = practiceExams[1].PracExamId,
+                        PracExamPaperId = practiceExamPapers[1].PracExamPaperId
                     }
                 };
                 await context.NoPEPaperInPEs.AddRangeAsync(noPEPaperInPEs);
@@ -813,12 +821,28 @@ namespace GESS.Entity.Contexts
         {
             if (!context.NoPEPaperInPEs.Any())
             {
-                var noPEPaper = new NoPEPaperInPE
+                var practiceExams = await context.PracticeExams.ToListAsync();
+                var practiceExamPapers = await context.PracticeExamPapers.ToListAsync();
+
+                if (!practiceExams.Any() || !practiceExamPapers.Any())
                 {
-                    PracExamId = context.PracticeExams.First().PracExamId,
-                    PracExamPaperId = context.PracticeExamPapers.First().PracExamPaperId
+                    throw new Exception("Required data for NoPEPaperInPE seeding is missing");
+                }
+
+                var noPEPaperInPEs = new List<NoPEPaperInPE>
+                {
+                    new NoPEPaperInPE
+                    {
+                        PracExamId = practiceExams[0].PracExamId,
+                        PracExamPaperId = practiceExamPapers[0].PracExamPaperId
+                    },
+                    new NoPEPaperInPE
+                    {
+                        PracExamId = practiceExams[1].PracExamId,
+                        PracExamPaperId = practiceExamPapers[1].PracExamPaperId
+                    }
                 };
-                await context.NoPEPaperInPEs.AddAsync(noPEPaper);
+                await context.NoPEPaperInPEs.AddRangeAsync(noPEPaperInPEs);
                 await context.SaveChangesAsync();
             }
         }

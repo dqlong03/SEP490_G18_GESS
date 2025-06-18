@@ -8,9 +8,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Gess.Repository.Infrastructures;
-using GESS.Entity.Entities;
-using GESS.Model.PracticeExamPaper;
 using GESS.Repository.Interface;
 
 namespace GESS.Service.practiceExamPaper
@@ -43,9 +40,9 @@ namespace GESS.Service.practiceExamPaper
             }
 
             return result;
-            }
+        }
         public async Task<int> CountPageAsync(string? name = null, int? subjectId = null, int? semesterId = null, int? categoryExamId = null, int pageSize = 5)
-            {
+        {
             return await _unitOfWork.PracticeExamPaperRepository.CountPageAsync(name, subjectId, semesterId, categoryExamId, pageSize);
         }
         public async Task<IEnumerable<PracticeExamPaperDTO>> GetAllPracticeExamPapers(int subjectId, int categoryId, Guid teacherId)
@@ -61,6 +58,65 @@ namespace GESS.Service.practiceExamPaper
             });
             return practiceExamPaperDtos;
         }
-    }
 
+        public async Task<PracticeExamPaperCreate> CreateExampaperByTeacherAsync(PracticeExamPaperCreate practiceExamPaperCreate, Guid teacherId)
+        {
+            if (practiceExamPaperCreate == null)
+            {
+                throw new ArgumentNullException(nameof(practiceExamPaperCreate));
+            }
+
+            var examPaper = new PracticeExamPaper
+            {
+                PracExamPaperName = practiceExamPaperCreate.PracExamPaperName,
+                NumberQuestion = practiceExamPaperCreate.QuestionScores?.Count ?? 0, 
+                CreateAt = DateTime.UtcNow,
+                Status = practiceExamPaperCreate.Status,
+                TeacherId = teacherId,
+                CategoryExamId = practiceExamPaperCreate.CategoryExamId,
+                SubjectId = practiceExamPaperCreate.SubjectId,
+                SemesterId = practiceExamPaperCreate.SemesterId,
+                PracticeTestQuestions = new List<PracticeTestQuestion>()
+            };
+
+            await _unitOfWork.PracticeExamPaperRepository.CreateAsync(examPaper);
+            await _unitOfWork.SaveChangesAsync(); 
+
+            if (practiceExamPaperCreate.QuestionScores == null || !practiceExamPaperCreate.QuestionScores.Any())
+            {
+                throw new ArgumentException("Danh sách câu hỏi không được rỗng.", nameof(practiceExamPaperCreate.QuestionScores));
+            }
+
+            await _unitOfWork.SaveChangesAsync(); 
+
+            var testQuestions = practiceExamPaperCreate.QuestionScores.Select((item, index) => new PracticeTestQuestion
+            {
+                PracExamPaperId = examPaper.PracExamPaperId,
+                PracticeQuestionId = item.PracticeQuestionId,
+                QuestionOrder = index + 1,
+                Score = item.Score
+            }).ToList();
+
+            await _unitOfWork.PracticeExamPaperRepository.CreateTestQuestionsAsync(testQuestions);
+            await _unitOfWork.SaveChangesAsync(); // Lần 3
+
+            return practiceExamPaperCreate;
+        }
+        public async Task<List<ListPracticeQuestion>> GetPracticeQuestionsByTeacherAsync(Guid teacherId)
+        {
+            return await _unitOfWork.PracticeExamPaperRepository.GetPracticeQuestionsAsync(teacherId);
+        }
+        public async Task<List<ListPracticeQuestion>> GetPublicPracticeQuestionsAsync(string? search = null, int? levelQuestionId = null)
+        {
+            return await _unitOfWork.PracticeExamPaperRepository.GetPublicPracticeQuestionsAsync(search, levelQuestionId);
+        }
+
+        public async Task<List<ListPracticeQuestion>> GetPrivatePracticeQuestionsAsync(Guid teacherId, string? search = null, int? levelQuestionId = null)
+        {
+            return await _unitOfWork.PracticeExamPaperRepository.GetPrivatePracticeQuestionsAsync(teacherId, search, levelQuestionId);
+        }
+
+    }
 }
+
+   

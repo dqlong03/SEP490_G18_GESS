@@ -24,6 +24,10 @@ namespace GESS.Service.practiceExamPaper
         );
         Task<int> CountPageAsync(string? name = null, int? subjectId = null, int? semesterId = null, int? categoryExamId = null, int pageSize = 5);
         Task<IEnumerable<PracticeExamPaperDTO>> GetAllPracticeExamPapers(int subjectId, int categoryId, Guid teacherId);
+        Task<PracticeExamPaperCreate> CreateExampaperByTeacherAsync(PracticeExamPaperCreate practiceExamPaperCreate, Guid teacherId);
+        Task<List<ListPracticeQuestion>> GetPracticeQuestionsByTeacherAsync(Guid teacherId);
+        Task<List<ListPracticeQuestion>> GetPublicPracticeQuestionsAsync(string? search = null, int? levelQuestionId = null);
+        Task<List<ListPracticeQuestion>> GetPrivatePracticeQuestionsAsync(Guid teacherId, string? search = null, int? levelQuestionId = null);
     }
 
 }
