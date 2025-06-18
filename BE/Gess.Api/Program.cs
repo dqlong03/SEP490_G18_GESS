@@ -39,6 +39,12 @@ using GESS.Service.practiceExamPaper;
 using GESS.Service.levelquestion;
 using GESS.Service.practicequestion;
 
+using GESS.Service.subject;
+using GESS.Service.trainingProgram;
+using GESS.Service.examination;
+using GESS.Service.student;
+using GESS.Service.exam;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Google login
@@ -133,6 +139,7 @@ builder.Services.AddScoped<ICategoryExamService, CategoryExamService>();
 builder.Services.AddScoped<IMultipleQuestionService, MultipleQuestionService>();
 builder.Services.AddScoped<IStudentService, StudentService>();
 builder.Services.AddScoped<IPracticeQuestionService, PracticeQuestionService>();
+builder.Services.AddScoped<IExamService, GESS.Service.exam.ExamService>();
 
 builder.Services.AddScoped<ILevelQuestionService, LevelQuestionService>();
 
@@ -159,6 +166,7 @@ builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 builder.Services.AddScoped<ISemesterRepository, SemesterRepository>();
 builder.Services.AddScoped<ICateExamSubRepository, CateExamSubRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+builder.Services.AddScoped<IExamRepository, ExamRepository>();
 builder.Services.AddScoped<IPracticeExamPaperRepository, PracticeExamPaperRepository>();
 builder.Services.AddScoped<IPracticeQuestionsRepository, PracticeQuestionsRepository>();
 builder.Services.AddScoped<ILevelQuestionRepository, LevelQuestionRepository>();

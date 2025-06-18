@@ -33,6 +33,8 @@ namespace Gess.Repository.Infrastructures
         private IPracticeExamPaperRepository _practiceExamPaperRepository;
         private IPracticeQuestionsRepository _practiceQuestionsRepository;
         private ILevelQuestionRepository _levelQuestionRepository;
+        private IMultipleAnswerRepository _multipleAnswerRepository;
+        private IExamRepository _examRepository;
         public UnitOfWork(GessDbContext context, UserManager<User> userManager, RoleManager<IdentityRole<Guid>> roleManager)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -58,8 +60,9 @@ namespace Gess.Repository.Infrastructures
         public UserManager<User> UserManager => _userManager;
         public RoleManager<IdentityRole<Guid>> RoleManager => _roleManager;
 
-        
+        public IExamRepository ExamRepository => _examRepository ??= new ExamRepository(_context);
 
+        public IMultipleAnswerRepository MultipleAnswerRepository => _multipleAnswerRepository ??= new MultiAnswerRepository(_context);
         public IMultipleExamRepository MultipleExamRepository => new MultipleExamRepository(_context);
         public ICategoryExamRepository CategoryExamRepository => new CategoryExamRepository(_context);
         public IMultipleQuestionRepository MultipleQuestionRepository => new MultipleQuestionRepository(_context);
