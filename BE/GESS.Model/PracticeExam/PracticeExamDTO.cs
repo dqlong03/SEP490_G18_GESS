@@ -4,10 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GESS.Model.PracticeExamPaper
+namespace GESS.Model.PracticeExam
 {
-    public class PracticeExamPaperDTO
+    public  class PracticeExamDTO
     {
-        public int PracExamPaperId { get; set; }
     }
 }

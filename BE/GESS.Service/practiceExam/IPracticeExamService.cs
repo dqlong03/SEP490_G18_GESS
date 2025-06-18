@@ -1,4 +1,5 @@
 ﻿using GESS.Entity.Entities;
+using GESS.Model.PracticeExam;
 using GESS.Model.Subject;
 using GESS.Model.TrainingProgram;
 using System;
@@ -11,5 +12,6 @@ namespace GESS.Service.practiceExam
 {
     public interface IPracticeExamService : IBaseService<PracticeExam>
     {
+        Task <PracticeExamCreateDTO> CreatePracticeExamAsync(PracticeExamCreateDTO practiceExamCreateDto);
     }
 }
