@@ -46,11 +46,12 @@ namespace GESS.Repository.Implement
                     multiExam.NoQuestionInChapters.Add(new NoQuestionInChapter
                     {
                         ChapterId = noQuestion.ChapterId,
-                        NumberQuestion = noQuestion.NumberQuestion
+                        NumberQuestion = noQuestion.NumberQuestion,
+                        LevelQuestionId = noQuestion.LevelQuestionId,
                     });
                 }
                 await _context.SaveChangesAsync();
-                foreach (var student in multipleExamCreateDto.StudentDTO)
+                foreach (var student in multipleExamCreateDto.StudentExamDTO)
                 {
                     var checkExistStudent = await _context.Students
                         .FirstOrDefaultAsync(s => s.StudentId == student.StudentId);
@@ -59,7 +60,7 @@ namespace GESS.Repository.Implement
                         var multiExamHistory = new MultiExamHistory
                         {
                             MultiExamId = multiExam.MultiExamId,
-                            StudentId = (Guid)student.StudentId,
+                            StudentId = student.StudentId,
                             IsGrade = false,
                             CheckIn = false,
                         };

@@ -42,6 +42,12 @@ namespace GESS.Entity.Entities
         public Major Major { get; set; }
         public int MajorId { get; set; }
 
+        // Xác định xem giáo viên có phải là trưởng bộ môn không
+        public bool IsHeadOfDepartment { get; set; }
+
+        // Xác định xem giáo viên có phải là khảo thí không
+        public bool IsExamManager { get; set; }
+
         // Constructor khởi tạo các danh sách
         public Teacher()
         {

@@ -20,7 +20,7 @@ namespace GESS.Service.chapter
 
         public async Task<ChapterCreateDTO> CreateChapterAsync(ChapterCreateDTO chapterCreateDto, int subjectId)
         {
-            bool chapterExists = _unitOfWork.ChapterRepository.ExistsAsync(c => c.ChapterName == chapterCreateDto.ChapterName).Result;
+            bool chapterExists =  _unitOfWork.ChapterRepository.ExistsAsync(c => c.ChapterName == chapterCreateDto.ChapterName).Result;
             if (chapterExists)
             {
                 throw new InvalidOperationException("Chapter with the same name already exists.");
@@ -132,6 +132,17 @@ namespace GESS.Service.chapter
                 // ThaiNH_add_UpdateMark&UserProfile_End
                 Description = chapter.Description,
             }).ToList();
+        }
+
+        public async Task<IEnumerable<ChapterList>> GetListChapter()
+        {
+            var chapters = await _unitOfWork.ChapterRepository.GetAllAsync(); // giả định bạn có GetAllAsync()
+
+            return chapters.Select(p => new ChapterList
+            {
+                Id = p.ChapterId,
+                ChapterName = p.ChapterName
+            });
         }
 
 
