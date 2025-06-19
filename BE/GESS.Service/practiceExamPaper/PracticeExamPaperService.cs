@@ -54,7 +54,8 @@ namespace GESS.Service.practiceExamPaper
             }
             var practiceExamPaperDtos = practiceExamPapers.Select(paper => new PracticeExamPaperDTO
             {
-
+                PracExamPaperId = paper.PracExamPaperId,
+                PracExamPaperName = paper.PracExamPaperName
             });
             return practiceExamPaperDtos;
         }

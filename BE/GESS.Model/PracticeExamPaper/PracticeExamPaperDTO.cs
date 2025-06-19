@@ -9,5 +9,6 @@ namespace GESS.Model.PracticeExamPaper
     public class PracticeExamPaperDTO
     {
         public int PracExamPaperId { get; set; }
+        public string PracExamPaperName { get; set; }
     }
 }
