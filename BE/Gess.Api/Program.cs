@@ -170,6 +170,7 @@ builder.Services.AddScoped<IExamRepository, ExamRepository>();
 builder.Services.AddScoped<IPracticeExamPaperRepository, PracticeExamPaperRepository>();
 builder.Services.AddScoped<IPracticeQuestionsRepository, PracticeQuestionsRepository>();
 builder.Services.AddScoped<ILevelQuestionRepository, LevelQuestionRepository>();
+builder.Services.AddScoped<IPracticeAnswersRepository, PracticeAnswersRepository>();
 
 
 // Đăng ký EmailService

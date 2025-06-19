@@ -24,25 +24,45 @@ namespace GESS.Service.practicequestion
         {
             return await _unitOfWork.PracticeQuestionsRepository.GetAllPracticeQuestionsAsync(chapterId);
         }
-        public async Task<PracticeQuestionCreateDTO> PracticeQuestionCreateAsync(int chapterId, PracticeQuestionCreateDTO dto)
+        public async Task<IEnumerable<PracticeQuestionCreateNoChapterDTO>> PracticeQuestionsCreateAsync(
+    int chapterId,
+    List<PracticeQuestionCreateNoChapterDTO> dtos)
         {
-            var practiceQuestion = new PracticeQuestion
+            foreach (var dto in dtos)
             {
-                Content = dto.Content,
-                UrlImg = dto.UrlImg,
-                IsActive = dto.IsActive,
-                CreatedBy = dto.CreatedBy,
-                IsPublic = dto.IsPublic,
-                CategoryExamId = dto.CategoryExamId,
-                LevelQuestionId = dto.LevelQuestionId,
-                SemesterId = dto.SemesterId,
-                ChapterId = chapterId 
-            };
+                var practiceQuestion = new PracticeQuestion
+                {
+                    Content = dto.Content,
+                    UrlImg = dto.UrlImg,
+                    IsActive = dto.IsActive,
+                    CreatedBy = dto.CreatedBy,
+                    IsPublic = dto.IsPublic,
+                    CategoryExamId = dto.CategoryExamId,
+                    LevelQuestionId = dto.LevelQuestionId,
+                    SemesterId = dto.SemesterId,
+                    ChapterId = chapterId
+                };
 
-            await _unitOfWork.PracticeQuestionsRepository.CreateAsync(practiceQuestion);
-            await _unitOfWork.SaveChangesAsync();
-            return dto;
+                await _unitOfWork.PracticeQuestionsRepository.CreateAsync(practiceQuestion);
+                await _unitOfWork.SaveChangesAsync(); 
+
+                if (!string.IsNullOrWhiteSpace(dto.AnswerContent))
+                {
+                    var answer = new PracticeAnswer
+                    {
+                        AnswerContent = dto.AnswerContent,
+                        PracticeQuestionId = practiceQuestion.PracticeQuestionId
+                    };
+
+                    await _unitOfWork.PracticeAnswersRepository.CreateAsync(answer);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+            }
+
+            return dtos;
         }
+
+
 
         public async Task<IEnumerable<PracticeQuestionReadExcel>> PracticeQuestionReadExcel(IFormFile file)
         {
@@ -80,7 +100,8 @@ namespace GESS.Service.practicequestion
                             {
                                 Content = worksheet.Cells[row, 1].Text,
                                 UrlImg = worksheet.Cells[row, 2].Text,
-                                LevelQuestion = levelMapping.TryGetValue(worksheet.Cells[row, 3].Text.Trim(), out int level) ? level : 0
+                                LevelQuestion = levelMapping.TryGetValue(worksheet.Cells[row, 3].Text.Trim(), out int level) ? level : 0,
+                                AnswerContent = worksheet.Cells[row, 4].Text
                             };
                             results.Add(item);
                         }

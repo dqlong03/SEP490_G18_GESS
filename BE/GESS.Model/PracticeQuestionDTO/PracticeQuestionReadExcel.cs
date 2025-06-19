@@ -11,5 +11,6 @@ namespace GESS.Model.PracticeQuestionDTO
         public string Content { get; set; }
         public string UrlImg { get; set; }
         public int LevelQuestion { get; set; }
+        public string AnswerContent { get; set; }
     }
 }

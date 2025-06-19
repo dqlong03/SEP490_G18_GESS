@@ -14,7 +14,7 @@ namespace GESS.Service.practicequestion
     public interface IPracticeQuestionService : IBaseService<PracticeQuestion>
     {
         Task<IEnumerable<PracticeQuestionLitsDTO>> GetAllPracticeQuestionsAsync(int chapterId);
-        Task<PracticeQuestionCreateDTO> PracticeQuestionCreateAsync(int chapterId, PracticeQuestionCreateDTO practiceQuestionCreateDTO);
+        Task<IEnumerable<PracticeQuestionCreateNoChapterDTO>> PracticeQuestionsCreateAsync(int chapterId, List<PracticeQuestionCreateNoChapterDTO> dtos);
         Task<IEnumerable< PracticeQuestionReadExcel>> PracticeQuestionReadExcel(IFormFile file);
     }
 }

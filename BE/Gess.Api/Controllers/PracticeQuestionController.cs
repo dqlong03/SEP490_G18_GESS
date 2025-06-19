@@ -42,12 +42,16 @@ namespace GESS.Api.Controllers
             }
         }
         //API tạo câu hỏi thực hành
-        [HttpPost("CreatePracticeQuestion/{chapterId}")]
-        public async Task<IActionResult> CreatePracticeQuestion(int chapterId, [FromBody] PracticeQuestionCreateDTO dto)
+        [HttpPost("CreateMultiple/{chapterId}")]
+        public async Task<IActionResult> CreateMultiple(int chapterId, [FromBody] List<PracticeQuestionCreateNoChapterDTO> dtos)
         {
-            var result = await _practiceQuestionService.PracticeQuestionCreateAsync(chapterId, dto);
+            if (dtos == null || !dtos.Any())
+                return BadRequest("Danh sách câu hỏi không được rỗng.");
+
+            var result = await _practiceQuestionService.PracticeQuestionsCreateAsync(chapterId, dtos);
             return Ok(result);
         }
+
 
         // API lấy danh sách chương (dùng trong dropdown, v.v.)
         [HttpGet("GetListChapter/{subjectId}")]
