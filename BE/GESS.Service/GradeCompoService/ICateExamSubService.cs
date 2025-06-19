@@ -12,8 +12,10 @@ namespace GESS.Service.GradeCompoService
     public interface ICateExamSubService : IBaseService<CateExamSubService>
     {
         Task<CategoryExamSubject> CreateCateExamSubAsync(CategoryExamSubjectDTO dto);
-        Task<IEnumerable<CategoryExamSubject>> GetAllCateExamSubBySubIdAsync(int subjectId);
-        Task UpdateCateExamSubAsync(int categoryExamId, int subjectId, CategoryExamSubjectDTO dto);
+        // ThaiNH_add_UpdateMark&UserProfile_Begin
+        Task<IEnumerable<CategoryExamSubjectDTO>> GetAllCateExamSubBySubIdAsync(int subjectId);
+        Task UpdateCateExamSubAsync(int subjectId, int categoryExamId, CategoryExamSubjectDTO dto);
+        // ThaiNH_add_UpdateMark&UserProfile_End
         Task DeleteCateExamSubAsync(int subjectId, int categoryExamId);
         Task DeleteAllCESBySubjectIdAsync(int subjectId);
     }

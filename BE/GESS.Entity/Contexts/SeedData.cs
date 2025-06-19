@@ -1,4 +1,5 @@
-﻿using GESS.Entity.Entities;
+﻿using GESS.Common;
+using GESS.Entity.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -99,7 +100,9 @@ namespace GESS.Entity.Contexts
 
         private static async Task SeedRolesAsync(RoleManager<IdentityRole<Guid>> roleManager)
         {
-            string[] roles = new[] { "Admin", "Trưởng bộ môn", "Giáo viên", "Khảo thí", "Sinh viên" };
+            // ThaiNH_modified_UpdateMark&UserProfile_Begin
+            string[] roles = new[] { PredefinedRole.ADMIN_ROLE, PredefinedRole.HEADOFDEPARTMENT_ROLE, PredefinedRole.TEACHER_ROLE, PredefinedRole.EXAMINATION_ROLE, PredefinedRole.STUDENT_ROLE };
+            // ThaiNH_modified_UpdateMark&UserProfile_End
             foreach (var role in roles)
             {
                 if (!await roleManager.RoleExistsAsync(role))
@@ -121,35 +124,37 @@ namespace GESS.Entity.Contexts
 
         private static async Task SeedUsersAsync(UserManager<User> userManager)
         {
+            //ThaiNH_modified_UpdateMark&UserProfile_Begin
             // Admin users
-            await CreateUser(userManager, "admin@example.com", "Nguyễn Văn A", "Password123!", new DateTime(1980, 1, 1), "1234567890", true, "Admin");
-            await CreateUser(userManager, "admin2@example.com", "Trần Thị B", "Password123!", new DateTime(1982, 3, 15), "1234567891", true, "Admin");
+            await CreateUser(userManager, "admin@example.com", "Nguyễn Văn A", "Password123!", "AM001", new DateTime(1980, 1, 1), "1234567890", true, PredefinedRole.ADMIN_ROLE);
+            await CreateUser(userManager, "admin2@example.com", "Trần Thị B", "Password123!", "AM002", new DateTime(1982, 3, 15), "1234567891", true, PredefinedRole.ADMIN_ROLE);
 
             // Trưởng bộ môn
-            await CreateUser(userManager, "hod1@example.com", "Lê Văn C", "Password123!", new DateTime(1983, 5, 10), "0987654321", true, "Trưởng bộ môn");
-            await CreateUser(userManager, "hod2@example.com", "Phạm Thị D", "Password123!", new DateTime(1984, 7, 20), "0987654322", false, "Trưởng bộ môn");
+            await CreateUser(userManager, "hod1@example.com", "Lê Văn C", "Password123!", "HOD001", new DateTime(1983, 5, 10), "0987654321", true, PredefinedRole.HEADOFDEPARTMENT_ROLE);
+            await CreateUser(userManager, "hod2@example.com", "Phạm Thị D", "Password123!", "HOD002", new DateTime(1984, 7, 20), "0987654322", false, PredefinedRole.HEADOFDEPARTMENT_ROLE);
 
             // Giáo viên
-            await CreateUser(userManager, "teacher1@example.com", "Hoàng Văn E", "Password123!", new DateTime(1985, 5, 10), "0987654323", true, "Giáo viên");
-            await CreateUser(userManager, "teacher2@example.com", "Vũ Thị F", "Password123!", new DateTime(1987, 7, 20), "0987654324", false, "Giáo viên");
-            await CreateUser(userManager, "teacher3@example.com", "Đỗ Văn G", "Password123!", new DateTime(1990, 9, 30), "0987654325", true, "Giáo viên");
-            await CreateUser(userManager, "teacher4@example.com", "Ngô Văn H", "Password123!", new DateTime(1988, 4, 15), "0987654326", true, "Giáo viên");
-            await CreateUser(userManager, "teacher5@example.com", "Đặng Thị I", "Password123!", new DateTime(1989, 6, 25), "0987654327", false, "Giáo viên");
+            await CreateUser(userManager, "teacher1@example.com", "Hoàng Văn E", "Password123!", "GV001", new DateTime(1985, 5, 10), "0987654323", true, PredefinedRole.TEACHER_ROLE);
+            await CreateUser(userManager, "teacher2@example.com", "Vũ Thị F", "Password123!", "GV002", new DateTime(1987, 7, 20), "0987654324", false, PredefinedRole.TEACHER_ROLE);
+            await CreateUser(userManager, "teacher3@example.com", "Đỗ Văn G", "Password123!", "GV003", new DateTime(1990, 9, 30), "0987654325", true, PredefinedRole.TEACHER_ROLE);
+            await CreateUser(userManager, "teacher4@example.com", "Ngô Văn H", "Password123!", "GV004", new DateTime(1988, 4, 15), "0987654326", true, PredefinedRole.TEACHER_ROLE);
+            await CreateUser(userManager, "teacher5@example.com", "Đặng Thị I", "Password123!", "GV005", new DateTime(1989, 6, 25), "0987654327", false, PredefinedRole.TEACHER_ROLE);
 
             // Khảo thí
-            await CreateUser(userManager, "exam1@example.com", "Ngô Thị H", "Password123!", new DateTime(1986, 6, 15), "0987654328", false, "Khảo thí");
-            await CreateUser(userManager, "exam2@example.com", "Đặng Văn I", "Password123!", new DateTime(1988, 8, 25), "0987654329", true, "Khảo thí");
-            await CreateUser(userManager, "tuanvahe140809@fpt.edu.vn", "Đặng Văn I", "Password123!", new DateTime(1988, 8, 25), "0987654329", true, "Khảo thí");
+            await CreateUser(userManager, "exam1@example.com", "Ngô Thị H", "Password123!", "EX001", new DateTime(1986, 6, 15), "0987654328", false, PredefinedRole.EXAMINATION_ROLE);
+            await CreateUser(userManager, "exam2@example.com", "Đặng Văn I", "Password123!", "EX002", new DateTime(1988, 8, 25), "0987654329", true, PredefinedRole.EXAMINATION_ROLE);
+            await CreateUser(userManager, "tuanvahe140809@fpt.edu.vn", "Đặng Văn I", "Password123!", "EX003", new DateTime(1988, 8, 25), "0987654329", true, PredefinedRole.EXAMINATION_ROLE);
 
             // Sinh viên
-            await CreateUser(userManager, "student1@example.com", "Phạm Minh J", "Password123!", new DateTime(2000, 8, 15), "0123456789", true, "Sinh viên");
-            await CreateUser(userManager, "student2@example.com", "Hoàng Anh K", "Password123!", new DateTime(2001, 9, 20), "0123456790", false, "Sinh viên");
-            await CreateUser(userManager, "student3@example.com", "Vũ Thị L", "Password123!", new DateTime(2002, 10, 25), "0123456791", true, "Sinh viên");
-            await CreateUser(userManager, "student4@example.com", "Trần Văn M", "Password123!", new DateTime(2000, 7, 10), "0123456792", true, "Sinh viên");
-            await CreateUser(userManager, "student5@example.com", "Lê Thị N", "Password123!", new DateTime(2001, 11, 5), "0123456793", false, "Sinh viên");
-            await CreateUser(userManager, "student6@example.com", "Nguyễn Văn O", "Password123!", new DateTime(2002, 3, 15), "0123456794", true, "Sinh viên");
-            await CreateUser(userManager, "student7@example.com", "Phạm Thị P", "Password123!", new DateTime(2000, 5, 20), "0123456795", false, "Sinh viên");
-            await CreateUser(userManager, "student8@example.com", "Hoàng Văn Q", "Password123!", new DateTime(2001, 12, 30), "0123456796", true, "Sinh viên");
+            await CreateUser(userManager, "student1@example.com", "Phạm Minh J", "Password123!", "SD001", new DateTime(2000, 8, 15), "0123456789", true, PredefinedRole.STUDENT_ROLE);
+            await CreateUser(userManager, "student2@example.com", "Hoàng Anh K", "Password123!", "SD002", new DateTime(2001, 9, 20), "0123456790", false, PredefinedRole.STUDENT_ROLE);
+            await CreateUser(userManager, "student3@example.com", "Vũ Thị L", "Password123!", "SD003", new DateTime(2002, 10, 25), "0123456791", true, PredefinedRole.STUDENT_ROLE);
+            await CreateUser(userManager, "student4@example.com", "Trần Văn M", "Password123!", "SD004", new DateTime(2000, 7, 10), "0123456792", true, PredefinedRole.STUDENT_ROLE);
+            await CreateUser(userManager, "student5@example.com", "Lê Thị N", "Password123!", "SD005", new DateTime(2001, 11, 5), "0123456793", false, PredefinedRole.STUDENT_ROLE);
+            await CreateUser(userManager, "student6@example.com", "Nguyễn Văn O", "Password123!", "SD006", new DateTime(2002, 3, 15), "0123456794", true, PredefinedRole.STUDENT_ROLE);
+            await CreateUser(userManager, "student7@example.com", "Phạm Thị P", "Password123!", "SD007", new DateTime(2000, 5, 20), "0123456795", false, PredefinedRole.STUDENT_ROLE);
+            await CreateUser(userManager, "student8@example.com", "Hoàng Văn Q", "Password123!", "SD008", new DateTime(2001, 12, 30), "0123456796", true, PredefinedRole.STUDENT_ROLE);
+            //ThaiNH_modified_UpdateMark&UserProfile_End
         }
 
         private static async Task SeedMajorsAsync(GessDbContext context)
@@ -373,6 +378,7 @@ namespace GESS.Entity.Contexts
             string email,
             string fullName,
             string password,
+            string code,
             DateTime dateOfBirth,
             string phoneNumber,
             bool gender,
@@ -385,6 +391,9 @@ namespace GESS.Entity.Contexts
                     UserName = email,
                     Email = email,
                     Fullname = fullName,
+                    // ThaiNH_add_UpdateMark&UserProfile_Begin
+                    Code = code,
+                    // ThaiNH_add_UpdateMark&UserProfile_End
                     DateOfBirth = dateOfBirth,
                     PhoneNumber = phoneNumber,
                     Gender = gender,

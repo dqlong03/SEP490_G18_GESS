@@ -27,6 +27,22 @@ namespace GESS.Service.categoryExam
                 CategoryExamName = categoryExam.CategoryExamName,
             }).ToList();
         }
+
+
+        // ThaiNH_add_UpdateMark&UserProfile_Begin
+
+        public async Task<IEnumerable<CategoryExamDTO>> GetAllCategoryExamsAsync()
+        {
+            var categoryExams = await _unitOfWork.CategoryExamRepository.GetAllAsync();
+
+            return categoryExams.Select(categoryExam => new CategoryExamDTO
+            {
+                CategoryExamId = categoryExam.CategoryExamId,
+                CategoryExamName = categoryExam.CategoryExamName
+            }).ToList();
+        }
+        // ThaiNH_add_UpdateMark&UserProfile_End
+
     }
 
 }

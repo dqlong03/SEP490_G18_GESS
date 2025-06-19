@@ -21,7 +21,6 @@ namespace GESS.Model.User
         public string UserName { get; set; }
         public string Email { get; set; }
 
-
         public DateTime? DateOfBirth { get; set; }
         public string? PhoneNumber { get; set; }
         // ThaiNH_Modified_UserProfile_End
@@ -29,6 +28,7 @@ namespace GESS.Model.User
         public bool Gender { get; set; }
         public string? Code { get; set; }
         public List<string> Roles { get; set; } = new List<string>();
+        public string? MainRole { get; set; }
         public bool IsActive { get; set; } = true;
 
     }

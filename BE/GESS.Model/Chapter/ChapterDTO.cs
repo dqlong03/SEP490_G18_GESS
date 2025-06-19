@@ -12,6 +12,9 @@ namespace GESS.Model.Chapter
         public int Id { get; set; }
         public string ChapterName { get; set; }
         public string Description { get; set; }
+        // ThaiNH_Add_UpdateMark&UserProfile_Begin
+        public string Curriculum { get; set; }
+        // ThaiNH_Add_UpdateMark&UserProfile_End
 
     }
 }

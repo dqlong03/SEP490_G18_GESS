@@ -24,5 +24,10 @@ namespace GESS.Repository.Interface
         Task<bool> RemoveSubjectFromTrainingProgramAsync(int trainingProgramId, int subjectId);
         Task<int> CountPageAsync(string? name, int pageSize);
         Task<IEnumerable<Subject>> GetAllSubjectsByMajorId(int? majorId);
+
+        // ThaiNH_add_UpdateMark&UserProfile_Begin
+        Task<Subject?> GetSubjectBySubIdAsync(int subjectId);
+        // ThaiNH_add_UpdateMark&UserProfile_End
+
     }
 }

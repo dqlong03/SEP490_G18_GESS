@@ -30,6 +30,7 @@ namespace GESS.Service.chapter
                
                 ChapterName = chapterCreateDto.ChapterName,
                 Description = chapterCreateDto.Description,
+                //Course = chapterCreateDto.Curriculum,
                 SubjectId = subjectId
             };
 
@@ -126,6 +127,9 @@ namespace GESS.Service.chapter
             {
                 Id = chapter.ChapterId,
                 ChapterName = chapter.ChapterName,
+                // ThaiNH_add_UpdateMark&UserProfile_Begin
+                Curriculum = chapter.Course,
+                // ThaiNH_add_UpdateMark&UserProfile_End
                 Description = chapter.Description,
             }).ToList();
         }

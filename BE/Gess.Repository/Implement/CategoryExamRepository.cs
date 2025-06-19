@@ -30,7 +30,15 @@ namespace GESS.Repository.Implement
                 .AsNoTracking();
             return await Task.FromResult(query.AsEnumerable());
         }
+
+        // ThaiNH_add_UpdateMark&UserProfile_Begin
+        public async Task<IEnumerable<CategoryExam>> GetAllAsync()
+        {
+            return await Task.FromResult(_context.CategoryExams.ToList());
+        }
+        // ThaiNH_add_UpdateMark&UserProfile_End
+
     }
-    
-    
+
+
 }
