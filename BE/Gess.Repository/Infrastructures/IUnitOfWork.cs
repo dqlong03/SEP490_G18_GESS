@@ -49,6 +49,7 @@ namespace Gess.Repository.Infrastructures
         // ThaiNH_Initialize_Begin
         ICateExamSubRepository CateExamSubRepository { get; }
         // ThaiNH_Initialize_End
+        IPracticeAnswersRepository PracticeAnswersRepository { get; }
         UserManager<User> UserManager { get; }
         RoleManager<IdentityRole<Guid>> RoleManager { get; }
     }
