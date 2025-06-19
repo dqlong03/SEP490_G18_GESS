@@ -1,5 +1,6 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Entities;
+using GESS.Model.GradeComponent;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +18,8 @@ namespace GESS.Repository.Interface
         Task UpdateAllCESBySubIdAsync(List<CategoryExamSubject> entities);
         Task DeleteCateExamSubAsync(CategoryExamSubject entity);
         Task DeleteCESBySubjectIdAsync(int subjectId);
-        Task<IEnumerable<CategoryExamSubject>> GetAllCateExamSubBySubIdAsync(int subjectId);
+        // ThaiNH_add_UpdateMark&UserProfile_Begin
+        Task<IEnumerable<CategoryExamSubjectDTO>> GetAllCateExamSubBySubIdAsync(int subjectId);
+        // ThaiNH_add_UpdateMark&UserProfile_End
     }
 }

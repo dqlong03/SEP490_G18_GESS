@@ -25,5 +25,9 @@ namespace GESS.Service.subject
         Task <int> CountPageAsync(string? name, int pageSize);
         Task<IEnumerable<SubjectDTO>> GetAllSubjectsByMajorId(int? majorId);
         Task<IEnumerable<SubjectListDTO>> ListSubject();
+
+        // ThaiNH_add_UpdateMark&UserProfile_Begin
+        Task<SubjectDTO> GetSubjectBySubIdAsync(int subjectId);
+        // ThaiNH_add_UpdateMark&UserProfile_End
     }
 }

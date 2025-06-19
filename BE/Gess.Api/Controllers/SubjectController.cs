@@ -139,5 +139,17 @@ namespace GESS.Api.Controllers
             return Ok(listSubject);
         }
 
+        // ThaiNH_add_UpdateMark&UserProfile_Begin
+        [HttpGet("{subjectId}")]
+        public async Task<ActionResult<SubjectDTO>> GetSubjectBySubId(int subjectId)
+        {
+            var subject = await _subjectService.GetSubjectBySubIdAsync(subjectId);
+            if (subject == null)
+                return NotFound("Không tìm thấy môn học");
+
+            return Ok(subject);
+        }
+        // ThaiNH_add_UpdateMark&UserProfile_End
+
     }
 }

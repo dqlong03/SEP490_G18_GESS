@@ -191,7 +191,16 @@ namespace GESS.Repository.Implement
             await _context.SaveChangesAsync();
             return await Task.FromResult(subject);
         }
+        // ThaiNH_add_UpdateMark&UserProfile_Begin
+        public async Task<Subject?> GetSubjectBySubIdAsync(int subjectId)
+        {
+            return await _context.Subjects
+                .Where(s => s.SubjectId == subjectId)
+                .FirstOrDefaultAsync();
+        }
+        // ThaiNH_add_UpdateMark&UserProfile_End
+
     }
-    
-    
+
+
 }

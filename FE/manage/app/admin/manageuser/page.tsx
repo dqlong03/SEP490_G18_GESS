@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Search } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useUsers } from '@hooks/admin/manageUserHook';
+import React, { useState } from "react";
+import { Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useUsers } from "@hooks/admin/manageUserHook";
 
 export default function ManageUser() {
   const {
@@ -40,25 +40,27 @@ export default function ManageUser() {
             className="w-full p-3 pl-10 border-none rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
             placeholder="Tìm kiếm người dùng..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         {roleOptions.length > 0 && (
           <select
             className="p-2 border rounded-md"
             value={roleFilter}
-            onChange={e => setRoleFilter(e.target.value)}
+            onChange={(e) => setRoleFilter(e.target.value)}
           >
             <option value="">Tất cả chức vụ</option>
-            {roleOptions.map(role => (
-              <option key={role} value={role}>{role}</option>
+            {roleOptions.map((role) => (
+              <option key={role} value={role}>
+                {role}
+              </option>
             ))}
           </select>
         )}
         <select
           className="p-2 border rounded-md"
           value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
+          onChange={(e) => setStatusFilter(e.target.value)}
         >
           <option value="">Tất cả trạng thái</option>
           <option value="active">Đang hoạt động</option>
@@ -67,7 +69,8 @@ export default function ManageUser() {
       </div>
 
       <div className="mb-4 text-sm text-gray-700">
-        Số lượng người dùng: <span className="font-semibold">{filteredUsers.length}</span>
+        Số lượng người dùng:{" "}
+        <span className="font-semibold">{filteredUsers.length}</span>
       </div>
 
       <div className="overflow-x-auto bg-white shadow-md rounded-lg">
@@ -77,7 +80,9 @@ export default function ManageUser() {
               <th className="px-4 py-2 text-left">Mã NV</th>
               <th className="px-4 py-2 text-left">Tên đăng nhập</th>
               <th className="px-4 py-2 text-left">Email</th>
-              {roleOptions.length > 0 && <th className="px-4 py-2 text-left">Chức vụ</th>}
+              {roleOptions.length > 0 && (
+                <th className="px-4 py-2 text-left">Chức vụ</th>
+              )}
               <th className="px-4 py-2 text-left">Trạng thái</th>
             </tr>
           </thead>
@@ -85,27 +90,34 @@ export default function ManageUser() {
             {filteredUsers.map((user, index) => (
               <tr
                 key={user.userId}
-                className={`border-t ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} cursor-pointer hover:bg-gray-200`}
+                className={`border-t ${index % 2 === 0 ? "bg-gray-50" : "bg-white"} cursor-pointer hover:bg-gray-200`}
                 onClick={() => handleRowClick(user.userId)}
               >
-                <td className="px-4 py-2">{user.userId}</td>
+                <td className="px-4 py-2">{user.code}</td>
                 <td className="px-4 py-2">{user.userName}</td>
                 <td className="px-4 py-2">{user.email}</td>
-                {roleOptions.length > 0 && <td className="px-4 py-2">{user.role}</td>}
+                {roleOptions.length > 0 && (
+                  <td className="px-4 py-2">{user.role}</td>
+                )}
                 <td className="px-4 py-2">
                   <span
                     className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                      user.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
+                      user.isActive
+                        ? "bg-green-100 text-green-700"
+                        : "bg-gray-200 text-gray-600"
                     }`}
                   >
-                    {user.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}
+                    {user.isActive ? "Đang hoạt động" : "Ngừng hoạt động"}
                   </span>
                 </td>
               </tr>
             ))}
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={roleOptions.length > 0 ? 5 : 4} className="text-center py-4 text-gray-500">
+                <td
+                  colSpan={roleOptions.length > 0 ? 5 : 4}
+                  className="text-center py-4 text-gray-500"
+                >
                   Không có người dùng nào.
                 </td>
               </tr>

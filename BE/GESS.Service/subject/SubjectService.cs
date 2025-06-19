@@ -147,6 +147,20 @@ namespace GESS.Service.subject
             };
             return subjectDto;
         }
+
+        // ThaiNH_add_UpdateMark&UserProfile_Begin
+        public async Task<SubjectDTO> GetSubjectBySubIdAsync(int subjectId)
+        {
+            var subject = await _unitOfWork.SubjectRepository.GetSubjectBySubIdAsync(subjectId);
+            if (subject == null) return null;
+
+            return new SubjectDTO
+            {
+                SubjectName = subject.SubjectName,
+                Course = subject.Course
+            };
+        }
+        // ThaiNH_add_UpdateMark&UserProfile_End
     }
 
 }
