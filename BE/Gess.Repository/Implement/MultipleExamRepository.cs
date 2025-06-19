@@ -47,7 +47,7 @@ namespace GESS.Repository.Implement
                     {
                         ChapterId = noQuestion.ChapterId,
                         NumberQuestion = noQuestion.NumberQuestion,
-                        LevelId = noQuestion.LevelId,
+                        LevelQuestionId = noQuestion.LevelQuestionId,
                     });
                 }
                 await _context.SaveChangesAsync();

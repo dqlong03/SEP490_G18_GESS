@@ -23,7 +23,7 @@ namespace GESS.Entity.Entities
         // Khóa ngoại liên kết đến kỳ thi trắc nghiệm (MultiExam)
         public int MultiExamId { get; set; }
         public MultiExam MultiExam { get; set; }
-        public int LevelId { get; set; }
+        public int LevelQuestionId { get; set; }
         public LevelQuestion LevelQuestion { get; set; }
 
         // Số lượng câu hỏi từ chương này trong kỳ thi, không được để trống
