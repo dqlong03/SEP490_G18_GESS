@@ -216,6 +216,42 @@ namespace GESS.Repository.Implement
                 .ToListAsync();
         }
 
+        public async Task<PracticeExamPaperDetailDTO> GetExamPaperDetailAsync(int examPaperId)
+        {
+            var examPaper = await _context.PracticeExamPapers
+                .Include(x => x.Subject)
+                .Include(x => x.Semester)
+                .Include(x => x.CategoryExam)
+                .Include(x => x.PracticeTestQuestions)
+                    .ThenInclude(ptq => ptq.PracticeQuestion)
+                        .ThenInclude(pq => pq.PracticeAnswer)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.PracExamPaperId == examPaperId);
+
+            if (examPaper == null)
+                throw new Exception("Không tìm thấy đề thi.");
+
+            return new PracticeExamPaperDetailDTO
+            {
+                PracExamPaperId = examPaper.PracExamPaperId,
+                PracExamPaperName = examPaper.PracExamPaperName,
+                CreateAt = examPaper.CreateAt,
+                SubjectName = examPaper.Subject?.SubjectName ?? "N/A",
+                SemesterName = examPaper.Semester?.SemesterName ?? "N/A",
+                CategoryExamName = examPaper.CategoryExam?.CategoryExamName ?? "N/A",
+                Status = examPaper.Status,
+                Questions = examPaper.PracticeTestQuestions
+                    .OrderBy(q => q.QuestionOrder)
+                    .Select(q => new PracticeExamQuestionDetailDTO
+                    {
+                        QuestionOrder = q.QuestionOrder,
+                        Content = q.PracticeQuestion.Content,
+                        AnswerContent = q.PracticeQuestion.PracticeAnswer?.AnswerContent,
+                        Score = q.Score
+                    })
+                    .ToList()
+            };
+        }
 
 
 

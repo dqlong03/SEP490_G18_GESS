@@ -30,6 +30,8 @@ namespace GESS.Repository.Interface
         Task<List<ListPracticeQuestion>> GetPracticeQuestionsAsync(Guid teacherId);
         Task<List<ListPracticeQuestion>> GetPublicPracticeQuestionsAsync(string? search = null, int? levelQuestionId = null);
         Task<List<ListPracticeQuestion>> GetPrivatePracticeQuestionsAsync(Guid teacherId, string? search = null, int? levelQuestionId = null);
+        Task<PracticeExamPaperDetailDTO> GetExamPaperDetailAsync(int examPaperId);
+
 
 
     }
