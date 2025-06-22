@@ -1,5 +1,6 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Entities;
+using GESS.Model.SemestersDTO;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,5 +14,11 @@ namespace GESS.Repository.Interface
     {
         Task<IEnumerable<Semester>> GetAllAsync(Expression<Func<Semester, bool>> filter);
 
+        // ThaiNH_Add_ManageSemester&ManageRoom_Begin
+        Task<List<SemesterListDTO>> GetAllChooseSemesterAsync();
+        Task AddRangeAsync(List<Semester> entities);
+        Task UpdateRangeAsync(List<Semester> entities);
+        Task<List<Semester>> GetAllEntitiesAsync();
+        // ThaiNH_Add_ManageSemester&ManageRoom_End
     }
 }
