@@ -44,6 +44,7 @@ using GESS.Service.trainingProgram;
 using GESS.Service.examination;
 using GESS.Service.student;
 using GESS.Service.exam;
+using GESS.Service.room;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -148,6 +149,8 @@ builder.Services.AddScoped<ICateExamSubService, CateExamSubService>();
 builder.Services.AddScoped<ISemestersService, SemestersService>();
 builder.Services.AddScoped<IPracticeExamPaperService, PracticeExamPaperService>();
 builder.Services.AddScoped<IPracticeQuestionService, PracticeQuestionService>();  
+builder.Services.AddScoped<IRoomRepository, RoomRepository>();
+builder.Services.AddScoped<IRoomService, RoomService>();  
 
 // Đăng ký các repository
 

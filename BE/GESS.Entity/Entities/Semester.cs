@@ -21,13 +21,9 @@ namespace GESS.Entity.Entities
         [StringLength(50, ErrorMessage = "Tên học kỳ không được vượt quá 50 ký tự!")]
         public string SemesterName { get; set; }
 
-        // Ngày bắt đầu học kỳ, không được để trống
-        [Required(ErrorMessage = "Ngày bắt đầu không được để trống!")]
-        public DateTime StartDate { get; set; }
+        [Column(TypeName = "BIT")]
 
-        // Ngày kết thúc học kỳ, không được để trống
-        [Required(ErrorMessage = "Ngày kết thúc không được để trống!")]
-        public DateTime EndDate { get; set; }
+        public bool IsActive { get; set; }
 
         // Danh sách lớp học trong học kỳ này
         public ICollection<Class> Classes { get; set; }

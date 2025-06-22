@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace GESS.Model.SemestersDTO
 {
-    public class SemesterListDTO
+    public class SemesterUpdateDTO
     {
-        public int SemesterId { get; set; }
-        public string SemesterName { get; set; } = string.Empty;
+        public List<SemesterListDTO> Semesters { get; set; } = new();
+
     }
 }
