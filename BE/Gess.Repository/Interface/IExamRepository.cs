@@ -22,6 +22,8 @@ namespace GESS.Repository.Interface
 
         Task<bool> UpdatePracticeExamAsync(PracticeExamUpdateDTO dto);
         Task<bool> UpdateMultiExamAsync(MultiExamUpdateDTO dto);
+        Task<List<ExamListOfStudentResponse>> GetAllMultiExamOfStudentAsync(ExamFilterRequest request);
+        Task<List<ExamListOfStudentResponse>> GetAllPracExamOfStudentAsync(ExamFilterRequest request);
     }
 
 }

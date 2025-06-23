@@ -40,6 +40,16 @@ namespace GESS.Service.exam
 
         public Task<bool> UpdateMultiExamAsync(MultiExamUpdateDTO dto)
                => _unitOfWork.ExamRepository.UpdateMultiExamAsync(dto);
+
+        public async Task<List<ExamListOfStudentResponse>> GetAllMultiExamOfStudentAsync(ExamFilterRequest request)
+        {
+            return await _unitOfWork.ExamRepository.GetAllMultiExamOfStudentAsync(request);
+        }
+
+        public async Task<List<ExamListOfStudentResponse>> GetAllPracExamOfStudentAsync(ExamFilterRequest request)
+        {
+            return await _unitOfWork.ExamRepository.GetAllPracExamOfStudentAsync(request);
+        }
     }
 
 }

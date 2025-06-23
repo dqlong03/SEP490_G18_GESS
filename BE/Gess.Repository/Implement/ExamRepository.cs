@@ -120,6 +120,133 @@ namespace GESS.Repository.Implement
             return true;
         }
 
+        public async Task<List<ExamListOfStudentResponse>> GetAllMultiExamOfStudentAsync(ExamFilterRequest request)
+        {
+            // Lấy năm mới nhất từ CreateAt của MultiExam
+            var latestYear = await _context.MultiExams
+                .MaxAsync(me => (int?)me.CreateAt.Year) ?? DateTime.Now.Year;
 
+            var query = _context.MultiExams
+                .Where(me => me.CreateAt.Year == latestYear
+                    && me.Status == "Draft") // Chỉ lấy bài thi chưa thi trong năm mới nhất
+                .Join(_context.Subjects,
+                    me => me.SubjectId,
+                    s => s.SubjectId,
+                    (me, s) => new { MultiExam = me, SubjectName = s.SubjectName })
+                .GroupJoin(_context.ExamSlotRooms,
+                    x => x.MultiExam.MultiExamId,
+                    esr => esr.ExamId,
+                    (x, esr) => new { x.MultiExam, x.SubjectName, ExamSlotRooms = esr })
+                .SelectMany(x => x.ExamSlotRooms.DefaultIfEmpty(),
+                    (x, esr) => new { x.MultiExam, x.SubjectName, ExamSlotRoom = esr })
+                .GroupJoin(_context.ExamSlots,
+                    x => x.ExamSlotRoom != null ? x.ExamSlotRoom.ExamSlotId : 0,
+                    es => es.ExamSlotId,
+                    (x, es) => new { x.MultiExam, x.SubjectName, x.ExamSlotRoom, ExamSlots = es })
+                .SelectMany(x => x.ExamSlots.DefaultIfEmpty(),
+                    (x, es) => new { x.MultiExam, x.SubjectName, x.ExamSlotRoom, ExamSlot = es })
+                .GroupJoin(_context.Rooms,
+                    x => x.ExamSlotRoom != null ? x.ExamSlotRoom.RoomId : 0,
+                    r => r.RoomId,
+                    (x, r) => new { x.MultiExam, x.SubjectName, x.ExamSlotRoom, x.ExamSlot, Rooms = r })
+                .SelectMany(x => x.Rooms.DefaultIfEmpty(),
+                    (x, r) => new MultiExamListOfStudentResponse
+                    {
+                        MultiExamId = x.MultiExam.MultiExamId,
+                        MultiExamName = x.MultiExam.MultiExamName,
+                        SubjectName = x.SubjectName,
+                        Duration = x.MultiExam.Duration,
+                        Status = x.MultiExam.Status,
+                        CodeStart = x.MultiExam.CodeStart,
+                        RoomName = r != null ? r.RoomName : null,
+                        ExamSlotName = x.ExamSlot != null ? x.ExamSlot.StartTime : default,
+                        StartTime = x.ExamSlot != null ? x.ExamSlot.StartTime : default,
+                        EndTime = x.ExamSlot != null ? x.ExamSlot.EndTime : default,
+                        ExamSlotRoom = x.ExamSlotRoom
+                    });
+
+            // Áp dụng bộ lọc tìm kiếm theo tên bài thi
+            if (!string.IsNullOrEmpty(request.SearchName))
+            {
+                query = query.Where(me => me.MultiExamName.Contains(request.SearchName));
+            }
+
+            // Áp dụng phân trang
+            query = query
+                .Skip((request.PageNumber - 1) * request.PageSize)
+                .Take(request.PageSize);
+
+            return await query.ToListAsync();
+        }
+    }
+
+        public async Task<List<ExamListOfStudentResponse>> GetAllPracExamOfStudentAsync(ExamFilterRequest request)
+        {
+            var latestSemester = await _context.Semesters
+                            .OrderByDescending(s => s.StartDate)
+                            .FirstOrDefaultAsync(); 
+
+            if (latestSemester == null)
+                return new List<ExamListOfStudentResponse>();
+
+            var query = _context.PracticeExams
+                .Where(me => me.SemesterId == latestSemester.SemesterId
+                    && (me.Status == "Draft" || me.Status == "Published"))
+               // Lọc bài thi của sinh viên qua bảng MultiExamHistory hoặc bảng liên quan
+               //.Join(_context.MultiExamHistories,
+               //    me => me.MultiExamId,
+               //    meh => meh.MultiExamId,
+               //    (me, meh) => new { MultiExam = me, MultiExamHistory = meh })
+               //.Where(x => x.MultiExamHistory.StudentId == request.StudentId)
+               .Join(_context.Subjects,
+                    me => me.SubjectId,
+                    s => s.SubjectId,
+                    (me, s) => new { PracticeExam = me, SubjectName = s.SubjectName })
+               .GroupJoin(_context.ExamSlotRooms,
+                    x => x.PracticeExam.PracExamId,
+                    esr => esr.ExamId,
+                    (x, esr) => new { x.PracticeExam, x.SubjectName, ExamSlotRooms = esr })
+                .SelectMany(x => x.ExamSlotRooms.DefaultIfEmpty(),
+                    (x, esr) => new { x.PracticeExam, x.SubjectName, ExamSlotRoom = esr })
+                .GroupJoin(_context.ExamSlots,
+                    x => x.ExamSlotRoom != null ? x.ExamSlotRoom.ExamSlotId : 0,
+                    es => es.ExamSlotId,
+                    (x, es) => new { x.PracticeExam, x.SubjectName, x.ExamSlotRoom, ExamSlots = es })
+                .SelectMany(x => x.ExamSlots.DefaultIfEmpty(),
+                    (x, es) => new { x.PracticeExam, x.SubjectName, x.ExamSlotRoom, ExamSlot = es })
+                .GroupJoin(_context.Rooms,
+                    x => x.ExamSlotRoom != null ? x.ExamSlotRoom.RoomId : 0,
+                    r => r.RoomId,
+                    (x, r) => new { x.PracticeExam, x.SubjectName, x.ExamSlotRoom, x.ExamSlot, Rooms = r })
+                .SelectMany(x => x.Rooms.DefaultIfEmpty(),
+                    (x, r) => new ExamListOfStudentResponse
+                    {
+                        ExamId = x.PracticeExam.PracExamId,
+                        ExamName = x.PracticeExam.PracExamName,
+                        SubjectName = x.SubjectName,
+                        Duration = x.PracticeExam.Duration,
+                        Status = x.PracticeExam.Status,
+                        CodeStart = x.PracticeExam.CodeStart,
+                        RoomName = r != null ? r.RoomName : null,
+                        ExamSlotName = x.ExamSlot != null ? x.ExamSlot.StartTime : default,
+                        StartTime = x.ExamSlot != null ? x.ExamSlot.StartTime : default,
+                        EndTime = x.ExamSlot != null ? x.ExamSlot.EndTime : default,
+                        ExamSlotRoom = x.ExamSlotRoom
+                    });
+
+
+            // Áp dụng bộ lọc tìm kiếm theo tên bài thi
+            if (!string.IsNullOrEmpty(request.SearchName))
+            {
+                query = query.Where(me => me.ExamName.Contains(request.SearchName));
+            }
+
+            // Áp dụng phân trang
+            query = query
+                .Skip((request.PageNumber - 1) * request.PageSize)
+                .Take(request.PageSize);
+
+            return await query.ToListAsync();
+        }
     }
 }
