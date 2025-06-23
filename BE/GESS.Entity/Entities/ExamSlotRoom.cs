@@ -56,10 +56,14 @@ namespace GESS.Entity.Entities
         // Lịch sử thi của sinh viên trong phòng/ca này (qua bảng trung gian MultiExamHistory)
         public ICollection<MultiExamHistory> MultiExamHistories { get; set; }
 
+        // Lịch sử thi tự luận của sinh viên trong phòng/ca này (qua bảng trung gian PracticeExamHistory)
+        public ICollection<PracticeExamHistory> PracticeExamHistories { get; set; }
+
         // Constructor khởi tạo danh sách
         public ExamSlotRoom()
         {
             MultiExamHistories = new List<MultiExamHistory>();
+            PracticeExamHistories = new List<PracticeExamHistory>();
         }
     }
 }

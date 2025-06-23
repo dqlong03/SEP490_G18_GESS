@@ -24,6 +24,16 @@ namespace GESS.Entity.Configs
             builder.HasMany(c => c.ClassStudents)
                    .WithOne(cs => cs.Class)
                    .HasForeignKey(cs => cs.ClassId);
+
+            builder.HasMany(c => c.MultiExams)
+                   .WithOne(me => me.Class)
+                   .HasForeignKey(me => me.ClassId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasMany(c => c.PracticeExams)
+                   .WithOne(pe => pe.Class)
+                   .HasForeignKey(pe => pe.ClassId)
+                   .OnDelete(DeleteBehavior.Restrict);
         }
     }
 } 

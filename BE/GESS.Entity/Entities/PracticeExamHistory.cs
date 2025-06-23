@@ -30,9 +30,11 @@ namespace GESS.Entity.Entities
         // Trạng thái chấm điểm (true = đã chấm, false = chưa chấm)
         [Column(TypeName = "BIT")]
         public bool IsGraded { get; set; }
+        
         // Khóa ngoại liên kết đến phòng thi và ca thi (ExamSlotRoom) - có thể null
         public int? ExamSlotRoomId { get; set; }
         public ExamSlotRoom? ExamSlotRoom { get; set; }
+        
         // Khóa ngoại liên kết đến kỳ thi tự luận (PracticeExam)
         public int PracExamId { get; set; }
         public PracticeExam PracticeExam { get; set; }
