@@ -16,7 +16,7 @@ namespace GESS.Api.Controllers
     {
 
         private readonly IPracticeExamPaperService _practiceExamPaperService;
-        private readonly  ICategoryExamService _categoryExamService;
+        private readonly ICategoryExamService _categoryExamService;
         private readonly ISubjectService _subjectService;
         private readonly ISemestersService _semesterService;
         public PracticeExamPaperController(IPracticeExamPaperService practiceExamPaperService, ICategoryExamService categoryExamService, ISubjectService subjectService, ISemestersService semestersService)
@@ -50,7 +50,7 @@ namespace GESS.Api.Controllers
         //API tổng số trang
         [HttpGet("CountPages")]
 
-        public async Task<IActionResult> CountPages(string? name = null,int? subjectId = null,int? semesterId = null,int? categoryExamId = null, int pageSize = 5
+        public async Task<IActionResult> CountPages(string? name = null, int? subjectId = null, int? semesterId = null, int? categoryExamId = null, int pageSize = 5
 )
         {
             try
@@ -59,8 +59,8 @@ namespace GESS.Api.Controllers
 
                 var totalPages = await _practiceExamPaperService.CountPageAsync(name, subjectId, semesterId, categoryExamId, pageSize);
                 return Ok(
-               
-                  
+
+
                  totalPages
                 );
             }
@@ -74,7 +74,7 @@ namespace GESS.Api.Controllers
             }
         }
 
-        
+
         //API to get category by subjectId
         [HttpGet("category/{subjectId}")]
         public async Task<ActionResult<IEnumerable<CategoryExamDTO>>> GetCategoriesBySubjectId(int subjectId)
@@ -112,7 +112,7 @@ namespace GESS.Api.Controllers
                 return NotFound(ex.Message);
             }
         }
-          // API lấy ra kỳ hiện tại
+        // API lấy ra kỳ hiện tại
         [HttpGet("GetCurrentSemester")]
         public async Task<IActionResult> GetCurrentSemester()
         {
@@ -180,6 +180,24 @@ namespace GESS.Api.Controllers
             }
             return Ok(result);
         }
+        //API chi tiết đề thi
+        [HttpGet("DetailExamPaper/{examPaperId}")]
+        public async Task<IActionResult> DetailExamPaper(int examPaperId)
+        {
+            try
+            {
+                var result = await _practiceExamPaperService.GetExamPaperDetailAsync(examPaperId);
+                if (result == null)
+                {
+                    return NotFound("Không tìm thấy đề thi với ID đã cho.");
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, $"Lỗi khi lấy chi tiết đề thi: {ex.Message}");
+            }
 
+        }
     }
 }

@@ -28,6 +28,8 @@ namespace GESS.Service.practiceExamPaper
         Task<List<ListPracticeQuestion>> GetPracticeQuestionsByTeacherAsync(Guid teacherId);
         Task<List<ListPracticeQuestion>> GetPublicPracticeQuestionsAsync(string? search = null, int? levelQuestionId = null);
         Task<List<ListPracticeQuestion>> GetPrivatePracticeQuestionsAsync(Guid teacherId, string? search = null, int? levelQuestionId = null);
+        Task<PracticeExamPaperDetailDTO> GetExamPaperDetailAsync(int examPaperId);
+
     }
 
 }

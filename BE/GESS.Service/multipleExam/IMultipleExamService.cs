@@ -13,5 +13,9 @@ namespace GESS.Service.multipleExam
     public interface IMultipleExamService : IBaseService<MultiExam>
     {
         Task<MultipleExamCreateDTO> CreateMultipleExamAsync(MultipleExamCreateDTO multipleExamCreateDto);
+        Task<ExamInfoResponseDTO> CheckExamNameAndCodeMEAsync(CheckExamRequestDTO request);
+        Task<UpdateMultiExamProgressResponseDTO> UpdateProgressAsync(UpdateMultiExamProgressDTO dto);
+        Task<UpdateMultiExamProgressResponseDTO> SubmitExamAsync(UpdateMultiExamProgressDTO dto);
+
     }
 }

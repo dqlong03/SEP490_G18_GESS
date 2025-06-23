@@ -19,6 +19,11 @@ namespace GESS.Entity.Configs
                    .HasForeignKey(peh => peh.PracExamId)
                    .OnDelete(DeleteBehavior.Restrict);
 
+            builder.HasOne(peh => peh.ExamSlotRoom)
+                   .WithMany(esr => esr.PracticeExamHistories)
+                   .HasForeignKey(peh => peh.ExamSlotRoomId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
             builder.HasMany(peh => peh.QuestionPracExams)
                    .WithOne(qpe => qpe.PracticeExamHistory)
                    .HasForeignKey(qpe => qpe.PracExamHistoryId)

@@ -57,6 +57,10 @@ namespace GESS.Entity.Entities
         public int SemesterId { get; set; }
         public Semester Semester { get; set; }
 
+        // Khóa ngoại liên kết đến lớp học (Class), 1 kỳ thi thuộc 1 lớp học
+        public int ClassId { get; set; }
+        public Class Class { get; set; }
+
         // Trạng thái công khai của kỳ thi (true = công khai, false = không công khai)
         [Column(TypeName = "BIT")]
         public bool IsPublish { get; set; }

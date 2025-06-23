@@ -13,5 +13,9 @@ namespace GESS.Repository.Interface
     public interface IMultipleExamRepository : IBaseRepository<MultiExam>
     {
         Task <MultiExam>CreateMultipleExamAsync(MultipleExamCreateDTO multipleExamCreateDto);
+        //
+        Task<ExamInfoResponseDTO> CheckAndPrepareExamAsync(int examId, string code, Guid studentId);
+        Task<UpdateMultiExamProgressResponseDTO> UpdateProgressAsync(UpdateMultiExamProgressDTO dto);
+        Task<UpdateMultiExamProgressResponseDTO> SubmitExamAsync(UpdateMultiExamProgressDTO dto);
     }
 }

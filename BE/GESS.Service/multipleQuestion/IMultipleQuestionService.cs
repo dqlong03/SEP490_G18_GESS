@@ -16,5 +16,6 @@ namespace GESS.Service.multipleQuestion
         Task<IEnumerable<MultipleQuestionListDTO>> GetAllMultipleQuestionsAsync();
         Task<int> GetQuestionCount(int? chapterId, int? categoryId, int? levelId, bool? isPublic, Guid? createdBy);
         Task<MultipleQuestionCreateDTO> MultipleQuestionCreateAsync(MultipleQuestionCreateDTO multipleQuestionCreateDTO);
+        Task<List<QuestionMultiExamSimpleDTO>> GetAllQuestionMultiExamByMultiExamIdAsync(int multiExamId);
     }
 }

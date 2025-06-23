@@ -8,7 +8,7 @@ namespace GESS.Entity.Configs
     {
         public void Configure(EntityTypeBuilder<NoQuestionInChapter> builder)
         {
-            builder.HasKey(nq => new { nq.ChapterId, nq.MultiExamId });
+            builder.HasKey(nq => nq.NoQuesInChapId);
 
             builder.HasOne(nq => nq.Chapter)
                 .WithMany(c => c.NoQuestionInChapters)
