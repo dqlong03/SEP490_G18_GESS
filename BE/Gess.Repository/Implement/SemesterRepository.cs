@@ -1,6 +1,7 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
+using GESS.Model.SemestersDTO;
 using GESS.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -23,6 +24,32 @@ namespace GESS.Repository.Implement
         public async Task<IEnumerable<Semester>> GetAllAsync(Expression<Func<Semester, bool>> filter)
         {
             return await _context.Semesters.Where(filter).ToListAsync();
+        }
+
+        public async Task<List<SemesterListDTO>> GetAllChooseSemesterAsync()
+        {
+            return await _context.Semesters
+                .Where(s => s.IsActive == true)
+                .Select(s => new SemesterListDTO
+                {
+                    SemesterId = s.SemesterId,
+                    SemesterName = s.SemesterName
+                }).ToListAsync();
+        }
+
+        public async Task AddRangeAsync(List<Semester> entities)
+        {
+            await _context.Semesters.AddRangeAsync(entities);
+        }
+
+        public async Task UpdateRangeAsync(List<Semester> entities)
+        {
+            _context.Semesters.UpdateRange(entities);
+        }
+
+        public async Task<List<Semester>> GetAllEntitiesAsync()
+        {
+            return await _context.Semesters.ToListAsync();
         }
 
     }

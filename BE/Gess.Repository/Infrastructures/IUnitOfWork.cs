@@ -47,6 +47,7 @@ namespace Gess.Repository.Infrastructures
         IPracticeQuestionsRepository PracticeQuestionsRepository { get; }
         ILevelQuestionRepository LevelQuestionRepository { get; }
         // ThaiNH_Initialize_Begin
+        IRoomRepository RoomRepository { get; }
         ICateExamSubRepository CateExamSubRepository { get; }
         // ThaiNH_Initialize_End
         IPracticeAnswersRepository PracticeAnswersRepository { get; }

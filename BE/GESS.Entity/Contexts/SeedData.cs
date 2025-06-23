@@ -26,7 +26,11 @@ namespace GESS.Entity.Contexts
                 await SeedRolesAsync(roleManager);
                 await SeedUsersAsync(userManager);
                 await SeedMajorsAsync(context);
-                await SeedSemestersAsync(context);
+                //await SeedSubjectsAsync(context);
+
+        // ThaiNH_Modified_ManageSemester&ManageRoom_Begin
+                //await SeedSemestersAsync(context);
+                // ThaiNH_Modified_ManageSemester&ManageRoom_End
                 await SeedCohortsAsync(context);
 
                 // 2. Tạo dữ liệu CategoryExam và Subject (cần thiết cho nhiều bảng khác)
@@ -174,29 +178,33 @@ namespace GESS.Entity.Contexts
             }
         }
 
+        // ThaiNH_Modified_ManageSemester&ManageRoom_Begin
         private static async Task SeedSemestersAsync(GessDbContext context)
         {
             if (!context.Semesters.Any())
             {
                 var semesters = new List<Semester>
                 {
-                    new Semester 
-                    { 
+                    new Semester
+                    {
                         SemesterName = "Học kỳ 1 năm 2023-2024",
-                        StartDate = new DateTime(2023, 9, 1),
-                        EndDate = new DateTime(2024, 1, 15)
+                        IsActive = true
+                        //StartDate = new DateTime(2023, 9, 1),
+                        //EndDate = new DateTime(2024, 1, 15)
                     },
-                    new Semester 
-                    { 
+                    new Semester
+                    {
                         SemesterName = "Học kỳ 2 năm 2023-2024",
-                        StartDate = new DateTime(2024, 2, 1),
-                        EndDate = new DateTime(2024, 6, 15)
+                        IsActive = true
+                        //StartDate = new DateTime(2024, 2, 1),
+                        //EndDate = new DateTime(2024, 6, 15)
                     }
                 };
                 await context.Semesters.AddRangeAsync(semesters);
                 await context.SaveChangesAsync();
             }
         }
+        // ThaiNH_Modified_ManageSemester&ManageRoom_End
 
         private static async Task SeedSubjectsAsync(GessDbContext context)
         {
