@@ -68,6 +68,11 @@ namespace GESS.Service.multipleQuestion
             }
             return dto;
         }
+
+        public async Task<List<QuestionMultiExamSimpleDTO>> GetAllQuestionMultiExamByMultiExamIdAsync(int multiExamId)
+        {
+            return await _unitOfWork.MultipleQuestionRepository.GetAllQuestionMultiExamByMultiExamIdAsync(multiExamId);
+        }
     }
 
 }

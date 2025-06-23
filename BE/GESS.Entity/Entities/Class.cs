@@ -36,10 +36,18 @@ namespace GESS.Entity.Entities
         // Danh sách sinh viên trong lớp học này (qua bảng trung gian ClassStudent)
         public ICollection<ClassStudent> ClassStudents { get; set; }
 
+        // Danh sách kỳ thi trắc nghiệm thuộc lớp học này (1 lớp có thể có nhiều kỳ thi trắc nghiệm)
+        public ICollection<MultiExam> MultiExams { get; set; }
+
+        // Danh sách kỳ thi tự luận thuộc lớp học này (1 lớp có thể có nhiều kỳ thi tự luận)
+        public ICollection<PracticeExam> PracticeExams { get; set; }
+
         // Constructor khởi tạo danh sách
         public Class()
         {
             ClassStudents = new List<ClassStudent>();
+            MultiExams = new List<MultiExam>();
+            PracticeExams = new List<PracticeExam>();
         }
     }
 

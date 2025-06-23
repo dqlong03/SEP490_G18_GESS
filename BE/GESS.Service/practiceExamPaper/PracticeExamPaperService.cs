@@ -116,6 +116,11 @@ namespace GESS.Service.practiceExamPaper
         {
             return await _unitOfWork.PracticeExamPaperRepository.GetPrivatePracticeQuestionsAsync(teacherId, search, levelQuestionId);
         }
+        public async Task<PracticeExamPaperDetailDTO> GetExamPaperDetailAsync(int examPaperId)
+        {
+            return await _unitOfWork.PracticeExamPaperRepository.GetExamPaperDetailAsync(examPaperId);
+        }
+
 
     }
 }

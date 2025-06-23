@@ -82,6 +82,18 @@ namespace GESS.Repository.Implement
             }
 
         }
+
+        public async Task<List<QuestionMultiExamSimpleDTO>> GetAllQuestionMultiExamByMultiExamIdAsync(int multiExamId)
+        {
+            return await _context.QuestionMultiExams
+                .Where(q => q.MultiExamHistory.MultiExamId == multiExamId)
+                .Select(q => new QuestionMultiExamSimpleDTO
+                {
+                    Id = q.MultiQuestionId, 
+                    QuestionOrder = q.QuestionOrder
+                })
+                .ToListAsync();
+        }
     }
 
 

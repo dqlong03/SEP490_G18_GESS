@@ -26,11 +26,7 @@ namespace GESS.Entity.Contexts
                 await SeedRolesAsync(roleManager);
                 await SeedUsersAsync(userManager);
                 await SeedMajorsAsync(context);
-                //await SeedSubjectsAsync(context);
-
-        // ThaiNH_Modified_ManageSemester&ManageRoom_Begin
-                //await SeedSemestersAsync(context);
-                // ThaiNH_Modified_ManageSemester&ManageRoom_End
+                await SeedSemestersAsync(context);
                 await SeedCohortsAsync(context);
 
                 // 2. Tạo dữ liệu CategoryExam và Subject (cần thiết cho nhiều bảng khác)
@@ -47,25 +43,20 @@ namespace GESS.Entity.Contexts
                 // 5. Tạo dữ liệu phụ thuộc vào Class và Student
                 await SeedClassStudentsAsync(context);
 
-                // 6. Tạo dữ liệu cho phần thi tự luận (phụ thuộc vào CategoryExam, Subject, Chapter)
+                // 6. Tạo dữ liệu LevelQuestion (cần thiết cho questions)
+                await SeedLevelQuestionsAsync(context);
+
+                // 7. Tạo dữ liệu cho phần thi tự luận (phụ thuộc vào CategoryExam, Subject, Chapter)
                 await SeedPracticeExamDataAsync(context);
 
-                // 7. Tạo dữ liệu cho phần thi trắc nghiệm (phụ thuộc vào ExamSlot, ExamSlotRoom, FinalExam, PracticeTestQuestion, NoQuestionInChapter, NoPEPaperInPE)
-                await SeedExamSlotsAsync(context);
-                await SeedExamSlotRoomsAsync(context);
-                await SeedFinalExamsAsync(context);
-                await SeedPracticeTestQuestionsAsync(context);
-                await SeedNoQuestionInChaptersAsync(context);
-                await SeedNoPEPaperInPEsAsync(context);
-
-                // 8. Tạo dữ liệu ApplyTrainingProgram
-                await SeedApplyTrainingProgramsAsync(context);
-
-                // 9. Tạo dữ liệu phụ thuộc vào Room
+                // 8. Tạo dữ liệu Rooms (cần thiết cho ExamSlotRoom)
                 await SeedRoomsAsync(context);
 
-                // 10. Tạo dữ liệu phụ thuộc vào LevelQuestion
-                await SeedLevelQuestionsAsync(context);
+                // 9. Tạo dữ liệu TrainingPrograms (cần thiết cho ApplyTrainingProgram)
+                await SeedTrainingProgramsAsync(context);
+
+                // 10. Tạo dữ liệu ApplyTrainingProgram
+                await SeedApplyTrainingProgramsAsync(context);
 
                 // 11. Tạo dữ liệu phụ thuộc vào SubjectTrainingProgram
                 await SeedSubjectTrainingProgramsAsync(context);
@@ -78,6 +69,20 @@ namespace GESS.Entity.Contexts
 
                 // 14. Tạo dữ liệu PracticeExam
                 await SeedPracticeExamsAsync(context);
+
+                // 15. Tạo dữ liệu cho thi trắc nghiệm và tự luận của sinh viên
+                await SeedMultiQuestionsAsync(context);
+                await SeedMultiAnswersAsync(context);
+                await SeedMultiExamHistoriesAsync(context);
+                await SeedQuestionMultiExamsAsync(context);
+                await SeedPracticeExamHistoriesAsync(context);
+                await SeedQuestionPracExamsAsync(context);
+
+                // 16. Tạo dữ liệu cho phần thi trắc nghiệm (phụ thuộc vào ExamSlot, ExamSlotRoom, FinalExam, PracticeTestQuestion, NoQuestionInChapter, NoPEPaperInPE)
+                await SeedExamSlotsAsync(context);
+                await SeedExamSlotRoomsAsync(context);
+                await SeedFinalExamsAsync(context);
+                await SeedNoQuestionInChaptersAsync(context);
             }
             catch (Exception ex)
             {
@@ -178,7 +183,6 @@ namespace GESS.Entity.Contexts
             }
         }
 
-        // ThaiNH_Modified_ManageSemester&ManageRoom_Begin
         private static async Task SeedSemestersAsync(GessDbContext context)
         {
             if (!context.Semesters.Any())
@@ -204,7 +208,6 @@ namespace GESS.Entity.Contexts
                 await context.SaveChangesAsync();
             }
         }
-        // ThaiNH_Modified_ManageSemester&ManageRoom_End
 
         private static async Task SeedSubjectsAsync(GessDbContext context)
         {
@@ -227,25 +230,38 @@ namespace GESS.Entity.Contexts
         {
             if (!context.Chapters.Any())
             {
+                // Kiểm tra dữ liệu cần thiết
+                if (!context.Subjects.Any())
+                {
+                    throw new Exception("No Subjects found. Please seed Subjects first.");
+                }
+                if (!context.Subjects.Any(s => s.SubjectName == "Lập trình C#"))
+                {
+                    throw new Exception("Subject 'Lập trình C#' not found. Please seed Subjects first.");
+                }
+
+                // Lấy SubjectId thực tế từ database
+                var csharpSubject = context.Subjects.First(s => s.SubjectName == "Lập trình C#");
+                
                 var chapters = new List<Chapter>
                 {
                     new Chapter 
                     { 
                         ChapterName = "Chương 1: Giới thiệu C#",
                         Description = "Chương mở đầu về C#",
-                        SubjectId = 1
+                        SubjectId = csharpSubject.SubjectId
                     },
                     new Chapter 
                     { 
                         ChapterName = "Chương 2: Cú pháp cơ bản",
                         Description = "Chương về cú pháp cơ bản C#",
-                        SubjectId = 1
+                        SubjectId = csharpSubject.SubjectId
                     },
                     new Chapter 
                     { 
                         ChapterName = "Chương 3: Lập trình hướng đối tượng",
                         Description = "Chương về OOP trong C#",
-                        SubjectId = 1
+                        SubjectId = csharpSubject.SubjectId
                     }
                 };
                 await context.Chapters.AddRangeAsync(chapters);
@@ -257,28 +273,56 @@ namespace GESS.Entity.Contexts
         {
             if (!context.Classes.Any())
             {
+                // Kiểm tra dữ liệu cần thiết
+                if (!context.Semesters.Any())
+                {
+                    throw new Exception("No Semesters found. Please seed Semesters first.");
+                }
+                if (!context.Subjects.Any())
+                {
+                    throw new Exception("No Subjects found. Please seed Subjects first.");
+                }
+                if (!context.Users.Any(u => u.Email == "teacher1@example.com"))
+                {
+                    throw new Exception("Teacher1 not found. Please seed Users first.");
+                }
+                if (!context.Users.Any(u => u.Email == "teacher2@example.com"))
+                {
+                    throw new Exception("Teacher2 not found. Please seed Users first.");
+                }
+                if (!context.Users.Any(u => u.Email == "teacher3@example.com"))
+                {
+                    throw new Exception("Teacher3 not found. Please seed Users first.");
+                }
+
+                // Lấy ID thực tế từ database
+                var semester = context.Semesters.First();
+                var subject1 = context.Subjects.First(s => s.SubjectName == "Lập trình C#");
+                var subject2 = context.Subjects.First(s => s.SubjectName == "Cơ sở dữ liệu");
+                var subject3 = context.Subjects.First(s => s.SubjectName == "Mạng máy tính");
+                
                 var classes = new List<Class>
                 {
                     new Class 
                     { 
                         ClassName = "Lập trình C# - Nhóm 1",
-                        SubjectId = 1,
+                        SubjectId = subject1.SubjectId,
                         TeacherId = context.Users.First(u => u.Email == "teacher1@example.com").Id,
-                        SemesterId = 1
+                        SemesterId = semester.SemesterId
                     },
                     new Class 
                     { 
                         ClassName = "Cơ sở dữ liệu - Nhóm 1",
-                        SubjectId = 2,
+                        SubjectId = subject2.SubjectId,
                         TeacherId = context.Users.First(u => u.Email == "teacher2@example.com").Id,
-                        SemesterId = 1
+                        SemesterId = semester.SemesterId
                     },
                     new Class 
                     { 
                         ClassName = "Mạng máy tính - Nhóm 1",
-                        SubjectId = 3,
+                        SubjectId = subject3.SubjectId,
                         TeacherId = context.Users.First(u => u.Email == "teacher3@example.com").Id,
-                        SemesterId = 1
+                        SemesterId = semester.SemesterId
                     }
                 };
                 await context.Classes.AddRangeAsync(classes);
@@ -290,6 +334,37 @@ namespace GESS.Entity.Contexts
         {
             if (!context.Teachers.Any())
             {
+                // Kiểm tra dữ liệu cần thiết
+                if (!context.Majors.Any())
+                {
+                    throw new Exception("No Majors found. Please seed Majors first.");
+                }
+                if (!context.Users.Any(u => u.Email == "teacher1@example.com"))
+                {
+                    throw new Exception("Teacher1 not found. Please seed Users first.");
+                }
+                if (!context.Users.Any(u => u.Email == "teacher2@example.com"))
+                {
+                    throw new Exception("Teacher2 not found. Please seed Users first.");
+                }
+                if (!context.Users.Any(u => u.Email == "teacher3@example.com"))
+                {
+                    throw new Exception("Teacher3 not found. Please seed Users first.");
+                }
+                if (!context.Users.Any(u => u.Email == "teacher4@example.com"))
+                {
+                    throw new Exception("Teacher4 not found. Please seed Users first.");
+                }
+                if (!context.Users.Any(u => u.Email == "teacher5@example.com"))
+                {
+                    throw new Exception("Teacher5 not found. Please seed Users first.");
+                }
+
+                // Lấy MajorId thực tế từ database
+                var majorCNTT = context.Majors.First(m => m.MajorName == "CNTT");
+                var majorDienTu = context.Majors.First(m => m.MajorName == "Điện tử");
+                var majorCoKhi = context.Majors.First(m => m.MajorName == "Cơ khí");
+                
                 var teachers = new List<Teacher>
                 {
                     new Teacher 
@@ -297,35 +372,35 @@ namespace GESS.Entity.Contexts
                         TeacherId = context.Users.First(u => u.Email == "teacher1@example.com").Id,
                         UserId = context.Users.First(u => u.Email == "teacher1@example.com").Id,
                         HireDate = new DateTime(2020, 9, 1),
-                        MajorId = 1 // Công nghệ thông tin
+                        MajorId = majorCNTT.MajorId
                     },
                     new Teacher 
                     { 
                         TeacherId = context.Users.First(u => u.Email == "teacher2@example.com").Id,
                         UserId = context.Users.First(u => u.Email == "teacher2@example.com").Id,
                         HireDate = new DateTime(2021, 9, 1),
-                        MajorId = 1 // Công nghệ thông tin
+                        MajorId = majorCNTT.MajorId
                     },
                     new Teacher 
                     { 
                         TeacherId = context.Users.First(u => u.Email == "teacher3@example.com").Id,
                         UserId = context.Users.First(u => u.Email == "teacher3@example.com").Id,
                         HireDate = new DateTime(2022, 9, 1),
-                        MajorId = 2 // Kỹ thuật điện
+                        MajorId = majorDienTu.MajorId
                     },
                     new Teacher 
                     { 
                         TeacherId = context.Users.First(u => u.Email == "teacher4@example.com").Id,
                         UserId = context.Users.First(u => u.Email == "teacher4@example.com").Id,
                         HireDate = new DateTime(2023, 9, 1),
-                        MajorId = 2 // Kỹ thuật điện
+                        MajorId = majorDienTu.MajorId
                     },
                     new Teacher 
                     { 
                         TeacherId = context.Users.First(u => u.Email == "teacher5@example.com").Id,
                         UserId = context.Users.First(u => u.Email == "teacher5@example.com").Id,
                         HireDate = new DateTime(2023, 9, 1),
-                        MajorId = 3 // Cơ khí
+                        MajorId = majorCoKhi.MajorId
                     }
                 };
                 await context.Teachers.AddRangeAsync(teachers);
@@ -347,7 +422,55 @@ namespace GESS.Entity.Contexts
                         CohortId = cohortId,
                         EnrollDate = new DateTime(2023, 9, 1)
                     },
-                    // ... (lặp lại cho các student khác)
+                    new Student
+                    {
+                        StudentId = context.Users.First(u => u.Email == "student2@example.com").Id,
+                        UserId = context.Users.First(u => u.Email == "student2@example.com").Id,
+                        CohortId = cohortId,
+                        EnrollDate = new DateTime(2023, 9, 1)
+                    },
+                    new Student
+                    {
+                        StudentId = context.Users.First(u => u.Email == "student3@example.com").Id,
+                        UserId = context.Users.First(u => u.Email == "student3@example.com").Id,
+                        CohortId = cohortId,
+                        EnrollDate = new DateTime(2023, 9, 1)
+                    },
+                    new Student
+                    {
+                        StudentId = context.Users.First(u => u.Email == "student4@example.com").Id,
+                        UserId = context.Users.First(u => u.Email == "student4@example.com").Id,
+                        CohortId = cohortId,
+                        EnrollDate = new DateTime(2023, 9, 1)
+                    },
+                    new Student
+                    {
+                        StudentId = context.Users.First(u => u.Email == "student5@example.com").Id,
+                        UserId = context.Users.First(u => u.Email == "student5@example.com").Id,
+                        CohortId = cohortId,
+                        EnrollDate = new DateTime(2023, 9, 1)
+                    },
+                    new Student
+                    {
+                        StudentId = context.Users.First(u => u.Email == "student6@example.com").Id,
+                        UserId = context.Users.First(u => u.Email == "student6@example.com").Id,
+                        CohortId = cohortId,
+                        EnrollDate = new DateTime(2023, 9, 1)
+                    },
+                    new Student
+                    {
+                        StudentId = context.Users.First(u => u.Email == "student7@example.com").Id,
+                        UserId = context.Users.First(u => u.Email == "student7@example.com").Id,
+                        CohortId = cohortId,
+                        EnrollDate = new DateTime(2023, 9, 1)
+                    },
+                    new Student
+                    {
+                        StudentId = context.Users.First(u => u.Email == "student8@example.com").Id,
+                        UserId = context.Users.First(u => u.Email == "student8@example.com").Id,
+                        CohortId = cohortId,
+                        EnrollDate = new DateTime(2023, 9, 1)
+                    }
                 };
                 await context.Students.AddRangeAsync(students);
                 await context.SaveChangesAsync();
@@ -422,33 +545,31 @@ namespace GESS.Entity.Contexts
 
         private static async Task SeedPracticeExamDataAsync(GessDbContext context)
         {
-            // 1. Seed LevelQuestion
-            if (!context.LevelQuestions.Any())
-            {
-                var levelQuestions = new List<LevelQuestion>
-                {
-                    new LevelQuestion { LevelQuestionName = "Dễ" },
-                    new LevelQuestion { LevelQuestionName = "Trung bình" },
-                    new LevelQuestion { LevelQuestionName = "Khó" }
-                };
-                await context.LevelQuestions.AddRangeAsync(levelQuestions);
-                await context.SaveChangesAsync();
-            }
-
-            // 2. Seed PracticeQuestions
+            // 1. Seed PracticeQuestions
             if (!context.PracticeQuestions.Any())
             {
+                var teacherUser = context.Users.First(u => u.Email == "teacher1@example.com");
+                
+                // Lấy ID thực tế từ database
+                var midtermCategory = context.CategoryExams.First(c => c.CategoryExamName == "Thi giữa kỳ");
+                var finalCategory = context.CategoryExams.First(c => c.CategoryExamName == "Thi cuối kỳ");
+                var easyLevel = context.LevelQuestions.First(l => l.LevelQuestionName == "Dễ");
+                var mediumLevel = context.LevelQuestions.First(l => l.LevelQuestionName == "Trung bình");
+                var semester = context.Semesters.First();
+                var chapter1 = context.Chapters.First(c => c.ChapterName == "Chương 1: Giới thiệu C#");
+                var chapter2 = context.Chapters.First(c => c.ChapterName == "Chương 2: Cú pháp cơ bản");
+                
                 var practiceQuestions = new List<PracticeQuestion>
                 {
                     new PracticeQuestion
                     {
                         Content = "Câu hỏi 1: Giải thích khái niệm về lập trình hướng đối tượng trong C#",
-                        CategoryExamId = 1,
-                        LevelQuestionId = 1,
-                        SemesterId = 1,
-                        ChapterId = 1,
+                        CategoryExamId = midtermCategory.CategoryExamId,
+                        LevelQuestionId = easyLevel.LevelQuestionId,
+                        SemesterId = semester.SemesterId,
+                        ChapterId = chapter1.ChapterId,
                         IsActive = true,
-                        //CreatedBy = "teacher1@example.com",
+                        CreatedBy = teacherUser.Id,
                         IsPublic = true,
                         PracticeAnswer = new PracticeAnswer
                         {
@@ -457,13 +578,13 @@ namespace GESS.Entity.Contexts
                     },
                     new PracticeQuestion
                     {
-                        Content = "Câu hỏi 2: Phân biệt interface và abstract class trong C#",
-                        CategoryExamId = 2,
-                        LevelQuestionId = 2,
-                        SemesterId = 1,
-                        ChapterId = 2,
+                        Content = "Câu hỏi 2: Phương thức nào được gọi khi tạo một đối tượng mới trong C#?",
+                        CategoryExamId = finalCategory.CategoryExamId,
+                        LevelQuestionId = mediumLevel.LevelQuestionId,
+                        SemesterId = semester.SemesterId,
+                        ChapterId = chapter2.ChapterId,
                         IsActive = true,
-                        //CreatedBy = "teacher2@example.com",
+                        CreatedBy = teacherUser.Id,
                         IsPublic = true,
                         PracticeAnswer = new PracticeAnswer
                         {
@@ -475,9 +596,17 @@ namespace GESS.Entity.Contexts
                 await context.SaveChangesAsync();
             }
 
-            // 3. Seed PracticeExamPapers
+            // 2. Seed PracticeExamPapers
             if (!context.PracticeExamPapers.Any())
             {
+                var teacherUser = context.Users.First(u => u.Email == "teacher1@example.com");
+                
+                // Lấy ID thực tế từ database
+                var midtermCategory = context.CategoryExams.First(c => c.CategoryExamName == "Thi giữa kỳ");
+                var finalCategory = context.CategoryExams.First(c => c.CategoryExamName == "Thi cuối kỳ");
+                var csharpSubject = context.Subjects.First(s => s.SubjectName == "Lập trình C#");
+                var semester = context.Semesters.First();
+                
                 var practiceExamPapers = new List<PracticeExamPaper>
                 {
                     new PracticeExamPaper
@@ -486,10 +615,10 @@ namespace GESS.Entity.Contexts
                         NumberQuestion = 1,
                         CreateAt = DateTime.Now,
                         Status = "Published",
-                        //CreateBy = "teacher1@example.com",
-                        CategoryExamId = 1,
-                        SubjectId = 1,
-                        SemesterId = 1
+                        TeacherId = teacherUser.Id,
+                        CategoryExamId = midtermCategory.CategoryExamId,
+                        SubjectId = csharpSubject.SubjectId,
+                        SemesterId = semester.SemesterId
                     },
                     new PracticeExamPaper
                     {
@@ -497,21 +626,21 @@ namespace GESS.Entity.Contexts
                         NumberQuestion = 1,
                         CreateAt = DateTime.Now,
                         Status = "Published",
-                        //CreateBy = "teacher2@example.com",
-                        CategoryExamId = 2,
-                        SubjectId = 1,
-                        SemesterId = 1
+                        TeacherId = teacherUser.Id,
+                        CategoryExamId = finalCategory.CategoryExamId,
+                        SubjectId = csharpSubject.SubjectId,
+                        SemesterId = semester.SemesterId
                     }
                 };
                 await context.PracticeExamPapers.AddRangeAsync(practiceExamPapers);
                 await context.SaveChangesAsync();
             }
 
-            // 4. Lấy lại ID thực tế
+            // 3. Lấy lại ID thực tế
             var practiceQuestionsList = await context.PracticeQuestions.ToListAsync();
             var practiceExamPapersList = await context.PracticeExamPapers.ToListAsync();
 
-            // 5. Seed PracticeTestQuestions
+            // 4. Seed PracticeTestQuestions
             if (!context.PracticeTestQuestions.Any())
             {
                 var practiceTestQuestions = new List<PracticeTestQuestion>
@@ -535,9 +664,18 @@ namespace GESS.Entity.Contexts
                 await context.SaveChangesAsync();
             }
 
-            // 6. Seed PracticeExam
+            // 5. Seed PracticeExam
             if (!context.PracticeExams.Any())
             {
+                var teacherUser = context.Users.First(u => u.Email == "teacher1@example.com");
+                
+                // Lấy ID thực tế từ database
+                var midtermCategory = context.CategoryExams.First(c => c.CategoryExamName == "Thi giữa kỳ");
+                var finalCategory = context.CategoryExams.First(c => c.CategoryExamName == "Thi cuối kỳ");
+                var csharpSubject = context.Subjects.First(s => s.SubjectName == "Lập trình C#");
+                var semester = context.Semesters.First();
+                var csharpClass = context.Classes.First(c => c.SubjectId == csharpSubject.SubjectId);
+                
                 var practiceExams = new List<PracticeExam>
                 {
                     new PracticeExam
@@ -547,10 +685,11 @@ namespace GESS.Entity.Contexts
                         CreateAt = DateTime.Now,
                         Status = "Published",
                         CodeStart = "C#MID1",
-                        //TeacherId = "teacher1@example.com",
-                        CategoryExamId = 1, // Thi giữa kỳ
-                        SubjectId = 1, // Lập trình C#
-                        SemesterId = 1 // Học kỳ 1
+                        TeacherId = teacherUser.Id,
+                        CategoryExamId = midtermCategory.CategoryExamId,
+                        SubjectId = csharpSubject.SubjectId,
+                        SemesterId = semester.SemesterId,
+                        ClassId = csharpClass.ClassId
                     },
                     new PracticeExam
                     {
@@ -559,17 +698,18 @@ namespace GESS.Entity.Contexts
                         CreateAt = DateTime.Now,
                         Status = "Published",
                         CodeStart = "C#FINAL1",
-                        //TeacherId = "b3b7e2a5-9e51-4ad1-a944-2e3392d18f7a",
-                        CategoryExamId = 2, // Thi cuối kỳ
-                        SubjectId = 1, // Lập trình C#
-                        SemesterId = 1 // Học kỳ 1
+                        TeacherId = teacherUser.Id,
+                        CategoryExamId = finalCategory.CategoryExamId,
+                        SubjectId = csharpSubject.SubjectId,
+                        SemesterId = semester.SemesterId,
+                        ClassId = csharpClass.ClassId
                     }
                 };
                 await context.PracticeExams.AddRangeAsync(practiceExams);
                 await context.SaveChangesAsync();
             }
 
-            // 7. Seed NoPEPaperInPE
+            // 6. Seed NoPEPaperInPE
             if (!context.NoPEPaperInPEs.Any())
             {
                 var practiceExams = await context.PracticeExams.ToListAsync();
@@ -580,19 +720,24 @@ namespace GESS.Entity.Contexts
                     throw new Exception("Required data for NoPEPaperInPE seeding is missing");
                 }
 
-                var noPEPaperInPEs = new List<NoPEPaperInPE>
+                // Kiểm tra có đủ dữ liệu không
+                if (practiceExams.Count < 2 || practiceExamPapers.Count < 2)
                 {
-                    new NoPEPaperInPE
+                    throw new Exception($"Insufficient data: PracticeExams count: {practiceExams.Count}, PracticeExamPapers count: {practiceExamPapers.Count}");
+                }
+
+                var noPEPaperInPEs = new List<NoPEPaperInPE>();
+                
+                // Tạo liên kết cho tất cả practice exams và papers có sẵn
+                for (int i = 0; i < Math.Min(practiceExams.Count, practiceExamPapers.Count); i++)
+                {
+                    noPEPaperInPEs.Add(new NoPEPaperInPE
                     {
-                        PracExamId = practiceExams[0].PracExamId,
-                        PracExamPaperId = practiceExamPapers[0].PracExamPaperId
-                    },
-                    new NoPEPaperInPE
-                    {
-                        PracExamId = practiceExams[1].PracExamId,
-                        PracExamPaperId = practiceExamPapers[1].PracExamPaperId
-                    }
-                };
+                        PracExamId = practiceExams[i].PracExamId,
+                        PracExamPaperId = practiceExamPapers[i].PracExamPaperId
+                    });
+                }
+
                 await context.NoPEPaperInPEs.AddRangeAsync(noPEPaperInPEs);
                 await context.SaveChangesAsync();
             }
@@ -775,14 +920,44 @@ namespace GESS.Entity.Contexts
         {
             if (!context.ExamSlotRooms.Any())
             {
+                // Kiểm tra dữ liệu cần thiết
+                if (!context.Rooms.Any())
+                {
+                    throw new Exception("No Rooms found. Please seed Rooms first.");
+                }
+                if (!context.ExamSlots.Any())
+                {
+                    throw new Exception("No ExamSlots found. Please seed ExamSlots first.");
+                }
+                if (!context.Semesters.Any())
+                {
+                    throw new Exception("No Semesters found. Please seed Semesters first.");
+                }
+                if (!context.Subjects.Any())
+                {
+                    throw new Exception("No Subjects found. Please seed Subjects first.");
+                }
+                if (!context.Teachers.Any())
+                {
+                    throw new Exception("No Teachers found. Please seed Teachers first.");
+                }
+
+                // Lấy ID thực tế từ database
+                var room = context.Rooms.First();
+                var examSlot = context.ExamSlots.First();
+                var semester = context.Semesters.First();
+                var subject = context.Subjects.First();
+                var teacher = context.Teachers.First();
+
                 var examSlotRoom = new ExamSlotRoom
                 {
-                    RoomId = context.Rooms.First().RoomId,
-                    ExamSlotId = context.ExamSlots.First().ExamSlotId,
-                    SemesterId = 1,
-                    SubjectId = 1,
-                    SupervisorId = context.Teachers.First().TeacherId,
-                    ExamGradedId = context.Teachers.First().TeacherId
+                    RoomId = room.RoomId,
+                    ExamSlotId = examSlot.ExamSlotId,
+                    SemesterId = semester.SemesterId,
+                    SubjectId = subject.SubjectId,
+                    SupervisorId = teacher.TeacherId,
+                    ExamGradedId = teacher.TeacherId,
+                    MultiOrPractice = "Multi" // Set to "Multi" for multiple choice exam
                 };
                 await context.ExamSlotRooms.AddAsync(examSlotRoom);
                 await context.SaveChangesAsync();
@@ -793,28 +968,26 @@ namespace GESS.Entity.Contexts
         {
             if (!context.FinalExams.Any())
             {
+                // Kiểm tra dữ liệu cần thiết
+                if (!context.MultiExams.Any())
+                {
+                    throw new Exception("No MultiExams found. Please seed MultiExams first.");
+                }
+                if (!context.MultiQuestions.Any())
+                {
+                    throw new Exception("No MultiQuestions found. Please seed MultiQuestions first.");
+                }
+
+                // Lấy ID thực tế từ database
+                var multiExam = context.MultiExams.First();
+                var multiQuestion = context.MultiQuestions.First();
+
                 var finalExam = new FinalExam
                 {
-                    MultiExamId = context.MultiExams.First().MultiExamId,
-                    MultiQuestionId = context.MultiQuestions.First().MultiQuestionId
+                    MultiExamId = multiExam.MultiExamId,
+                    MultiQuestionId = multiQuestion.MultiQuestionId
                 };
                 await context.FinalExams.AddAsync(finalExam);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedPracticeTestQuestionsAsync(GessDbContext context)
-        {
-            if (!context.PracticeTestQuestions.Any())
-            {
-                var pracTestQuestion = new PracticeTestQuestion
-                {
-                    PracExamPaperId = context.PracticeExamPapers.First().PracExamPaperId,
-                    PracticeQuestionId = context.PracticeQuestions.First().PracticeQuestionId,
-                    QuestionOrder = 1,
-                    Score = 5.0
-                };
-                await context.PracticeTestQuestions.AddAsync(pracTestQuestion);
                 await context.SaveChangesAsync();
             }
         }
@@ -823,43 +996,33 @@ namespace GESS.Entity.Contexts
         {
             if (!context.NoQuestionInChapters.Any())
             {
+                // Kiểm tra dữ liệu cần thiết
+                if (!context.MultiExams.Any())
+                {
+                    throw new Exception("No MultiExams found. Please seed MultiExams first.");
+                }
+                if (!context.Chapters.Any())
+                {
+                    throw new Exception("No Chapters found. Please seed Chapters first.");
+                }
+                if (!context.LevelQuestions.Any())
+                {
+                    throw new Exception("No LevelQuestions found. Please seed LevelQuestions first.");
+                }
+
+                // Lấy ID thực tế từ database
+                var multiExam = context.MultiExams.First();
+                var chapter = context.Chapters.First();
+                var levelQuestion = context.LevelQuestions.First();
+
                 var noQuestion = new NoQuestionInChapter
                 {
-                    MultiExamId = context.MultiExams.First().MultiExamId,
-                    ChapterId = context.Chapters.First().ChapterId,
+                    MultiExamId = multiExam.MultiExamId,
+                    ChapterId = chapter.ChapterId,
+                    LevelQuestionId = levelQuestion.LevelQuestionId,
                     NumberQuestion = 5
                 };
                 await context.NoQuestionInChapters.AddAsync(noQuestion);
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static async Task SeedNoPEPaperInPEsAsync(GessDbContext context)
-        {
-            if (!context.NoPEPaperInPEs.Any())
-            {
-                var practiceExams = await context.PracticeExams.ToListAsync();
-                var practiceExamPapers = await context.PracticeExamPapers.ToListAsync();
-
-                if (!practiceExams.Any() || !practiceExamPapers.Any())
-                {
-                    throw new Exception("Required data for NoPEPaperInPE seeding is missing");
-                }
-
-                var noPEPaperInPEs = new List<NoPEPaperInPE>
-                {
-                    new NoPEPaperInPE
-                    {
-                        PracExamId = practiceExams[0].PracExamId,
-                        PracExamPaperId = practiceExamPapers[0].PracExamPaperId
-                    },
-                    new NoPEPaperInPE
-                    {
-                        PracExamId = practiceExams[1].PracExamId,
-                        PracExamPaperId = practiceExamPapers[1].PracExamPaperId
-                    }
-                };
-                await context.NoPEPaperInPEs.AddRangeAsync(noPEPaperInPEs);
                 await context.SaveChangesAsync();
             }
         }
@@ -869,14 +1032,26 @@ namespace GESS.Entity.Contexts
             if (!context.TrainingPrograms.Any())
             {
                 var majors = context.Majors.Take(5).ToList();
-                var programs = new List<TrainingProgram>
+                
+                if (!majors.Any())
                 {
-                    new TrainingProgram { TrainProName = "Chương trình A", StartDate = DateTime.Now, EndDate = DateTime.Now.AddYears(4), NoCredits = 120, MajorId = majors[0].MajorId },
-                    new TrainingProgram { TrainProName = "Chương trình B", StartDate = DateTime.Now, EndDate = DateTime.Now.AddYears(4), NoCredits = 120, MajorId = majors[1].MajorId },
-                    new TrainingProgram { TrainProName = "Chương trình C", StartDate = DateTime.Now, EndDate = DateTime.Now.AddYears(4), NoCredits = 120, MajorId = majors[2].MajorId },
-                    new TrainingProgram { TrainProName = "Chương trình D", StartDate = DateTime.Now, EndDate = DateTime.Now.AddYears(4), NoCredits = 120, MajorId = majors[3].MajorId },
-                    new TrainingProgram { TrainProName = "Chương trình E", StartDate = DateTime.Now, EndDate = DateTime.Now.AddYears(4), NoCredits = 120, MajorId = majors[4].MajorId }
-                };
+                    throw new Exception("No majors found for TrainingProgram seeding");
+                }
+
+                var programs = new List<TrainingProgram>();
+                
+                for (int i = 0; i < majors.Count; i++)
+                {
+                    programs.Add(new TrainingProgram 
+                    { 
+                        TrainProName = $"Chương trình {(char)('A' + i)}", 
+                        StartDate = DateTime.Now, 
+                        EndDate = DateTime.Now.AddYears(4), 
+                        NoCredits = 120, 
+                        MajorId = majors[i].MajorId 
+                    });
+                }
+                
                 await context.TrainingPrograms.AddRangeAsync(programs);
                 await context.SaveChangesAsync();
             }
@@ -888,11 +1063,24 @@ namespace GESS.Entity.Contexts
             {
                 var programs = context.TrainingPrograms.Take(5).ToList();
                 var cohorts = context.Cohorts.Take(5).ToList();
-                var applys = new List<ApplyTrainingProgram>();
-                for (int i = 0; i < 5; i++)
+                
+                if (!programs.Any() || !cohorts.Any())
                 {
-                    applys.Add(new ApplyTrainingProgram { TrainProId = programs[i].TrainProId, CohortId = cohorts[i].CohortId });
+                    throw new Exception("No training programs or cohorts found for ApplyTrainingProgram seeding");
                 }
+
+                var applys = new List<ApplyTrainingProgram>();
+                var maxCount = Math.Min(programs.Count, cohorts.Count);
+                
+                for (int i = 0; i < maxCount; i++)
+                {
+                    applys.Add(new ApplyTrainingProgram 
+                    { 
+                        TrainProId = programs[i].TrainProId, 
+                        CohortId = cohorts[i].CohortId 
+                    });
+                }
+                
                 await context.ApplyTrainingPrograms.AddRangeAsync(applys);
                 await context.SaveChangesAsync();
             }
@@ -938,11 +1126,24 @@ namespace GESS.Entity.Contexts
             {
                 var subjects = context.Subjects.Take(5).ToList();
                 var programs = context.TrainingPrograms.Take(5).ToList();
-                var stps = new List<SubjectTrainingProgram>();
-                for (int i = 0; i < 5; i++)
+                
+                if (!subjects.Any() || !programs.Any())
                 {
-                    stps.Add(new SubjectTrainingProgram { SubjectId = subjects[i].SubjectId, TrainProId = programs[i].TrainProId });
+                    throw new Exception("No subjects or training programs found for SubjectTrainingProgram seeding");
                 }
+
+                var stps = new List<SubjectTrainingProgram>();
+                var maxCount = Math.Min(subjects.Count, programs.Count);
+                
+                for (int i = 0; i < maxCount; i++)
+                {
+                    stps.Add(new SubjectTrainingProgram 
+                    { 
+                        SubjectId = subjects[i].SubjectId, 
+                        TrainProId = programs[i].TrainProId 
+                    });
+                }
+                
                 await context.SubjectTrainingPrograms.AddRangeAsync(stps);
                 await context.SaveChangesAsync();
             }
@@ -954,11 +1155,24 @@ namespace GESS.Entity.Contexts
             {
                 var stps = context.SubjectTrainingPrograms.Take(5).ToList();
                 var subjects = context.Subjects.Take(5).ToList();
-                var preconditions = new List<PreconditionSubject>();
-                for (int i = 0; i < 5; i++)
+                
+                if (!stps.Any() || !subjects.Any())
                 {
-                    preconditions.Add(new PreconditionSubject { SubTrainingProgramId = stps[i].SubTrainProgramId, PreconditionSubjectId = subjects[(i+1)%5].SubjectId });
+                    throw new Exception("No subject training programs or subjects found for PreconditionSubject seeding");
                 }
+
+                var preconditions = new List<PreconditionSubject>();
+                var maxCount = Math.Min(stps.Count, subjects.Count);
+                
+                for (int i = 0; i < maxCount; i++)
+                {
+                    preconditions.Add(new PreconditionSubject 
+                    { 
+                        SubTrainingProgramId = stps[i].SubTrainProgramId, 
+                        PreconditionSubjectId = subjects[(i+1) % subjects.Count].SubjectId 
+                    });
+                }
+                
                 await context.PreconditionSubjects.AddRangeAsync(preconditions);
                 await context.SaveChangesAsync();
             }
@@ -968,17 +1182,21 @@ namespace GESS.Entity.Contexts
         {
             if (!context.MultiExams.Any())
             {
-                var teacher = context.Teachers.First();
-                var subject = context.Subjects.First();
-                var cateExam = context.CategoryExams.First();
+                var teacherUser = context.Users.First(u => u.Email == "teacher1@example.com");
+                
+                // Lấy ID thực tế từ database
+                var subject = context.Subjects.First(s => s.SubjectName == "Lập trình C#");
+                var cateExam = context.CategoryExams.First(c => c.CategoryExamName == "Thi giữa kỳ");
                 var semester = context.Semesters.First();
+                var csharpClass = context.Classes.First(c => c.SubjectId == subject.SubjectId);
+                
                 var multiExams = new List<MultiExam>
                 {
-                    new MultiExam { MultiExamName = "Midterm 1", NumberQuestion = 10, Duration = 60, CreateAt = DateTime.Now, Status = "Published", CodeStart = "MID1", TeacherId = teacher.TeacherId, SubjectId = subject.SubjectId, CategoryExamId = cateExam.CategoryExamId, SemesterId = semester.SemesterId, IsPublish = true },
-                    new MultiExam { MultiExamName = "Midterm 2", NumberQuestion = 15, Duration = 70, CreateAt = DateTime.Now, Status = "Published", CodeStart = "MID2", TeacherId = teacher.TeacherId, SubjectId = subject.SubjectId, CategoryExamId = cateExam.CategoryExamId, SemesterId = semester.SemesterId, IsPublish = true },
-                    new MultiExam { MultiExamName = "Final 1", NumberQuestion = 20, Duration = 90, CreateAt = DateTime.Now, Status = "Published", CodeStart = "FIN1", TeacherId = teacher.TeacherId, SubjectId = subject.SubjectId, CategoryExamId = cateExam.CategoryExamId, SemesterId = semester.SemesterId, IsPublish = true },
-                    new MultiExam { MultiExamName = "Final 2", NumberQuestion = 25, Duration = 100, CreateAt = DateTime.Now, Status = "Published", CodeStart = "FIN2", TeacherId = teacher.TeacherId, SubjectId = subject.SubjectId, CategoryExamId = cateExam.CategoryExamId, SemesterId = semester.SemesterId, IsPublish = true },
-                    new MultiExam { MultiExamName = "Quiz", NumberQuestion = 5, Duration = 30, CreateAt = DateTime.Now, Status = "Published", CodeStart = "QUIZ", TeacherId = teacher.TeacherId, SubjectId = subject.SubjectId, CategoryExamId = cateExam.CategoryExamId, SemesterId = semester.SemesterId, IsPublish = true }
+                    new MultiExam { MultiExamName = "Midterm 1", NumberQuestion = 10, Duration = 60, CreateAt = DateTime.Now, Status = "Published", CodeStart = "MID1", TeacherId = teacherUser.Id, SubjectId = subject.SubjectId, CategoryExamId = cateExam.CategoryExamId, SemesterId = semester.SemesterId, ClassId = csharpClass.ClassId, IsPublish = true },
+                    new MultiExam { MultiExamName = "Midterm 2", NumberQuestion = 15, Duration = 70, CreateAt = DateTime.Now, Status = "Published", CodeStart = "MID2", TeacherId = teacherUser.Id, SubjectId = subject.SubjectId, CategoryExamId = cateExam.CategoryExamId, SemesterId = semester.SemesterId, ClassId = csharpClass.ClassId, IsPublish = true },
+                    new MultiExam { MultiExamName = "Final 1", NumberQuestion = 20, Duration = 90, CreateAt = DateTime.Now, Status = "Published", CodeStart = "FIN1", TeacherId = teacherUser.Id, SubjectId = subject.SubjectId, CategoryExamId = cateExam.CategoryExamId, SemesterId = semester.SemesterId, ClassId = csharpClass.ClassId, IsPublish = true },
+                    new MultiExam { MultiExamName = "Final 2", NumberQuestion = 25, Duration = 100, CreateAt = DateTime.Now, Status = "Published", CodeStart = "FIN2", TeacherId = teacherUser.Id, SubjectId = subject.SubjectId, CategoryExamId = cateExam.CategoryExamId, SemesterId = semester.SemesterId, ClassId = csharpClass.ClassId, IsPublish = true },
+                    new MultiExam { MultiExamName = "Quiz", NumberQuestion = 5, Duration = 30, CreateAt = DateTime.Now, Status = "Published", CodeStart = "QUIZ", TeacherId = teacherUser.Id, SubjectId = subject.SubjectId, CategoryExamId = cateExam.CategoryExamId, SemesterId = semester.SemesterId, ClassId = csharpClass.ClassId, IsPublish = true }
                 };
                 await context.MultiExams.AddRangeAsync(multiExams);
                 await context.SaveChangesAsync();
@@ -987,22 +1205,459 @@ namespace GESS.Entity.Contexts
 
         private static async Task SeedPracticeExamsAsync(GessDbContext context)
         {
-            if (!context.PracticeExams.Any())
+            var teacherUser = context.Users.First(u => u.Email == "teacher1@example.com");
+            var existingCount = context.PracticeExams.Count();
+            var examsToAdd = new List<PracticeExam>();
+
+            if (existingCount < 2)
             {
-                var teacher = context.Teachers.First();
-                var subject = context.Subjects.First();
-                var cateExam = context.CategoryExams.First();
+                // Lấy ID thực tế từ database
+                var midtermCategory = context.CategoryExams.First(c => c.CategoryExamName == "Thi giữa kỳ");
+                var finalCategory = context.CategoryExams.First(c => c.CategoryExamName == "Thi cuối kỳ");
+                var csharpSubject = context.Subjects.First(s => s.SubjectName == "Lập trình C#");
                 var semester = context.Semesters.First();
-                var pracExams = new List<PracticeExam>
+                var csharpClass = context.Classes.First(c => c.SubjectId == csharpSubject.SubjectId);
+
+                if (existingCount == 0)
                 {
-                    new PracticeExam { PracExamName = "Practice 1", Duration = 60, CreateAt = DateTime.Now, Status = "Published", CodeStart = "PRA1", TeacherId = teacher.TeacherId, CategoryExamId = cateExam.CategoryExamId, SubjectId = subject.SubjectId, SemesterId = semester.SemesterId },
-                    new PracticeExam { PracExamName = "Practice 2", Duration = 70, CreateAt = DateTime.Now, Status = "Published", CodeStart = "PRA2", TeacherId = teacher.TeacherId, CategoryExamId = cateExam.CategoryExamId, SubjectId = subject.SubjectId, SemesterId = semester.SemesterId },
-                    new PracticeExam { PracExamName = "Practice 3", Duration = 80, CreateAt = DateTime.Now, Status = "Published", CodeStart = "PRA3", TeacherId = teacher.TeacherId, CategoryExamId = cateExam.CategoryExamId, SubjectId = subject.SubjectId, SemesterId = semester.SemesterId },
-                    new PracticeExam { PracExamName = "Practice 4", Duration = 90, CreateAt = DateTime.Now, Status = "Published", CodeStart = "PRA4", TeacherId = teacher.TeacherId, CategoryExamId = cateExam.CategoryExamId, SubjectId = subject.SubjectId, SemesterId = semester.SemesterId },
-                    new PracticeExam { PracExamName = "Practice 5", Duration = 100, CreateAt = DateTime.Now, Status = "Published", CodeStart = "PRA5", TeacherId = teacher.TeacherId, CategoryExamId = cateExam.CategoryExamId, SubjectId = subject.SubjectId, SemesterId = semester.SemesterId }
-                };
-                await context.PracticeExams.AddRangeAsync(pracExams);
+                    examsToAdd.Add(new PracticeExam
+                    {
+                        PracExamName = "Kỳ thi giữa kỳ C# - Ca 1",
+                        Duration = 90,
+                        CreateAt = DateTime.Now,
+                        Status = "Published",
+                        CodeStart = "C#MID1",
+                        TeacherId = teacherUser.Id,
+                        CategoryExamId = midtermCategory.CategoryExamId,
+                        SubjectId = csharpSubject.SubjectId,
+                        SemesterId = semester.SemesterId,
+                        ClassId = csharpClass.ClassId
+                    });
+                    examsToAdd.Add(new PracticeExam
+                    {
+                        PracExamName = "Kỳ thi cuối kỳ C# - Ca 1",
+                        Duration = 120,
+                        CreateAt = DateTime.Now,
+                        Status = "Published",
+                        CodeStart = "C#FINAL1",
+                        TeacherId = teacherUser.Id,
+                        CategoryExamId = finalCategory.CategoryExamId,
+                        SubjectId = csharpSubject.SubjectId,
+                        SemesterId = semester.SemesterId,
+                        ClassId = csharpClass.ClassId
+                    });
+                }
+                else if (existingCount == 1)
+                {
+                    // Lấy code đã có để không trùng
+                    var existing = context.PracticeExams.First();
+                    if (existing.CodeStart == "C#MID1")
+                    {
+                        examsToAdd.Add(new PracticeExam
+                        {
+                            PracExamName = "Kỳ thi cuối kỳ C# - Ca 1",
+                            Duration = 120,
+                            CreateAt = DateTime.Now,
+                            Status = "Published",
+                            CodeStart = "C#FINAL1",
+                            TeacherId = teacherUser.Id,
+                            CategoryExamId = finalCategory.CategoryExamId,
+                            SubjectId = csharpSubject.SubjectId,
+                            SemesterId = semester.SemesterId,
+                            ClassId = csharpClass.ClassId
+                        });
+                    }
+                    else
+                    {
+                        examsToAdd.Add(new PracticeExam
+                        {
+                            PracExamName = "Kỳ thi giữa kỳ C# - Ca 1",
+                            Duration = 90,
+                            CreateAt = DateTime.Now,
+                            Status = "Published",
+                            CodeStart = "C#MID1",
+                            TeacherId = teacherUser.Id,
+                            CategoryExamId = midtermCategory.CategoryExamId,
+                            SubjectId = csharpSubject.SubjectId,
+                            SemesterId = semester.SemesterId,
+                            ClassId = csharpClass.ClassId
+                        });
+                    }
+                }
+                await context.PracticeExams.AddRangeAsync(examsToAdd);
                 await context.SaveChangesAsync();
+            }
+        }
+
+        private static async Task SeedMultiQuestionsAsync(GessDbContext context)
+        {
+            if (!context.MultiQuestions.Any())
+            {
+                var teacherUser = context.Users.First(u => u.Email == "teacher1@example.com");
+                
+                // Lấy ID thực tế từ database
+                var midtermCategory = context.CategoryExams.First(c => c.CategoryExamName == "Thi giữa kỳ");
+                var finalCategory = context.CategoryExams.First(c => c.CategoryExamName == "Thi cuối kỳ");
+                var easyLevel = context.LevelQuestions.First(l => l.LevelQuestionName == "Dễ");
+                var mediumLevel = context.LevelQuestions.First(l => l.LevelQuestionName == "Trung bình");
+                var hardLevel = context.LevelQuestions.First(l => l.LevelQuestionName == "Khó");
+                var semester = context.Semesters.First();
+                var chapter1 = context.Chapters.First(c => c.ChapterName == "Chương 1: Giới thiệu C#");
+                var chapter2 = context.Chapters.First(c => c.ChapterName == "Chương 2: Cú pháp cơ bản");
+                var chapter3 = context.Chapters.First(c => c.ChapterName == "Chương 3: Lập trình hướng đối tượng");
+                
+                var multiQuestions = new List<MultiQuestion>
+                {
+                    new MultiQuestion 
+                    { 
+                        Content = "Câu hỏi 1: Trong C#, từ khóa nào được sử dụng để khai báo một lớp?",
+                        IsActive = true,
+                        CreatedBy = teacherUser.Id,
+                        IsPublic = true,
+                        ChapterId = chapter1.ChapterId,
+                        CategoryExamId = midtermCategory.CategoryExamId,
+                        LevelQuestionId = easyLevel.LevelQuestionId,
+                        SemesterId = semester.SemesterId
+                    },
+                    new MultiQuestion 
+                    { 
+                        Content = "Câu hỏi 2: Phương thức nào được gọi khi tạo một đối tượng mới trong C#?",
+                        IsActive = true,
+                        CreatedBy = teacherUser.Id,
+                        IsPublic = true,
+                        ChapterId = chapter1.ChapterId,
+                        CategoryExamId = midtermCategory.CategoryExamId,
+                        LevelQuestionId = mediumLevel.LevelQuestionId,
+                        SemesterId = semester.SemesterId
+                    },
+                    new MultiQuestion 
+                    { 
+                        Content = "Câu hỏi 3: Interface trong C# có thể chứa phương thức có thân không?",
+                        IsActive = true,
+                        CreatedBy = teacherUser.Id,
+                        IsPublic = true,
+                        ChapterId = chapter2.ChapterId,
+                        CategoryExamId = midtermCategory.CategoryExamId,
+                        LevelQuestionId = mediumLevel.LevelQuestionId,
+                        SemesterId = semester.SemesterId
+                    },
+                    new MultiQuestion 
+                    { 
+                        Content = "Câu hỏi 4: Từ khóa 'virtual' được sử dụng để làm gì trong C#?",
+                        IsActive = true,
+                        CreatedBy = teacherUser.Id,
+                        IsPublic = true,
+                        ChapterId = chapter2.ChapterId,
+                        CategoryExamId = finalCategory.CategoryExamId,
+                        LevelQuestionId = hardLevel.LevelQuestionId,
+                        SemesterId = semester.SemesterId
+                    },
+                    new MultiQuestion 
+                    { 
+                        Content = "Câu hỏi 5: Exception handling trong C# sử dụng từ khóa nào?",
+                        IsActive = true,
+                        CreatedBy = teacherUser.Id,
+                        IsPublic = true,
+                        ChapterId = chapter3.ChapterId,
+                        CategoryExamId = finalCategory.CategoryExamId,
+                        LevelQuestionId = easyLevel.LevelQuestionId,
+                        SemesterId = semester.SemesterId
+                    }
+                };
+                await context.MultiQuestions.AddRangeAsync(multiQuestions);
+                await context.SaveChangesAsync();
+            }
+        }
+
+        private static async Task SeedMultiAnswersAsync(GessDbContext context)
+        {
+            if (!context.MultiAnswers.Any())
+            {
+                // Lấy ID thực tế từ database
+                var questions = context.MultiQuestions.ToList();
+                
+                if (!questions.Any())
+                {
+                    throw new Exception("No MultiQuestions found for MultiAnswers seeding");
+                }
+
+                var multiAnswers = new List<MultiAnswer>
+                {
+                    // Câu hỏi 1
+                    new MultiAnswer { MultiQuestionId = questions[0].MultiQuestionId, AnswerContent = "class", IsCorrect = true },
+                    new MultiAnswer { MultiQuestionId = questions[0].MultiQuestionId, AnswerContent = "struct", IsCorrect = false },
+                    new MultiAnswer { MultiQuestionId = questions[0].MultiQuestionId, AnswerContent = "interface", IsCorrect = false },
+                    new MultiAnswer { MultiQuestionId = questions[0].MultiQuestionId, AnswerContent = "enum", IsCorrect = false },
+                    
+                    // Câu hỏi 2
+                    new MultiAnswer { MultiQuestionId = questions[1].MultiQuestionId, AnswerContent = "Constructor", IsCorrect = true },
+                    new MultiAnswer { MultiQuestionId = questions[1].MultiQuestionId, AnswerContent = "Destructor", IsCorrect = false },
+                    new MultiAnswer { MultiQuestionId = questions[1].MultiQuestionId, AnswerContent = "Method", IsCorrect = false },
+                    new MultiAnswer { MultiQuestionId = questions[1].MultiQuestionId, AnswerContent = "Property", IsCorrect = false },
+                    
+                    // Câu hỏi 3
+                    new MultiAnswer { MultiQuestionId = questions[2].MultiQuestionId, AnswerContent = "Không, chỉ chứa khai báo", IsCorrect = true },
+                    new MultiAnswer { MultiQuestionId = questions[2].MultiQuestionId, AnswerContent = "Có, có thể chứa thân", IsCorrect = false },
+                    new MultiAnswer { MultiQuestionId = questions[2].MultiQuestionId, AnswerContent = "Tùy thuộc vào phiên bản C#", IsCorrect = false },
+                    new MultiAnswer { MultiQuestionId = questions[2].MultiQuestionId, AnswerContent = "Chỉ trong C# 8.0 trở lên", IsCorrect = false },
+                    
+                    // Câu hỏi 4
+                    new MultiAnswer { MultiQuestionId = questions[3].MultiQuestionId, AnswerContent = "Cho phép override", IsCorrect = true },
+                    new MultiAnswer { MultiQuestionId = questions[3].MultiQuestionId, AnswerContent = "Ngăn chặn override", IsCorrect = false },
+                    new MultiAnswer { MultiQuestionId = questions[3].MultiQuestionId, AnswerContent = "Tạo phương thức tĩnh", IsCorrect = false },
+                    new MultiAnswer { MultiQuestionId = questions[3].MultiQuestionId, AnswerContent = "Tạo phương thức private", IsCorrect = false },
+                    
+                    // Câu hỏi 5
+                    new MultiAnswer { MultiQuestionId = questions[4].MultiQuestionId, AnswerContent = "try-catch", IsCorrect = true },
+                    new MultiAnswer { MultiQuestionId = questions[4].MultiQuestionId, AnswerContent = "if-else", IsCorrect = false },
+                    new MultiAnswer { MultiQuestionId = questions[4].MultiQuestionId, AnswerContent = "switch-case", IsCorrect = false },
+                    new MultiAnswer { MultiQuestionId = questions[4].MultiQuestionId, AnswerContent = "for-while", IsCorrect = false }
+                };
+                await context.MultiAnswers.AddRangeAsync(multiAnswers);
+                await context.SaveChangesAsync();
+            }
+        }
+
+        private static async Task SeedMultiExamHistoriesAsync(GessDbContext context)
+        {
+            if (!context.MultiExamHistories.Any())
+            {
+                var students = context.Students.Take(3).ToList();
+                var multiExams = context.MultiExams.Take(3).ToList();
+                
+                if (students.Any() && multiExams.Any())
+                {
+                    var multiExamHistories = new List<MultiExamHistory>();
+                    
+                    // Create history for first student and exam
+                    if (students.Count > 0 && multiExams.Count > 0)
+                    {
+                        multiExamHistories.Add(new MultiExamHistory 
+                        { 
+                            ExamHistoryId = Guid.NewGuid(),
+                            MultiExamId = multiExams[0].MultiExamId, 
+                            StudentId = students[0].StudentId, 
+                            StartTime = DateTime.Now.AddHours(-2),
+                            EndTime = DateTime.Now.AddHours(-1),
+                            Score = 8.0,
+                            CheckIn = true,
+                            StatusExam = "Completed",
+                            IsGrade = true
+                        });
+                    }
+                    
+                    // Create history for second student and exam
+                    if (students.Count > 1 && multiExams.Count > 1)
+                    {
+                        multiExamHistories.Add(new MultiExamHistory 
+                        { 
+                            ExamHistoryId = Guid.NewGuid(),
+                            MultiExamId = multiExams[1].MultiExamId, 
+                            StudentId = students[1].StudentId, 
+                            StartTime = DateTime.Now.AddHours(-1),
+                            EndTime = DateTime.Now.AddMinutes(-30),
+                            Score = 9.0,
+                            CheckIn = true,
+                            StatusExam = "Completed",
+                            IsGrade = true
+                        });
+                    }
+                    
+                    // Create history for third student and exam
+                    if (students.Count > 2 && multiExams.Count > 2)
+                    {
+                        multiExamHistories.Add(new MultiExamHistory 
+                        { 
+                            ExamHistoryId = Guid.NewGuid(),
+                            MultiExamId = multiExams[2].MultiExamId, 
+                            StudentId = students[2].StudentId, 
+                            StartTime = DateTime.Now,
+                            Score = null,
+                            CheckIn = true,
+                            StatusExam = "InProgress",
+                            IsGrade = false
+                        });
+                    }
+                    
+                    if (multiExamHistories.Any())
+                    {
+                        await context.MultiExamHistories.AddRangeAsync(multiExamHistories);
+                        await context.SaveChangesAsync();
+                    }
+                }
+            }
+        }
+
+        private static async Task SeedQuestionMultiExamsAsync(GessDbContext context)
+        {
+            if (!context.QuestionMultiExams.Any())
+            {
+                var multiExamHistories = context.MultiExamHistories.Take(2).ToList();
+                var multiQuestions = context.MultiQuestions.Take(3).ToList();
+                
+                if (multiExamHistories.Any() && multiQuestions.Any())
+                {
+                    var questionMultiExams = new List<QuestionMultiExam>();
+                    
+                    // Create question for first history and first question
+                    if (multiExamHistories.Count > 0 && multiQuestions.Count > 0)
+                    {
+                        questionMultiExams.Add(new QuestionMultiExam 
+                        { 
+                            MultiExamHistoryId = multiExamHistories[0].ExamHistoryId,
+                            MultiQuestionId = multiQuestions[0].MultiQuestionId,
+                            QuestionOrder = 1,
+                            Answer = "class",
+                            Score = 1.0
+                        });
+                    }
+                    
+                    // Create question for first history and second question
+                    if (multiExamHistories.Count > 0 && multiQuestions.Count > 1)
+                    {
+                        questionMultiExams.Add(new QuestionMultiExam 
+                        { 
+                            MultiExamHistoryId = multiExamHistories[0].ExamHistoryId,
+                            MultiQuestionId = multiQuestions[1].MultiQuestionId,
+                            QuestionOrder = 2,
+                            Answer = "Constructor",
+                            Score = 2.0
+                        });
+                    }
+                    
+                    // Create question for second history and third question
+                    if (multiExamHistories.Count > 1 && multiQuestions.Count > 2)
+                    {
+                        questionMultiExams.Add(new QuestionMultiExam 
+                        { 
+                            MultiExamHistoryId = multiExamHistories[1].ExamHistoryId,
+                            MultiQuestionId = multiQuestions[2].MultiQuestionId,
+                            QuestionOrder = 1,
+                            Answer = "Không, chỉ chứa khai báo",
+                            Score = 2.0
+                        });
+                    }
+                    
+                    if (questionMultiExams.Any())
+                    {
+                        await context.QuestionMultiExams.AddRangeAsync(questionMultiExams);
+                        await context.SaveChangesAsync();
+                    }
+                }
+            }
+        }
+
+        private static async Task SeedPracticeExamHistoriesAsync(GessDbContext context)
+        {
+            if (!context.PracticeExamHistories.Any())
+            {
+                var students = context.Students.Take(3).ToList();
+                var practiceExams = context.PracticeExams.Take(3).ToList();
+                
+                if (students.Any() && practiceExams.Any())
+                {
+                    var practiceExamHistories = new List<PracticeExamHistory>();
+                    
+                    // Create history for first student and exam
+                    if (students.Count > 0 && practiceExams.Count > 0)
+                    {
+                        practiceExamHistories.Add(new PracticeExamHistory 
+                        { 
+                            PracExamHistoryId = Guid.NewGuid(),
+                            PracExamId = practiceExams[0].PracExamId, 
+                            StudentId = students[0].StudentId, 
+                            StartTime = DateTime.Now.AddHours(-3),
+                            EndTime = DateTime.Now.AddHours(-2),
+                            Score = 8.5,
+                            CheckIn = true,
+                            StatusExam = "Completed",
+                            IsGraded = true
+                        });
+                    }
+                    
+                    // Create history for second student and exam
+                    if (students.Count > 1 && practiceExams.Count > 1)
+                    {
+                        practiceExamHistories.Add(new PracticeExamHistory 
+                        { 
+                            PracExamHistoryId = Guid.NewGuid(),
+                            PracExamId = practiceExams[1].PracExamId, 
+                            StudentId = students[1].StudentId, 
+                            StartTime = DateTime.Now.AddHours(-1),
+                            EndTime = DateTime.Now.AddMinutes(-30),
+                            Score = 9.0,
+                            CheckIn = true,
+                            StatusExam = "Completed",
+                            IsGraded = true
+                        });
+                    }
+                    
+                    // Create history for third student and exam
+                    if (students.Count > 2 && practiceExams.Count > 2)
+                    {
+                        practiceExamHistories.Add(new PracticeExamHistory 
+                        { 
+                            PracExamHistoryId = Guid.NewGuid(),
+                            PracExamId = practiceExams[2].PracExamId, 
+                            StudentId = students[2].StudentId, 
+                            StartTime = DateTime.Now,
+                            Score = null,
+                            CheckIn = true,
+                            StatusExam = "InProgress",
+                            IsGraded = false
+                        });
+                    }
+                    
+                    if (practiceExamHistories.Any())
+                    {
+                        await context.PracticeExamHistories.AddRangeAsync(practiceExamHistories);
+                        await context.SaveChangesAsync();
+                    }
+                }
+            }
+        }
+
+        private static async Task SeedQuestionPracExamsAsync(GessDbContext context)
+        {
+            if (!context.QuestionPracExams.Any())
+            {
+                var practiceExamHistories = context.PracticeExamHistories.Take(2).ToList();
+                var practiceQuestions = context.PracticeQuestions.Take(2).ToList();
+                
+                if (practiceExamHistories.Any() && practiceQuestions.Any())
+                {
+                    var questionPracExams = new List<QuestionPracExam>();
+                    
+                    // Create question for first history and first question
+                    if (practiceExamHistories.Count > 0 && practiceQuestions.Count > 0)
+                    {
+                        questionPracExams.Add(new QuestionPracExam 
+                        { 
+                            PracExamHistoryId = practiceExamHistories[0].PracExamHistoryId,
+                            PracticeQuestionId = practiceQuestions[0].PracticeQuestionId,
+                            Answer = "OOP là phương pháp lập trình dựa trên đối tượng...",
+                            Score = 4.0
+                        });
+                    }
+                    
+                    // Create question for second history and second question
+                    if (practiceExamHistories.Count > 1 && practiceQuestions.Count > 1)
+                    {
+                        questionPracExams.Add(new QuestionPracExam 
+                        { 
+                            PracExamHistoryId = practiceExamHistories[1].PracExamHistoryId,
+                            PracticeQuestionId = practiceQuestions[1].PracticeQuestionId,
+                            Answer = "Interface chỉ chứa khai báo, abstract class có thể chứa cả phương thức có thân...",
+                            Score = 4.5
+                        });
+                    }
+                    
+                    if (questionPracExams.Any())
+                    {
+                        await context.QuestionPracExams.AddRangeAsync(questionPracExams);
+                        await context.SaveChangesAsync();
+                    }
+                }
             }
         }
     }
