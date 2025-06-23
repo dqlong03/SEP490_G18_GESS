@@ -1,4 +1,5 @@
 ﻿using Gess.Repository.Infrastructures;
+using GESS.Common;
 using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
 using GESS.Model.Exam;
@@ -126,9 +127,30 @@ namespace GESS.Repository.Implement
             var latestYear = await _context.MultiExams
                 .MaxAsync(me => (int?)me.CreateAt.Year) ?? DateTime.Now.Year;
 
+            // Lấy học kỳ mới nhất trong năm mới nhất
+            var latestSemesterId = await _context.MultiExams
+                .Where(me => me.CreateAt.Year == latestYear)
+                .Join(_context.Semesters,
+                    me => me.SemesterId,
+                    s => s.SemesterId,
+                    (me, s) => s.SemesterId)
+                .OrderByDescending(semesterId => semesterId)
+                .FirstOrDefaultAsync();
+
+            if (latestSemesterId == 0)
+                return new List<ExamListOfStudentResponse>();
+
             var query = _context.MultiExams
                 .Where(me => me.CreateAt.Year == latestYear
-                    && me.Status == "Draft") // Chỉ lấy bài thi chưa thi trong năm mới nhất
+                    && me.SemesterId == latestSemesterId
+                    && me.Status == PredefinedStatusExam.PENDING_EXAM) 
+                .Join(_context.MultiExamHistories,
+                    me => me.MultiExamId,
+                    meh => meh.MultiExamId,
+                    (me, meh) => new { MultiExam = me, MultiExamHistory = meh })
+                .Where(x => x.MultiExamHistory.StudentId == request.StudentId
+                    && x.MultiExamHistory.StatusExam == PredefinedStatusExam.PENDING_EXAM) 
+                .Select(x => x.MultiExam)
                 .Join(_context.Subjects,
                     me => me.SubjectId,
                     s => s.SubjectId,
@@ -150,10 +172,10 @@ namespace GESS.Repository.Implement
                     r => r.RoomId,
                     (x, r) => new { x.MultiExam, x.SubjectName, x.ExamSlotRoom, x.ExamSlot, Rooms = r })
                 .SelectMany(x => x.Rooms.DefaultIfEmpty(),
-                    (x, r) => new MultiExamListOfStudentResponse
+                    (x, r) => new ExamListOfStudentResponse
                     {
-                        MultiExamId = x.MultiExam.MultiExamId,
-                        MultiExamName = x.MultiExam.MultiExamName,
+                        ExamId = x.MultiExam.MultiExamId,
+                        ExamName = x.MultiExam.MultiExamName,
                         SubjectName = x.SubjectName,
                         Duration = x.MultiExam.Duration,
                         Status = x.MultiExam.Status,
@@ -168,7 +190,7 @@ namespace GESS.Repository.Implement
             // Áp dụng bộ lọc tìm kiếm theo tên bài thi
             if (!string.IsNullOrEmpty(request.SearchName))
             {
-                query = query.Where(me => me.MultiExamName.Contains(request.SearchName));
+                query = query.Where(me => me.ExamName.Contains(request.SearchName));
             }
 
             // Áp dụng phân trang
@@ -178,31 +200,41 @@ namespace GESS.Repository.Implement
 
             return await query.ToListAsync();
         }
-    }
-
+    
         public async Task<List<ExamListOfStudentResponse>> GetAllPracExamOfStudentAsync(ExamFilterRequest request)
         {
-            var latestSemester = await _context.Semesters
-                            .OrderByDescending(s => s.StartDate)
-                            .FirstOrDefaultAsync(); 
+            var latestYear = await _context.PracticeExams
+                .MaxAsync(me => (int?)me.CreateAt.Year) ?? DateTime.Now.Year;
 
-            if (latestSemester == null)
+            // Lấy học kỳ mới nhất trong năm mới nhất
+            var latestSemesterId = await _context.PracticeExams
+                .Where(me => me.CreateAt.Year == latestYear)
+                .Join(_context.Semesters,
+                    me => me.SemesterId,
+                    s => s.SemesterId,
+                    (me, s) => s.SemesterId)
+                .OrderByDescending(semesterId => semesterId)
+                .FirstOrDefaultAsync();
+
+            if (latestSemesterId == 0)
                 return new List<ExamListOfStudentResponse>();
 
             var query = _context.PracticeExams
-                .Where(me => me.SemesterId == latestSemester.SemesterId
-                    && (me.Status == "Draft" || me.Status == "Published"))
-               // Lọc bài thi của sinh viên qua bảng MultiExamHistory hoặc bảng liên quan
-               //.Join(_context.MultiExamHistories,
-               //    me => me.MultiExamId,
-               //    meh => meh.MultiExamId,
-               //    (me, meh) => new { MultiExam = me, MultiExamHistory = meh })
-               //.Where(x => x.MultiExamHistory.StudentId == request.StudentId)
-               .Join(_context.Subjects,
+                .Where(me => me.CreateAt.Year == latestYear
+                    && me.SemesterId == latestSemesterId
+                    && me.Status == PredefinedStatusExam.PENDING_EXAM)
+                .Join(_context.PracticeExamHistories,
+                    me => me.PracExamId,
+                    meh => meh.PracExamId,
+                    (me, meh) => new { PracticeExam = me, PracticeExamHistory = meh })
+                .Where(x => x.PracticeExamHistory.StudentId == request.StudentId
+                    && x.PracticeExamHistory.StatusExam == PredefinedStatusExam.PENDING_EXAM)
+                .Select(x => x.PracticeExam)
+                .Join(_context.Subjects,
                     me => me.SubjectId,
                     s => s.SubjectId,
                     (me, s) => new { PracticeExam = me, SubjectName = s.SubjectName })
-               .GroupJoin(_context.ExamSlotRooms,
+                .GroupJoin(_context.ExamSlotRooms,
                     x => x.PracticeExam.PracExamId,
                     esr => esr.ExamId,
                     (x, esr) => new { x.PracticeExam, x.SubjectName, ExamSlotRooms = esr })
@@ -233,7 +265,6 @@ namespace GESS.Repository.Implement
                         EndTime = x.ExamSlot != null ? x.ExamSlot.EndTime : default,
                         ExamSlotRoom = x.ExamSlotRoom
                     });
-
 
             // Áp dụng bộ lọc tìm kiếm theo tên bài thi
             if (!string.IsNullOrEmpty(request.SearchName))
