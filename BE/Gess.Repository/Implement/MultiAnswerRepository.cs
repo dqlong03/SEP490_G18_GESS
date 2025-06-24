@@ -28,7 +28,8 @@ namespace GESS.Repository.Implement
                 {
                     AnswerId = a.AnswerId,
                     QuestionName = a.MultiQuestion.Content,
-                    AnswerContent = a.AnswerContent
+                    AnswerContent = a.AnswerContent,
+                    IsCorrect = a.IsCorrect
                 })
                 .ToListAsync();
         }

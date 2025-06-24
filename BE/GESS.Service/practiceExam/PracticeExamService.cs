@@ -29,6 +29,49 @@ namespace GESS.Service.practiceExam
             }
             return practiceExamCreateDto;
         }
+        public async Task<PracticeExamInfoResponseDTO> CheckExamNameAndCodePEAsync(CheckPracticeExamRequestDTO request)
+        {
+            if (request == null)
+                throw new ArgumentNullException(nameof(request), "Dữ liệu đầu vào không được để trống!");
+
+            if (string.IsNullOrWhiteSpace(request.ExamName) || string.IsNullOrWhiteSpace(request.Code))
+                throw new ArgumentException("Tên bài thi và mã code không được để trống!");
+
+            if (request.StudentId == Guid.Empty)
+                throw new ArgumentException("StudentId không hợp lệ!");
+
+            return await _unitOfWork.PracticeExamRepository.CheckExamNameAndCodePEAsync(request);
+        }
+
+        public async Task<List<QuestionOrderDTO>> GetQuestionAndAnswerByPracExamId(int pracExamId)
+        {
+            return await _unitOfWork.PracticeExamRepository.GetQuestionAndAnswerByPracExamId(pracExamId);
+        }
+
+        public async Task<List<PracticeAnswerOfQuestionDTO>> GetPracticeAnswerOfQuestion(int pracExamId)
+        {
+            return await _unitOfWork.PracticeExamRepository.GetPracticeAnswerOfQuestion(pracExamId);
+        }
+        public async Task UpdatePEEach5minutesAsync(List<UpdatePracticeExamAnswerDTO> answers)
+        {
+            if (answers == null || !answers.Any())
+                throw new ArgumentException("Danh sách câu trả lời không được để trống!");
+
+            await _unitOfWork.PracticeExamRepository.UpdatePEEach5minutesAsync(answers);
+        }
+        public async Task<SubmitPracticeExamResponseDTO> SubmitPracticeExamAsync(SubmitPracticeExamRequest dto)
+        {
+            if (dto == null)
+                throw new ArgumentNullException(nameof(dto), "Dữ liệu đầu vào không được để trống!");
+
+            if (dto.PracExamHistoryId == Guid.Empty)
+                throw new ArgumentException("PracExamHistoryId không hợp lệ!");
+
+            if (dto.Answers == null || !dto.Answers.Any())
+                throw new ArgumentException("Danh sách câu trả lời không được để trống!");
+
+            return await _unitOfWork.PracticeExamRepository.SubmitPracticeExamAsync(dto);
+        }
     }
 
 }

@@ -1146,11 +1146,11 @@ namespace GESS.Entity.Contexts
             {
                 var levels = new List<LevelQuestion>
                 {
-                    new LevelQuestion { LevelQuestionName = "Dễ" },
-                    new LevelQuestion { LevelQuestionName = "Trung bình" },
-                    new LevelQuestion { LevelQuestionName = "Khó" },
-                    new LevelQuestion { LevelQuestionName = "Rất khó" },
-                    new LevelQuestion { LevelQuestionName = "Cơ bản" }
+                    new LevelQuestion { LevelQuestionName = "Dễ", Score = 0.5 },
+                    new LevelQuestion { LevelQuestionName = "Trung bình", Score = 1.0 },
+                    new LevelQuestion { LevelQuestionName = "Khó", Score = 1.3 },
+                    new LevelQuestion { LevelQuestionName = "Rất khó", Score = 1.5 },
+                    new LevelQuestion { LevelQuestionName = "Cơ bản", Score = 0.8 }
                 };
                 await context.LevelQuestions.AddRangeAsync(levels);
                 await context.SaveChangesAsync();

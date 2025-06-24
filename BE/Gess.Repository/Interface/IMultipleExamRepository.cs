@@ -16,6 +16,6 @@ namespace GESS.Repository.Interface
         //
         Task<ExamInfoResponseDTO> CheckAndPrepareExamAsync(int examId, string code, Guid studentId);
         Task<UpdateMultiExamProgressResponseDTO> UpdateProgressAsync(UpdateMultiExamProgressDTO dto);
-        Task<UpdateMultiExamProgressResponseDTO> SubmitExamAsync(UpdateMultiExamProgressDTO dto);
+        Task<SubmitExamResponseDTO> SubmitExamAsync(UpdateMultiExamProgressDTO dto);
     }
 }

@@ -15,7 +15,7 @@ namespace GESS.Service.multipleExam
         Task<MultipleExamCreateDTO> CreateMultipleExamAsync(MultipleExamCreateDTO multipleExamCreateDto);
         Task<ExamInfoResponseDTO> CheckExamNameAndCodeMEAsync(CheckExamRequestDTO request);
         Task<UpdateMultiExamProgressResponseDTO> UpdateProgressAsync(UpdateMultiExamProgressDTO dto);
-        Task<UpdateMultiExamProgressResponseDTO> SubmitExamAsync(UpdateMultiExamProgressDTO dto);
+        Task<SubmitExamResponseDTO> SubmitExamAsync(UpdateMultiExamProgressDTO dto);
 
     }
 }

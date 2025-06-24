@@ -46,6 +46,7 @@ using GESS.Service.student;
 using GESS.Service.exam;
 using GESS.Service.room;
 using GESS.Service.multianswer;
+using GESS.Service.practiceExam;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -153,6 +154,7 @@ builder.Services.AddScoped<IPracticeQuestionService, PracticeQuestionService>();
 builder.Services.AddScoped<IRoomRepository, RoomRepository>();
 builder.Services.AddScoped<IRoomService, RoomService>();
 builder.Services.AddScoped<IMultiAnswerService, MultiAnswerService>();
+builder.Services.AddScoped<IPracticeExamService, PracticeExamService>();
 
 // Đăng ký các repository
 
@@ -177,6 +179,7 @@ builder.Services.AddScoped<IPracticeQuestionsRepository, PracticeQuestionsReposi
 builder.Services.AddScoped<ILevelQuestionRepository, LevelQuestionRepository>();
 builder.Services.AddScoped<IPracticeAnswersRepository, PracticeAnswersRepository>();
 builder.Services.AddScoped<IMultipleAnswerRepository, MultiAnswerRepository>();
+builder.Services.AddScoped<IPracticeExamRepository, PracticeExamRepository>();
 
 
 // Đăng ký EmailService

@@ -219,6 +219,8 @@ namespace GESS.Repository.Implement
         {
             var history = await _context.MultiExamHistories
                 .Include(h => h.QuestionMultiExams)
+                    .ThenInclude(q => q.MultiQuestion)
+                        .ThenInclude(mq => mq.LevelQuestion)
                 .FirstOrDefaultAsync(h => h.ExamHistoryId == dto.MultiExamHistoryId);
             if (history == null) throw new Exception("Không tìm thấy lịch sử bài thi.");
 
@@ -231,15 +233,18 @@ namespace GESS.Repository.Implement
                 if (questionExam == null) continue;
                 questionExam.Answer = ans.Answer ?? string.Empty;
 
-                // Lấy đáp án đúng
+                // Get correct answer
                 var correctAnswer = await _context.MultiAnswers
                     .Where(a => a.MultiQuestionId == ans.QuestionId && a.IsCorrect)
                     .Select(a => a.AnswerContent)
                     .FirstOrDefaultAsync();
 
-                // Lấy điểm theo level (mặc định 1 điểm/câu nếu chưa có trường Score)
                 bool isCorrect = !string.IsNullOrEmpty(correctAnswer) && string.Equals(ans.Answer, correctAnswer, StringComparison.OrdinalIgnoreCase);
-                double score = isCorrect ? 1 : 0;
+                
+                // Calculate score based on difficulty level from database
+                double weight = questionExam.MultiQuestion.LevelQuestion.Score;
+                double score = isCorrect ? weight : 0;
+                
                 questionExam.Score = score;
                 totalScore += score;
                 questionResults.Add(new QuestionResultDTO
@@ -258,56 +263,95 @@ namespace GESS.Repository.Implement
             };
         }
 
-        public async Task<UpdateMultiExamProgressResponseDTO> SubmitExamAsync(UpdateMultiExamProgressDTO dto)
+        public async Task<SubmitExamResponseDTO> SubmitExamAsync(UpdateMultiExamProgressDTO dto)
         {
             var history = await _context.MultiExamHistories
                 .Include(h => h.QuestionMultiExams)
+                    .ThenInclude(q => q.MultiQuestion)
+                        .ThenInclude(mq => mq.LevelQuestion)
+                .Include(h => h.MultiExam)
+                    .ThenInclude(me => me.Subject)
                 .FirstOrDefaultAsync(h => h.ExamHistoryId == dto.MultiExamHistoryId);
+            
             if (history == null)
                 throw new Exception("Không tìm thấy lịch sử bài thi.");
 
             if (history.StatusExam == "Completed")
                 throw new Exception("Bài thi đã được nộp, không thể nộp lại.");
 
-            double totalScore = 0;
             var questionResults = new List<QuestionResultDTO>();
+            int correctAnswers = 0;
+            double totalScore = 0;
+            double maxPossibleScore = 0;
+            int totalQuestions = history.QuestionMultiExams.Count;
 
-            foreach (var ans in dto.Answers)
+            foreach (var questionExam in history.QuestionMultiExams)
             {
-                var questionExam = history.QuestionMultiExams.FirstOrDefault(q => q.MultiQuestionId == ans.QuestionId);
-                if (questionExam == null) continue;
-                questionExam.Answer = ans.Answer ?? string.Empty;
+                var ans = dto.Answers.FirstOrDefault(a => a.QuestionId == questionExam.MultiQuestionId);
+                string studentAnswer = ans?.Answer ?? string.Empty;
 
                 // Lấy đáp án đúng
                 var correctAnswer = await _context.MultiAnswers
-                    .Where(a => a.MultiQuestionId == ans.QuestionId && a.IsCorrect)
+                    .Where(a => a.MultiQuestionId == questionExam.MultiQuestionId && a.IsCorrect)
                     .Select(a => a.AnswerContent)
                     .FirstOrDefaultAsync();
 
-                bool isCorrect = !string.IsNullOrEmpty(correctAnswer) && string.Equals(ans.Answer, correctAnswer, StringComparison.OrdinalIgnoreCase);
-                double score = isCorrect ? 1 : 0;
+                bool isCorrect = !string.IsNullOrEmpty(correctAnswer) && string.Equals(studentAnswer, correctAnswer, StringComparison.OrdinalIgnoreCase);
+
+                double weight = questionExam.MultiQuestion.LevelQuestion.Score;
+                double score = isCorrect ? weight : 0;
+
+                // Cập nhật điểm và đáp án cho từng câu hỏi
+                questionExam.Answer = studentAnswer;
                 questionExam.Score = score;
+
+                if (isCorrect) correctAnswers++;
                 totalScore += score;
+                maxPossibleScore += weight;
+
                 questionResults.Add(new QuestionResultDTO
                 {
-                    QuestionId = ans.QuestionId,
+                    QuestionId = questionExam.MultiQuestionId,
                     IsCorrect = isCorrect,
                     Score = score
                 });
             }
-            // Cập nhật trạng thái nộp bài
-            history.Score = totalScore;
+
+            // Calculate final score on scale of 10
+            double finalScore = maxPossibleScore > 0 ? (totalScore / maxPossibleScore) * 10 : 0;
+
+            // Calculate correct answers percentage
+            string correctAnswersPercentage = totalQuestions > 0 
+                ? $"{correctAnswers}/{totalQuestions} ({(double)correctAnswers / totalQuestions * 100:F0}%)"
+                : "0/0 (0%)";
+
+            // Update exam status
+            history.Score = finalScore;
             history.StatusExam = "Completed";
             history.EndTime = DateTime.Now;
             history.IsGrade = true;
             await _context.SaveChangesAsync();
-
-            return new UpdateMultiExamProgressResponseDTO
+             // Calculate time taken
+            string timeTaken = "";
+            if (history.StartTime.HasValue && history.EndTime.HasValue)
             {
-                TotalScore = totalScore,
-                QuestionResults = questionResults
+                var duration = history.EndTime.Value - history.StartTime.Value;
+                timeTaken = $"{duration.Hours:D2}:{duration.Minutes:D2}:{duration.Seconds:D2}";
+            }
+            return new SubmitExamResponseDTO
+            {
+                ExamName = history.MultiExam.MultiExamName,
+                SubjectName = history.MultiExam.Subject.SubjectName,
+                TimeTaken = timeTaken,
+                CorrectAnswersPercentage = correctAnswersPercentage,
+                FinalScore = Math.Round(finalScore, 2),
+                QuestionResults = questionResults,
+                CorrectCount = correctAnswers,
+                TotalCount = totalQuestions
             };
         }
+
+       
     }
     
     
