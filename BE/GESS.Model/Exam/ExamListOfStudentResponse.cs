@@ -18,9 +18,9 @@ namespace GESS.Model.Exam
         public string? Status { get; set; }
         public string? CodeStart { get; set; }
         public string? RoomName { get; set; }
-        public DateTime ExamSlotName { get; set; }
+        public string? ExamSlotName { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
-        public ExamSlotRoom? ExamSlotRoom { get; set; }
+       // public ExamSlotRoom? ExamSlotRoom { get; set; }
     }
 }

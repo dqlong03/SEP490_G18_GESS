@@ -35,11 +35,11 @@ namespace GESS.Entity.Configs
 
             builder.HasOne(esr => esr.PracticeExam)
                    .WithOne(pe => pe.ExamSlotRoom)
-                   .HasForeignKey<ExamSlotRoom>(esr => esr.ExamId);
+                   .HasForeignKey<ExamSlotRoom>(esr => esr.PracticeExamId);
 
             builder.HasOne(esr => esr.MultiExam)
                    .WithOne(me => me.ExamSlotRoom)
-                   .HasForeignKey<ExamSlotRoom>(esr => esr.ExamId);
+                   .HasForeignKey<ExamSlotRoom>(esr => esr.MultiExamId);
         }
     }
 } 

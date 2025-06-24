@@ -143,21 +143,26 @@ namespace GESS.Repository.Implement
             var query = _context.MultiExams
                 .Where(me => me.CreateAt.Year == latestYear
                     && me.SemesterId == latestSemesterId
-                    && me.Status == PredefinedStatusExam.PENDING_EXAM) 
+                    && me.Status == "Published") 
+
                 .Join(_context.MultiExamHistories,
                     me => me.MultiExamId,
                     meh => meh.MultiExamId,
                     (me, meh) => new { MultiExam = me, MultiExamHistory = meh })
+
                 .Where(x => x.MultiExamHistory.StudentId == request.StudentId
                     && x.MultiExamHistory.StatusExam == PredefinedStatusExam.PENDING_EXAM) 
                 .Select(x => x.MultiExam)
+
+
                 .Join(_context.Subjects,
                     me => me.SubjectId,
                     s => s.SubjectId,
                     (me, s) => new { MultiExam = me, SubjectName = s.SubjectName })
+
                 .GroupJoin(_context.ExamSlotRooms,
                     x => x.MultiExam.MultiExamId,
-                    esr => esr.ExamId,
+                    esr => esr.MultiExamId,
                     (x, esr) => new { x.MultiExam, x.SubjectName, ExamSlotRooms = esr })
                 .SelectMany(x => x.ExamSlotRooms.DefaultIfEmpty(),
                     (x, esr) => new { x.MultiExam, x.SubjectName, ExamSlotRoom = esr })
@@ -181,10 +186,10 @@ namespace GESS.Repository.Implement
                         Status = x.MultiExam.Status,
                         CodeStart = x.MultiExam.CodeStart,
                         RoomName = r != null ? r.RoomName : null,
-                        ExamSlotName = x.ExamSlot != null ? x.ExamSlot.StartTime : default,
+                        ExamSlotName = x.ExamSlot != null ? x.ExamSlot.SlotName : null,
                         StartTime = x.ExamSlot != null ? x.ExamSlot.StartTime : default,
                         EndTime = x.ExamSlot != null ? x.ExamSlot.EndTime : default,
-                        ExamSlotRoom = x.ExamSlotRoom
+                        //ExamSlotRoom = x.ExamSlotRoom
                     });
 
             // Áp dụng bộ lọc tìm kiếm theo tên bài thi
@@ -222,23 +227,29 @@ namespace GESS.Repository.Implement
             var query = _context.PracticeExams
                 .Where(me => me.CreateAt.Year == latestYear
                     && me.SemesterId == latestSemesterId
-                    && me.Status == PredefinedStatusExam.PENDING_EXAM)
+                    && me.Status == "Published")
+
                 .Join(_context.PracticeExamHistories,
                     me => me.PracExamId,
                     meh => meh.PracExamId,
                     (me, meh) => new { PracticeExam = me, PracticeExamHistory = meh })
+
                 .Where(x => x.PracticeExamHistory.StudentId == request.StudentId
                     && x.PracticeExamHistory.StatusExam == PredefinedStatusExam.PENDING_EXAM)
                 .Select(x => x.PracticeExam)
+
+
                 .Join(_context.Subjects,
                     me => me.SubjectId,
                     s => s.SubjectId,
                     (me, s) => new { PracticeExam = me, SubjectName = s.SubjectName })
+
                 .GroupJoin(_context.ExamSlotRooms,
                     x => x.PracticeExam.PracExamId,
-                    esr => esr.ExamId,
+                    esr => esr.PracticeExamId,
                     (x, esr) => new { x.PracticeExam, x.SubjectName, ExamSlotRooms = esr })
                 .SelectMany(x => x.ExamSlotRooms.DefaultIfEmpty(),
+
                     (x, esr) => new { x.PracticeExam, x.SubjectName, ExamSlotRoom = esr })
                 .GroupJoin(_context.ExamSlots,
                     x => x.ExamSlotRoom != null ? x.ExamSlotRoom.ExamSlotId : 0,
@@ -246,6 +257,7 @@ namespace GESS.Repository.Implement
                     (x, es) => new { x.PracticeExam, x.SubjectName, x.ExamSlotRoom, ExamSlots = es })
                 .SelectMany(x => x.ExamSlots.DefaultIfEmpty(),
                     (x, es) => new { x.PracticeExam, x.SubjectName, x.ExamSlotRoom, ExamSlot = es })
+
                 .GroupJoin(_context.Rooms,
                     x => x.ExamSlotRoom != null ? x.ExamSlotRoom.RoomId : 0,
                     r => r.RoomId,
@@ -260,10 +272,10 @@ namespace GESS.Repository.Implement
                         Status = x.PracticeExam.Status,
                         CodeStart = x.PracticeExam.CodeStart,
                         RoomName = r != null ? r.RoomName : null,
-                        ExamSlotName = x.ExamSlot != null ? x.ExamSlot.StartTime : default,
+                        ExamSlotName = x.ExamSlot != null ? x.ExamSlot.SlotName : null,
                         StartTime = x.ExamSlot != null ? x.ExamSlot.StartTime : default,
                         EndTime = x.ExamSlot != null ? x.ExamSlot.EndTime : default,
-                        ExamSlotRoom = x.ExamSlotRoom
+                       // ExamSlotRoom = x.ExamSlotRoom
                     });
 
             // Áp dụng bộ lọc tìm kiếm theo tên bài thi
