@@ -1,7 +1,9 @@
 ﻿using GESS.Model.MultipleExam;
+using GESS.Model.PracticeExam;
 using GESS.Service.multianswer;
 using GESS.Service.multipleExam;
 using GESS.Service.multipleQuestion;
+using GESS.Service.practiceExam;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,12 +16,14 @@ namespace GESS.Api.Controllers
         private readonly IMultipleExamService _multipleExamService;
         private readonly IMultipleQuestionService _multipleQuestionService;
         private readonly IMultiAnswerService _multipleAnswerService;
+        private readonly IPracticeExamService _practiceExamService;
 
-        public StudentExamController(IMultipleExamService multipleExamService, IMultipleQuestionService multipleQuestionService, IMultiAnswerService multiAnswerService)
+        public StudentExamController(IMultipleExamService multipleExamService, IMultipleQuestionService multipleQuestionService, IMultiAnswerService multiAnswerService, IPracticeExamService practiceExamService)
         {
             _multipleExamService = multipleExamService;
             _multipleQuestionService = multipleQuestionService;
             _multipleAnswerService = multiAnswerService;
+            _practiceExamService = practiceExamService;
         }
 
         [HttpPost("CheckExamNameAndCodeME")]
@@ -35,7 +39,7 @@ namespace GESS.Api.Controllers
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
-        [HttpGet("ByMultiExam/{multiExamId}")]
+        [HttpGet("GetAllQuestionMultiExam/{multiExamId}")]
         public async Task<IActionResult> GetAllQuestionMultiExamByMultiExamId(int multiExamId)
         {
             var result = await _multipleQuestionService.GetAllQuestionMultiExamByMultiExamIdAsync(multiExamId);
@@ -78,5 +82,53 @@ namespace GESS.Api.Controllers
             }
         }
 
+        [HttpPost("CheckExamNameAndCodePE")]
+        public async Task<IActionResult> CheckExamNameAndCodePE([FromBody] CheckPracticeExamRequestDTO request)
+        {
+            try
+            {
+                var result = await _practiceExamService.CheckExamNameAndCodePEAsync(request);
+                return Ok(new { success = true, data = result });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet("GetQuestionAndAnswerByPracExamId/{pracExamId}")]
+        public async Task<IActionResult> GetQuestionAndAnswerByPracExamId(int pracExamId)
+        {
+            var result = await _practiceExamService.GetQuestionAndAnswerByPracExamId(pracExamId);
+            return Ok(result);
+        }
+
+        [HttpGet("GetPracticeAnswerOfQuestion/{pracExamId}")]
+        public async Task<IActionResult> GetPracticeAnswerOfQuestion(int pracExamId)
+        {
+            var result = await _practiceExamService.GetPracticeAnswerOfQuestion(pracExamId);
+            return Ok(result);
+        }
+
+        [HttpPost("UpdatePEEach5minutes")]
+        public async Task<IActionResult> UpdatePEEach5minutes([FromBody] UpdatePracticeExamAnswersRequest request)
+        {
+            await _practiceExamService.UpdatePEEach5minutesAsync(request.Answers);
+            return Ok(new { success = true, message = "Lưu tạm thành công!" });
+        }
+        [HttpPost("SubmitPracticeExam")]
+        public async Task<IActionResult> SubmitPracticeExam([FromBody] SubmitPracticeExamRequest dto)
+        {
+            try
+            {
+                var result = await _practiceExamService.SubmitPracticeExamAsync(dto);
+                return Ok(new { success = true, data = result });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+
+        }
     }
 }

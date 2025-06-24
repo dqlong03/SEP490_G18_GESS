@@ -14,5 +14,11 @@ namespace GESS.Repository.Interface
     public interface IPracticeExamRepository : IBaseRepository<PracticeExam>
     {
         Task <PracticeExam> CreatePracticeExamAsync(PracticeExamCreateDTO practiceExamCreateDto);
+        Task<PracticeExamInfoResponseDTO> CheckExamNameAndCodePEAsync(CheckPracticeExamRequestDTO request);
+        Task<List<QuestionOrderDTO>> GetQuestionAndAnswerByPracExamId(int pracExamId);
+        Task<List<PracticeAnswerOfQuestionDTO>> GetPracticeAnswerOfQuestion(int pracExamId);
+        Task UpdatePEEach5minutesAsync(List<UpdatePracticeExamAnswerDTO> answers);
+        Task<SubmitPracticeExamResponseDTO> SubmitPracticeExamAsync(SubmitPracticeExamRequest dto);
+
     }
 }

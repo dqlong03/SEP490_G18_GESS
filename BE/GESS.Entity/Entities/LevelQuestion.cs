@@ -26,6 +26,7 @@ namespace GESS.Entity.Entities
 
         // Danh sách câu hỏi tự luận thuộc cấp độ này
         public ICollection<PracticeQuestion> PracticeQuestions { get; set; }
+        public double Score { get; set; }
 
         // Constructor khởi tạo các danh sách
         public LevelQuestion()

@@ -43,7 +43,7 @@ namespace GESS.Service.multipleExam
             return await _unitOfWork.MultipleExamRepository.UpdateProgressAsync(dto);
         }
 
-        public async Task<UpdateMultiExamProgressResponseDTO> SubmitExamAsync(UpdateMultiExamProgressDTO dto)
+        public async Task<SubmitExamResponseDTO> SubmitExamAsync(UpdateMultiExamProgressDTO dto)
         {
             return await _unitOfWork.MultipleExamRepository.SubmitExamAsync(dto);
         }
