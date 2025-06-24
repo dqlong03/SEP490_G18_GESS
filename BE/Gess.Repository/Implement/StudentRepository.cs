@@ -1,8 +1,10 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
+using GESS.Model.Exam;
 using GESS.Model.Examination;
 using GESS.Model.Student;
+using GESS.Model.Subject;
 using GESS.Repository.Interface;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -255,6 +257,79 @@ namespace GESS.Repository.Implement
 
             await _context.Students.AddAsync(newStudent);
             await _context.SaveChangesAsync();
+        }
+
+
+        public async Task<List<int>> GetAllYearOfStudentAsync(Guid studentId)
+        {
+            var multiExamYears = await _context.MultiExamHistories
+                 .Where(meh => meh.Student.UserId == studentId)
+                 .Select(meh => meh.MultiExam.CreateAt.Year)
+                 .ToListAsync();
+
+            var practiceExamYears = await _context.PracticeExamHistories
+                .Where(peh => peh.Student.UserId == studentId)
+                .Select(peh => peh.PracticeExam.CreateAt.Year)
+                .ToListAsync();
+
+       
+            return multiExamYears.Concat(practiceExamYears)
+                .Distinct()
+                .OrderBy(y => y)
+                .ToList();
+        }
+
+        public async Task<List<HistoryExamOfStudentDTOResponse>> GetHistoryExamOfStudentBySubIdAsync(int subjectId, Guid studentId)
+        {
+            var multiExams = await _context.MultiExamHistories
+               .Where(meh => meh.Student.UserId == studentId
+                   && meh.MultiExam.SubjectId == subjectId
+                   && meh.StatusExam == "Đã thi")
+               .Select(meh => new HistoryExamOfStudentDTOResponse
+               {
+                   ExamName = meh.MultiExam.MultiExamName,
+                   ExamType = "Multi",
+                   //MaxScore = 100, // Giả định đầu điểm, cần thay bằng giá trị thực nếu có
+                   Duration = meh.MultiExam.Duration,
+                   SubmittedDateTime = meh.EndTime,
+                   Score = meh.Score ?? 0
+               })
+               .ToListAsync();
+
+            var practiceExams = await _context.PracticeExamHistories
+                .Where(peh => peh.Student.UserId == studentId
+                    && peh.PracticeExam.SubjectId == subjectId
+                    && peh.StatusExam == "Đã thi")
+                .Select(peh => new HistoryExamOfStudentDTOResponse
+                {
+                    ExamName = peh.PracticeExam.PracExamName,
+                    ExamType = "Practice",
+                    //MaxScore = 100, // Giả định đầu điểm, cần thay bằng giá trị thực nếu có
+                    Duration = peh.PracticeExam.Duration,
+                    SubmittedDateTime = peh.EndTime,
+                    Score = peh.Score ?? 0
+                })
+                .ToListAsync();
+
+            return multiExams.Concat(practiceExams)
+                .OrderBy(e => e.SubmittedDateTime)
+                .ToList();
+        }
+
+        public async Task<List<AllSubjectBySemesterOfStudentDTOResponse>> GetAllSubjectBySemesterOfStudentAsync(int semesterId, int year, Guid userId)
+        {
+            return await _context.Subjects
+               .Where(s => s.Classes.Any(c => c.SemesterId == semesterId
+                   && c.Semester.SemesterName.Contains(year.ToString())
+                   && c.ClassStudents.Any(cs => cs.Student.StudentId == userId)))
+               .Select(s => new AllSubjectBySemesterOfStudentDTOResponse
+               {
+                   Id = s.SubjectId,
+                   Code = s.Course,
+                   Name = s.SubjectName,
+                   IsDeleted = !s.Classes.Any(c => c.Semester.IsActive)
+               })
+               .ToListAsync();
         }
     }
 }

@@ -1,6 +1,8 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Entities;
+using GESS.Model.Exam;
 using GESS.Model.Student;
+using GESS.Model.Subject;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,5 +21,9 @@ namespace GESS.Repository.Interface
         Task<StudentResponse> UpdateStudentAsync(Guid studentId, StudentUpdateRequest request);
         Task<Student> GetStudentbyUserId(Guid userId);
         Task AddStudent(Guid id, Student student);
+
+        Task<List<int>> GetAllYearOfStudentAsync(Guid studentId);
+        Task<List<HistoryExamOfStudentDTOResponse>> GetHistoryExamOfStudentBySubIdAsync(int subjectId, Guid userId);
+        Task<List<AllSubjectBySemesterOfStudentDTOResponse>> GetAllSubjectBySemesterOfStudentAsync(int semesterId, int year, Guid userId);
     }
 }
