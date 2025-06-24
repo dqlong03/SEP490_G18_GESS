@@ -11,6 +11,8 @@ using GESS.Common;
 using Microsoft.AspNetCore.Http;
 using GESS.Model.Teacher;
 using OfficeOpenXml;
+using GESS.Model.Subject;
+using GESS.Model.Exam;
 
 namespace GESS.Service.student
 {
@@ -269,6 +271,24 @@ namespace GESS.Service.student
 
 
             return students;
+        }
+
+        public async Task<List<AllSubjectBySemesterOfStudentDTOResponse>> GetAllSubjectBySemesterOfStudentAsync(int semesterId, int year, Guid userId)
+        {
+            if (semesterId <= 0 || year <= 0 )
+                throw new ArgumentException("Thông tin đầu vào không hợp lệ.");
+
+            return await _unitOfWork.StudentRepository.GetAllSubjectBySemesterOfStudentAsync(semesterId, year, userId);
+        }
+
+        public async Task<List<int>> GetAllYearOfStudentAsync(Guid studentId)
+        {
+            return await _unitOfWork.StudentRepository.GetAllYearOfStudentAsync(studentId);
+        }
+
+        public async Task<List<HistoryExamOfStudentDTOResponse>> GetHistoryExamOfStudentBySubIdAsync(int subjectId, Guid studentId)
+        {
+            return await _unitOfWork.StudentRepository.GetHistoryExamOfStudentBySubIdAsync(subjectId, studentId);
         }
     }
 }
