@@ -45,19 +45,21 @@ namespace GESS.Entity.Entities
         public string MultiOrPractice { get; set; }
 
         // Id của kỳ thi (MultiExamId hoặc PracticeExamId, tùy thuộc vào MultiOrPractice), có thể để trống
-        public int? ExamId { get; set; }
+        public int? MultiExamId { get; set; }
+
+        public int? PracticeExamId { get; set; }
 
         // Kỳ thi trắc nghiệm diễn ra ở phòng/ca này (1 phòng/ca chỉ có 1 kỳ thi trắc nghiệm)
-        public MultiExam MultiExam { get; set; }
+        public MultiExam? MultiExam { get; set; }
 
         // Kỳ thi tự luận diễn ra ở phòng/ca này (1 phòng/ca chỉ có 1 kỳ thi tự luận)
-        public PracticeExam PracticeExam { get; set; }
+        public PracticeExam? PracticeExam { get; set; }
 
         // Lịch sử thi của sinh viên trong phòng/ca này (qua bảng trung gian MultiExamHistory)
         public ICollection<MultiExamHistory> MultiExamHistories { get; set; }
+        public ICollection<PracticeExamHistory> PracticeExamHistories { get; set; }
 
         // Lịch sử thi tự luận của sinh viên trong phòng/ca này (qua bảng trung gian PracticeExamHistory)
-        public ICollection<PracticeExamHistory> PracticeExamHistories { get; set; }
 
         // Constructor khởi tạo danh sách
         public ExamSlotRoom()

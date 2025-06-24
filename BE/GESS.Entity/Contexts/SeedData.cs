@@ -941,25 +941,62 @@ namespace GESS.Entity.Contexts
                 {
                     throw new Exception("No Teachers found. Please seed Teachers first.");
                 }
-
-                // Lấy ID thực tế từ database
-                var room = context.Rooms.First();
-                var examSlot = context.ExamSlots.First();
-                var semester = context.Semesters.First();
-                var subject = context.Subjects.First();
-                var teacher = context.Teachers.First();
-
-                var examSlotRoom = new ExamSlotRoom
+                if (!context.MultiExams.Any() && !context.PracticeExams.Any())
                 {
-                    RoomId = room.RoomId,
-                    ExamSlotId = examSlot.ExamSlotId,
-                    SemesterId = semester.SemesterId,
-                    SubjectId = subject.SubjectId,
-                    SupervisorId = teacher.TeacherId,
-                    ExamGradedId = teacher.TeacherId,
-                    MultiOrPractice = "Multi" // Set to "Multi" for multiple choice exam
-                };
-                await context.ExamSlotRooms.AddAsync(examSlotRoom);
+                    throw new Exception("No MultiExams or PracticeExams found. Please seed Exams first.");
+                }
+
+                // Lấy tất cả các bản ghi cần thiết
+                var rooms = context.Rooms.ToList();
+                var examSlots = context.ExamSlots.ToList();
+                var semesters = context.Semesters.ToList();
+                var subjects = context.Subjects.ToList();
+                var teachers = context.Teachers.ToList();
+                var multiExams = context.MultiExams.ToList();
+                var practiceExams = context.PracticeExams.ToList();
+
+                var examSlotRooms = new List<ExamSlotRoom>();
+
+                // Tạo ExamSlotRoom cho từng MultiExam
+                foreach (var multiExam in multiExams)
+                {
+                    examSlotRooms.Add(new ExamSlotRoom
+                    {
+                        RoomId = rooms.First().RoomId, // Có thể thay bằng logic phân bổ phòng
+                        ExamSlotId = examSlots.First().ExamSlotId, // Có thể thay bằng logic phân bổ ca thi
+                        SemesterId = multiExam.SemesterId,
+                        SubjectId = multiExam.SubjectId,
+                        SupervisorId = teachers.First().TeacherId, // Có thể thay bằng logic gán giáo viên
+                        ExamGradedId = teachers.First().TeacherId, // Có thể thay bằng logic gán giáo viên
+                        MultiOrPractice = "Multi",
+                        MultiExamId = multiExam.MultiExamId,
+                        PracticeExamId = null,
+                        MultiExam = multiExam,
+                        PracticeExam = null
+                    });
+                }
+
+                // Tạo ExamSlotRoom cho từng PracticeExam
+                foreach (var practiceExam in practiceExams)
+                {
+                    examSlotRooms.Add(new ExamSlotRoom
+                    {
+                        RoomId = rooms.First().RoomId, // Có thể thay bằng logic phân bổ phòng
+                        ExamSlotId = examSlots.First().ExamSlotId, // Có thể thay bằng logic phân bổ ca thi
+                        SemesterId = practiceExam.SemesterId,
+                        SubjectId = practiceExam.SubjectId,
+                        SupervisorId = teachers.First().TeacherId, // Có thể thay bằng logic gán giáo viên
+                        ExamGradedId = teachers.First().TeacherId, // Có thể thay bằng logic gán giáo viên
+                        MultiOrPractice = "Practice",
+                        MultiExamId = null,
+                        PracticeExamId = practiceExam.PracExamId,
+                        MultiExam = null,
+                        PracticeExam = practiceExam
+                    });
+                }
+
+                // Thêm danh sách vào context và lưu
+                await context.ExamSlotRooms.AddRangeAsync(examSlotRooms);
                 await context.SaveChangesAsync();
             }
         }

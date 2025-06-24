@@ -28,7 +28,7 @@ namespace GESS.Entity.Configs
 
             builder.HasOne(me => me.ExamSlotRoom)
                    .WithOne(esr => esr.MultiExam)
-                   .HasForeignKey<ExamSlotRoom>(esr => esr.ExamId);
+                   .HasForeignKey<ExamSlotRoom>(esr => esr.MultiExamId);
 
             builder.HasMany(me => me.NoQuestionInChapters)
                    .WithOne(nq => nq.MultiExam)
