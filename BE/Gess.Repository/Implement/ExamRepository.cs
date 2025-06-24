@@ -184,7 +184,7 @@ namespace GESS.Repository.Implement
                         SubjectName = x.SubjectName,
                         Duration = x.MultiExam.Duration,
                         Status = x.MultiExam.Status,
-                        CodeStart = x.MultiExam.CodeStart,
+                        //CodeStart = x.MultiExam.CodeStart,
                         RoomName = r != null ? r.RoomName : null,
                         ExamSlotName = x.ExamSlot != null ? x.ExamSlot.SlotName : null,
                         StartTime = x.ExamSlot != null ? x.ExamSlot.StartTime : default,
@@ -192,16 +192,6 @@ namespace GESS.Repository.Implement
                         //ExamSlotRoom = x.ExamSlotRoom
                     });
 
-            // Áp dụng bộ lọc tìm kiếm theo tên bài thi
-            if (!string.IsNullOrEmpty(request.SearchName))
-            {
-                query = query.Where(me => me.ExamName.Contains(request.SearchName));
-            }
-
-            // Áp dụng phân trang
-            query = query
-                .Skip((request.PageNumber - 1) * request.PageSize)
-                .Take(request.PageSize);
 
             return await query.ToListAsync();
         }
@@ -270,7 +260,7 @@ namespace GESS.Repository.Implement
                         SubjectName = x.SubjectName,
                         Duration = x.PracticeExam.Duration,
                         Status = x.PracticeExam.Status,
-                        CodeStart = x.PracticeExam.CodeStart,
+                        //CodeStart = x.PracticeExam.CodeStart,
                         RoomName = r != null ? r.RoomName : null,
                         ExamSlotName = x.ExamSlot != null ? x.ExamSlot.SlotName : null,
                         StartTime = x.ExamSlot != null ? x.ExamSlot.StartTime : default,
@@ -278,16 +268,6 @@ namespace GESS.Repository.Implement
                        // ExamSlotRoom = x.ExamSlotRoom
                     });
 
-            // Áp dụng bộ lọc tìm kiếm theo tên bài thi
-            if (!string.IsNullOrEmpty(request.SearchName))
-            {
-                query = query.Where(me => me.ExamName.Contains(request.SearchName));
-            }
-
-            // Áp dụng phân trang
-            query = query
-                .Skip((request.PageNumber - 1) * request.PageSize)
-                .Take(request.PageSize);
 
             return await query.ToListAsync();
         }

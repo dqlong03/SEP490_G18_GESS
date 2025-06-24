@@ -16,7 +16,7 @@ namespace GESS.Model.Exam
         public string SubjectName { get; set; }
         public int Duration { get; set; }
         public string? Status { get; set; }
-        public string? CodeStart { get; set; }
+        //public string? CodeStart { get; set; }
         public string? RoomName { get; set; }
         public string? ExamSlotName { get; set; }
         public DateTime StartTime { get; set; }
