@@ -273,7 +273,7 @@ namespace GESS.Service.student
             return students;
         }
 
-        public async Task<List<AllSubjectBySemesterOfStudentDTOResponse>> GetAllSubjectBySemesterOfStudentAsync(int semesterId, int year, Guid userId)
+        public async Task<List<AllSubjectBySemesterOfStudentDTOResponse>> GetAllSubjectBySemesterOfStudentAsync(int? semesterId, int? year, Guid userId)
         {
             if (semesterId <= 0 || year <= 0 )
                 throw new ArgumentException("Thông tin đầu vào không hợp lệ.");

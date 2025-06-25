@@ -24,7 +24,7 @@ namespace GESS.Service.student
         Task<Student> AddStudentAsync(Guid id, StudentCreateDTO student);
 
         Task<IEnumerable<StudentFileExcel>> StudentFileExcelsAsync(IFormFile file);
-        Task<List<AllSubjectBySemesterOfStudentDTOResponse>> GetAllSubjectBySemesterOfStudentAsync(int semesterId, int year, Guid studentId);
+        Task<List<AllSubjectBySemesterOfStudentDTOResponse>> GetAllSubjectBySemesterOfStudentAsync(int? semesterId, int? year, Guid studentId);
         Task<List<int>> GetAllYearOfStudentAsync(Guid studentId);
 
         Task<List<HistoryExamOfStudentDTOResponse>> GetHistoryExamOfStudentBySubIdAsync(int subjectId, Guid studentId);

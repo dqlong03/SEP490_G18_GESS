@@ -105,6 +105,6 @@ namespace Gess.Repository.Infrastructures
                 _context.Dispose();
                 _disposed = true;
             }
-        }
+            }
     }
 }
