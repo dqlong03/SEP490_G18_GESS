@@ -1,4 +1,5 @@
 ﻿using Gess.Repository.Infrastructures;
+using GESS.Common;
 using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
 using GESS.Model.Exam;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -57,7 +59,7 @@ namespace GESS.Repository.Implement
                 EnrollDate = student.EnrollDate,
             };
         }
-        
+
         public Task<int> CountPageAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageSize)
         {
             var query = _context.ExamServices.AsQueryable();
@@ -232,7 +234,7 @@ namespace GESS.Repository.Implement
                 EnrollDate = existing.EnrollDate,
             };
         }
-      
+
         public Task<Student> GetStudentbyUserId(Guid userId)
         {
             var student = _context.Students
@@ -272,7 +274,7 @@ namespace GESS.Repository.Implement
                 .Select(peh => peh.PracticeExam.CreateAt.Year)
                 .ToListAsync();
 
-       
+
             return multiExamYears.Concat(practiceExamYears)
                 .Distinct()
                 .OrderBy(y => y)
@@ -284,12 +286,13 @@ namespace GESS.Repository.Implement
             var multiExams = await _context.MultiExamHistories
                .Where(meh => meh.Student.UserId == studentId
                    && meh.MultiExam.SubjectId == subjectId
-                   && meh.StatusExam == "Đã thi")
+                   && meh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM)
                .Select(meh => new HistoryExamOfStudentDTOResponse
                {
                    ExamName = meh.MultiExam.MultiExamName,
                    ExamType = "Multi",
-                   //MaxScore = 100, // Giả định đầu điểm, cần thay bằng giá trị thực nếu có
+
+                   CategoryExamName = meh.MultiExam.CategoryExam.CategoryExamName,
                    Duration = meh.MultiExam.Duration,
                    SubmittedDateTime = meh.EndTime,
                    Score = meh.Score ?? 0
@@ -299,12 +302,12 @@ namespace GESS.Repository.Implement
             var practiceExams = await _context.PracticeExamHistories
                 .Where(peh => peh.Student.UserId == studentId
                     && peh.PracticeExam.SubjectId == subjectId
-                    && peh.StatusExam == "Đã thi")
+                    && peh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM)
                 .Select(peh => new HistoryExamOfStudentDTOResponse
                 {
                     ExamName = peh.PracticeExam.PracExamName,
                     ExamType = "Practice",
-                    //MaxScore = 100, // Giả định đầu điểm, cần thay bằng giá trị thực nếu có
+                    CategoryExamName = peh.PracticeExam.CategoryExam.CategoryExamName,
                     Duration = peh.PracticeExam.Duration,
                     SubmittedDateTime = peh.EndTime,
                     Score = peh.Score ?? 0
@@ -316,20 +319,122 @@ namespace GESS.Repository.Implement
                 .ToList();
         }
 
-        public async Task<List<AllSubjectBySemesterOfStudentDTOResponse>> GetAllSubjectBySemesterOfStudentAsync(int semesterId, int year, Guid userId)
+        public async Task<List<AllSubjectBySemesterOfStudentDTOResponse>> GetAllSubjectBySemesterOfStudentAsync(int? semesterId, int? year, Guid userId)
         {
-            return await _context.Subjects
-               .Where(s => s.Classes.Any(c => c.SemesterId == semesterId
-                   && c.Semester.SemesterName.Contains(year.ToString())
-                   && c.ClassStudents.Any(cs => cs.Student.StudentId == userId)))
-               .Select(s => new AllSubjectBySemesterOfStudentDTOResponse
-               {
-                   Id = s.SubjectId,
-                   Code = s.Course,
-                   Name = s.SubjectName,
-                   IsDeleted = !s.Classes.Any(c => c.Semester.IsActive)
-               })
-               .ToListAsync();
+            // Nếu không có semesterId hoặc year, lấy năm và học kỳ mới nhất
+            if (!semesterId.HasValue && !year.HasValue)
+            {
+                // Tìm năm mới nhất từ MultiExam và PracticeExam
+                var latestMultiExamYear = await _context.MultiExamHistories
+                    .Where(meh => meh.Student.UserId == userId && meh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM)
+                    .Select(meh => meh.MultiExam.CreateAt.Year)
+                    .OrderByDescending(y => y)
+                    .FirstOrDefaultAsync();
+
+                var latestPracticeExamYear = await _context.PracticeExamHistories
+                    .Where(peh => peh.Student.UserId == userId && peh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM)
+                    .Select(peh => peh.PracticeExam.CreateAt.Year)
+                    .OrderByDescending(y => y)
+                    .FirstOrDefaultAsync();
+
+                year = Math.Max(latestMultiExamYear, latestPracticeExamYear);
+                if (year == 0 || year > DateTime.Now.Year) // Không có bài thi hoặc năm vượt quá 2025
+                    return new List<AllSubjectBySemesterOfStudentDTOResponse>();
+
+                // Tìm học kỳ mới nhất trong năm mới nhất
+                var latestMultiExamSemester = await _context.MultiExamHistories
+                    .Where(meh => meh.Student.UserId == userId
+                        && meh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM
+                        && meh.MultiExam.CreateAt.Year == year)
+                    .Select(meh => new { meh.MultiExam.SemesterId, meh.MultiExam.CreateAt })
+                    .OrderByDescending(x => x.CreateAt)
+                    .FirstOrDefaultAsync();
+
+                var latestPracticeExamSemester = await _context.PracticeExamHistories
+                    .Where(peh => peh.Student.UserId == userId
+                        && peh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM
+                        && peh.PracticeExam.CreateAt.Year == year)
+                    .Select(peh => new { peh.PracticeExam.SemesterId, peh.PracticeExam.CreateAt })
+                    .OrderByDescending(x => x.CreateAt)
+                    .FirstOrDefaultAsync();
+
+                // Chọn học kỳ mới nhất dựa trên CreateAt
+                semesterId = latestMultiExamSemester != null && latestPracticeExamSemester != null
+                    ? (latestMultiExamSemester.CreateAt > latestPracticeExamSemester.CreateAt
+                        ? latestMultiExamSemester.SemesterId
+                        : latestPracticeExamSemester.SemesterId)
+                    : latestMultiExamSemester?.SemesterId ?? latestPracticeExamSemester?.SemesterId;
+
+                if (!semesterId.HasValue) // Không có bài thi trong năm mới nhất
+                    return new List<AllSubjectBySemesterOfStudentDTOResponse>();
+                return await _context.Subjects
+             .Where(s => s.Classes.Any(c => c.SemesterId == semesterId
+                 && c.ClassStudents.Any(cs => cs.Student.UserId == userId)
+                 && (c.MultiExams.Any(me => me.MultiExamHistories.Any(meh => meh.Student.UserId == userId && meh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM))
+                     || c.PracticeExams.Any(pe => pe.PracticeExamHistories.Any(peh => peh.Student.UserId == userId && peh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM)))))
+             .Select(s => new AllSubjectBySemesterOfStudentDTOResponse
+             {
+                 Id = s.SubjectId,
+                 Code = s.Course,
+                 Name = s.SubjectName,
+                 IsDeleted = !s.Classes.Any(c => c.Semester.IsActive)
+             })
+             .ToListAsync();
+            }
+
+            if (!semesterId.HasValue && year.HasValue)
+            {
+                var semesterIds = await _context.MultiExamHistories
+                    .Where(meh => meh.Student.UserId == userId
+                        && meh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM
+                        && meh.MultiExam.CreateAt.Year == year)
+                    .Select(meh => meh.MultiExam.SemesterId)
+                    .Union(_context.PracticeExamHistories
+                        .Where(peh => peh.Student.UserId == userId
+                            && peh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM
+                            && peh.PracticeExam.CreateAt.Year == year)
+                        .Select(peh => peh.PracticeExam.SemesterId))
+                    .Distinct()
+                    .ToListAsync();
+
+                if (!semesterIds.Any())
+                    return new List<AllSubjectBySemesterOfStudentDTOResponse>();
+
+                return await _context.Subjects
+                    .Where(s => s.Classes.Any(c => semesterIds.Contains(c.SemesterId)
+                        && c.ClassStudents.Any(cs => cs.Student.UserId == userId)
+                        && (c.MultiExams.Any(me => me.MultiExamHistories.Any(meh => meh.Student.UserId == userId && meh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM && me.CreateAt.Year == year))
+                            || c.PracticeExams.Any(pe => pe.PracticeExamHistories.Any(peh => peh.Student.UserId == userId && peh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM && pe.CreateAt.Year == year)))))
+                    .Select(s => new AllSubjectBySemesterOfStudentDTOResponse
+                    {
+                        Id = s.SubjectId,
+                        Code = s.Course,
+                        Name = s.SubjectName,
+                        IsDeleted = !s.Classes.Any(c => c.Semester.IsActive)
+                    })
+                    .Distinct()
+                    .ToListAsync();
+            }
+
+            else
+            {
+                // Truy vấn môn học dựa trên semesterId và year
+                return await _context.Subjects
+                    .Where(s => s.Classes.Any(c => c.SemesterId == semesterId
+                        && c.ClassStudents.Any(cs => cs.Student.UserId == userId)
+                        && (c.MultiExams.Any(me => me.MultiExamHistories.Any(meh => meh.Student.UserId == userId && meh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM && me.CreateAt.Year == year))
+                            || c.PracticeExams.Any(pe => pe.PracticeExamHistories.Any(peh => peh.Student.UserId == userId && peh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM && pe.CreateAt.Year == year)))))
+                    .Select(s => new AllSubjectBySemesterOfStudentDTOResponse
+                    {
+                        Id = s.SubjectId,
+                        Code = s.Course,
+                        Name = s.SubjectName,
+                        IsDeleted = !s.Classes.Any(c => c.Semester.IsActive)
+                    })
+                    .ToListAsync();
+            }
+        
         }
+
     }
 }

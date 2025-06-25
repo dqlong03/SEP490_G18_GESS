@@ -151,7 +151,7 @@ namespace GESS.Api.Controllers
 
 
         [HttpGet("subjects/{studentId}")]
-        public async Task<ActionResult<IEnumerable<AllSubjectBySemesterOfStudentDTOResponse>>> GetAllSubjectBySemesterOfStudent(Guid studentId, int semesterId, int year)
+        public async Task<ActionResult<IEnumerable<AllSubjectBySemesterOfStudentDTOResponse>>> GetAllSubjectBySemesterOfStudent(Guid studentId, int? semesterId, int? year)
         {
             try
             {
