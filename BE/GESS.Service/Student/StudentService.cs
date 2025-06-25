@@ -286,9 +286,9 @@ namespace GESS.Service.student
             return await _unitOfWork.StudentRepository.GetAllYearOfStudentAsync(studentId);
         }
 
-        public async Task<List<HistoryExamOfStudentDTOResponse>> GetHistoryExamOfStudentBySubIdAsync(int subjectId, Guid studentId)
+        public async Task<List<HistoryExamOfStudentDTOResponse>> GetHistoryExamOfStudentBySubIdAsync(int? semesterId, int? year, int subjectId, Guid studentId)
         {
-            return await _unitOfWork.StudentRepository.GetHistoryExamOfStudentBySubIdAsync(subjectId, studentId);
+            return await _unitOfWork.StudentRepository.GetHistoryExamOfStudentBySubIdAsync(semesterId, year, subjectId, studentId);
         }
     }
 }

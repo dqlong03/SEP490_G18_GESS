@@ -23,7 +23,7 @@ namespace GESS.Repository.Interface
         Task AddStudent(Guid id, Student student);
 
         Task<List<int>> GetAllYearOfStudentAsync(Guid studentId);
-        Task<List<HistoryExamOfStudentDTOResponse>> GetHistoryExamOfStudentBySubIdAsync(int subjectId, Guid userId);
+        Task<List<HistoryExamOfStudentDTOResponse>> GetHistoryExamOfStudentBySubIdAsync(int? semesterId, int? year, int subjectId, Guid userId);
         Task<List<AllSubjectBySemesterOfStudentDTOResponse>> GetAllSubjectBySemesterOfStudentAsync(int? semesterId, int? year, Guid userId);
     }
 }

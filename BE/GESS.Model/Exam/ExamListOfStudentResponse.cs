@@ -17,6 +17,7 @@ namespace GESS.Model.Exam
         public int Duration { get; set; }
         public string? Status { get; set; }
         //public string? CodeStart { get; set; }
+        //Thêm ngày thi cho multiexam và practiceexam
         public string? RoomName { get; set; }
         public string? ExamSlotName { get; set; }
         public DateTime StartTime { get; set; }

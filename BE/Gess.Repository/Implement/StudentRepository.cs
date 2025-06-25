@@ -280,29 +280,32 @@ namespace GESS.Repository.Implement
                 .OrderBy(y => y)
                 .ToList();
         }
-
-        public async Task<List<HistoryExamOfStudentDTOResponse>> GetHistoryExamOfStudentBySubIdAsync(int subjectId, Guid studentId)
+        //Thêm kỳ với năm 
+        public async Task<List<HistoryExamOfStudentDTOResponse>> GetHistoryExamOfStudentBySubIdAsync(int? semesterId, int? year, int subjectId, Guid studentId)
         {
             var multiExams = await _context.MultiExamHistories
-               .Where(meh => meh.Student.UserId == studentId
-                   && meh.MultiExam.SubjectId == subjectId
-                   && meh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM)
-               .Select(meh => new HistoryExamOfStudentDTOResponse
-               {
-                   ExamName = meh.MultiExam.MultiExamName,
-                   ExamType = "Multi",
-
-                   CategoryExamName = meh.MultiExam.CategoryExam.CategoryExamName,
-                   Duration = meh.MultiExam.Duration,
-                   SubmittedDateTime = meh.EndTime,
-                   Score = meh.Score ?? 0
-               })
-               .ToListAsync();
+            .Where(meh => meh.Student.UserId == studentId
+            && meh.MultiExam.SubjectId == subjectId
+            && meh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM
+            && (!semesterId.HasValue || meh.MultiExam.SemesterId == semesterId)
+            && (!year.HasValue || meh.MultiExam.CreateAt.Year == year))
+            .Select(meh => new HistoryExamOfStudentDTOResponse
+            {
+                ExamName = meh.MultiExam.MultiExamName,
+                ExamType = "Multi",
+                CategoryExamName = meh.MultiExam.CategoryExam.CategoryExamName,
+                Duration = meh.MultiExam.Duration,
+                SubmittedDateTime = meh.EndTime,
+                Score = meh.Score ?? 0
+            })
+        .ToListAsync();
 
             var practiceExams = await _context.PracticeExamHistories
                 .Where(peh => peh.Student.UserId == studentId
                     && peh.PracticeExam.SubjectId == subjectId
-                    && peh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM)
+                    && peh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM
+                    && (!semesterId.HasValue || peh.PracticeExam.SemesterId == semesterId)
+                    && (!year.HasValue || peh.PracticeExam.CreateAt.Year == year))
                 .Select(peh => new HistoryExamOfStudentDTOResponse
                 {
                     ExamName = peh.PracticeExam.PracExamName,
@@ -322,6 +325,7 @@ namespace GESS.Repository.Implement
         public async Task<List<AllSubjectBySemesterOfStudentDTOResponse>> GetAllSubjectBySemesterOfStudentAsync(int? semesterId, int? year, Guid userId)
         {
             // Nếu không có semesterId hoặc year, lấy năm và học kỳ mới nhất
+            // Trả về năm và kỳ mới nhất
             if (!semesterId.HasValue && !year.HasValue)
             {
                 // Tìm năm mới nhất từ MultiExam và PracticeExam
@@ -376,12 +380,15 @@ namespace GESS.Repository.Implement
              {
                  Id = s.SubjectId,
                  Code = s.Course,
+                 Year = year.Value,
+                 SemesterId = semesterId.Value,
                  Name = s.SubjectName,
                  IsDeleted = !s.Classes.Any(c => c.Semester.IsActive)
              })
              .ToListAsync();
             }
 
+            // Trả về năm mà nó truyền vào
             if (!semesterId.HasValue && year.HasValue)
             {
                 var semesterIds = await _context.MultiExamHistories
@@ -400,6 +407,7 @@ namespace GESS.Repository.Implement
                 if (!semesterIds.Any())
                     return new List<AllSubjectBySemesterOfStudentDTOResponse>();
 
+
                 return await _context.Subjects
                     .Where(s => s.Classes.Any(c => semesterIds.Contains(c.SemesterId)
                         && c.ClassStudents.Any(cs => cs.Student.UserId == userId)
@@ -409,6 +417,7 @@ namespace GESS.Repository.Implement
                     {
                         Id = s.SubjectId,
                         Code = s.Course,
+                        Year = year.Value,
                         Name = s.SubjectName,
                         IsDeleted = !s.Classes.Any(c => c.Semester.IsActive)
                     })
@@ -418,6 +427,7 @@ namespace GESS.Repository.Implement
 
             else
             {
+                // Trả về năm và kỳ nó truyền vào 
                 // Truy vấn môn học dựa trên semesterId và year
                 return await _context.Subjects
                     .Where(s => s.Classes.Any(c => c.SemesterId == semesterId
@@ -428,6 +438,8 @@ namespace GESS.Repository.Implement
                     {
                         Id = s.SubjectId,
                         Code = s.Course,
+                        Year = year.Value,
+                        SemesterId = semesterId.Value,
                         Name = s.SubjectName,
                         IsDeleted = !s.Classes.Any(c => c.Semester.IsActive)
                     })
