@@ -180,11 +180,11 @@ namespace GESS.Api.Controllers
         }
 
         [HttpGet("exams/{subjectId}/{studentId}")]
-        public async Task<ActionResult<IEnumerable<HistoryExamOfStudentDTOResponse>>> GetHistoryExamOfStudentBySubId(int subjectId, Guid studentId)
+        public async Task<ActionResult<IEnumerable<HistoryExamOfStudentDTOResponse>>> GetHistoryExamOfStudentBySubId(int? semesterId, int? year, int subjectId, Guid studentId)
         {
             try
             {
-                var exams = await _studentService.GetHistoryExamOfStudentBySubIdAsync(subjectId, studentId);
+                var exams = await _studentService.GetHistoryExamOfStudentBySubIdAsync(semesterId, year, subjectId, studentId);
                 return Ok(exams);
             }
             catch (ArgumentException ex)
