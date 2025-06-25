@@ -283,22 +283,75 @@ namespace GESS.Repository.Implement
         //Thêm kỳ với năm 
         public async Task<List<HistoryExamOfStudentDTOResponse>> GetHistoryExamOfStudentBySubIdAsync(int? semesterId, int? year, int subjectId, Guid studentId)
         {
-            var multiExams = await _context.MultiExamHistories
-            .Where(meh => meh.Student.UserId == studentId
-            && meh.MultiExam.SubjectId == subjectId
-            && meh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM
-            && (!semesterId.HasValue || meh.MultiExam.SemesterId == semesterId)
-            && (!year.HasValue || meh.MultiExam.CreateAt.Year == year))
-            .Select(meh => new HistoryExamOfStudentDTOResponse
+            // Nếu không có semesterId hoặc year, lấy năm và học kỳ mới nhất
+            if (!semesterId.HasValue && !year.HasValue)
             {
-                ExamName = meh.MultiExam.MultiExamName,
-                ExamType = "Multi",
-                CategoryExamName = meh.MultiExam.CategoryExam.CategoryExamName,
-                Duration = meh.MultiExam.Duration,
-                SubmittedDateTime = meh.EndTime,
-                Score = meh.Score ?? 0
-            })
-        .ToListAsync();
+                // Tìm năm mới nhất từ MultiExam và PracticeExam
+                var latestMultiExamYear = await _context.MultiExamHistories
+                    .Where(meh => meh.Student.UserId == studentId
+                        && meh.MultiExam.SubjectId == subjectId
+                        && meh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM)
+                    .Select(meh => meh.MultiExam.CreateAt.Year)
+                    .OrderByDescending(y => y)
+                    .FirstOrDefaultAsync();
+
+                var latestPracticeExamYear = await _context.PracticeExamHistories
+                    .Where(peh => peh.Student.UserId == studentId
+                        && peh.PracticeExam.SubjectId == subjectId
+                        && peh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM)
+                    .Select(peh => peh.PracticeExam.CreateAt.Year)
+                    .OrderByDescending(y => y)
+                    .FirstOrDefaultAsync();
+
+                year = Math.Max(latestMultiExamYear, latestPracticeExamYear);
+                if (year == 0 || year > DateTime.Now.Year) // Không có bài thi hoặc năm vượt quá 2025
+                    return new List<HistoryExamOfStudentDTOResponse>();
+
+                // Tìm học kỳ mới nhất trong năm mới nhất
+                var latestMultiExamSemester = await _context.MultiExamHistories
+                    .Where(meh => meh.Student.UserId == studentId
+                        && meh.MultiExam.SubjectId == subjectId
+                        && meh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM
+                        && meh.MultiExam.CreateAt.Year == year)
+                    .Select(meh => new { meh.MultiExam.SemesterId, meh.MultiExam.CreateAt })
+                    .OrderByDescending(x => x.CreateAt)
+                    .FirstOrDefaultAsync();
+
+                var latestPracticeExamSemester = await _context.PracticeExamHistories
+                    .Where(peh => peh.Student.UserId == studentId
+                        && peh.PracticeExam.SubjectId == subjectId
+                        && peh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM
+                        && peh.PracticeExam.CreateAt.Year == year)
+                    .Select(peh => new { peh.PracticeExam.SemesterId, peh.PracticeExam.CreateAt })
+                    .OrderByDescending(x => x.CreateAt)
+                    .FirstOrDefaultAsync();
+
+                semesterId = latestMultiExamSemester != null && latestPracticeExamSemester != null
+                    ? (latestMultiExamSemester.CreateAt > latestPracticeExamSemester.CreateAt
+                        ? latestMultiExamSemester.SemesterId
+                        : latestPracticeExamSemester.SemesterId)
+                    : latestMultiExamSemester?.SemesterId ?? latestPracticeExamSemester?.SemesterId;
+
+                if (!semesterId.HasValue) // Không có bài thi trong năm mới nhất
+                    return new List<HistoryExamOfStudentDTOResponse>();
+            }
+
+            var multiExams = await _context.MultiExamHistories
+                .Where(meh => meh.Student.UserId == studentId
+                    && meh.MultiExam.SubjectId == subjectId
+                    && meh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM
+                    && (!semesterId.HasValue || meh.MultiExam.SemesterId == semesterId)
+                    && (!year.HasValue || meh.MultiExam.CreateAt.Year == year))
+                .Select(meh => new HistoryExamOfStudentDTOResponse
+                {
+                    ExamName = meh.MultiExam.MultiExamName,
+                    ExamType = "Multi",
+                    CategoryExamName = meh.MultiExam.CategoryExam.CategoryExamName,
+                    Duration = meh.MultiExam.Duration,
+                    SubmittedDateTime = meh.EndTime,
+                    Score = meh.Score ?? 0
+                })
+                .ToListAsync();
 
             var practiceExams = await _context.PracticeExamHistories
                 .Where(peh => peh.Student.UserId == studentId

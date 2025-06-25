@@ -18,6 +18,7 @@ namespace GESS.Repository.Interface
         Task<List<SemesterListDTO>> GetAllChooseSemesterAsync();
         Task AddRangeAsync(List<Semester> entities);
         Task UpdateRangeAsync(List<Semester> entities);
+        Task<List<SemesterResponse>> GetSemestersByYearAsync(int year, Guid userId);
         Task<List<Semester>> GetAllEntitiesAsync();
         // ThaiNH_Add_ManageSemester&ManageRoom_End
     }

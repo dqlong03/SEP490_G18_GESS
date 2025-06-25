@@ -27,6 +27,6 @@ namespace GESS.Service.student
         Task<List<AllSubjectBySemesterOfStudentDTOResponse>> GetAllSubjectBySemesterOfStudentAsync(int? semesterId, int? year, Guid studentId);
         Task<List<int>> GetAllYearOfStudentAsync(Guid studentId);
 
-        Task<List<HistoryExamOfStudentDTOResponse>> GetHistoryExamOfStudentBySubIdAsync(int subjectId, Guid studentId);
+        Task<List<HistoryExamOfStudentDTOResponse>> GetHistoryExamOfStudentBySubIdAsync(int? semesterId, int? year, int subjectId, Guid studentId);
     }
 }

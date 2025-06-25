@@ -35,6 +35,16 @@ namespace GESS.Service.semesters
                 SemesterName = s.SemesterName
             });
         }
+        public async Task<List<SemesterResponse>> GetSemestersByYearAsync(int? year, Guid userId)
+        {
+            if (!year.HasValue)
+            {
+                throw new ArgumentException("Year is required.");
+            }
+
+            var semesters = await _unitOfWork.SemesterRepository.GetSemestersByYearAsync(year.Value, userId);
+            return semesters;
+        }
 
         public async Task<List<SemesterListDTO>> GetAllCurrentSemestersAsync()
         {
