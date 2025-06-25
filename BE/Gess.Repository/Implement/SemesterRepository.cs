@@ -1,4 +1,5 @@
 ﻿using Gess.Repository.Infrastructures;
+using GESS.Common;
 using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
 using GESS.Model.SemestersDTO;
@@ -50,6 +51,27 @@ namespace GESS.Repository.Implement
         public async Task<List<Semester>> GetAllEntitiesAsync()
         {
             return await _context.Semesters.ToListAsync();
+        }
+
+        public async Task<List<SemesterResponse>> GetSemestersByYearAsync(int year, Guid userId)
+        {
+            var semesters = await _context.Semesters
+                .Where(s => s.IsActive
+                    && s.MultiExams.Any(me => me.MultiExamHistories.Any(meh => meh.Student.UserId == userId
+                        && meh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM
+                        && me.CreateAt.Year == year))
+                    || s.PracticeExams.Any(pe => pe.PracticeExamHistories.Any(peh => peh.Student.UserId == userId
+                        && peh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM
+                        && pe.CreateAt.Year == year)))
+                .Select(s => new SemesterResponse
+                {
+                    SemesterId = s.SemesterId,
+                    SemesterName = s.SemesterName
+                })
+                .Distinct()
+                .ToListAsync();
+
+            return semesters;
         }
 
     }

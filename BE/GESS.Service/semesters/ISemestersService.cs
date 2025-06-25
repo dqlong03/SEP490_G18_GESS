@@ -18,5 +18,7 @@ namespace GESS.Service.semesters
         Task CreateAsync(SemesterCreateDTO request);
         Task UpdateAsync(SemesterUpdateDTO request);
         // ThaiNH_Add_ManageSemester&ManageRoom_End
+
+        Task<List<SemesterResponse>> GetSemestersByYearAsync(int? year, Guid userId);
     }
 }

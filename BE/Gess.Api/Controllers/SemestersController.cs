@@ -38,6 +38,28 @@ namespace GESS.Api.Controllers
             return Ok(result);
         }
 
+        [HttpGet("by-year")]
+        public async Task<IActionResult> GetSemestersByYear([FromQuery] int? year, [FromQuery] Guid userId)
+        {
+            try
+            {
+                var semesters = await _semesterService.GetSemestersByYearAsync(year, userId);
+                if (semesters == null || !semesters.Any())
+                {
+                    return NotFound($"Không có kỳ học nào được tìm thấy vào năm {year} của sinh viên {userId}.");
+                }
+                return Ok(semesters);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
         //[HttpPost]
         //public async Task<IActionResult> CreateSemester([FromBody] SemesterCreateDTO request)
         //{
