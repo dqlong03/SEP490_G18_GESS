@@ -1,6 +1,7 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Entities;
 using GESS.Model.Chapter;
+using GESS.Model.ExamSlotRoomDTO;
 using GESS.Model.Subject;
 using System;
 using System.Collections.Generic;
@@ -18,6 +19,24 @@ namespace GESS.Service.examSchedule
             _unitOfWork = unitOfWork;
         }
 
+        public async Task<IEnumerable<ExamSlotRoomDTO>> GetExamScheduleByTeacherIdAsync(Guid teacherId, DateTime fromDate, DateTime toDate)
+        {
+            var examSchedules = await _unitOfWork.ExamScheduleRepository.GetExamScheduleByTeacherIdAsync(teacherId, fromDate, toDate);
+            if (examSchedules == null || !examSchedules.Any())
+            {
+                return new List<ExamSlotRoomDTO>();
+            }
+            var examScheduleDtos = examSchedules.Select(schedule => new ExamSlotRoomDTO
+            {
+                ExamSlotRoomId = schedule.ExamSlotRoomId,
+                SubjectName = schedule.Subject?.SubjectName ?? "N/A",
+                ExamDate = schedule.MultiOrPractice.Equals("Multiple") ? schedule.MultiExam.ExamDate: schedule.PracticeExam.ExamDate,
+                RoomName = schedule.Room?.RoomName ?? "N/A",
+                ExamSlotId = schedule.ExamSlotId
+            });
+            return examScheduleDtos;
+
+        }
     }
 
 }

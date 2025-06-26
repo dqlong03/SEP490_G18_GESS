@@ -182,7 +182,7 @@ builder.Services.AddScoped<ILevelQuestionRepository, LevelQuestionRepository>();
 builder.Services.AddScoped<IPracticeAnswersRepository, PracticeAnswersRepository>();
 builder.Services.AddScoped<IMultipleAnswerRepository, MultiAnswerRepository>();
 builder.Services.AddScoped<IPracticeExamRepository, PracticeExamRepository>();
-builder.Services.AddScoped<IExamSchelduleRepository, ExamSchelduleRepository>();
+builder.Services.AddScoped<IExamScheduleRepository, ExamScheduleRepository>();
 
 
 

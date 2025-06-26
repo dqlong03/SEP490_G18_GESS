@@ -30,6 +30,7 @@ namespace GESS.Repository.Implement
                 NumberQuestion = multipleExamCreateDto.NumberQuestion,
                 SubjectId = multipleExamCreateDto.SubjectId,
                 Duration = multipleExamCreateDto.Duration,
+                ExamDate = multipleExamCreateDto.ExamDate,
                 CategoryExamId = multipleExamCreateDto.CategoryExamId,
                 SemesterId = multipleExamCreateDto.SemesterId,
                 TeacherId = multipleExamCreateDto.TeacherId,

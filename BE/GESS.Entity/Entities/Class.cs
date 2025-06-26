@@ -27,6 +27,8 @@ namespace GESS.Entity.Entities
         // Khóa ngoại liên kết đến học kỳ (Semester)
         public int SemesterId { get; set; }
         public Semester Semester { get; set; }
+        // Ngày tạo lớp học
+        public DateTime CreatedDate { get; set; }
 
         // Tên lớp học, không được để trống, tối đa 50 ký tự
         [Required(ErrorMessage = "Tên lớp học không được để trống!")]
