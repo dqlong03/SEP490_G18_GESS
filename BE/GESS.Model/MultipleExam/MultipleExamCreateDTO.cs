@@ -26,6 +26,9 @@ namespace GESS.Model.MultipleExam
         // Thời gian làm bài (phút), không được để trống
         [Required(ErrorMessage = "Thời gian làm bài không được để trống!")]
         public int Duration { get; set; }
+        //Ngày thi, không được để trống
+        [Required(ErrorMessage = "Ngày thi không được để trống!")]
+        public DateTime ExamDate { get; set; }
 
         // Ngày tạo kỳ thi, không được để trống
         [Required(ErrorMessage = "Ngày tạo không được để trống!")]

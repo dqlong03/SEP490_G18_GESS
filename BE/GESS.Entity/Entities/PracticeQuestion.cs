@@ -51,6 +51,9 @@ namespace GESS.Entity.Entities
         // Khóa ngoại liên kết đến học kỳ (Semester), 1 câu hỏi thuộc 1 học kỳ
         public int SemesterId { get; set; }
         public Semester Semester { get; set; }
+        // Ngày tạo câu hỏi, không được để trống
+        [Required(ErrorMessage = "Ngày tạo không được để trống!")]
+        public DateTime CreateAt { get; set; }
 
         // Đáp án của câu hỏi tự luận này (1 câu hỏi tự luận có 1 đáp án)
         public PracticeAnswer PracticeAnswer { get; set; }

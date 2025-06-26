@@ -8,7 +8,8 @@ using System.Threading.Tasks;
 
 namespace GESS.Repository.Interface
 {
-    public interface IExamSchelduleRepository
+    public interface IExamScheduleRepository
     {
+        Task<IEnumerable<ExamSlotRoom>> GetExamScheduleByTeacherIdAsync(Guid teacherId, DateTime fromDate, DateTime toDate);
     }
 }
