@@ -58,6 +58,7 @@ namespace GESS.Entity.Entities
         // Lịch sử thi của sinh viên trong phòng/ca này (qua bảng trung gian MultiExamHistory)
         public ICollection<MultiExamHistory> MultiExamHistories { get; set; }
         public ICollection<PracticeExamHistory> PracticeExamHistories { get; set; }
+        public ICollection<StudentExamSlotRoom> StudentExamSlotRooms { get; set; }
 
         // Lịch sử thi tự luận của sinh viên trong phòng/ca này (qua bảng trung gian PracticeExamHistory)
 
@@ -66,6 +67,7 @@ namespace GESS.Entity.Entities
         {
             MultiExamHistories = new List<MultiExamHistory>();
             PracticeExamHistories = new List<PracticeExamHistory>();
+            StudentExamSlotRooms = new List<StudentExamSlotRoom>();
         }
     }
 }

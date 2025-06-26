@@ -49,6 +49,7 @@ namespace GESS.Entity.Contexts
         public DbSet<QuestionMultiExam> QuestionMultiExams { get; set; }
         public DbSet<Cohort> Cohorts { get; set; }
         public DbSet<ApplyTrainingProgram> ApplyTrainingPrograms { get; set; }
+        public DbSet<StudentExamSlotRoom> StudentExamSlotRoom { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -92,6 +93,7 @@ namespace GESS.Entity.Contexts
             modelBuilder.ApplyConfiguration(new FinalExamConfig());
             modelBuilder.ApplyConfiguration(new MultiAnswerConfig());
             modelBuilder.ApplyConfiguration(new PracticeAnswerConfig());
+            modelBuilder.ApplyConfiguration(new StudentExamSlotRoomConfig());
 
             // Cấu hình NEWSEQUENTIALID() cho các cột Guid
             // modelBuilder.Entity<Student>()
