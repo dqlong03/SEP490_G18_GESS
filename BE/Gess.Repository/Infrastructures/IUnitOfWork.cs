@@ -53,6 +53,7 @@ namespace Gess.Repository.Infrastructures
         IPracticeAnswersRepository PracticeAnswersRepository { get; }
 
         IExamScheduleRepository ExamScheduleRepository { get; }
+        IExamSlotRepository ExamSlotRepository { get; }
         UserManager<User> UserManager { get; }
         RoleManager<IdentityRole<Guid>> RoleManager { get; }
     }
