@@ -2,6 +2,7 @@
 using GESS.Entity.Entities;
 using GESS.Model.Chapter;
 using GESS.Model.ExamSlotRoomDTO;
+using GESS.Model.Student;
 using GESS.Model.Subject;
 using System;
 using System.Collections.Generic;
@@ -17,6 +18,16 @@ namespace GESS.Service.examSchedule
         public ExamScheduleService(IUnitOfWork unitOfWork) : base(unitOfWork)
         {
             _unitOfWork = unitOfWork;
+        }
+
+        public async Task<ExamSlotRoomDetail> GetExamBySlotIdsAsync(int examSlotId)
+        {
+            var examSlotRoom = await _unitOfWork.ExamScheduleRepository.GetExamBySlotIdsAsync(examSlotId);
+            if (examSlotRoom == null)
+            {
+                return null;
+            }
+            return examSlotRoom;
         }
 
         public async Task<IEnumerable<ExamSlotRoomDTO>> GetExamScheduleByTeacherIdAsync(Guid teacherId, DateTime fromDate, DateTime toDate)
@@ -36,6 +47,11 @@ namespace GESS.Service.examSchedule
             });
             return examScheduleDtos;
 
+        }
+
+        public Task<IEnumerable<StudentCheckIn>> GetStudentsByExamSlotIdAsync(int examSlotId)
+        {
+            throw new NotImplementedException();
         }
     }
 
