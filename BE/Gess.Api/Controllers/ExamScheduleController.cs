@@ -38,6 +38,27 @@ namespace GESS.Api.Controllers
             }
             return Ok(examSlots);
         }
-
+        //API to get exam schedule by exam slot id
+        [HttpGet("slots/{examSlotId}")]
+        public async Task<IActionResult> GetExamScheduleByExamSlotId(int examSlotId)
+        {
+            var examSlots = await _examScheduleService.GetExamBySlotIdsAsync(examSlotId);
+            if (examSlots == null)
+            {
+                return NotFound($"No exam slot found with ID {examSlotId}.");
+            }
+            return Ok(examSlots);
+        }
+        //API to get all student by exam slot id
+        [HttpGet("students/{examSlotId}")]
+        public async Task<IActionResult> GetStudentsByExamSlotId(int examSlotId)
+        {
+            var students = await _examScheduleService.GetStudentsByExamSlotIdAsync(examSlotId);
+            if (students == null || !students.Any())
+            {
+                return NotFound($"No students found for exam slot ID {examSlotId}.");
+            }
+            return Ok(students);
+        }
     }
 }

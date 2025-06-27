@@ -30,6 +30,9 @@ namespace GESS.Entity.Entities
 
         public int? CohortId { get; set; }
         public Cohort? Cohort { get; set; }
+        // Ảnh đại diện của sinh viên, không được để trống
+        [Required(ErrorMessage = "Ảnh đại diện không được để trống!")]
+        public string AvatarURL { get; set; }
 
         // Danh sách lớp học mà sinh viên tham gia (qua bảng trung gian ClassStudent)
         public ICollection<ClassStudent> ClassStudents { get; set; }
