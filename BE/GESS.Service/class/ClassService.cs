@@ -21,6 +21,18 @@ namespace GESS.Service
         }
 
 
+        //Tuan
+        public async Task<ClassDetailResponseDTO?> GetClassDetailAsync(int classId)
+        {
+            // Gọi repository qua unit of work, không tạo repository trực tiếp
+            return await _unitOfWork.ClassRepository.GetClassDetailAsync(classId);
+        }
+
+        //
+
+
+
+
         public async Task<ClassCreateDTO> CreateClassAsync(ClassCreateDTO classCreateDto)
         {
             using var transaction = await _unitOfWork.DataContext.Database.BeginTransactionAsync();
@@ -133,7 +145,8 @@ namespace GESS.Service
                             StudentId = Guid.NewGuid(),
                             UserId = userId,
                             // CohortId = studentDto.CohortId ?? 1, // Sửa typo: CohirtId -> CohortId (đã sửa trong đoạn trước)
-                            EnrollDate = DateTime.UtcNow
+                            EnrollDate = DateTime.UtcNow,
+                            AvatarURL = "DefaultAvatar.png" // Giả sử có ảnh đại diện mặc định
                         };
                         _unitOfWork.StudentRepository.Create(newStudent);
                         studentId = newStudent.StudentId;

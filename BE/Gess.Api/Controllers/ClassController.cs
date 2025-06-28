@@ -1,5 +1,6 @@
 ﻿using GESS.Model.Class;
 using GESS.Model.Student;
+using GESS.Repository.Interface;
 using GESS.Service;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,10 +12,29 @@ namespace GESS.Api.Controllers
     public class ClassController : ControllerBase
     {
         private readonly IClassService _classService;
+     
         public ClassController(IClassService classService)
         {
             _classService = classService;
         }
+
+
+
+        //Tuan
+        //API hiển thị chi tiết lớp học theo id: ds học sinh + các bài kiểm tra
+        [HttpGet("{classId}/detail")]
+        public async Task<IActionResult> GetClassDetail(int classId)
+        {
+            var result = await _classService.GetClassDetailAsync(classId);
+            if (result == null)
+                return NotFound("Class not found");
+            return Ok(result);
+        }
+
+        //
+
+
+
         //API hiển thị danh sách lớp học thực hiện search, lọc theo semester, subject
         [HttpGet("GetAllClass")]
         public async Task<IActionResult> GetAllClassAsync( string? name = null,int? subjectId = null,int? semesterId = null,int pageNumber = 1, int pageSize = 10)

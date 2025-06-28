@@ -11,6 +11,9 @@ namespace GESS.Repository.Interface
 {
     public interface IClassRepository : IBaseRepository<Class>
     {
+
+        Task<ClassDetailResponseDTO?> GetClassDetailAsync(int classId);
+
         Task<IEnumerable<Class>> GetAllClassesAsync();
         Task<Class> GetByIdAsync(int classId);
      

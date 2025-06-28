@@ -12,6 +12,11 @@ namespace GESS.Service
 {
     public interface IClassService : IBaseService<Class>
     {
+
+        //Tuan
+        Task<ClassDetailResponseDTO?> GetClassDetailAsync(int classId);
+        //
+
         Task<ClassCreateDTO> CreateClassAsync(ClassCreateDTO classCreateDto);
         Task<IEnumerable<ClassListDTO>> GetAllClassAsync(string? name = null, int? subjectId = null, int? semesterId = null, int pageNumber = 1, int pageSize = 5);
         Task<IEnumerable<ClassListDTO>> GetAllClassByTeacherIdAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageNumber = 1, int pageSize = 5);

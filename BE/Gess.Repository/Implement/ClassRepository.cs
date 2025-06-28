@@ -20,6 +20,94 @@ namespace GESS.Repository.Implement
             _context = context;
         }
 
+
+
+
+
+        //Tuan----------------------------------------------------------------------
+        //Lay ra chi tiet lop học: học sinh trong lớp + các bài kiếm tra của lớp
+        public async Task<ClassDetailResponseDTO?> GetClassDetailAsync(int classId)
+        {
+            var classEntity = await _context.Classes
+                .Include(c => c.ClassStudents)
+                    .ThenInclude(cs => cs.Student)
+                        .ThenInclude(s => s.User)
+                .Include(c => c.MultiExams)
+                    .ThenInclude(e => e.CategoryExam)
+                .Include(c => c.PracticeExams)
+                    .ThenInclude(e => e.CategoryExam)
+                .FirstOrDefaultAsync(c => c.ClassId == classId);
+
+            if (classEntity == null)
+                return null;
+
+            var students = classEntity.ClassStudents
+                .Select(cs => new StudentInClassDTO
+                {
+                    StudentId = cs.Student.StudentId,
+                    FullName = cs.Student.User.Fullname,
+                    AvatarURL = cs.Student.AvatarURL
+                }).ToList();
+
+            // Lọc các bài kiểm tra KHÔNG phải "cuối kỳ"
+            var multiExams = classEntity.MultiExams
+                .Where(e => e.CategoryExam == null ||
+                            !e.CategoryExam.CategoryExamName.ToLower().Contains("cuối kỳ"))
+                .Select(e =>
+                {
+                    var histories = _context.MultiExamHistories.Where(h => h.MultiExamId == e.MultiExamId).ToList();
+                    var isCompleted = histories.Any(h => h.StatusExam == "Completed");
+                    return new ExamInClassDTO
+                    {
+                        ExamId = e.MultiExamId,
+                        ExamName = e.MultiExamName,
+                        GradeComponent = e.CategoryExam?.CategoryExamName ?? "",
+                        Status = isCompleted ? "Đã chấm" : "Chưa chấm",
+                        StudentCount = histories.Count
+                    };
+                });
+
+            var practiceExams = classEntity.PracticeExams
+                .Where(e => e.CategoryExam == null ||
+                            !e.CategoryExam.CategoryExamName.ToLower().Contains("cuối kỳ"))
+                .Select(e =>
+                {
+                    var histories = _context.PracticeExamHistories.Where(h => h.PracExamId == e.PracExamId).ToList();
+                    var isCompleted = histories.Any(h => h.StatusExam == "Completed");
+                    return new ExamInClassDTO
+                    {
+                        ExamId = e.PracExamId,
+                        ExamName = e.PracExamName,
+                        GradeComponent = e.CategoryExam?.CategoryExamName ?? "",
+                        Status = isCompleted ? "Đã chấm" : "Chưa chấm",
+                        StudentCount = histories.Count
+                    };
+                });
+
+            var exams = multiExams.Concat(practiceExams).ToList();
+
+            return new ClassDetailResponseDTO
+            {
+                ClassId = classEntity.ClassId,
+                ClassName = classEntity.ClassName,
+                Students = students,
+                Exams = exams
+            };
+        }
+        //Tuan-----------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
         public Task<bool> ClassExistsAsync(string className)
         {
             var exists = _context.Classes.AnyAsync(c => c.ClassName == className);
