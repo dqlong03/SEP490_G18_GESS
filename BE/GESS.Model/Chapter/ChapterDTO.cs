@@ -19,6 +19,7 @@ namespace GESS.Model.Chapter
     }
 
 
+
     // <tuan>
     public class ChapterInClassDTO
     {
