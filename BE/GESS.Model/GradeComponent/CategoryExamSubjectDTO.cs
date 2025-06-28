@@ -23,4 +23,10 @@ namespace GESS.Model.GradeComponent
         public bool IsDelete { get; set; }
 
     }
+
+    public class GradeComponentDTO
+    {
+        public int CategoryExamId { get; set; }
+        public string CategoryExamName { get; set; }
+    }
 }

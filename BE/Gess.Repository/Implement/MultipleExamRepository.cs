@@ -22,6 +22,8 @@ namespace GESS.Repository.Implement
             _context = context;
         }
 
+
+
         public async Task<MultiExam> CreateMultipleExamAsync(MultipleExamCreateDTO multipleExamCreateDto)
         {
             var multiExam = new MultiExam
@@ -36,6 +38,7 @@ namespace GESS.Repository.Implement
                 TeacherId = multipleExamCreateDto.TeacherId,
                 CreateAt = multipleExamCreateDto.CreateAt,
                 IsPublish = multipleExamCreateDto.IsPublish,
+                ClassId = multipleExamCreateDto.ClassId,
             };
             
             try

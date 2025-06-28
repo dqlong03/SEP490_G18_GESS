@@ -2,6 +2,7 @@
 using GESS.Entity.Entities;
 using GESS.Model.Chapter;
 using GESS.Model.Class;
+using GESS.Model.GradeComponent;
 using GESS.Model.Student;
 using Microsoft.AspNetCore.Identity;
 using System;
@@ -22,6 +23,29 @@ namespace GESS.Service
 
 
         //Tuan
+
+        public async Task<int?> GetSubjectIdByClassIdAsync(int classId)
+        {
+            return await _unitOfWork.ClassRepository.GetSubjectIdByClassIdAsync(classId);
+        }
+
+        public async Task<IEnumerable<StudentInClassDTO>> GetStudentsByClassIdAsync(int classId)
+        {
+            return await _unitOfWork.ClassRepository.GetStudentsByClassIdAsync(classId);
+        }
+
+
+        public async Task<IEnumerable<GradeComponentDTO>> GetGradeComponentsByClassIdAsync(int classId)
+        {
+            return await _unitOfWork.ClassRepository.GetGradeComponentsByClassIdAsync(classId);
+        }
+
+        public async Task<IEnumerable<ChapterInClassDTO>> GetChaptersByClassIdAsync(int classId)
+        {
+            return await _unitOfWork.ClassRepository.GetChaptersByClassIdAsync(classId);
+        }
+
+
         public async Task<ClassDetailResponseDTO?> GetClassDetailAsync(int classId)
         {
             // Gọi repository qua unit of work, không tạo repository trực tiếp

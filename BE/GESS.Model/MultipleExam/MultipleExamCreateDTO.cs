@@ -39,6 +39,9 @@ namespace GESS.Model.MultipleExam
         // Khóa ngoại liên kết đến môn học (Subject), 1 kỳ thi thuộc 1 môn học
         public int SubjectId { get; set; }
 
+        //Thêm
+        public int ClassId { get; set; }
+
         // Khóa ngoại liên kết đến danh mục kỳ thi (CategoryExam), 1 kỳ thi thuộc 1 danh mục
         public int CategoryExamId { get; set; }
 

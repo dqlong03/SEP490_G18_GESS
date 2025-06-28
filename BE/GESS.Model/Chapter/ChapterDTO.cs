@@ -17,4 +17,16 @@ namespace GESS.Model.Chapter
         // ThaiNH_Add_UpdateMark&UserProfile_End
 
     }
+
+
+    // <tuan>
+    public class ChapterInClassDTO
+    {
+        public int ChapterId { get; set; }
+        public string ChapterName { get; set; }
+        public string Description { get; set; }
+    }
+    //
+
+
 }

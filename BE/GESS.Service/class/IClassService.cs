@@ -1,6 +1,7 @@
 ﻿using GESS.Entity.Entities;
 using GESS.Model.Chapter;
 using GESS.Model.Class;
+using GESS.Model.GradeComponent;
 using GESS.Model.Student;
 using System;
 using System.Collections.Generic;
@@ -14,6 +15,11 @@ namespace GESS.Service
     {
 
         //Tuan
+        Task<int?> GetSubjectIdByClassIdAsync(int classId);
+        Task<IEnumerable<StudentInClassDTO>> GetStudentsByClassIdAsync(int classId);
+        Task<IEnumerable<GradeComponentDTO>> GetGradeComponentsByClassIdAsync(int classId);
+        Task<IEnumerable<ChapterInClassDTO>> GetChaptersByClassIdAsync(int classId);
+
         Task<ClassDetailResponseDTO?> GetClassDetailAsync(int classId);
         //
 

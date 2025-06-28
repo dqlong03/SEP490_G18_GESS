@@ -1,7 +1,9 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
+using GESS.Model.Chapter;
 using GESS.Model.Class;
+using GESS.Model.GradeComponent;
 using GESS.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -25,6 +27,73 @@ namespace GESS.Repository.Implement
 
 
         //Tuan----------------------------------------------------------------------
+
+        //Lấy subjectId theo classId
+        public async Task<int?> GetSubjectIdByClassIdAsync(int classId)
+        {
+            return await _context.Classes
+                .Where(c => c.ClassId == classId)
+                .Select(c => (int?)c.SubjectId)
+                .FirstOrDefaultAsync();
+        }
+
+        //Lấy danh sách học sinh theo id lớp học
+        public async Task<IEnumerable<StudentInClassDTO>> GetStudentsByClassIdAsync(int classId)
+        {
+            var students = await _context.ClassStudents
+                .Where(cs => cs.ClassId == classId)
+                .Select(cs => new StudentInClassDTO
+                {
+                    StudentId = cs.Student.StudentId,
+                    FullName = cs.Student.User.Fullname,
+                    AvatarURL = cs.Student.AvatarURL
+                })
+                .ToListAsync();
+
+            return students;
+        }
+
+        //Lấy danh sách các GradeComponent theo id lớp học
+        public async Task<IEnumerable<GradeComponentDTO>> GetGradeComponentsByClassIdAsync(int classId)
+        {
+            // Lấy subjectId từ classId
+            var subjectId = await _context.Classes
+                .Where(c => c.ClassId == classId)
+                .Select(c => c.SubjectId)
+                .FirstOrDefaultAsync();
+
+            if (subjectId == 0)
+                return new List<GradeComponentDTO>();
+
+            // Lấy các CategoryExam liên kết với subjectId
+            var gradeComponents = await (from ces in _context.CategoryExamSubjects
+                                         join ce in _context.CategoryExams on ces.CategoryExamId equals ce.CategoryExamId
+                                         where ces.SubjectId == subjectId
+                                         select new GradeComponentDTO
+                                         {
+                                             CategoryExamId = ce.CategoryExamId,
+                                             CategoryExamName = ce.CategoryExamName
+                                         }).Distinct().ToListAsync();
+
+            return gradeComponents;
+        }
+
+        //Lấy danh sách chương theo id lớp học
+        public async Task<IEnumerable<ChapterInClassDTO>> GetChaptersByClassIdAsync(int classId)
+        {
+            var chapters = await (from c in _context.Classes
+                                  join ch in _context.Chapters on c.SubjectId equals ch.SubjectId
+                                  where c.ClassId == classId
+                                  select new ChapterInClassDTO
+                                  {
+                                      ChapterId = ch.ChapterId,
+                                      ChapterName = ch.ChapterName,
+                                      Description = ch.Description
+                                  }).ToListAsync();
+
+            return chapters;
+        }
+
         //Lay ra chi tiet lop học: học sinh trong lớp + các bài kiếm tra của lớp
         public async Task<ClassDetailResponseDTO?> GetClassDetailAsync(int classId)
         {

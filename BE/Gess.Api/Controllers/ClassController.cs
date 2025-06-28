@@ -21,6 +21,41 @@ namespace GESS.Api.Controllers
 
 
         //Tuan
+
+        //API hiển thị danh sách lớp học theo id môn học
+        [HttpGet("{classId}/subject-id")]
+        public async Task<IActionResult> GetSubjectIdByClassId(int classId)
+        {
+            var subjectId = await _classService.GetSubjectIdByClassIdAsync(classId);
+            if (subjectId == null)
+                return NotFound("Class not found");
+            return Ok(subjectId);
+        }
+
+        //API hiển thị danh sách học sinh theo id lớp học
+        [HttpGet("{classId}/students")]
+        public async Task<IActionResult> GetStudentsByClassId(int classId)
+        {
+            var students = await _classService.GetStudentsByClassIdAsync(classId);
+            return Ok(students);
+        }
+
+        //API hiển thị danh sách thành phần điểm theo id lớp học
+        [HttpGet("{classId}/grade-components")]
+        public async Task<IActionResult> GetGradeComponentsByClassId(int classId)
+        {
+            var result = await _classService.GetGradeComponentsByClassIdAsync(classId);
+            return Ok(result);
+        }
+
+        //API hiển thị danh sách chương theo id lớp học
+        [HttpGet("{classId}/chapters")]
+        public async Task<IActionResult> GetChaptersByClassId(int classId)
+        {
+            var chapters = await _classService.GetChaptersByClassIdAsync(classId);
+            return Ok(chapters);
+        }
+
         //API hiển thị chi tiết lớp học theo id: ds học sinh + các bài kiểm tra
         [HttpGet("{classId}/detail")]
         public async Task<IActionResult> GetClassDetail(int classId)
@@ -31,7 +66,7 @@ namespace GESS.Api.Controllers
             return Ok(result);
         }
 
-        //
+        //-------------------------
 
 
 

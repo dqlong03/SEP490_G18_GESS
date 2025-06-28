@@ -1,6 +1,8 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Entities;
+using GESS.Model.Chapter;
 using GESS.Model.Class;
+using GESS.Model.GradeComponent;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +14,10 @@ namespace GESS.Repository.Interface
     public interface IClassRepository : IBaseRepository<Class>
     {
 
+        Task<int?> GetSubjectIdByClassIdAsync(int classId);
+        Task<IEnumerable<StudentInClassDTO>> GetStudentsByClassIdAsync(int classId);
+        Task<IEnumerable<GradeComponentDTO>> GetGradeComponentsByClassIdAsync(int classId);
+        Task<IEnumerable<ChapterInClassDTO>> GetChaptersByClassIdAsync(int classId);
         Task<ClassDetailResponseDTO?> GetClassDetailAsync(int classId);
 
         Task<IEnumerable<Class>> GetAllClassesAsync();
