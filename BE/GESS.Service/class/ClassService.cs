@@ -40,6 +40,7 @@ namespace GESS.Service
                     TeacherId = classCreateDto.TeacherId,
                     SubjectId = classCreateDto.SubjectId,
                     SemesterId = classCreateDto.SemesterId,
+                    CreatedDate = DateTime.UtcNow,
                     ClassStudents = new List<ClassStudent>()
                 };
 

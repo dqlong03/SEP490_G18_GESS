@@ -50,6 +50,28 @@ namespace GESS.Api.Controllers
             });
         }
 
+        //Login With Google for Desktop Application
+        [HttpPost("google-login")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginModel model)
+        {
+            var result = await _authService.LoginWithGoogleDesktopAsync(model);
+
+            if (!result.Success)
+            {
+                return BadRequest(new { message = result.ErrorMessage });
+            }
+
+            return Ok(new
+            {
+                AccessToken = result.AccessToken,
+                RefreshToken = result.RefreshToken,
+                Username = result.Username,
+                StudentId = result.StudentId,
+                StudentName = result.StudentName,
+                StudentCode = result.StudentCode
+            });
+        }
 
         [HttpPost("login")]
         [AllowAnonymous]        

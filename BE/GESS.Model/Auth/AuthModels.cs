@@ -33,4 +33,17 @@ namespace GESS.Model.Auth
         public string RefreshToken { get; set; }
         public string ErrorMessage { get; set; }
     }
+
+    // DTO riêng cho Google login desktop
+    public class GoogleLoginDesktopResult
+    {
+        public bool Success { get; set; }
+        public string AccessToken { get; set; }
+        public string RefreshToken { get; set; }
+        public string Username { get; set; }
+        public string ErrorMessage { get; set; }
+        public string StudentCode { get; set; }
+        public Guid? StudentId { get; set; }
+        public string StudentName { get; set; }
+    }
 } 
