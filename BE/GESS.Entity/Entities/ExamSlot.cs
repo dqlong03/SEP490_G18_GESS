@@ -20,14 +20,12 @@ namespace GESS.Entity.Entities
         [Required(ErrorMessage = "Tên ca thi không được để trống!")]
         [StringLength(50, ErrorMessage = "Tên ca thi không được vượt quá 50 ký tự!")]
         public string SlotName { get; set; }
-
-        // Thời gian bắt đầu ca thi, không được để trống
-        [Required(ErrorMessage = "Thời gian bắt đầu không được để trống!")]
+        [Column(TypeName = "time")]
         public TimeSpan StartTime { get; set; }
 
-        // Thời gian kết thúc ca thi, không được để trống
-        [Required(ErrorMessage = "Thời gian kết thúc không được để trống!")]
+        [Column(TypeName = "time")]
         public TimeSpan EndTime { get; set; }
+
 
         // Danh sách phòng thi cho ca thi này (qua bảng trung gian ExamSlotRoom)
         public ICollection<ExamSlotRoom> ExamSlotRooms { get; set; }
