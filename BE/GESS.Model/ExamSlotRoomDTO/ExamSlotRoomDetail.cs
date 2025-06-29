@@ -14,7 +14,7 @@ namespace GESS.Model.ExamSlotRoomDTO
         public string? SubjectName { get; set; }
         public DateTime ExamDate { get; set; }
         public string ? ExamName { get; set; }
-        public DateTime ? StartTime { get; set; }
-        public DateTime ? EndTime { get; set; }
+        public TimeSpan ? StartTime { get; set; }
+        public TimeSpan? EndTime { get; set; }
     }
 }
