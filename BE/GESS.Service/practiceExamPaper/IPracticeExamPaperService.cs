@@ -14,8 +14,6 @@ namespace GESS.Service.practiceExamPaper
 {
     public interface IPracticeExamPaperService : IBaseService<PracticeExamPaper>
     {
-
-
         Task<PracticeExamPaperCreateResponse> CreateExamPaperAsync(PracticeExamPaperCreateRequest request);
 
         Task<List<ExamPaperListDTO>> GetAllExamPaperListAsync(
