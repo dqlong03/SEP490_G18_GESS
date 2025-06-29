@@ -18,11 +18,11 @@ namespace GESS.Model.ExamSlot
 
         // Thời gian bắt đầu ca thi, không được để trống
         [Required(ErrorMessage = "Thời gian bắt đầu không được để trống!")]
-        public DateTime StartTime { get; set; }
+        public TimeSpan StartTime { get; set; }
 
         // Thời gian kết thúc ca thi, không được để trống
         [Required(ErrorMessage = "Thời gian kết thúc không được để trống!")]
-        public DateTime EndTime { get; set; }
+        public TimeSpan EndTime { get; set; }
 
         // Danh sách phòng thi cho ca thi này (qua bảng trung gian ExamSlotRoom)
     }
