@@ -2378,5 +2378,10 @@ namespace GESS.Entity.Contexts
                 throw new Exception($"Lỗi khi xóa dữ liệu: {ex.Message}", ex);
             }
         }
+
+        /// <summary>
+        /// Xóa toàn bộ dữ liệu trong database theo thứ tự đúng để tránh lỗi foreign key constraint
+        /// </summary>
+        
     }
 }

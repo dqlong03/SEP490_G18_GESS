@@ -34,7 +34,8 @@ namespace GESS.Service.practiceExam
             if (request == null)
                 throw new ArgumentNullException(nameof(request), "Dữ liệu đầu vào không được để trống!");
 
-            if (string.IsNullOrWhiteSpace(request.ExamName) || string.IsNullOrWhiteSpace(request.Code))
+            // Fix for CS0472: ExamId is of type int, which cannot be null. Adjusted the condition to check for default value instead.
+            if (request.ExamId == default || string.IsNullOrWhiteSpace(request.Code))
                 throw new ArgumentException("Tên bài thi và mã code không được để trống!");
 
             if (request.StudentId == Guid.Empty)

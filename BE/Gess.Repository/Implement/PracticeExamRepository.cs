@@ -80,7 +80,7 @@ namespace GESS.Repository.Implement
                 .Include(e => e.CategoryExam)
                 .Include(e => e.NoPEPaperInPEs)
                 .ThenInclude(n => n.PracticeExamPaper)
-                .FirstOrDefaultAsync(e => e.PracExamName == request.ExamName && e.CodeStart == request.Code);
+                .FirstOrDefaultAsync(e => e.PracExamId == request.ExamId && e.CodeStart == request.Code);
 
             if (exam == null)
                 throw new Exception("Tên bài thi hoặc mã thi không đúng.");
