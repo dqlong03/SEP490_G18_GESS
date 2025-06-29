@@ -21,13 +21,23 @@ namespace GESS.Repository.Implement
         {
             _context = context;
         }
-        public async Task<IEnumerable<PracticeExamPaper>> GetAllPracticeExamPapersAsync(int subjectId, int categoryId, Guid teacherId)
+        public async Task<IEnumerable<PracticeExamPaper>> GetAllPracticeExamPapersAsync(int? subjectId, int? categoryId, Guid? teacherId)
         {
-            var practiceExamPapers = await _context.PracticeExamPapers
-                 .Where(p => p.SubjectId == subjectId && p.CategoryExamId == categoryId && p.TeacherId == teacherId)
-                 .ToListAsync();
+            var query = _context.PracticeExamPapers.AsQueryable();
+
+            if (subjectId.HasValue)
+                query = query.Where(p => p.SubjectId == subjectId.Value);
+
+            if (categoryId.HasValue)
+                query = query.Where(p => p.CategoryExamId == categoryId.Value);
+
+            if (teacherId.HasValue && teacherId.Value != Guid.Empty)
+                query = query.Where(p => p.TeacherId == teacherId.Value);
+
+            var practiceExamPapers = await query.ToListAsync();
             return practiceExamPapers;
         }
+
         public async Task<List<ExamPaperListDTO>> GetAllExamPaperListAsync(
             string? searchName = null,
             int? subjectId = null,

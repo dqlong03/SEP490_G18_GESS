@@ -45,7 +45,7 @@ namespace GESS.Service.practiceExamPaper
         {
             return await _unitOfWork.PracticeExamPaperRepository.CountPageAsync(name, subjectId, semesterId, categoryExamId, pageSize);
         }
-        public async Task<IEnumerable<PracticeExamPaperDTO>> GetAllPracticeExamPapers(int subjectId, int categoryId, Guid teacherId)
+        public async Task<IEnumerable<PracticeExamPaperDTO>> GetAllPracticeExamPapers(int? subjectId, int? categoryId, Guid? teacherId)
         {
             var practiceExamPapers = await _unitOfWork.PracticeExamPaperRepository.GetAllPracticeExamPapersAsync(subjectId, categoryId, teacherId);
             if (practiceExamPapers == null || !practiceExamPapers.Any())

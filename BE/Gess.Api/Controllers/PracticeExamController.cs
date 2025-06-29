@@ -112,11 +112,11 @@ namespace GESS.Api.Controllers
 
         //API to get all practice exam paper by subjectId and categoryId and teacherId
         [HttpGet("exams_paper")]
-        public ActionResult<IEnumerable<PracticeExamPaperDTO>> GetAllPracticeExamPapers(int subjectId, int categoryId, Guid teacherId)
+        public async Task<ActionResult<IEnumerable<PracticeExamPaperDTO>>> GetAllPracticeExamPapers(int? subjectId, int? categoryId, Guid? teacherId)
         {
             try
             {
-                var exams = _practiceExamPaperService.GetAllPracticeExamPapers(subjectId, categoryId, teacherId);
+                var exams = await _practiceExamPaperService.GetAllPracticeExamPapers(subjectId, categoryId, teacherId);
                 return Ok(exams);
             }
             catch (Exception ex)
@@ -124,6 +124,7 @@ namespace GESS.Api.Controllers
                 return NotFound(ex.Message);
             }
         }
+
 
         //API to create a new practice exam
         [HttpPost("create")]

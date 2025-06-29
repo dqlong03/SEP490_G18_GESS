@@ -34,7 +34,9 @@ namespace GESS.Repository.Implement
                 SubjectId = practiceExamCreateDto.SubjectId,
                 CreateAt = practiceExamCreateDto.CreateAt,
                 CategoryExamId = practiceExamCreateDto.CategoryExamId,
-                SemesterId = practiceExamCreateDto.SemesterId
+                SemesterId = practiceExamCreateDto.SemesterId,
+                ClassId = practiceExamCreateDto.ClassId,
+                Status = practiceExamCreateDto.Status,
             };
             try
             {
@@ -50,17 +52,18 @@ namespace GESS.Repository.Implement
                     };
                     await _context.NoPEPaperInPEs.AddAsync(noPEPaperInPE);
                 }
-                foreach (var student in practiceExamCreateDto.StudentDTO)
+                foreach (var studentId in practiceExamCreateDto.StudentIds)
                 {
                     var practiceExamHistory = new PracticeExamHistory
                     {
                         PracExamId = practiceExam.PracExamId,
-                        StudentId = student.StudentId,
-                        CheckIn= false,
+                        StudentId = studentId,
+                        CheckIn = false,
                         IsGraded = false
                     };
                     await _context.PracticeExamHistories.AddAsync(practiceExamHistory);
                 }
+
                 await _context.SaveChangesAsync();
                 return practiceExam;
             }

@@ -26,6 +26,37 @@ namespace GESS.Api.Controllers
             _categoryExamService = categoryExamService;
             _levelQuestionService = levelQuestionService;
         }
+
+
+        // API lấy danh sách câu hỏi thực hành với phân trang
+        [HttpGet("practice-questions")]
+        public async Task<IActionResult> GetPracticeQuestions(
+        [FromQuery] int classId,
+        [FromQuery] string? content,
+        [FromQuery] int? levelId,
+        [FromQuery] int? chapterId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
+        {
+            if (classId <= 0)
+                return BadRequest("classId là bắt buộc và phải > 0");
+
+            var (data, total) = await _practiceQuestionService.GetPracticeQuestionsAsync(classId, content, levelId, chapterId, page, pageSize);
+
+            int totalPages = (int)Math.Ceiling((double)total / pageSize);
+
+            return Ok(new
+            {
+                Total = total,
+                TotalPages = totalPages,
+                Page = page,
+                PageSize = pageSize,
+                Data = data
+            });
+        }
+
+
+
         //API lấy danh sách câu hỏi thực hành
         [HttpGet("GetAllPracticeQuestions/{chapterId}")]
         public async Task<IActionResult> GetAllPracticeQuestions(int chapterId)

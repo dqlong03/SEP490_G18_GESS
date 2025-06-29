@@ -14,6 +14,8 @@ namespace GESS.Service.practiceExamPaper
 {
     public interface IPracticeExamPaperService : IBaseService<PracticeExamPaper>
     {
+
+        Task<bool> CreateExamPaperAsync(PracticeExamPaperCreateDTO dto);
         Task<List<ExamPaperListDTO>> GetAllExamPaperListAsync(
             string? searchName = null,
             int? subjectId = null,
@@ -23,7 +25,7 @@ namespace GESS.Service.practiceExamPaper
             int pageSize = 10
         );
         Task<int> CountPageAsync(string? name = null, int? subjectId = null, int? semesterId = null, int? categoryExamId = null, int pageSize = 5);
-        Task<IEnumerable<PracticeExamPaperDTO>> GetAllPracticeExamPapers(int subjectId, int categoryId, Guid teacherId);
+        Task<IEnumerable<PracticeExamPaperDTO>> GetAllPracticeExamPapers(int? subjectId, int? categoryId, Guid? teacherId);
         Task<PracticeExamPaperCreate> CreateExampaperByTeacherAsync(PracticeExamPaperCreate practiceExamPaperCreate, Guid teacherId);
         Task<List<ListPracticeQuestion>> GetPracticeQuestionsByTeacherAsync(Guid teacherId);
         Task<List<ListPracticeQuestion>> GetPublicPracticeQuestionsAsync(string? search = null, int? levelQuestionId = null);

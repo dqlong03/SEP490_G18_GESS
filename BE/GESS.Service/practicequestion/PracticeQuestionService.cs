@@ -20,6 +20,20 @@ namespace GESS.Service.practicequestion
         {
             _unitOfWork = unitOfWork;
         }
+
+        //<tuan>------------------------------------------
+        public async Task<(IEnumerable<PracticeQuestionExamPaperDTO> Data, int TotalCount)> GetPracticeQuestionsAsync(
+            int classId, string? content, int? levelId, int? chapterId, int page, int pageSize)
+        {
+            return await _unitOfWork.PracticeQuestionsRepository.GetPracticeQuestionsAsync(classId, content, levelId, chapterId, page, pageSize);
+        }
+
+        //--------------------------------------    
+
+
+
+
+
         public async Task<IEnumerable<PracticeQuestionLitsDTO>> GetAllPracticeQuestionsAsync(int chapterId)
         {
             return await _unitOfWork.PracticeQuestionsRepository.GetAllPracticeQuestionsAsync(chapterId);

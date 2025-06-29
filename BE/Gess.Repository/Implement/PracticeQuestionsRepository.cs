@@ -20,6 +20,45 @@ namespace GESS.Repository.Implement
             _context = context;
         }
 
+
+        //<tuan>-------------------------------------------
+        public async Task<(IEnumerable<PracticeQuestionExamPaperDTO> Data, int TotalCount)> GetPracticeQuestionsAsync(
+        int classId, string? content, int? levelId, int? chapterId, int page, int pageSize)
+        {
+            var query = _context.PracticeQuestions
+                .Where(q => q.Chapter.Subject.Classes.Any(c => c.ClassId == classId));
+
+            if (!string.IsNullOrEmpty(content))
+                query = query.Where(q => q.Content.Contains(content));
+
+            if (levelId.HasValue)
+                query = query.Where(q => q.LevelQuestionId == levelId.Value);
+
+            if (chapterId.HasValue)
+                query = query.Where(q => q.ChapterId == chapterId.Value);
+
+            int total = await query.CountAsync();
+
+            var data = await query
+                .OrderBy(q => q.PracticeQuestionId)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(q => new PracticeQuestionExamPaperDTO
+                {
+                    Id = q.PracticeQuestionId,
+                    Content = q.Content,
+                    Level = q.LevelQuestion.LevelQuestionName
+                })
+                .ToListAsync();
+
+            return (data, total);
+        }
+
+
+        //---------------------------------------
+
+
+
         public async Task<IEnumerable<PracticeQuestionLitsDTO>> GetAllPracticeQuestionsAsync(int chapterId)
         {
             var practiceQuestions = await _context.PracticeQuestions

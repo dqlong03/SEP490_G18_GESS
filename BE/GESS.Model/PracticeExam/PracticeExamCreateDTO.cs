@@ -38,9 +38,13 @@ namespace GESS.Model.PracticeExam
         // Khóa ngoại liên kết đến môn học (Subject), 1 kỳ thi thuộc 1 môn học
         public int SubjectId { get; set; }
 
+        public int ClassId { get; set; }
+        public string Status { get; set; }
+
+
         // Khóa ngoại liên kết đến học kỳ (Semester), 1 kỳ thi thuộc 1 học kỳ
         public int SemesterId { get; set; }
         public ICollection<PracticeExamPaperDTO> PracticeExamPaperDTO { get; set; }
-        public ICollection<StudentDTO> StudentDTO { get; set; }
+        public ICollection<Guid> StudentIds { get; set; }
     }
 }
