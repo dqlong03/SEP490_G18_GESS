@@ -21,6 +21,104 @@ namespace GESS.Repository.Implement
         {
             _context = context;
         }
+
+
+        /// Tạo đề thi thực hành với các câu hỏi thủ công và đã chọn
+        public async Task<PracticeExamPaperCreateResponse> CreateExamPaperAsync(PracticeExamPaperCreateRequest request)
+        {
+            // 1. Lấy SemesterId mới nhất
+            var semester = _context.Semesters.OrderByDescending(s => s.SemesterId).FirstOrDefault();
+            if (semester == null) throw new Exception("Không tìm thấy học kỳ.");
+
+            // 2. Lấy SubjectId từ ClassId
+            var classEntity = await _context.Classes.FindAsync(request.ClassId);
+            if (classEntity == null) throw new Exception("Không tìm thấy lớp học.");
+            int subjectId = classEntity.SubjectId;
+
+            // 3. Tạo các PracticeQuestion từ manualQuestions
+            var createdQuestions = new List<PracticeQuestion>();
+            foreach (var mq in request.ManualQuestions)
+            {
+                int levelId = mq.Level switch
+                {
+                    "Dễ" => 1,
+                    "Trung bình" => 2,
+                    "Khó" => 3,
+                    _ => 2
+                };
+                var pq = new PracticeQuestion
+                {
+                    Content = mq.Content,
+                    UrlImg = null,
+                    IsActive = true,
+                    ChapterId = mq.ChapterId,
+                    CategoryExamId = request.CategoryExamId,
+                    LevelQuestionId = levelId,
+                    SemesterId = semester.SemesterId,
+                    CreateAt = DateTime.UtcNow,
+                    CreatedBy = request.TeacherId,
+                    IsPublic = true
+                };
+                _context.PracticeQuestions.Add(pq);
+                createdQuestions.Add(pq);
+            }
+            await _context.SaveChangesAsync();
+
+            // 4. Tạo PracticeAnswer cho từng manualQuestion
+            foreach (var (pq, mq) in createdQuestions.Zip(request.ManualQuestions))
+            {
+                var answer = new PracticeAnswer
+                {
+                    AnswerContent = mq.Criteria,
+                    PracticeQuestionId = pq.PracticeQuestionId
+                };
+                _context.PracticeAnswers.Add(answer);
+            }
+            await _context.SaveChangesAsync();
+
+            // 5. Tạo PracticeExamPaper
+            var examPaper = new PracticeExamPaper
+            {
+                PracExamPaperName = request.ExamName,
+                NumberQuestion = request.TotalQuestion,
+                CreateAt = DateTime.UtcNow,
+                TeacherId = request.TeacherId,
+                CategoryExamId = request.CategoryExamId,
+                SubjectId = subjectId,
+                SemesterId = semester.SemesterId,
+                Status = "published"
+            };
+            _context.PracticeExamPapers.Add(examPaper);
+            await _context.SaveChangesAsync();
+
+            // 6. Thêm PracticeTestQuestion (manual + selected) và set QuestionOrder
+            var allQuestions = createdQuestions
+                .Select((q, idx) => new { q.PracticeQuestionId, Score = request.ManualQuestions[idx].Score })
+                .Concat(request.SelectedQuestions.Select(sq => new { sq.PracticeQuestionId, sq.Score }))
+                .ToList();
+
+            for (int i = 0; i < allQuestions.Count; i++)
+            {
+                var q = allQuestions[i];
+                var testQuestion = new PracticeTestQuestion
+                {
+                    PracExamPaperId = examPaper.PracExamPaperId,
+                    PracticeQuestionId = q.PracticeQuestionId,
+                    Score = q.Score,
+                    QuestionOrder = i + 1
+                };
+                _context.PracticeTestQuestions.Add(testQuestion);
+            }
+            await _context.SaveChangesAsync();
+
+            return new PracticeExamPaperCreateResponse
+            {
+                PracExamPaperId = examPaper.PracExamPaperId,
+                Message = "Tạo đề thi thành công"
+            };
+        }
+
+
         public async Task<IEnumerable<PracticeExamPaper>> GetAllPracticeExamPapersAsync(int? subjectId, int? categoryId, Guid? teacherId)
         {
             var query = _context.PracticeExamPapers.AsQueryable();

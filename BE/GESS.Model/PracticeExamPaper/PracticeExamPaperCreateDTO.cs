@@ -31,4 +31,10 @@ namespace GESS.Model.PracticeExamPaper
         public int PracticeQuestionId { get; set; }
         public double Score { get; set; }
     }
+
+    public class PracticeExamPaperCreateResponse
+    {
+        public int PracExamPaperId { get; set; }
+        public string Message { get; set; }
+    }
 }

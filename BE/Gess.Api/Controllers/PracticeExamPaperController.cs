@@ -22,113 +22,24 @@ namespace GESS.Api.Controllers
         private readonly ISubjectService _subjectService;
         private readonly ISemestersService _semesterService;
 
-      //  private readonly IUnitOfWork _unitOfWork;
-        public PracticeExamPaperController(IPracticeExamPaperService practiceExamPaperService, ICategoryExamService categoryExamService, ISubjectService subjectService, ISemestersService semestersService, IUnitOfWork unitOfWork)
+        public PracticeExamPaperController(IPracticeExamPaperService practiceExamPaperService, ICategoryExamService categoryExamService, ISubjectService subjectService, ISemestersService semestersService)
         {
             _practiceExamPaperService = practiceExamPaperService;
             _categoryExamService = categoryExamService;
             _subjectService = subjectService;
             _semesterService = semestersService;
-           // _unitOfWork = unitOfWork;
         }
 
 
-
-        //[HttpPost("create-exam-paper")]
-        //public async Task<IActionResult> CreateExamPaper([FromBody] PracticeExamPaperCreateRequest request)
-        //{
-        //    // 1. Get latest SemesterId
-        //    var latestSemester = _unitOfWork.DataContext.Set<Semester>().OrderByDescending(s => s.SemesterId).FirstOrDefault();
-        //    if (latestSemester == null)
-        //        return BadRequest("No semester found.");
-
-        //    int semesterId = latestSemester.SemesterId;
-
-        //    // 2. Get SubjectId from ClassId
-        //    var classEntity = await _unitOfWork.ClassRepository.GetByIdAsync(request.ClassId);
-        //    if (classEntity == null)
-        //        return BadRequest("Class not found.");
-        //    int subjectId = classEntity.SubjectId;
-
-        //    // 3. Create manual PracticeQuestions and PracticeAnswers
-        //    var createdPracticeQuestions = new List<PracticeQuestion>();
-        //    foreach (var mq in request.ManualQuestions)
-        //    {
-        //        int levelId = mq.Level switch
-        //        {
-        //            "Dễ" => 1,
-        //            "Trung bình" => 2,
-        //            "Khó" => 3,
-        //            _ => 2
-        //        };
-
-        //        var pq = new PracticeQuestion
-        //        {
-        //            Content = mq.Content,
-        //            UrlImg = null,
-        //            IsActive = true,
-        //            ChapterId = mq.ChapterId,
-        //            CategoryExamId = request.CategoryExamId,
-        //            LevelQuestionId = levelId,
-        //            SemesterId = semesterId,
-        //            CreateAt = DateTime.UtcNow,
-        //            CreatedBy = request.TeacherId, // Assuming TeacherId is the creator
-        //            IsPublic = true // Assuming manual questions are  public
-        //            // Add other required fields if any
-        //        };
-        //        await _unitOfWork.DataContext.PracticeQuestions.AddAsync(pq);
-        //        createdPracticeQuestions.Add(pq);
-        //    }
-        //    await _unitOfWork.SaveChangesAsync();
-
-        //    // 4. Create PracticeAnswers for manual questions
-        //    foreach (var (pq, mq) in createdPracticeQuestions.Zip(request.ManualQuestions))
-        //    {
-        //        var answer = new PracticeAnswer
-        //        {
-        //            AnswerContent = mq.Criteria,
-        //            PracticeQuestionId = pq.PracticeQuestionId
-        //        };
-        //        await _unitOfWork.DataContext.PracticeAnswers.AddAsync(answer);
-        //    }
-        //    await _unitOfWork.SaveChangesAsync();
-
-        //    // 5. Create PracticeExamPaper
-        //    var examPaper = new PracticeExamPaper
-        //    {
-        //        PracExamPaperName = request.ExamName,
-        //        NumberQuestion = request.TotalQuestion,
-        //        CreateAt = DateTime.UtcNow,
-        //        TeacherId = request.TeacherId,
-        //        CategoryExamId = request.CategoryExamId,
-        //        SubjectId = subjectId,
-        //        SemesterId = semesterId,
-        //        Status = "published" // Add if you have this property
-        //    };
-        //    await _unitOfWork.DataContext.PracticeExamPapers.AddAsync(examPaper);
-        //    await _unitOfWork.SaveChangesAsync();
-
-        //    // 6. Add PracticeTestQuestions (manual + selected)
-        //    var allQuestions = createdPracticeQuestions
-        //        .Select((q, idx) => new { q.PracticeQuestionId, Score = request.ManualQuestions[idx].Score })
-        //        .Concat(request.SelectedQuestions.Select(sq => new { sq.PracticeQuestionId, sq.Score }));
-
-        //    foreach (var q in allQuestions)
-        //    {
-        //        var testQuestion = new PracticeTestQuestion
-        //        {
-        //            PracExamPaperId = examPaper.PracExamPaperId,
-        //            PracticeQuestionId = q.PracticeQuestionId,
-        //            Score = q.Score
-        //        };
-        //        await _unitOfWork.DataContext.PracticeTestQuestions.AddAsync(testQuestion);
-        //    }
-        //    await _unitOfWork.SaveChangesAsync();
-
-        //    return Ok(new { examPaper.PracExamPaperId });
-        //}
-
-
+        //API tạo đề thi
+        [HttpPost("create-exam-paper")]
+        public async Task<IActionResult> CreateExamPaper([FromBody] PracticeExamPaperCreateRequest request)
+        {
+            var result = await _practiceExamPaperService.CreateExamPaperAsync(request);
+            if (result == null)
+                return BadRequest("Tạo đề thi thất bại.");
+            return Ok(result);
+        }
 
 
 
@@ -153,9 +64,9 @@ namespace GESS.Api.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, $" {ex.Message}");
             }
         }
+
         //API tổng số trang
         [HttpGet("CountPages")]
-
         public async Task<IActionResult> CountPages(string? name = null, int? subjectId = null, int? semesterId = null, int? categoryExamId = null, int pageSize = 5
 )
         {

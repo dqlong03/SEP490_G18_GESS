@@ -14,6 +14,9 @@ namespace GESS.Repository.Interface
 {
     public interface IPracticeExamPaperRepository : IBaseRepository<PracticeExamPaper>
     {
+
+        Task<PracticeExamPaperCreateResponse> CreateExamPaperAsync(PracticeExamPaperCreateRequest request);
+
         Task<List<ExamPaperListDTO>> GetAllExamPaperListAsync(
             string? searchName = null,
             int? subjectId = null,

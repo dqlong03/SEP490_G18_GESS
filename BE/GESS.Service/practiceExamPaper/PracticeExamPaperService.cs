@@ -21,6 +21,13 @@ namespace GESS.Service.practiceExamPaper
             _unitOfWork = unitOfWork;
         }
 
+
+        public async Task<PracticeExamPaperCreateResponse> CreateExamPaperAsync(PracticeExamPaperCreateRequest request)
+        {
+            // Gọi xuống repository để xử lý logic tạo đề thi
+            return await _unitOfWork.PracticeExamPaperRepository.CreateExamPaperAsync(request);
+        }
+
         public async Task<List<ExamPaperListDTO>> GetAllExamPaperListAsync(
             string? searchName = null,
             int? subjectId = null,
