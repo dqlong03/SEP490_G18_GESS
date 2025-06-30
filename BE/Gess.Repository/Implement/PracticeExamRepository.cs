@@ -285,13 +285,28 @@ namespace GESS.Repository.Implement
             if (history.StatusExam == "Completed")
                 throw new Exception("Bài thi đã được nộp, không thể nộp lại.");
 
-            // Cập nhật đáp án cho từng câu hỏi
-            foreach (var questionExam in history.QuestionPracExams)
+            // Xóa toàn bộ câu trả lời cũ của sinh viên này
+            var existingAnswers = await _context.QuestionPracExams
+                .Where(q => q.PracExamHistoryId == dto.PracExamHistoryId)
+                .ToListAsync();
+            
+            if (existingAnswers.Any())
             {
-                var ans = dto.Answers.FirstOrDefault(a => a.PracticeQuestionId == questionExam.PracticeQuestionId);
-                questionExam.Answer = ans?.Answer ?? "";
-                // Score luôn là 0, vì PE không chấm tự động
-                questionExam.Score = 0;
+                _context.QuestionPracExams.RemoveRange(existingAnswers);
+                await _context.SaveChangesAsync();
+            }
+
+            // Thêm câu trả lời mới
+            foreach (var answer in dto.Answers)
+            {
+                var newQuestionPracExam = new QuestionPracExam
+                {
+                    PracExamHistoryId = dto.PracExamHistoryId,
+                    PracticeQuestionId = answer.PracticeQuestionId,
+                    Answer = answer.Answer ?? "",
+                    Score = 0 // PE không chấm tự động
+                };
+                _context.QuestionPracExams.Add(newQuestionPracExam);
             }
 
             // Cập nhật trạng thái bài thi
@@ -307,13 +322,16 @@ namespace GESS.Repository.Implement
                 timeTaken = $"{duration.Hours:D2}:{duration.Minutes:D2}:{duration.Seconds:D2}";
             }
 
-            // Chuẩn bị kết quả trả về
-            var questionResults = history.QuestionPracExams.Select(q => new PracticeExamQuestionResultDTO
-            {
-                PracticeQuestionId = q.PracticeQuestionId,
-                QuestionContent = q.PracticeQuestion.Content,
-                StudentAnswer = q.Answer
-            }).ToList();
+            // Lấy lại dữ liệu câu hỏi sau khi đã cập nhật
+            var questionResults = await (from q in _context.QuestionPracExams
+                                         join pq in _context.PracticeQuestions on q.PracticeQuestionId equals pq.PracticeQuestionId
+                                         where q.PracExamHistoryId == dto.PracExamHistoryId
+                                         select new PracticeExamQuestionResultDTO
+                                         {
+                                             PracticeQuestionId = q.PracticeQuestionId,
+                                             QuestionContent = pq.Content,
+                                             StudentAnswer = q.Answer
+                                         }).ToListAsync();
 
             return new SubmitPracticeExamResponseDTO
             {
