@@ -85,7 +85,7 @@ namespace GESS.Repository.Implement
             if (exam == null)
                 throw new Exception("Tên bài thi hoặc mã thi không đúng.");
 
-            if (exam.Status != "Published")
+            if (exam.Status != "InProgress")
                 throw new Exception("Bài thi chưa được mở.");
 
             // 2. Lấy danh sách sinh viên
@@ -139,6 +139,15 @@ namespace GESS.Repository.Implement
                     StatusExam = "InProgress"
                 };
                 _context.PracticeExamHistories.Add(history);
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                // Cập nhật StartTime khi xác nhận code thành công
+                history.StartTime = DateTime.Now;
+                history.StatusExam = "InProgress";
+                
+                // Save StartTime to database immediately
                 await _context.SaveChangesAsync();
             }
 
