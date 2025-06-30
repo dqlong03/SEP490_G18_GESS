@@ -60,5 +60,27 @@ namespace GESS.Api.Controllers
             }
             return Ok(students);
         }
+        //API to check in student by exam slot id and student id
+        [HttpPost("checkin")]
+        public async Task<IActionResult> CheckInStudent(int examSlotId, Guid studentId)
+        {
+            var result = await _examScheduleService.CheckInStudentAsync(examSlotId, studentId);
+            if (!result)
+            {
+                return BadRequest("Failed to check in the student. Please ensure the exam slot and student ID are valid.");
+            }
+            return Ok("Student checked in successfully.");
+        }
+        //API to refresh exam code
+        [HttpPost("refresh")]
+        public async Task<IActionResult> RefreshExamCode(int examSlotId)
+        {
+            var result = await _examScheduleService.RefreshExamCodeAsync(examSlotId);
+            if (!result)
+            {
+                return BadRequest("Failed to refresh the exam code. Please ensure the exam slot ID is valid.");
+            }
+            return Ok("Exam code refreshed successfully.");
+        }
     }
 }
