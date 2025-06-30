@@ -22,6 +22,125 @@ namespace GESS.Repository.Implement
 
 
         //<tuan>-------------------------------------------
+
+        public async Task<(IEnumerable<QuestionBankListDTO> Data, int TotalCount)> GetAllQuestionsAsync(
+     int? majorId, int? subjectId, int? chapterId, bool? isPublic, int? levelId, string? questionType, int pageNumber, int pageSize)
+        {
+            // Lấy danh sách chapterId theo majorId hoặc subjectId nếu có
+            List<int> chapterIds = null;
+
+            if (majorId.HasValue)
+            {
+                var trainingProgramIds = _context.TrainingPrograms
+                    .Where(tp => tp.MajorId == majorId.Value)
+                    .Select(tp => tp.TrainProId)
+                    .ToList();
+
+                var subjectIds = _context.SubjectTrainingPrograms
+                    .Where(stp => trainingProgramIds.Contains(stp.TrainProId))
+                    .Select(stp => stp.SubjectId)
+                    .Distinct()
+                    .ToList();
+
+                chapterIds = _context.Chapters
+                    .Where(c => subjectIds.Contains(c.SubjectId))
+                    .Select(c => c.ChapterId)
+                    .ToList();
+            }
+            else if (subjectId.HasValue)
+            {
+                chapterIds = _context.Chapters
+                    .Where(c => c.SubjectId == subjectId.Value)
+                    .Select(c => c.ChapterId)
+                    .ToList();
+            }
+
+            // Truy vấn entity MultiQuestion
+            var multipleQuery = _context.MultiQuestions
+                .Include(q => q.LevelQuestion)
+                .Include(q => q.Chapter)
+                .Include(q => q.MultiAnswers)
+                .Where(q =>
+                    (chapterId != null && q.ChapterId == chapterId) ||
+                    (chapterId == null && chapterIds != null && chapterIds.Contains(q.ChapterId)) ||
+                    (chapterId == null && chapterIds == null)
+                )
+                .Where(q =>
+                    (isPublic == null || q.IsPublic == isPublic) &&
+                    (levelId == null || q.LevelQuestionId == levelId) &&
+                    (questionType == null || questionType == "multiple")
+                );
+
+            // Truy vấn entity PracticeQuestion
+            var essayQuery = _context.PracticeQuestions
+                .Include(q => q.LevelQuestion)
+                .Include(q => q.Chapter)
+                .Include(q => q.PracticeAnswer)
+                .Where(q =>
+                    (chapterId != null && q.ChapterId == chapterId) ||
+                    (chapterId == null && chapterIds != null && chapterIds.Contains(q.ChapterId)) ||
+                    (chapterId == null && chapterIds == null)
+                )
+                .Where(q =>
+                    (isPublic == null || q.IsPublic == isPublic) &&
+                    (levelId == null || q.LevelQuestionId == levelId) &&
+                    (questionType == null || questionType == "essay")
+                );
+
+            // Lấy dữ liệu entity ra memory, sau đó chuyển sang DTO và hợp nhất
+            var multipleList = await multipleQuery.ToListAsync();
+            var essayList = await essayQuery.ToListAsync();
+
+            var allQuestions = multipleList
+                .Select(q => new QuestionBankListDTO
+                {
+                    QuestionId = q.MultiQuestionId,
+                    Content = q.Content,
+                    QuestionType = "Trắc nghiệm",
+                    Level = q.LevelQuestion?.LevelQuestionName,
+                    Chapter = q.Chapter?.ChapterName,
+                    Answers = q.MultiAnswers?.Select(a => new AnswerDTO
+                    {
+                        AnswerId = a.AnswerId,
+                        Content = a.AnswerContent,
+                        IsCorrect = a.IsCorrect
+                    }).ToList() ?? new List<AnswerDTO>()
+                })
+                .Concat(
+                    essayList.Select(q => new QuestionBankListDTO
+                    {
+                        QuestionId = q.PracticeQuestionId,
+                        Content = q.Content,
+                        QuestionType = "Tự luận",
+                        Level = q.LevelQuestion?.LevelQuestionName,
+                        Chapter = q.Chapter?.ChapterName,
+                        Answers = q.PracticeAnswer != null
+                            ? new List<AnswerDTO>
+                            {
+                        new AnswerDTO
+                        {
+                            AnswerId = q.PracticeAnswer.AnswerId,
+                            Content = q.PracticeAnswer.AnswerContent,
+                            IsCorrect = true
+                        }
+                            }
+                            : new List<AnswerDTO>()
+                    })
+                )
+                .OrderBy(q => q.QuestionId);
+
+            var totalCount = allQuestions.Count();
+            var data = allQuestions
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return (data, totalCount);
+        }
+
+
+
+        // API lấy danh sách câu hỏi thực hành
         public async Task<(IEnumerable<PracticeQuestionExamPaperDTO> Data, int TotalCount)> GetPracticeQuestionsAsync(
         int classId, string? content, int? levelId, int? chapterId, int page, int pageSize)
         {

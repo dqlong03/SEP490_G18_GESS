@@ -41,7 +41,7 @@ namespace GESS.Model.PracticeQuestionDTO
     public class PracticeQuestionCreateNoChapterDTO
     {
         public string Content { get; set; }
-        public string UrlImg { get; set; }
+        public string? UrlImg { get; set; }
         public bool IsActive { get; set; }
         public Guid CreatedBy { get; set; }
         public bool IsPublic { get; set; }

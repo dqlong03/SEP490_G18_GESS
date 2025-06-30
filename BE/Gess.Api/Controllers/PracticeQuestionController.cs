@@ -28,32 +28,73 @@ namespace GESS.Api.Controllers
         }
 
 
+        // API lấy danh sách câu hỏi trắc nghiệm và tự luận với phân trang và filter
+        [HttpGet("all-questions")]
+        public async Task<IActionResult> GetAllQuestions(
+            int? majorId = null,
+            int? subjectId = null,
+            int? chapterId = null,
+            bool? isPublic = null,
+            int? levelId = null,
+            string? questionType = null, // "multiple" hoặc "essay" hoặc null
+            int pageNumber = 1,
+            int pageSize = 10)
+        {
+            try
+            {
+                var (data, totalCount) = await _practiceQuestionService.GetAllQuestionsAsync(
+                    majorId, subjectId, chapterId, isPublic, levelId, questionType, pageNumber, pageSize);
+
+                int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+                return Ok(new
+                {
+                    TotalPages = totalPages,
+                    Questions = data
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, $"Đã xảy ra lỗi: {ex.Message}");
+            }
+        }
+
+
+
         // API lấy danh sách câu hỏi thực hành với phân trang
         [HttpGet("practice-questions")]
         public async Task<IActionResult> GetPracticeQuestions(
-        [FromQuery] int classId,
-        [FromQuery] string? content,
-        [FromQuery] int? levelId,
-        [FromQuery] int? chapterId,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 10)
+            [FromQuery] int classId,
+            [FromQuery] string? content,
+            [FromQuery] int? levelId,
+            [FromQuery] int? chapterId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
         {
             if (classId <= 0)
                 return BadRequest("classId là bắt buộc và phải > 0");
 
-            var (data, total) = await _practiceQuestionService.GetPracticeQuestionsAsync(classId, content, levelId, chapterId, page, pageSize);
-
-            int totalPages = (int)Math.Ceiling((double)total / pageSize);
-
-            return Ok(new
+            try
             {
-                Total = total,
-                TotalPages = totalPages,
-                Page = page,
-                PageSize = pageSize,
-                Data = data
-            });
+                var (data, total) = await _practiceQuestionService.GetPracticeQuestionsAsync(classId, content, levelId, chapterId, page, pageSize);
+
+                int totalPages = (int)Math.Ceiling((double)total / pageSize);
+
+                return Ok(new
+                {
+                    Total = total,
+                    TotalPages = totalPages,
+                    Page = page,
+                    PageSize = pageSize,
+                    Data = data
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, $"Đã xảy ra lỗi: {ex.Message}");
+            }
         }
+
 
 
 

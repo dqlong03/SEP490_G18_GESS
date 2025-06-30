@@ -22,6 +22,13 @@ namespace GESS.Service.practicequestion
         }
 
         //<tuan>------------------------------------------
+        // API lấy danh sách câu hỏi trắc nghiệm và tự luận
+        public async Task<(IEnumerable<QuestionBankListDTO> Data, int TotalCount)> GetAllQuestionsAsync(
+        int? majorId, int? subjectId, int? chapterId, bool? isPublic, int? levelId, string? questionType, int pageNumber, int pageSize)
+        {
+            return await _unitOfWork.PracticeQuestionsRepository.GetAllQuestionsAsync(majorId, subjectId, chapterId, isPublic, levelId, questionType, pageNumber, pageSize);
+        }
+
         public async Task<(IEnumerable<PracticeQuestionExamPaperDTO> Data, int TotalCount)> GetPracticeQuestionsAsync(
             int classId, string? content, int? levelId, int? chapterId, int page, int pageSize)
         {
@@ -39,8 +46,8 @@ namespace GESS.Service.practicequestion
             return await _unitOfWork.PracticeQuestionsRepository.GetAllPracticeQuestionsAsync(chapterId);
         }
         public async Task<IEnumerable<PracticeQuestionCreateNoChapterDTO>> PracticeQuestionsCreateAsync(
-    int chapterId,
-    List<PracticeQuestionCreateNoChapterDTO> dtos)
+        int chapterId,
+        List<PracticeQuestionCreateNoChapterDTO> dtos)
         {
             foreach (var dto in dtos)
             {
@@ -54,7 +61,8 @@ namespace GESS.Service.practicequestion
                     CategoryExamId = dto.CategoryExamId,
                     LevelQuestionId = dto.LevelQuestionId,
                     SemesterId = dto.SemesterId,
-                    ChapterId = chapterId
+                    ChapterId = chapterId,
+                    CreateAt = DateTime.UtcNow
                 };
 
                 await _unitOfWork.PracticeQuestionsRepository.CreateAsync(practiceQuestion);
