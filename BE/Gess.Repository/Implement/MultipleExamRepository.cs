@@ -1,4 +1,5 @@
 ﻿using Gess.Repository.Infrastructures;
+using GESS.Common;
 using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
 using GESS.Model.MultiExamHistories;
@@ -100,7 +101,7 @@ namespace GESS.Repository.Implement
                 throw new Exception("Mã thi không đúng.");
             }
 
-            if (exam.Status != "InProgress")
+            if (exam.Status.ToLower().Trim() != PredefinedStatusAllExam.OPENING_EXAM.ToLower().Trim())
             {
                 throw new Exception("Bài thi chưa được mở.");
             }
@@ -125,7 +126,7 @@ namespace GESS.Repository.Implement
 
             // 5. Set StartTime when code verification is successful
             history.StartTime = DateTime.Now;
-            history.StatusExam = "InProgress";
+            history.StatusExam = PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM.Trim();
             
             // Save StartTime to database immediately
             await _context.SaveChangesAsync();
@@ -267,7 +268,7 @@ namespace GESS.Repository.Implement
             if (history == null)
                 throw new Exception("Không tìm thấy lịch sử bài thi.");
 
-            if (history.StatusExam == "Completed")
+            if (history.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM.ToLower().Trim())
                 throw new Exception("Bài thi đã được nộp, không thể nộp lại.");
 
             var questionResults = new List<QuestionResultDTO>();
@@ -336,7 +337,7 @@ namespace GESS.Repository.Implement
 
             // Update exam status
             history.Score = finalScore;
-            history.StatusExam = "Completed";
+            history.StatusExam = PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM;
             history.EndTime = DateTime.Now;
             history.IsGrade = true;
             await _context.SaveChangesAsync();

@@ -58,10 +58,10 @@ namespace GESS.Repository.Implement
             var semesters = await _context.Semesters
                 .Where(s => s.IsActive
                     && s.MultiExams.Any(me => me.MultiExamHistories.Any(meh => meh.Student.UserId == userId
-                        && meh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM
+                        && meh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM
                         && me.CreateAt.Year == year))
                     || s.PracticeExams.Any(pe => pe.PracticeExamHistories.Any(peh => peh.Student.UserId == userId
-                        && peh.StatusExam == PredefinedStatusExam.COMPLETED_EXAM
+                        && peh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM
                         && pe.CreateAt.Year == year)))
                 .Select(s => new SemesterResponse
                 {

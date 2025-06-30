@@ -87,7 +87,7 @@ namespace GESS.Repository.Implement
         public async Task<bool> UpdatePracticeExamAsync(PracticeExamUpdateDTO dto)
         {
             var exam = await _context.PracticeExams.FirstOrDefaultAsync(e => e.PracExamId == dto.PracExamId);
-            if (exam == null || exam.Status.ToLower() != "chưa thi") // chỉ cho sửa khi chưa thi
+            if (exam == null || exam.Status.ToLower() != PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM.ToLower()) // chỉ cho sửa khi chưa thi
                 return false;
 
             exam.PracExamName = dto.PracExamName;
@@ -143,7 +143,7 @@ namespace GESS.Repository.Implement
             var query = _context.MultiExams
                 .Where(me => me.CreateAt.Year == latestYear
                     && me.SemesterId == latestSemesterId
-                    && me.Status == "Published") 
+                    && (me.Status.ToLower().Trim() == "chưa mở ca" || me.Status.ToLower().Trim() == "đang mở ca")) 
 
                 .Join(_context.MultiExamHistories,
                     me => me.MultiExamId,
@@ -151,7 +151,7 @@ namespace GESS.Repository.Implement
                     (me, meh) => new { MultiExam = me, MultiExamHistory = meh })
 
                 .Where(x => x.MultiExamHistory.StudentId == request.StudentId
-                    && x.MultiExamHistory.StatusExam == PredefinedStatusExam.PENDING_EXAM) 
+                    && x.MultiExamHistory.StatusExam == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM) 
                 .Select(x => x.MultiExam)
 
 
@@ -185,6 +185,7 @@ namespace GESS.Repository.Implement
                         Duration = x.MultiExam.Duration,
                         Status = x.MultiExam.Status,
                         //CodeStart = x.MultiExam.CodeStart,
+                        ExamDay = x.MultiExam != null ? x.MultiExam.ExamDate : default,
                         RoomName = r != null ? r.RoomName : null,
                         ExamSlotName = x.ExamSlot != null ? x.ExamSlot.SlotName : null,
                         StartTime = x.ExamSlot != null ? x.ExamSlot.StartTime : default,
@@ -217,7 +218,7 @@ namespace GESS.Repository.Implement
             var query = _context.PracticeExams
                 .Where(me => me.CreateAt.Year == latestYear
                     && me.SemesterId == latestSemesterId
-                    && me.Status == "Published")
+                    && (me.Status.ToLower().Trim() == "chưa mở ca" || me.Status.ToLower().Trim() == "đang mở ca"))
 
                 .Join(_context.PracticeExamHistories,
                     me => me.PracExamId,
@@ -225,7 +226,7 @@ namespace GESS.Repository.Implement
                     (me, meh) => new { PracticeExam = me, PracticeExamHistory = meh })
 
                 .Where(x => x.PracticeExamHistory.StudentId == request.StudentId
-                    && x.PracticeExamHistory.StatusExam == PredefinedStatusExam.PENDING_EXAM)
+                    && x.PracticeExamHistory.StatusExam == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM)
                 .Select(x => x.PracticeExam)
 
 
@@ -261,11 +262,12 @@ namespace GESS.Repository.Implement
                         Duration = x.PracticeExam.Duration,
                         Status = x.PracticeExam.Status,
                         //CodeStart = x.PracticeExam.CodeStart,
+                        ExamDay = x.PracticeExam != null ? x.PracticeExam.ExamDate : default,
                         RoomName = r != null ? r.RoomName : null,
                         ExamSlotName = x.ExamSlot != null ? x.ExamSlot.SlotName : null,
                         StartTime = x.ExamSlot != null ? x.ExamSlot.StartTime : default,
                         EndTime = x.ExamSlot != null ? x.ExamSlot.EndTime : default,
-                       // ExamSlotRoom = x.ExamSlotRoom
+                        // ExamSlotRoom = x.ExamSlotRoom
                     });
 
 
