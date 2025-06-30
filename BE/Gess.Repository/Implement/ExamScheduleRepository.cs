@@ -1,6 +1,7 @@
 ﻿using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
 using GESS.Model.ExamSlotRoomDTO;
+using GESS.Model.Student;
 using GESS.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -20,6 +21,43 @@ namespace GESS.Repository.Implement
             _context = context;
         }
 
+        public async Task<bool> CheckInStudentAsync(int examSlotId, Guid studentId)
+        {
+            var checkIn = _context.StudentExamSlotRoom
+                .Any(s => s.ExamSlotRoomId == examSlotId && s.StudentId == studentId);
+            if (checkIn)
+            {
+                var examSlotRoom = _context.ExamSlotRooms
+                    .FirstOrDefaultAsync(e => e.ExamSlotRoomId == examSlotId);
+                if (examSlotRoom != null)
+                {
+                    if (examSlotRoom.Result.MultiOrPractice == "Multiple")
+                    {
+                        var multiExamHistory = _context.MultiExamHistories
+                            .FirstOrDefaultAsync(m => m.MultiExamId == examSlotRoom.Result.MultiExamId && m.StudentId == studentId);
+                        if (multiExamHistory.Result != null)
+                        {
+                            multiExamHistory.Result.CheckIn = true;
+                            _context.MultiExamHistories.Update(multiExamHistory.Result);
+                            return await _context.SaveChangesAsync().ContinueWith(t => true);
+                        }
+                    }
+                    else if (examSlotRoom.Result.MultiOrPractice == "Practice")
+                    {
+                        var practiceExamHistory = _context.PracticeExamHistories
+                            .FirstOrDefaultAsync(p => p.PracExamId == examSlotRoom.Result.PracticeExamId && p.StudentId == studentId);
+                        if (practiceExamHistory.Result != null)
+                            {
+                            practiceExamHistory.Result.CheckIn = true;
+                            _context.PracticeExamHistories.Update(practiceExamHistory.Result);
+                            return await _context.SaveChangesAsync().ContinueWith(t => true);
+                        }
+                    }
+                }
+            }
+            return await Task.FromResult(false);
+        }
+
         public async Task<ExamSlotRoomDetail> GetExamBySlotIdsAsync(int examSlotId)
         {
             var examSlotRoom = await _context.ExamSlotRooms
@@ -30,7 +68,7 @@ namespace GESS.Repository.Implement
                 .Include(e => e.PracticeExam)
                 .FirstOrDefaultAsync();
             if (examSlotRoom == null)
-                {
+            {
                 return null;
             }
             var examSlotRoomDetail = new ExamSlotRoomDetail
@@ -41,7 +79,7 @@ namespace GESS.Repository.Implement
                 RoomName = examSlotRoom.Room?.RoomName ?? "N/A",
                 SlotName = examSlotRoom.ExamSlot?.SlotName ?? "N/A",
                 ExamName = examSlotRoom.MultiOrPractice.Equals("Multiple") ? examSlotRoom.MultiExam.MultiExamName : examSlotRoom.PracticeExam.PracExamName,
-                StartTime = examSlotRoom.ExamSlot ?.StartTime,
+                StartTime = examSlotRoom.ExamSlot?.StartTime,
                 EndTime = examSlotRoom.ExamSlot?.EndTime
             };
             return examSlotRoomDetail;
@@ -67,6 +105,59 @@ namespace GESS.Repository.Implement
             }
             return examSchedules;
 
+        }
+
+        public async Task<IEnumerable<StudentCheckIn>> GetStudentsByExamSlotIdAsync(int examSlotId)
+        {
+            var students = await _context.StudentExamSlotRoom
+                .Where(s => s.ExamSlotRoomId == examSlotId)
+                .Include(s => s.Student)
+                .Select(s => new StudentCheckIn
+                {
+                    Id = s.StudentId,
+                    Code = s.Student.User.Code==null?"": s.Student.User.Code,
+                    AvatarURL = s.Student.AvatarURL,
+                    FullName = s.Student.User.Fullname
+                }
+                ).ToListAsync();
+            if (students == null || !students.Any())
+            {
+                return new List<StudentCheckIn>();
+            }
+            return students;
+        }
+
+        public async Task<bool> RefreshExamCodeAsync(int examSlotId, string codeStart)
+        {
+            var examSlotRoom = await _context.ExamSlotRooms
+                .FirstOrDefaultAsync(e => e.ExamSlotRoomId == examSlotId);
+            if (examSlotRoom == null)
+            {
+                return false;
+            }
+            if (examSlotRoom.MultiOrPractice == "Multiple")
+            {
+                var multiExam = await _context.MultiExams
+                    .FirstOrDefaultAsync(m => m.MultiExamId == examSlotRoom.MultiExamId);
+                if (multiExam != null)
+                {
+                    multiExam.CodeStart = codeStart;
+                    _context.MultiExams.Update(multiExam);
+                    return await _context.SaveChangesAsync().ContinueWith(t => true);
+                }
+            }
+            else if (examSlotRoom.MultiOrPractice == "Practice")
+            {
+                var practiceExam = await _context.PracticeExams
+                    .FirstOrDefaultAsync(p => p.PracExamId == examSlotRoom.PracticeExamId);
+                if (practiceExam != null)
+                {
+                    practiceExam.CodeStart = codeStart;
+                    _context.PracticeExams.Update(practiceExam);
+                    return await _context.SaveChangesAsync().ContinueWith(t => true);
+                }
+            }
+            return await Task.FromResult(false);
         }
     }
 }

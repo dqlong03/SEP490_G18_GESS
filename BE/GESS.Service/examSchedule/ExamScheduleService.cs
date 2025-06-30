@@ -20,6 +20,11 @@ namespace GESS.Service.examSchedule
             _unitOfWork = unitOfWork;
         }
 
+        public async Task<bool> CheckInStudentAsync(int examSlotId, Guid studentId)
+        {            
+            return await _unitOfWork.ExamScheduleRepository.CheckInStudentAsync(examSlotId, studentId);
+        }
+
         public async Task<ExamSlotRoomDetail> GetExamBySlotIdsAsync(int examSlotId)
         {
             var examSlotRoom = await _unitOfWork.ExamScheduleRepository.GetExamBySlotIdsAsync(examSlotId);
@@ -49,9 +54,29 @@ namespace GESS.Service.examSchedule
 
         }
 
-        public Task<IEnumerable<StudentCheckIn>> GetStudentsByExamSlotIdAsync(int examSlotId)
+        public async Task<IEnumerable<StudentCheckIn>> GetStudentsByExamSlotIdAsync(int examSlotId)
         {
-            throw new NotImplementedException();
+            var students = await _unitOfWork.ExamScheduleRepository.GetStudentsByExamSlotIdAsync(examSlotId);
+            if (students == null || !students.Any())
+            {
+                return new List<StudentCheckIn>();
+            }
+            return students;
+        }
+
+        public async Task<string> RefreshExamCodeAsync(int examSlotId)
+        {
+            //random codestart 000000 to 999999
+            var codeStart = new Random().Next(0, 1000000).ToString("D6");
+            var isUpdated = await _unitOfWork.ExamScheduleRepository.RefreshExamCodeAsync(examSlotId, codeStart);
+            if (isUpdated)
+            {
+                return codeStart;
+            }
+            else
+            {
+                throw new Exception("Failed to refresh exam code. Please try again.");
+            }
         }
     }
 
