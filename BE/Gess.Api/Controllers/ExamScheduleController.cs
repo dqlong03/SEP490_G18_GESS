@@ -76,11 +76,11 @@ namespace GESS.Api.Controllers
         public async Task<IActionResult> RefreshExamCode(int examSlotId)
         {
             var result = await _examScheduleService.RefreshExamCodeAsync(examSlotId);
-            if (!result)
+            if (string.IsNullOrEmpty(result))
             {
-                return BadRequest("Failed to refresh the exam code. Please ensure the exam slot ID is valid.");
+                return BadRequest("Failed to refresh exam code. Please try again.");
             }
-            return Ok("Exam code refreshed successfully.");
+            return Ok(new { ExamCode = result, Message = "Exam code refreshed successfully." });
         }
     }
 }

@@ -161,6 +161,7 @@ builder.Services.AddScoped<IPracticeExamService, PracticeExamService>();
 
 //LongDQ
 builder.Services.AddScoped<IExamSlotService, ExamSlotService>();
+builder.Services.AddScoped<IGradeScheduleRepository, GradeScheduleRepository>();
 // Đăng ký các repository
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
