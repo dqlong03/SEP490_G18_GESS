@@ -100,7 +100,7 @@ namespace GESS.Repository.Implement
                 throw new Exception("Mã thi không đúng.");
             }
 
-            if (exam.Status != "Published")
+            if (exam.Status != "InProgress")
             {
                 throw new Exception("Bài thi chưa được mở.");
             }
@@ -123,9 +123,16 @@ namespace GESS.Repository.Implement
                 throw new Exception("Bạn chưa được điểm danh.");
             }
 
+            // 5. Set StartTime when code verification is successful
+            history.StartTime = DateTime.Now;
+            history.StatusExam = "InProgress";
+            
+            // Save StartTime to database immediately
+            await _context.SaveChangesAsync();
+
             string message = "Xác thực thành công. Bắt đầu thi.";
 
-            // 5. Handle exam questions (re-take or first-take)
+            // 6. Handle exam questions (re-take or first-take)
             var existingQuestions = await _context.QuestionMultiExams
                 .Include(q => q.MultiQuestion)
                 .Where(q => q.MultiExamHistoryId == history.ExamHistoryId)
@@ -204,7 +211,7 @@ namespace GESS.Repository.Implement
                 })
                 .ToListAsync();
 
-            // 6. Prepare and return response
+            // 7. Prepare and return response
             return new ExamInfoResponseDTO
             {
                 MultiExamHistoryId = history.ExamHistoryId,
@@ -223,47 +230,27 @@ namespace GESS.Repository.Implement
         {
             var history = await _context.MultiExamHistories
                 .Include(h => h.QuestionMultiExams)
-                    .ThenInclude(q => q.MultiQuestion)
-                        .ThenInclude(mq => mq.LevelQuestion)
                 .FirstOrDefaultAsync(h => h.ExamHistoryId == dto.MultiExamHistoryId);
             if (history == null) throw new Exception("Không tìm thấy lịch sử bài thi.");
 
-            double totalScore = 0;
-            var questionResults = new List<QuestionResultDTO>();
-
+            // Chỉ lưu câu trả lời, không tính điểm
             foreach (var ans in dto.Answers)
             {
                 var questionExam = history.QuestionMultiExams.FirstOrDefault(q => q.MultiQuestionId == ans.QuestionId);
                 if (questionExam == null) continue;
+                
+                // Chỉ cập nhật câu trả lời, giữ nguyên điểm = 0
                 questionExam.Answer = ans.Answer ?? string.Empty;
-
-                // Get correct answer
-                var correctAnswer = await _context.MultiAnswers
-                    .Where(a => a.MultiQuestionId == ans.QuestionId && a.IsCorrect)
-                    .Select(a => a.AnswerContent)
-                    .FirstOrDefaultAsync();
-
-                bool isCorrect = !string.IsNullOrEmpty(correctAnswer) && string.Equals(ans.Answer, correctAnswer, StringComparison.OrdinalIgnoreCase);
-                
-                // Calculate score based on difficulty level from database
-                double weight = questionExam.MultiQuestion.LevelQuestion.Score;
-                double score = isCorrect ? weight : 0;
-                
-                questionExam.Score = score;
-                totalScore += score;
-                questionResults.Add(new QuestionResultDTO
-                {
-                    QuestionId = ans.QuestionId,
-                    IsCorrect = isCorrect,
-                    Score = score
-                });
+                // Không cập nhật Score ở đây
             }
-            history.Score = totalScore;
+            
+            // Không cập nhật history.Score ở đây
             await _context.SaveChangesAsync();
+            
             return new UpdateMultiExamProgressResponseDTO
             {
-                TotalScore = totalScore,
-                QuestionResults = questionResults
+                TotalScore = 0, // Không trả về điểm trong quá trình làm bài
+                QuestionResults = new List<QuestionResultDTO>() // Không trả về kết quả chấm điểm
             };
         }
 
@@ -294,13 +281,31 @@ namespace GESS.Repository.Implement
                 var ans = dto.Answers.FirstOrDefault(a => a.QuestionId == questionExam.MultiQuestionId);
                 string studentAnswer = ans?.Answer ?? string.Empty;
 
-                // Lấy đáp án đúng
-                var correctAnswer = await _context.MultiAnswers
+                // Lấy tất cả đáp án đúng của câu hỏi
+                var correctAnswerIds = await _context.MultiAnswers
                     .Where(a => a.MultiQuestionId == questionExam.MultiQuestionId && a.IsCorrect)
-                    .Select(a => a.AnswerContent)
-                    .FirstOrDefaultAsync();
+                    .Select(a => a.AnswerId)
+                    .ToListAsync();
 
-                bool isCorrect = !string.IsNullOrEmpty(correctAnswer) && string.Equals(studentAnswer, correctAnswer, StringComparison.OrdinalIgnoreCase);
+                bool isCorrect = false;
+
+                if (!string.IsNullOrEmpty(studentAnswer) && correctAnswerIds.Any())
+                {
+                    // Parse student answers (có thể là single ID hoặc multiple IDs cách nhau bằng dấu phẩy)
+                    var studentAnswerIds = studentAnswer.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(id => int.TryParse(id.Trim(), out int answerId) ? answerId : 0)
+                        .Where(id => id > 0)
+                        .ToList();
+
+                    if (studentAnswerIds.Any())
+                    {
+                        // Kiểm tra câu trả lời:
+                        // - Số lượng đáp án đã chọn phải bằng số đáp án đúng
+                        // - Tất cả đáp án đã chọn phải là đáp án đúng
+                        isCorrect = studentAnswerIds.Count == correctAnswerIds.Count && 
+                                   studentAnswerIds.All(id => correctAnswerIds.Contains(id));
+                    }
+                }
 
                 double weight = questionExam.MultiQuestion.LevelQuestion.Score;
                 double score = isCorrect ? weight : 0;
