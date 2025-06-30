@@ -35,7 +35,8 @@ namespace GESS.Entity.Entities
         // Khóa ngoại liên kết đến giáo viên chấm điểm (Teacher), có thể để trống
         public Guid? ExamGradedId { get; set; }
         public Teacher ExamGrader { get; set; }
-
+        // IsGraded: true nếu đã chấm điểm, false nếu chưa chấm điểm
+        public int? IsGraded { get; set; }
         // Khóa ngoại liên kết đến môn học (Subject), có thể để trống
         public int? SubjectId { get; set; }
         public Subject Subject { get; set; }

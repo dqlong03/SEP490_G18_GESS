@@ -109,22 +109,42 @@ namespace GESS.Repository.Implement
 
         public async Task<IEnumerable<StudentCheckIn>> GetStudentsByExamSlotIdAsync(int examSlotId)
         {
-            var students = await _context.StudentExamSlotRoom
-                .Where(s => s.ExamSlotRoomId == examSlotId)
-                .Include(s => s.Student)
-                .Select(s => new StudentCheckIn
-                {
-                    Id = s.StudentId,
-                    Code = s.Student.User.Code==null?"": s.Student.User.Code,
-                    AvatarURL = s.Student.AvatarURL,
-                    FullName = s.Student.User.Fullname
-                }
-                ).ToListAsync();
-            if (students == null || !students.Any())
+            var examSlotRoom = _context.ExamSlotRooms
+                    .FirstOrDefaultAsync(e => e.ExamSlotRoomId == examSlotId);
+            if (examSlotRoom != null)
             {
-                return new List<StudentCheckIn>();
+                if (examSlotRoom.Result.MultiOrPractice == "Multiple")
+                {
+                    var multiExamHistories = await _context.MultiExamHistories
+                        .Where(m => m.MultiExamId == examSlotRoom.Result.MultiExamId)
+                        .Select(m => new StudentCheckIn
+                        {
+                            Id = m.StudentId,
+                            IsCheckedIn = m.CheckIn==true? 1:0,
+                            FullName = m.Student.User.Fullname,
+                            AvatarURL = m.Student.AvatarURL,
+                            Code = m.Student.User.Code
+                        })
+                        .ToListAsync();
+                    return multiExamHistories;
+                }
+                else if (examSlotRoom.Result.MultiOrPractice == "Practice")
+                {
+                    var practiceExamHistories = await _context.PracticeExamHistories
+                        .Where(p => p.PracExamId == examSlotRoom.Result.PracticeExamId)
+                        .Select(p => new StudentCheckIn
+                        {
+                            Id = p.StudentId,
+                            IsCheckedIn = p.CheckIn==true? 1:0,
+                            FullName = p.Student.User.Fullname,
+                            AvatarURL = p.Student.AvatarURL,
+                            Code = p.Student.User.Code
+                        })
+                        .ToListAsync();
+                    return practiceExamHistories;
+                }
             }
-            return students;
+            return Enumerable.Empty<StudentCheckIn>();
         }
 
         public async Task<bool> RefreshExamCodeAsync(int examSlotId, string codeStart)
