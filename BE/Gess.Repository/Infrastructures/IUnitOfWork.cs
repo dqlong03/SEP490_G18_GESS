@@ -54,6 +54,7 @@ namespace Gess.Repository.Infrastructures
 
         IExamScheduleRepository ExamScheduleRepository { get; }
         IExamSlotRepository ExamSlotRepository { get; }
+        IGradeScheduleRepository GradeScheduleRepository { get; }
         UserManager<User> UserManager { get; }
         RoleManager<IdentityRole<Guid>> RoleManager { get; }
     }
