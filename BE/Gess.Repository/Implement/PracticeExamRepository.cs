@@ -1,4 +1,5 @@
 ﻿using Gess.Repository.Infrastructures;
+using GESS.Common;
 using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
 using GESS.Model.MultiExamHistories;
@@ -85,7 +86,7 @@ namespace GESS.Repository.Implement
             if (exam == null)
                 throw new Exception("Tên bài thi hoặc mã thi không đúng.");
 
-            if (exam.Status != "InProgress")
+            if (exam.Status.ToLower().Trim() != PredefinedStatusAllExam.OPENING_EXAM.ToLower().Trim())
                 throw new Exception("Bài thi chưa được mở.");
 
             // 2. Lấy danh sách sinh viên
@@ -136,7 +137,7 @@ namespace GESS.Repository.Implement
                     StartTime = DateTime.Now,
                     CheckIn = true,
                     IsGraded = false,
-                    StatusExam = "InProgress"
+                    StatusExam = PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM,
                 };
                 _context.PracticeExamHistories.Add(history);
                 await _context.SaveChangesAsync();
@@ -145,7 +146,7 @@ namespace GESS.Repository.Implement
             {
                 // Cập nhật StartTime khi xác nhận code thành công
                 history.StartTime = DateTime.Now;
-                history.StatusExam = "InProgress";
+                history.StatusExam = PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM;
                 
                 // Save StartTime to database immediately
                 await _context.SaveChangesAsync();
@@ -291,7 +292,7 @@ namespace GESS.Repository.Implement
             if (history == null)
                 throw new Exception("Không tìm thấy lịch sử bài thi.");
 
-            if (history.StatusExam == "Completed")
+            if (history.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM.ToLower().Trim())
                 throw new Exception("Bài thi đã được nộp, không thể nộp lại.");
 
             // Xóa toàn bộ câu trả lời cũ của sinh viên này
@@ -319,7 +320,7 @@ namespace GESS.Repository.Implement
             }
 
             // Cập nhật trạng thái bài thi
-            history.StatusExam = "Completed";
+            history.StatusExam = PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM.Trim();
             history.EndTime = DateTime.Now;
             await _context.SaveChangesAsync();
 
