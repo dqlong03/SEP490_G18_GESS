@@ -20,7 +20,10 @@ namespace GESS.Entity.Entities
         [Required(ErrorMessage = "Nội dung đáp án không được để trống!")]
         [StringLength(1000, ErrorMessage = "Nội dung đáp án không được vượt quá 1000 ký tự!")]
         public string AnswerContent { get; set; }
-
+        // Tiêu chí chấm điểm, không được để trống, tối đa 1000 ký tự
+        [Required(ErrorMessage = "Tiêu chí chấm điểm không được để trống!")]
+        [StringLength(500, ErrorMessage = "Tiêu chí chấm điểm không được vượt quá 1000 ký tự!")]
+        public string GradingCriteria { get; set; }
         // Khóa ngoại liên kết đến câu hỏi tự luận (PracticeQuestion), 1 đáp án thuộc 1 câu hỏi
         public int PracticeQuestionId { get; set; }
         public PracticeQuestion PracticeQuestion { get; set; }
