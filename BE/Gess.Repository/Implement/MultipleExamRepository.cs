@@ -264,7 +264,7 @@ namespace GESS.Repository.Implement
                 .Include(h => h.MultiExam)
                     .ThenInclude(me => me.Subject)
                 .FirstOrDefaultAsync(h => h.ExamHistoryId == dto.MultiExamHistoryId);
-            
+
             if (history == null)
                 throw new Exception("Không tìm thấy lịch sử bài thi.");
 
@@ -303,7 +303,7 @@ namespace GESS.Repository.Implement
                         // Kiểm tra câu trả lời:
                         // - Số lượng đáp án đã chọn phải bằng số đáp án đúng
                         // - Tất cả đáp án đã chọn phải là đáp án đúng
-                        isCorrect = studentAnswerIds.Count == correctAnswerIds.Count && 
+                        isCorrect = studentAnswerIds.Count == correctAnswerIds.Count &&
                                    studentAnswerIds.All(id => correctAnswerIds.Contains(id));
                     }
                 }
@@ -327,11 +327,11 @@ namespace GESS.Repository.Implement
                 });
             }
 
-            // Calculate final score on scale of 10
-            double finalScore = maxPossibleScore > 0 ? (totalScore / maxPossibleScore) * 10 : 0;
+            // Calculate final score on scale of 10 - SỬA Ở ĐÂY: làm tròn ngay khi tính
+            double finalScore = maxPossibleScore > 0 ? Math.Round((totalScore / maxPossibleScore) * 10, 2) : 0;
 
             // Calculate correct answers percentage
-            string correctAnswersPercentage = totalQuestions > 0 
+            string correctAnswersPercentage = totalQuestions > 0
                 ? $"{correctAnswers}/{totalQuestions} ({(double)correctAnswers / totalQuestions * 100:F0}%)"
                 : "0/0 (0%)";
 
@@ -341,27 +341,29 @@ namespace GESS.Repository.Implement
             history.EndTime = DateTime.Now;
             history.IsGrade = true;
             await _context.SaveChangesAsync();
-             // Calculate time taken
+
+            // Calculate time taken
             string timeTaken = "";
             if (history.StartTime.HasValue && history.EndTime.HasValue)
             {
                 var duration = history.EndTime.Value - history.StartTime.Value;
                 timeTaken = $"{duration.Hours:D2}:{duration.Minutes:D2}:{duration.Seconds:D2}";
             }
+
             return new SubmitExamResponseDTO
             {
                 ExamName = history.MultiExam.MultiExamName,
                 SubjectName = history.MultiExam.Subject.SubjectName,
                 TimeTaken = timeTaken,
                 CorrectAnswersPercentage = correctAnswersPercentage,
-                FinalScore = Math.Round(finalScore, 2),
+                FinalScore = finalScore, // Đã được làm tròn ở trên rồi, không cần Math.Round nữa
                 QuestionResults = questionResults,
                 CorrectCount = correctAnswers,
                 TotalCount = totalQuestions
             };
         }
 
-       
+
     }
     
     
