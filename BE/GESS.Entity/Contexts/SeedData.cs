@@ -932,40 +932,40 @@ namespace GESS.Entity.Contexts
                      new ExamSlot
             {
                 SlotName = "Ca 1",
-                StartTime = new TimeSpan(7, 30, 0),   
-                EndTime = new TimeSpan(9, 0, 0)      
+                StartTime = new TimeSpan(7, 30, 0),
+                EndTime = new TimeSpan(9, 0, 0)
             },
             new ExamSlot
             {
-                SlotName = "Ca 2", 
-                StartTime = new TimeSpan(9, 10, 0),   
-                EndTime = new TimeSpan(10, 40, 0)     
+                SlotName = "Ca 2",
+                StartTime = new TimeSpan(9, 10, 0),
+                EndTime = new TimeSpan(10, 40, 0)
             },
             new ExamSlot
             {
                 SlotName = "Ca 3",
-                StartTime = new TimeSpan(10, 50, 0),  
-                EndTime = new TimeSpan(12, 20, 0)     
+                StartTime = new TimeSpan(10, 50, 0),
+                EndTime = new TimeSpan(12, 20, 0)
             },
 
             new ExamSlot
             {
                 SlotName = "Ca 4",
-                StartTime = new TimeSpan(12, 50, 0), 
-                EndTime = new TimeSpan(14, 20, 0)     
+                StartTime = new TimeSpan(12, 50, 0),
+                EndTime = new TimeSpan(14, 20, 0)
             },
             // Ca 5: 14:40 - 16:10 (cách ca 4 là 10 phút, kết thúc 16:10)
             new ExamSlot
             {
                 SlotName = "Ca 5",
-                StartTime = new TimeSpan(14, 30, 0), 
-                EndTime = new TimeSpan(16, 0, 0)     
+                StartTime = new TimeSpan(14, 30, 0),
+                EndTime = new TimeSpan(16, 0, 0)
             },
           new ExamSlot
             {
                 SlotName = "Ca 6",
-                StartTime = new TimeSpan(16, 10, 0),    
-                EndTime = new TimeSpan(17, 40, 0)    
+                StartTime = new TimeSpan(16, 10, 0),
+                EndTime = new TimeSpan(17, 40, 0)
             }
                 };
                 await context.ExamSlots.AddRangeAsync(examSlots);
@@ -2382,6 +2382,6 @@ namespace GESS.Entity.Contexts
         /// <summary>
         /// Xóa toàn bộ dữ liệu trong database theo thứ tự đúng để tránh lỗi foreign key constraint
         /// </summary>
-        
+
     }
 }

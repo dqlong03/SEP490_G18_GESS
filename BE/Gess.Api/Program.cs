@@ -220,13 +220,13 @@ Constants.Initialize(builder.Configuration);
 
 var app = builder.Build();
 
-// Seed dữ liệu
+//Seed dữ liệu
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var context = services.GetRequiredService<GessDbContext>();
     var logger = services.GetRequiredService<ILogger<Program>>();
-    
+
     try
     {
         // Kiểm tra arguments để xem có muốn xóa dữ liệu không

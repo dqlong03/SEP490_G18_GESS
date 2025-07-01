@@ -43,6 +43,10 @@ namespace GESS.Entity.Entities
         public Guid StudentId { get; set; }
         public Student Student { get; set; }
 
+        // Khóa ngoại liên kết đến đề thi tự luận (PracticeExamPaper) - một sinh viên trong một bài thi chỉ có một đề thi
+        public int? PracExamPaperId { get; set; }
+        public PracticeExamPaper? PracticeExamPaper { get; set; }
+
         // Danh sách câu hỏi tự luận mà sinh viên đã làm (qua bảng trung gian QuestionPracExam)
         public ICollection<QuestionPracExam> QuestionPracExams { get; set; }
 

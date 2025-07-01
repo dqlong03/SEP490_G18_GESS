@@ -55,11 +55,15 @@ namespace GESS.Entity.Entities
         // Danh sách kỳ thi tự luận sử dụng đề thi này (qua bảng trung gian NoPEPaperInPE)
         public ICollection<NoPEPaperInPE> NoPEPaperInPEs { get; set; }
 
+        // Danh sách lịch sử thi của sinh viên sử dụng đề thi này
+        public ICollection<PracticeExamHistory> PracticeExamHistories { get; set; }
+
         // Constructor khởi tạo các danh sách
         public PracticeExamPaper()
         {
             PracticeTestQuestions = new List<PracticeTestQuestion>();
             NoPEPaperInPEs = new List<NoPEPaperInPE>();
+            PracticeExamHistories = new List<PracticeExamHistory>();
         }
     }
 }

@@ -28,6 +28,11 @@ namespace GESS.Entity.Configs
                    .WithOne(qpe => qpe.PracticeExamHistory)
                    .HasForeignKey(qpe => qpe.PracExamHistoryId)
                    .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(peh => peh.PracticeExamPaper)
+                   .WithMany(pep => pep.PracticeExamHistories)
+                   .HasForeignKey(peh => peh.PracExamPaperId)
+                   .OnDelete(DeleteBehavior.Restrict);
         }
     }
 } 

@@ -134,6 +134,7 @@ namespace GESS.Repository.Implement
                     PracExamHistoryId = Guid.NewGuid(),
                     PracExamId = exam.PracExamId,
                     StudentId = request.StudentId,
+                    PracExamPaperId = assignedPaperId, // Lưu đề thi được gán cho sinh viên
                     StartTime = DateTime.Now,
                     CheckIn = true,
                     IsGraded = false,
@@ -144,9 +145,10 @@ namespace GESS.Repository.Implement
             }
             else
             {
-                // Cập nhật StartTime khi xác nhận code thành công
+                // Cập nhật StartTime và PracExamPaperId khi xác nhận code thành công
                 history.StartTime = DateTime.Now;
                 history.StatusExam = PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM;
+                history.PracExamPaperId = assignedPaperId; // Lưu đề thi được gán cho sinh viên
                 
                 // Save StartTime to database immediately
                 await _context.SaveChangesAsync();
@@ -185,15 +187,15 @@ namespace GESS.Repository.Implement
             // 9. Lấy danh sách câu hỏi trả về
             var questionDetails = await (from q in _context.QuestionPracExams
                                          join pq in _context.PracticeQuestions on q.PracticeQuestionId equals pq.PracticeQuestionId
-                                         join PracticeTestQuestion ptq in _context.PracticeTestQuestions on q.PracticeQuestionId equals ptq.PracticeQuestionId
+                                         join ptq in _context.PracticeTestQuestions on new { q.PracticeQuestionId, PaperId = history.PracExamPaperId } equals new { ptq.PracticeQuestionId, PaperId = (int?)ptq.PracExamPaperId }
                                          where q.PracExamHistoryId == history.PracExamHistoryId
-                                         orderby q.PracticeQuestionId
+                                         orderby ptq.QuestionOrder
                                          select new PracticeExamQuestionDetailDTO
                                          {
-                                             QuestionOrder = ptq.QuestionOrder, // Nếu cần thứ tự, lấy từ PracticeTestQuestion
+                                             QuestionOrder = ptq.QuestionOrder,
                                              Content = pq.Content,
                                              AnswerContent = pq.PracticeAnswer.AnswerContent,
-                                             Score = ptq.Score // Nếu cần điểm tối đa, lấy từ PracticeTestQuestion
+                                             Score = ptq.Score
                                          }).ToListAsync();
 
             // 10. Trả về kết quả
