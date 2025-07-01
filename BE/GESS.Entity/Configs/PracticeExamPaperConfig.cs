@@ -28,6 +28,10 @@ namespace GESS.Entity.Configs
             builder.HasMany(pep => pep.NoPEPaperInPEs)
                    .WithOne(np => np.PracticeExamPaper)
                    .HasForeignKey(np => np.PracExamPaperId);
+
+            builder.HasMany(pep => pep.PracticeExamHistories)
+                   .WithOne(peh => peh.PracticeExamPaper)
+                   .HasForeignKey(peh => peh.PracExamPaperId);
         }
     }
 } 
