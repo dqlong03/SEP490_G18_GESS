@@ -185,14 +185,15 @@ namespace GESS.Repository.Implement
             // 9. Lấy danh sách câu hỏi trả về
             var questionDetails = await (from q in _context.QuestionPracExams
                                          join pq in _context.PracticeQuestions on q.PracticeQuestionId equals pq.PracticeQuestionId
+                                         join PracticeTestQuestion ptq in _context.PracticeTestQuestions on q.PracticeQuestionId equals ptq.PracticeQuestionId
                                          where q.PracExamHistoryId == history.PracExamHistoryId
                                          orderby q.PracticeQuestionId
                                          select new PracticeExamQuestionDetailDTO
                                          {
-                                             QuestionOrder = 0, // Nếu cần thứ tự, lấy từ PracticeTestQuestion
+                                             QuestionOrder = ptq.QuestionOrder, // Nếu cần thứ tự, lấy từ PracticeTestQuestion
                                              Content = pq.Content,
                                              AnswerContent = pq.PracticeAnswer.AnswerContent,
-                                             Score = 0 // Nếu cần điểm tối đa, lấy từ PracticeTestQuestion
+                                             Score = ptq.Score // Nếu cần điểm tối đa, lấy từ PracticeTestQuestion
                                          }).ToListAsync();
 
             // 10. Trả về kết quả
