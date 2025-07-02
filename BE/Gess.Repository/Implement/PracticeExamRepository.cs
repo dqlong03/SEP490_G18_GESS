@@ -89,7 +89,7 @@ namespace GESS.Repository.Implement
             if (exam.Status.ToLower().Trim() != PredefinedStatusAllExam.OPENING_EXAM.ToLower().Trim())
                 throw new Exception("Bài thi chưa được mở.");
 
-            // 2. Lấy danh sách sinh viên
+            // 2. Lấy danh sách sinh viên và validate
             List<Guid> studentIds;
             if (exam.ClassId != 0) // Giữa kỳ
             {
@@ -114,77 +114,165 @@ namespace GESS.Repository.Implement
             if (stt == 0)
                 throw new Exception("Sinh viên không thuộc danh sách dự thi.");
 
-            // 4. Lấy danh sách đề thi
+            // 4. Lấy danh sách đề thi và chia đề
             var examPapers = exam.NoPEPaperInPEs.Select(n => n.PracExamPaperId).ToList();
             if (examPapers.Count == 0)
                 throw new Exception("Chưa có đề thi cho bài thi này.");
 
-            // 5. Chia đề cho sinh viên
             int paperIndex = (stt - 1) % examPapers.Count;
             int assignedPaperId = examPapers[paperIndex];
 
-            // 6. Lấy hoặc tạo PracticeExamHistory
+            // 5. Lấy exam history và phân tích trạng thái
             var history = await _context.PracticeExamHistories
                 .FirstOrDefaultAsync(h => h.PracExamId == exam.PracExamId && h.StudentId == request.StudentId);
 
             if (history == null)
             {
-                history = new PracticeExamHistory
-                {
-                    PracExamHistoryId = Guid.NewGuid(),
-                    PracExamId = exam.PracExamId,
-                    StudentId = request.StudentId,
-                    PracExamPaperId = assignedPaperId, // Lưu đề thi được gán cho sinh viên
-                    StartTime = DateTime.Now,
-                    CheckIn = true,
-                    IsGraded = false,
-                    StatusExam = PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM,
-                };
-                _context.PracticeExamHistories.Add(history);
-                await _context.SaveChangesAsync();
-            }
-            else
-            {
-                // Cập nhật StartTime và PracExamPaperId khi xác nhận code thành công
-                history.StartTime = DateTime.Now;
-                history.StatusExam = PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM;
-                history.PracExamPaperId = assignedPaperId; // Lưu đề thi được gán cho sinh viên
-                
-                // Save StartTime to database immediately
-                await _context.SaveChangesAsync();
+                // TH1: Lần đầu vào thi - tạo history mới
+                return await HandleFirstTimePracticeCase(exam, request.StudentId, assignedPaperId);
             }
 
-            // 7. Kiểm tra đã có câu hỏi chưa, nếu chưa thì tạo
+            // 6. Phân tích trạng thái hiện tại và quyết định hành động
+            string currentStatus = history.StatusExam?.Trim();
+            bool isFirstTime = string.IsNullOrEmpty(currentStatus) || currentStatus == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM;
+            bool isCompleted = currentStatus == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM;
+            bool isIncomplete = currentStatus == PredefinedStatusExamInHistoryOfStudent.INCOMPLETE_EXAM;
+            bool isInProgress = currentStatus == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM;
+
+            if (isFirstTime)
+            {
+                // TH1: Lần đầu làm bài
+                return await HandleFirstTimePracticeCase(history, exam, assignedPaperId);
+            }
+            else if (isCompleted || isIncomplete)
+            {
+                // TH2: Thi lại (từ COMPLETED hoặc INCOMPLETE)
+                return await HandleRetakePracticeCase(history, exam, assignedPaperId);
+            }
+            else if (isInProgress)
+            {
+                // TH3: Tiếp tục thi (máy sập, vào lại)
+                return await HandleContinuePracticeCase(history, exam);
+            }
+
+            throw new Exception("Trạng thái bài thi không hợp lệ.");
+        }
+
+        // TH1: Lần đầu làm bài (new history)
+        private async Task<PracticeExamInfoResponseDTO> HandleFirstTimePracticeCase(PracticeExam exam, Guid studentId, int assignedPaperId)
+        {
+            var history = new PracticeExamHistory
+            {
+                PracExamHistoryId = Guid.NewGuid(),
+                PracExamId = exam.PracExamId,
+                StudentId = studentId,
+                PracExamPaperId = assignedPaperId,
+                StartTime = DateTime.Now,
+                CheckIn = true,
+                IsGraded = false,
+                StatusExam = PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM,
+            };
+
+            await _context.PracticeExamHistories.AddAsync(history);
+            await _context.SaveChangesAsync();
+
+            // Tạo câu hỏi cho bài thi
+            await GeneratePracticeQuestions(history.PracExamHistoryId, assignedPaperId);
+
+            return await CreatePracticeExamResponse(history, exam, "Xác thực thành công. Bắt đầu thi.");
+        }
+
+        // TH1: Lần đầu làm bài (existing history chưa bắt đầu)
+        private async Task<PracticeExamInfoResponseDTO> HandleFirstTimePracticeCase(PracticeExamHistory history, PracticeExam exam, int assignedPaperId)
+        {
+            // Set StartTime và StatusExam
+            history.StartTime = DateTime.Now;
+            history.StatusExam = PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM;
+            history.PracExamPaperId = assignedPaperId;
+            history.CheckIn = true;
+
+            // Lưu thay đổi history trước
+            await _context.SaveChangesAsync();
+
+            // Tạo câu hỏi mới - xóa câu cũ nếu có
+            await GeneratePracticeQuestions(history.PracExamHistoryId, assignedPaperId);
+
+            return await CreatePracticeExamResponse(history, exam, "Xác thực thành công. Bắt đầu thi.");
+        }
+
+        // TH2: Thi lại (từ COMPLETED hoặc INCOMPLETE)
+        private async Task<PracticeExamInfoResponseDTO> HandleRetakePracticeCase(PracticeExamHistory history, PracticeExam exam, int assignedPaperId)
+        {
+            // Reset StartTime và các thông tin liên quan
+            history.StartTime = DateTime.Now;
+            history.StatusExam = PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM;
+            history.Score = 0;
+            history.IsGraded = false;
+            history.EndTime = null;
+            history.PracExamPaperId = assignedPaperId; // Có thể được gán đề mới
+            history.CheckIn = true;
+
+            // Lưu thay đổi history trước
+            await _context.SaveChangesAsync();
+
+            // Tạo lại câu hỏi hoàn toàn mới (xóa câu cũ)
+            await GeneratePracticeQuestions(history.PracExamHistoryId, assignedPaperId);
+
+            return await CreatePracticeExamResponse(history, exam, "Xác thực thành công. Bắt đầu thi lại.");
+        }
+
+        // TH3: Tiếp tục thi (máy sập, vào lại)
+        private async Task<PracticeExamInfoResponseDTO> HandleContinuePracticeCase(PracticeExamHistory history, PracticeExam exam)
+        {
+            // KHÔNG thay đổi StartTime - thời gian tiếp tục chạy
+            // KHÔNG tạo lại câu hỏi
+            // KHÔNG reset đáp án
+
+            return await CreatePracticeExamResponse(history, exam, "Xác thực thành công. Tiếp tục bài thi.");
+        }
+
+        // Helper: Tạo câu hỏi cho practice exam
+        private async Task GeneratePracticeQuestions(Guid pracExamHistoryId, int assignedPaperId)
+        {
+            // Xóa tất cả câu hỏi cũ trước
             var existingQuestions = await _context.QuestionPracExams
-                .Where(q => q.PracExamHistoryId == history.PracExamHistoryId)
+                .Where(q => q.PracExamHistoryId == pracExamHistoryId)
                 .ToListAsync();
 
-            if (!existingQuestions.Any())
+            if (existingQuestions.Any())
             {
-                var questions = await _context.PracticeTestQuestions
-                    .Where(q => q.PracExamPaperId == assignedPaperId)
-                    .OrderBy(q => q.QuestionOrder)
-                    .ToListAsync();
-
-                foreach (var q in questions)
-                {
-                    _context.QuestionPracExams.Add(new QuestionPracExam
-                    {
-                        PracExamHistoryId = history.PracExamHistoryId,
-                        PracticeQuestionId = q.PracticeQuestionId,
-                        Answer = "",
-                        Score = 0
-                    });
-                }
+                _context.QuestionPracExams.RemoveRange(existingQuestions);
                 await _context.SaveChangesAsync();
             }
 
-            // 8. Lấy thông tin sinh viên
+            // Tạo câu hỏi mới từ đề thi được gán
+            var questions = await _context.PracticeTestQuestions
+                .Where(q => q.PracExamPaperId == assignedPaperId)
+                .OrderBy(q => q.QuestionOrder)
+                .ToListAsync();
+
+            foreach (var q in questions)
+            {
+                await _context.QuestionPracExams.AddAsync(new QuestionPracExam
+                {
+                    PracExamHistoryId = pracExamHistoryId,
+                    PracticeQuestionId = q.PracticeQuestionId,
+                    Answer = "",
+                    Score = 0
+                });
+            }
+            await _context.SaveChangesAsync();
+        }
+
+        // Helper: Tạo response object
+        private async Task<PracticeExamInfoResponseDTO> CreatePracticeExamResponse(PracticeExamHistory history, PracticeExam exam, string message)
+        {
+            // Lấy thông tin sinh viên
             var student = await _context.Students
                 .Include(s => s.User)
-                .FirstOrDefaultAsync(s => s.StudentId == request.StudentId);
+                .FirstOrDefaultAsync(s => s.StudentId == history.StudentId);
 
-            // 9. Lấy danh sách câu hỏi trả về
+            // Lấy danh sách câu hỏi
             var questionDetails = await (from q in _context.QuestionPracExams
                                          join pq in _context.PracticeQuestions on q.PracticeQuestionId equals pq.PracticeQuestionId
                                          join ptq in _context.PracticeTestQuestions on new { q.PracticeQuestionId, PaperId = history.PracExamPaperId } equals new { ptq.PracticeQuestionId, PaperId = (int?)ptq.PracExamPaperId }
@@ -194,11 +282,10 @@ namespace GESS.Repository.Implement
                                          {
                                              QuestionOrder = ptq.QuestionOrder,
                                              Content = pq.Content,
-                                             AnswerContent = pq.PracticeAnswer.AnswerContent,
+                                             AnswerContent = q.Answer,
                                              Score = ptq.Score
                                          }).ToListAsync();
 
-            // 10. Trả về kết quả
             return new PracticeExamInfoResponseDTO
             {
                 PracExamHistoryId = history.PracExamHistoryId,
@@ -207,7 +294,8 @@ namespace GESS.Repository.Implement
                 SubjectName = exam.Subject.SubjectName,
                 ExamCategoryName = exam.CategoryExam.CategoryExamName,
                 Duration = exam.Duration,
-                Message = "Xác thực thành công. Bắt đầu thi.",
+                StartTime = history.StartTime, // QUAN TRỌNG: Trả về StartTime cho frontend
+                Message = message,
                 Questions = questionDetails
             };
         }
