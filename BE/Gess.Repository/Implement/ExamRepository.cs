@@ -87,7 +87,7 @@ namespace GESS.Repository.Implement
         public async Task<bool> UpdatePracticeExamAsync(PracticeExamUpdateDTO dto)
         {
             var exam = await _context.PracticeExams.FirstOrDefaultAsync(e => e.PracExamId == dto.PracExamId);
-            if (exam == null || exam.Status.ToLower() != PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM.ToLower()) // chỉ cho sửa khi chưa thi
+            if (exam == null || exam.Status.ToLower().Trim() != PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM.ToLower().Trim()) // chỉ cho sửa khi chưa thi
                 return false;
 
             exam.PracExamName = dto.PracExamName;
@@ -143,7 +143,7 @@ namespace GESS.Repository.Implement
             var query = _context.MultiExams
                 .Where(me => me.CreateAt.Year == latestYear
                     && me.SemesterId == latestSemesterId
-                    && (me.Status.ToLower().Trim() == "chưa mở ca" || me.Status.ToLower().Trim() == "đang mở ca")) 
+                    && (me.Status.ToLower().Trim() == PredefinedStatusAllExam.ONHOLD_EXAM.ToLower().Trim() || me.Status.ToLower().Trim() == PredefinedStatusAllExam.OPENING_EXAM.ToLower().Trim())) 
 
                 .Join(_context.MultiExamHistories,
                     me => me.MultiExamId,
@@ -151,7 +151,7 @@ namespace GESS.Repository.Implement
                     (me, meh) => new { MultiExam = me, MultiExamHistory = meh })
 
                 .Where(x => x.MultiExamHistory.StudentId == request.StudentId
-                    && x.MultiExamHistory.StatusExam == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM) 
+                    && (x.MultiExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM.ToLower().Trim() || x.MultiExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM.ToLower().Trim())) 
                 .Select(x => x.MultiExam)
 
 
@@ -218,7 +218,7 @@ namespace GESS.Repository.Implement
             var query = _context.PracticeExams
                 .Where(me => me.CreateAt.Year == latestYear
                     && me.SemesterId == latestSemesterId
-                    && (me.Status.ToLower().Trim() == "chưa mở ca" || me.Status.ToLower().Trim() == "đang mở ca"))
+                    && (me.Status.ToLower().Trim() == PredefinedStatusAllExam.ONHOLD_EXAM.ToLower().Trim() || me.Status.ToLower().Trim() == PredefinedStatusAllExam.OPENING_EXAM.ToLower().Trim()))
 
                 .Join(_context.PracticeExamHistories,
                     me => me.PracExamId,
@@ -226,7 +226,7 @@ namespace GESS.Repository.Implement
                     (me, meh) => new { PracticeExam = me, PracticeExamHistory = meh })
 
                 .Where(x => x.PracticeExamHistory.StudentId == request.StudentId
-                    && x.PracticeExamHistory.StatusExam == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM)
+                    && (x.PracticeExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM.ToLower().Trim() || x.PracticeExamHistory.StatusExam == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM.ToLower().Trim()))
                 .Select(x => x.PracticeExam)
 
 
