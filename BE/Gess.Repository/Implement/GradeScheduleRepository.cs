@@ -102,10 +102,9 @@ namespace GESS.Repository.Implement
                    StudentId = p.StudentId,
                    StudentCode = p.Student.User.Code,
                    FullName = p.Student.User.Fullname,
-
                 }).ToListAsync();
             if (submissions == null || !submissions.Any())
-                {
+            {
                 return Enumerable.Empty<StudentSubmission>();
             }
             for (int i = 0; i < submissions.Count; i++)
@@ -114,7 +113,11 @@ namespace GESS.Repository.Implement
                     .Where(q => q.PracExamHistoryId== submissions[i].PracExamHistoryId)
                     .Select(q => new QuestionPracExamDTO
                     {
-                       //must update
+                        PracExamHistoryId = q.PracExamHistoryId,
+                        QuestionContent = q.PracticeQuestion.Content,
+                        Answer = q.Answer,
+                        Score = q.Score,//Must update
+                        GradingCriteria = q.PracticeQuestion.PracticeAnswer.GradingCriteria
                     }).ToListAsync();
                 submissions[i].QuestionPracExamDTO = submissionDetails;
             }
