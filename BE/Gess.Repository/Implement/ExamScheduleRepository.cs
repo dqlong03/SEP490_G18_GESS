@@ -75,7 +75,7 @@ namespace GESS.Repository.Implement
             {
                 ExamSlotRoomId = examSlotRoom.ExamSlotRoomId,
                 SubjectName = examSlotRoom.Subject?.SubjectName ?? "N/A",
-                ExamDate = examSlotRoom.MultiOrPractice.Equals("Multiple") ? examSlotRoom.MultiExam.ExamDate : examSlotRoom.PracticeExam.ExamDate,
+                ExamDate = examSlotRoom.MultiOrPractice.Equals("Multiple") ? examSlotRoom.MultiExam.StartDay : examSlotRoom.PracticeExam.StartDay,
                 RoomName = examSlotRoom.Room?.RoomName ?? "N/A",
                 SlotName = examSlotRoom.ExamSlot?.SlotName ?? "N/A",
                 ExamName = examSlotRoom.MultiOrPractice.Equals("Multiple") ? examSlotRoom.MultiExam.MultiExamName : examSlotRoom.PracticeExam.PracExamName,
@@ -90,8 +90,8 @@ namespace GESS.Repository.Implement
             var examSchedules = await _context.ExamSlotRooms
                 .Where(e => e.SupervisorId == teacherId &&
                     (
-                        (e.MultiOrPractice == "Multiple" && e.MultiExam.ExamDate >= fromDate && e.MultiExam.ExamDate <= toDate) ||
-                        (e.MultiOrPractice == "Practice" && e.PracticeExam.ExamDate >= fromDate && e.PracticeExam.ExamDate <= toDate)
+                        (e.MultiOrPractice == "Multiple" && e.MultiExam.StartDay >= fromDate && e.MultiExam.StartDay <= toDate) ||
+                        (e.MultiOrPractice == "Practice" && e.PracticeExam.StartDay >= fromDate && e.PracticeExam.StartDay <= toDate)
                     )
                 )
                 .Include(e => e.Subject)

@@ -30,7 +30,8 @@ namespace GESS.Repository.Implement
             {
                 PracExamName = practiceExamCreateDto.PracExamName,
                 Duration = practiceExamCreateDto.Duration,
-                ExamDate = practiceExamCreateDto.ExamDate,
+                StartDay = practiceExamCreateDto.StartDay,
+                EndDay = practiceExamCreateDto.EndDay,
                 TeacherId = practiceExamCreateDto.TeacherId,
                 SubjectId = practiceExamCreateDto.SubjectId,
                 CreateAt = practiceExamCreateDto.CreateAt,

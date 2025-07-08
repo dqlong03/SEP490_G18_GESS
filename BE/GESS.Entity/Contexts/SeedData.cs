@@ -1019,7 +1019,7 @@ namespace GESS.Entity.Contexts
                 foreach (var multiExam in multiExams)
                 {
                     // FIXED: Tìm ca thi phù hợp dựa trên thời gian thi với TimeSpan
-                    var examTimeOfDay = multiExam.ExamDate.TimeOfDay;
+                    var examTimeOfDay = multiExam.StartDay.TimeOfDay;
 
                     // Tìm ca thi có thời gian exam nằm trong khoảng StartTime-EndTime
                     var matchingSlot = examSlots.FirstOrDefault(slot =>
@@ -1061,7 +1061,7 @@ namespace GESS.Entity.Contexts
                 foreach (var practiceExam in practiceExams)
                 {
                     // FIXED: Tìm ca thi phù hợp dựa trên thời gian thi với TimeSpan
-                    var examTimeOfDay = practiceExam.ExamDate.TimeOfDay;
+                    var examTimeOfDay = practiceExam.StartDay.TimeOfDay;
 
                     // Tìm ca thi có thời gian exam nằm trong khoảng StartTime-EndTime
                     var matchingSlot = examSlots.FirstOrDefault(slot =>
@@ -1349,7 +1349,8 @@ namespace GESS.Entity.Contexts
                             MultiExamName = $"Thi giữa kỳ {subject.SubjectName} - Đề 1",
                             NumberQuestion = 15,
                             Duration = 90,
-                            ExamDate = new DateTime(2024, 6, 15, 8, 0, 0),
+                            StartDay = new DateTime(2024, 6, 15, 8, 0, 0),
+                            EndDay = new DateTime(2024, 6, 15, 8, 0, 0),
                             CreateAt = DateTime.Now,
                             Status = "Published",
                             CodeStart = $"MID1_{subject.Course}",
@@ -1366,7 +1367,8 @@ namespace GESS.Entity.Contexts
                             MultiExamName = $"Thi giữa kỳ {subject.SubjectName} - Đề 2",
                             NumberQuestion = 15,
                             Duration = 90,
-                            ExamDate = new DateTime(2024, 6, 15, 10, 30, 0),
+                            StartDay = new DateTime(2024, 6, 15, 10, 30, 0),
+                            EndDay = new DateTime(2024, 6, 15, 10, 30, 0),
                             CreateAt = DateTime.Now,
                             Status = "Published",
                             CodeStart = $"MID2_{subject.Course}",
@@ -1388,7 +1390,8 @@ namespace GESS.Entity.Contexts
                             MultiExamName = $"Thi cuối kỳ {subject.SubjectName} - Đề 1",
                             NumberQuestion = 25,
                             Duration = 120,
-                            ExamDate = new DateTime(2024, 6, 16, 8, 0, 0),
+                            StartDay = new DateTime(2024, 6, 16, 8, 0, 0),
+                            EndDay = new DateTime(2024, 6, 16, 8, 0, 0),
                             CreateAt = DateTime.Now,
                             Status = "Published",
                             CodeStart = $"FIN1_{subject.Course}",
@@ -1410,7 +1413,8 @@ namespace GESS.Entity.Contexts
                             MultiExamName = $"Thi thử {subject.SubjectName}",
                             NumberQuestion = 10,
                             Duration = 60,
-                            ExamDate = new DateTime(2024, 6, 14, 14, 0, 0),
+                            StartDay = new DateTime(2024, 6, 14, 14, 0, 0),
+                            EndDay = new DateTime(2024, 6, 14, 14, 0, 0),
                             CreateAt = DateTime.Now,
                             Status = "Published",
                             CodeStart = $"PRAC_{subject.Course}",
@@ -1458,7 +1462,8 @@ namespace GESS.Entity.Contexts
                         {
                             PracExamName = $"Thi giữa kỳ tự luận {subject.SubjectName} - Ca 1",
                             Duration = 120,
-                            ExamDate = new DateTime(2024, 6, 15, 13, 30, 0),
+                            StartDay = new DateTime(2024, 6, 15, 13, 30, 0),
+                            EndDay = new DateTime(2024, 6, 15, 13, 30, 0),
                             CreateAt = DateTime.Now,
                             Status = "Published",
                             CodeStart = $"PMID1_{subject.Course}",
@@ -1473,7 +1478,8 @@ namespace GESS.Entity.Contexts
                         {
                             PracExamName = $"Thi giữa kỳ tự luận {subject.SubjectName} - Ca 2",
                             Duration = 120,
-                            ExamDate = new DateTime(2024, 6, 15, 16, 0, 0),
+                            StartDay = new DateTime(2024, 6, 15, 16, 0, 0),
+                            EndDay = new DateTime(2024, 6, 15, 16, 0, 0),
                             CreateAt = DateTime.Now,
                             Status = "Published",
                             CodeStart = $"PMID2_{subject.Course}",
@@ -1493,7 +1499,8 @@ namespace GESS.Entity.Contexts
                         {
                             PracExamName = $"Thi cuối kỳ tự luận {subject.SubjectName} - Ca 1",
                             Duration = 150,
-                            ExamDate = new DateTime(2024, 6, 16, 13, 30, 0),
+                            StartDay = new DateTime(2024, 6, 16, 13, 30, 0),
+                            EndDay = new DateTime(2024, 6, 16, 13, 30, 0),
                             CreateAt = DateTime.Now,
                             Status = "Published",
                             CodeStart = $"PFIN1_{subject.Course}",
@@ -1513,7 +1520,8 @@ namespace GESS.Entity.Contexts
                         {
                             PracExamName = $"Thi thử tự luận {subject.SubjectName}",
                             Duration = 90,
-                            ExamDate = new DateTime(2024, 6, 14, 18, 30, 0),
+                            StartDay = new DateTime(2024, 6, 14, 18, 30, 0),
+                            EndDay = new DateTime(2024, 6, 14, 18, 30, 0),
                             CreateAt = DateTime.Now,
                             Status = "Published",
                             CodeStart = $"PPRAC_{subject.Course}",
