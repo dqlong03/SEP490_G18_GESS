@@ -58,6 +58,7 @@ namespace GESS.Repository.Implement
                 {
                     var practiceExamHistory = new PracticeExamHistory
                     {
+                        PracExamHistoryId = Guid.NewGuid(),
                         PracExamId = practiceExam.PracExamId,
                         StudentId = studentId,
                         CheckIn = false,
@@ -76,6 +77,9 @@ namespace GESS.Repository.Implement
         }
         public async Task<PracticeExamInfoResponseDTO> CheckExamNameAndCodePEAsync(CheckPracticeExamRequestDTO request)
         {
+            // 0. Kiểm tra và xử lý timeout trước tiên
+            await CheckAndHandleTimeoutExams();
+
             // 1. Tìm bài thi
             var exam = await _context.PracticeExams
                 .Include(e => e.Subject)
@@ -90,7 +94,32 @@ namespace GESS.Repository.Implement
             if (exam.Status.ToLower().Trim() != PredefinedStatusAllExam.OPENING_EXAM.ToLower().Trim())
                 throw new Exception("Bài thi chưa được mở.");
 
-            // 2. Lấy danh sách sinh viên và validate
+            // 2. VALIDATION: Kiểm tra time frame cho thi giữa kỳ
+            bool isMidtermExam = IsMidtermExam(exam.CategoryExam.CategoryExamName);
+            
+            if (isMidtermExam)
+            {
+                if (!ValidateExamTimeFrame(exam.StartDay, exam.EndDay))
+                {
+                    Console.WriteLine($"[DEBUG] Practice midterm exam time validation failed. " +
+                        $"Current: {DateTime.Now:yyyy-MM-dd HH:mm:ss}, " +
+                        $"StartDay: {exam.StartDay:yyyy-MM-dd HH:mm:ss}, " +
+                        $"EndDay: {exam.EndDay:yyyy-MM-dd HH:mm:ss}");
+                    
+                    throw new Exception($"Kỳ thi giữa kỳ chỉ được thực hiện trong khoảng thời gian từ {exam.StartDay:dd/MM/yyyy HH:mm} đến {exam.EndDay:dd/MM/yyyy HH:mm}.");
+                }
+                
+                Console.WriteLine($"[DEBUG] Practice midterm exam time validation passed. " +
+                    $"Current: {DateTime.Now:yyyy-MM-dd HH:mm:ss}, " +
+                    $"StartDay: {exam.StartDay:yyyy-MM-dd HH:mm:ss}, " +
+                    $"EndDay: {exam.EndDay:yyyy-MM-dd HH:mm:ss}");
+            }
+            else
+            {
+                Console.WriteLine($"[DEBUG] Not a practice midterm exam ({exam.CategoryExam.CategoryExamName}), skipping time frame validation.");
+            }
+
+            // 3. Lấy danh sách sinh viên và validate
             List<Guid> studentIds;
             if (exam.ClassId != 0) // Giữa kỳ
             {
@@ -110,12 +139,12 @@ namespace GESS.Repository.Implement
                     .ToListAsync();
             }
 
-            // 3. Xác định STT sinh viên
+            // 4. Xác định STT sinh viên
             int stt = studentIds.IndexOf(request.StudentId) + 1;
             if (stt == 0)
                 throw new Exception("Sinh viên không thuộc danh sách dự thi.");
 
-            // 4. Lấy danh sách đề thi và chia đề
+            // 5. Lấy danh sách đề thi và chia đề
             var examPapers = exam.NoPEPaperInPEs.Select(n => n.PracExamPaperId).ToList();
             if (examPapers.Count == 0)
                 throw new Exception("Chưa có đề thi cho bài thi này.");
@@ -123,7 +152,7 @@ namespace GESS.Repository.Implement
             int paperIndex = (stt - 1) % examPapers.Count;
             int assignedPaperId = examPapers[paperIndex];
 
-            // 5. Lấy exam history và phân tích trạng thái
+            // 6. Lấy exam history và phân tích trạng thái
             var history = await _context.PracticeExamHistories
                 .FirstOrDefaultAsync(h => h.PracExamId == exam.PracExamId && h.StudentId == request.StudentId);
 
@@ -133,7 +162,7 @@ namespace GESS.Repository.Implement
                 return await HandleFirstTimePracticeCase(exam, request.StudentId, assignedPaperId);
             }
 
-            // 6. Phân tích trạng thái hiện tại và quyết định hành động
+            // 7. Phân tích trạng thái hiện tại và quyết định hành động
             string currentStatus = history.StatusExam?.Trim();
             bool isFirstTime = string.IsNullOrEmpty(currentStatus) || currentStatus == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM;
             bool isCompleted = currentStatus == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM;
@@ -357,6 +386,9 @@ namespace GESS.Repository.Implement
 
         public async Task UpdatePEEach5minutesAsync(List<UpdatePracticeExamAnswerDTO> answers)
         {
+            // Kiểm tra timeout trước khi update
+            await CheckAndHandleTimeoutExams();
+
             foreach (var item in answers)
             {
                 var question = await _context.QuestionPracExams
@@ -444,6 +476,77 @@ namespace GESS.Repository.Implement
                 TimeTaken = timeTaken,
                 QuestionResults = questionResults
             };
+        }
+
+        // Helper: Kiểm tra có phải thi giữa kỳ không
+        private bool IsMidtermExam(string categoryExamName)
+        {
+            if (string.IsNullOrEmpty(categoryExamName))
+                return false;
+                
+            // Sử dụng PredefinedCategoryExam constants thay vì hardcode
+            return categoryExamName.Trim().Equals(PredefinedCategoryExam.MidTERM_EXAM_CATEGORY, StringComparison.OrdinalIgnoreCase);
+        }
+
+        // Helper: Validation time frame cho thi giữa kỳ  
+        private bool ValidateExamTimeFrame(DateTime startDay, DateTime endDay)
+        {
+            var currentTime = DateTime.Now;
+            return currentTime >= startDay && currentTime <= endDay;
+        }
+
+        // Helper method: Kiểm tra và xử lý timeout tự động
+        private async Task CheckAndHandleTimeoutExams()
+        {
+            // 1. Kiểm tra timeout theo thời gian làm bài (Duration)
+            var timeoutExams = await _context.PracticeExamHistories
+                .Include(h => h.PracticeExam)
+                .Where(h => h.StatusExam == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM && 
+                           h.StartTime.HasValue &&
+                           DateTime.Now > h.StartTime.Value.AddMinutes(h.PracticeExam.Duration))
+                .ToListAsync();
+                
+            foreach (var exam in timeoutExams)
+            {
+                await AutoMarkIncomplete(exam);
+            }
+
+            // 2. Kiểm tra khung thời gian cho kỳ thi giữa kỳ (StartDay - EndDay)
+            var midtermTimeoutExams = await _context.PracticeExamHistories
+                .Include(h => h.PracticeExam)
+                    .ThenInclude(m => m.CategoryExam)
+                .Where(h => h.StatusExam == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM &&
+                           DateTime.Now > h.PracticeExam.EndDay)
+                .ToListAsync();
+
+            foreach (var exam in midtermTimeoutExams)
+            {
+                // Chỉ xử lý nếu là kỳ thi giữa kỳ
+                if (IsMidtermExam(exam.PracticeExam.CategoryExam.CategoryExamName))
+                {
+                    await AutoMarkIncomplete(exam);
+                    Console.WriteLine($"[DEBUG] Auto-marked practice midterm exam as incomplete due to time frame expiry. " +
+                                    $"ExamId: {exam.PracticeExam.PracExamId}, EndDay: {exam.PracticeExam.EndDay:dd/MM/yyyy HH:mm}");
+                }
+            }
+            
+            if (timeoutExams.Any() || midtermTimeoutExams.Any())
+            {
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        // Helper: Tự động đánh dấu bài thi là INCOMPLETE khi timeout
+        private async Task AutoMarkIncomplete(PracticeExamHistory history)
+        {
+            history.StatusExam = PredefinedStatusExamInHistoryOfStudent.INCOMPLETE_EXAM;
+            history.EndTime = DateTime.Now;
+            history.IsGraded = false;
+            
+            Console.WriteLine($"[DEBUG] Auto-marked practice exam as INCOMPLETE. " +
+                $"HistoryId: {history.PracExamHistoryId}, " +
+                $"StartTime: {history.StartTime:yyyy-MM-dd HH:mm:ss}, " +
+                $"EndTime: {history.EndTime:yyyy-MM-dd HH:mm:ss}");
         }
     }
     

@@ -55,6 +55,52 @@ namespace GESS.Repository.Implement
             }
         }
 
+        // Helper: Validate khung thời gian cho kỳ thi giữa kỳ
+        private async Task ValidateExamTimeFrame(MultiExam exam)
+        {
+            // Kiểm tra xem có phải kỳ thi giữa kỳ không
+            bool isMidtermExam = IsMidtermExam(exam.CategoryExam.CategoryExamName);
+            
+            if (isMidtermExam)
+            {
+                DateTime currentTime = DateTime.Now;
+                
+                // Validate thời gian hiện tại có nằm trong khung thời gian cho phép không
+                if (currentTime < exam.StartDay)
+                {
+                    throw new Exception($"Kỳ thi giữa kỳ chưa được mở. " +
+                                      $"Thời gian bắt đầu: {exam.StartDay:dd/MM/yyyy HH:mm}. " +
+                                      $"Thời gian hiện tại: {currentTime:dd/MM/yyyy HH:mm}.");
+                }
+                
+                if (currentTime > exam.EndDay)
+                {
+                    throw new Exception($"Kỳ thi giữa kỳ đã hết hạn. " +
+                                      $"Thời gian kết thúc: {exam.EndDay:dd/MM/yyyy HH:mm}. " +
+                                      $"Thời gian hiện tại: {currentTime:dd/MM/yyyy HH:mm}.");
+                }
+                
+                Console.WriteLine($"[DEBUG] Midterm exam time validation passed. " +
+                                $"StartDay: {exam.StartDay:dd/MM/yyyy HH:mm}, " +
+                                $"EndDay: {exam.EndDay:dd/MM/yyyy HH:mm}, " +
+                                $"Current: {currentTime:dd/MM/yyyy HH:mm}");
+            }
+            else
+            {
+                Console.WriteLine($"[DEBUG] Not a midterm exam ({exam.CategoryExam.CategoryExamName}), skipping time frame validation.");
+            }
+        }
+
+        // Helper: Kiểm tra có phải kỳ thi giữa kỳ không dựa vào tên danh mục
+        private bool IsMidtermExam(string categoryExamName)
+        {
+            if (string.IsNullOrEmpty(categoryExamName))
+                return false;
+                
+           
+            return categoryExamName.Trim().Equals(PredefinedCategoryExam.MidTERM_EXAM_CATEGORY, StringComparison.OrdinalIgnoreCase);
+        }
+
 
 
         public async Task<MultiExam> CreateMultipleExamAsync(MultipleExamCreateDTO multipleExamCreateDto)
@@ -145,7 +191,10 @@ namespace GESS.Repository.Implement
                 throw new Exception("Bài thi chưa được mở.");
             }
 
-            // 3. Validate student is in the class for the exam
+            // 3. VALIDATE KHUNG THỜI GIAN CHO KỲ THI GIỮA KỲ
+            await ValidateExamTimeFrame(exam);
+
+            // 4. Validate student is in the class for the exam
             var isStudentInClass = await _context.ClassStudents
                 .AnyAsync(cs => cs.ClassId == exam.ClassId && cs.StudentId == studentId);
 
@@ -154,7 +203,7 @@ namespace GESS.Repository.Implement
                 throw new Exception("Bạn không thuộc lớp của bài thi này.");
             }
 
-            // 4. Get exam history and check for attendance
+            // 5. Get exam history and check for attendance
             var history = await _context.MultiExamHistories
                 .FirstOrDefaultAsync(h => h.MultiExamId == exam.MultiExamId && h.StudentId == studentId);
 
@@ -163,14 +212,14 @@ namespace GESS.Repository.Implement
                 throw new Exception("Bạn chưa được điểm danh.");
             }
 
-            // 5. Phân tích trạng thái hiện tại và quyết định hành động
+            // 6. Phân tích trạng thái hiện tại và quyết định hành động
             string currentStatus = history.StatusExam?.Trim();
             bool isFirstTime = string.IsNullOrEmpty(currentStatus) || currentStatus == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM;
             bool isCompleted = currentStatus == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM;
             bool isIncomplete = currentStatus == PredefinedStatusExamInHistoryOfStudent.INCOMPLETE_EXAM;
             bool isInProgress = currentStatus == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM;
 
-            // 6. Kiểm tra timeout cho TH3 & TH4
+            // 7. Kiểm tra timeout cho TH3 & TH4
             if (isInProgress && history.StartTime.HasValue)
             {
                 var timeElapsed = DateTime.Now - history.StartTime.Value;
@@ -186,7 +235,7 @@ namespace GESS.Repository.Implement
                 return await HandleContinueCase(history, timeRemaining, exam);
             }
 
-            // 7. Xử lý TH1 & TH2
+            // 8. Xử lý TH1 & TH2
             if (isFirstTime)
             {
                 return await HandleFirstTimeCase(history, exam);
@@ -202,6 +251,7 @@ namespace GESS.Repository.Implement
         // Helper method: Kiểm tra và xử lý timeout tự động
         private async Task CheckAndHandleTimeoutExams()
         {
+            // 1. Kiểm tra timeout theo thời gian làm bài (Duration)
             var timeoutExams = await _context.MultiExamHistories
                 .Include(h => h.MultiExam)
                 .Where(h => h.StatusExam == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM && 
@@ -213,12 +263,30 @@ namespace GESS.Repository.Implement
             {
                 await AutoMarkIncomplete(exam);
             }
+
+            // 2. Kiểm tra khung thời gian cho kỳ thi giữa kỳ (StartDay - EndDay)
+            var midtermTimeoutExams = await _context.MultiExamHistories
+                .Include(h => h.MultiExam)
+                    .ThenInclude(m => m.CategoryExam)
+                .Where(h => h.StatusExam == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM &&
+                           DateTime.Now > h.MultiExam.EndDay)
+                .ToListAsync();
+
+            foreach (var exam in midtermTimeoutExams)
+            {
+                // Chỉ xử lý nếu là kỳ thi giữa kỳ
+                if (IsMidtermExam(exam.MultiExam.CategoryExam.CategoryExamName))
+                {
+                    await AutoMarkIncomplete(exam);
+                    Console.WriteLine($"[DEBUG] Auto-marked midterm exam as incomplete due to time frame expiry. " +
+                                    $"ExamId: {exam.MultiExam.MultiExamId}, EndDay: {exam.MultiExam.EndDay:dd/MM/yyyy HH:mm}");
+                }
+            }
             
-            if (timeoutExams.Any())
+            if (timeoutExams.Any() || midtermTimeoutExams.Any())
             {
                 await _context.SaveChangesAsync();
             }
-            
         }
 
         // TH1: Lần đầu làm bài
