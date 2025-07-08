@@ -27,7 +27,7 @@ namespace GESS.Repository.Implement
         public async Task<int> CountExamNeedGradeByTeacherIdAsync(Guid teacherId, int subjectId, int statusExam, int semesterId, int year, int pagesze)
         {
             int pageNumber = _context.ExamSlotRooms
-                .Where(e => e.ExamGradedId == teacherId && e.SubjectId == subjectId && e.IsGraded == statusExam && e.SemesterId == semesterId && e.PracticeExam.ExamDate.Year == year)
+                .Where(e => e.ExamGradedId == teacherId && e.SubjectId == subjectId && e.IsGraded == statusExam && e.SemesterId == semesterId && e.PracticeExam.StartDay.Year == year)
                 .Count();
             pageNumber = (int)Math.Ceiling((double)pageNumber / pagesze);
             return await Task.FromResult(pageNumber);
@@ -36,7 +36,7 @@ namespace GESS.Repository.Implement
         public async Task<IEnumerable<ExamNeedGrade>> GetExamNeedGradeByTeacherIdAsync(Guid teacherId, int subjectId, int statusExam, int semesterId, int year, int pagesze, int pageindex)
         {
             var exams = await _context.ExamSlotRooms
-                .Where(e => e.ExamGradedId == teacherId && e.SubjectId == subjectId && e.IsGraded == statusExam && e.SemesterId == semesterId && e.PracticeExam.ExamDate.Year == year)
+                .Where(e => e.ExamGradedId == teacherId && e.SubjectId == subjectId && e.IsGraded == statusExam && e.SemesterId == semesterId && e.PracticeExam.StartDay.Year == year)
                 .Skip((pageindex - 1) * pagesze)
                 .Take(pagesze)
                 .Select(e => new ExamNeedGrade
@@ -46,7 +46,7 @@ namespace GESS.Repository.Implement
                     ExamName = e.PracticeExam.PracExamName,
                     SubjectName = e.Subject.SubjectName,
                     SemesterId = e.SemesterId,
-                    ExamDate = e.PracticeExam.ExamDate,
+                    ExamDate = e.PracticeExam.StartDay,
                     IsGrade = e.IsGraded,
                 })
                 .ToListAsync();

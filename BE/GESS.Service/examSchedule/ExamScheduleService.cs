@@ -46,7 +46,7 @@ namespace GESS.Service.examSchedule
             {
                 ExamSlotRoomId = schedule.ExamSlotRoomId,
                 SubjectName = schedule.Subject?.SubjectName ?? "N/A",
-                ExamDate = schedule.MultiOrPractice.Equals("Multiple") ? schedule.MultiExam.ExamDate: schedule.PracticeExam.ExamDate,
+                ExamDate = schedule.MultiOrPractice.Equals("Multiple") ? schedule.MultiExam.StartDay: schedule.PracticeExam.StartDay,
                 RoomName = schedule.Room?.RoomName ?? "N/A",
                 ExamSlotId = schedule.ExamSlotId
             });
