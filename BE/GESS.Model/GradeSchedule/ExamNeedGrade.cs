@@ -14,6 +14,6 @@ namespace GESS.Model.GradeSchedule
         public string? SubjectName { get; set; }
         public int SemesterId { get; set; }
         public int? IsGrade { get; set; }
-        public DateTime ExamDate { get; set; }
+        public DateTime? ExamDate { get; set; }
     }
 }

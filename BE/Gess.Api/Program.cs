@@ -221,38 +221,38 @@ Constants.Initialize(builder.Configuration);
 var app = builder.Build();
 
 //Seed dữ liệu
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    var context = services.GetRequiredService<GessDbContext>();
-    var logger = services.GetRequiredService<ILogger<Program>>();
+//using (var scope = app.Services.CreateScope())
+//{
+//    var services = scope.ServiceProvider;
+//    var context = services.GetRequiredService<GessDbContext>();
+//    var logger = services.GetRequiredService<ILogger<Program>>();
 
-    try
-    {
-        // Kiểm tra arguments để xem có muốn xóa dữ liệu không
-        if (args.Contains("--clear-data"))
-        {
-            logger.LogInformation("Clearing all data from database...");
-            logger.LogInformation("All data cleared successfully.");
-        }
-        else if (args.Contains("--reseed"))
-        {
-            logger.LogInformation("Clearing and reseeding database...");
-            await SeedData.InitializeAsync(services);
-            logger.LogInformation("Database reseeded successfully.");
-        }
-        else
-        {
-            // Chỉ seed nếu không có args đặc biệt
-            await SeedData.InitializeAsync(services);
-        }
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "An error occurred while seeding the database.");
-        throw; // Re-throw để dừng ứng dụng nếu có lỗi
-    }
-}
+//    try
+//    {
+//        // Kiểm tra arguments để xem có muốn xóa dữ liệu không
+//        if (args.Contains("--clear-data"))
+//        {
+//            logger.LogInformation("Clearing all data from database...");
+//            logger.LogInformation("All data cleared successfully.");
+//        }
+//        else if (args.Contains("--reseed"))
+//        {
+//            logger.LogInformation("Clearing and reseeding database...");
+//            await SeedData.InitializeAsync(services);
+//            logger.LogInformation("Database reseeded successfully.");
+//        }
+//        else
+//        {
+//            // Chỉ seed nếu không có args đặc biệt
+//            await SeedData.InitializeAsync(services);
+//        }
+//    }
+//    catch (Exception ex)
+//    {
+//        logger.LogError(ex, "An error occurred while seeding the database.");
+//        throw; // Re-throw để dừng ứng dụng nếu có lỗi
+//    }
+//}
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())

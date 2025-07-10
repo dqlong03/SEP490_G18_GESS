@@ -46,12 +46,13 @@ namespace GESS.Service.examSchedule
             {
                 ExamSlotRoomId = schedule.ExamSlotRoomId,
                 SubjectName = schedule.Subject?.SubjectName ?? "N/A",
-                ExamDate = schedule.MultiOrPractice.Equals("Multiple") ? schedule.MultiExam.StartDay: schedule.PracticeExam.StartDay,
+                ExamDate = schedule.MultiOrPractice.Equals("Multiple")
+                    ? (schedule.MultiExam?.StartDay ?? DateTime.MinValue)
+                    : (schedule.PracticeExam?.StartDay ?? DateTime.MinValue),
                 RoomName = schedule.Room?.RoomName ?? "N/A",
                 ExamSlotId = schedule.ExamSlotId
             });
             return examScheduleDtos;
-
         }
 
         public async Task<IEnumerable<StudentCheckIn>> GetStudentsByExamSlotIdAsync(int examSlotId)
