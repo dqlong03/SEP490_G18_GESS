@@ -92,7 +92,7 @@ namespace GESS.Repository.Implement
             return students;
         }
 
-        public async Task<IEnumerable<StudentSubmission>> GetSubmissionOfStudentInExamNeedGradeAsync(Guid teacherId, int examId, Guid studentId)
+        public async Task<StudentSubmission> GetSubmissionOfStudentInExamNeedGradeAsync(Guid teacherId, int examId, Guid studentId)
         {
             var submissions = await _context.PracticeExamHistories
                 .Where(p => p.StudentId == studentId && p.PracticeExam.PracExamId == examId && p.IsGraded == false)
@@ -102,25 +102,26 @@ namespace GESS.Repository.Implement
                    StudentId = p.StudentId,
                    StudentCode = p.Student.User.Code,
                    FullName = p.Student.User.Fullname,
+
+                }).FirstOrDefaultAsync();
+            if (submissions == null)
+            {
+                return null;
+            }
+            var questions = await _context.QuestionPracExams
+                .Where(q => q.PracExamHistoryId == submissions.PracExamHistoryId)
+                .Select(q => new QuestionPracExamDTO
+                {
+                    PracticeQuestionId = q.PracticeQuestionId,
+                    QuestionContent= q.PracticeQuestion.Content,
+                    Answer = q.Answer,
+                    Score = q.PracticeExamHistory.PracticeExamPaper.PracticeTestQuestions
+                    .Where(ptq => ptq.PracticeQuestionId == q.PracticeQuestionId)
+                    .Select(ptq => ptq.Score)
+                    .FirstOrDefault(),
+                    GradingCriteria = q.PracticeQuestion.PracticeAnswer.GradingCriteria,
                 }).ToListAsync();
-            if (submissions == null || !submissions.Any())
-            {
-                return Enumerable.Empty<StudentSubmission>();
-            }
-            for (int i = 0; i < submissions.Count; i++)
-            {
-                var submissionDetails = await _context.QuestionPracExams
-                    .Where(q => q.PracExamHistoryId== submissions[i].PracExamHistoryId)
-                    .Select(q => new QuestionPracExamDTO
-                    {
-                        PracExamHistoryId = q.PracExamHistoryId,
-                        QuestionContent = q.PracticeQuestion.Content,
-                        Answer = q.Answer,
-                        Score = q.Score,//Must update
-                        GradingCriteria = q.PracticeQuestion.PracticeAnswer.GradingCriteria
-                    }).ToListAsync();
-                submissions[i].QuestionPracExamDTO = submissionDetails;
-            }
+            submissions.QuestionPracExamDTO = questions;
             return submissions;
         }
     }

@@ -47,12 +47,12 @@ namespace GESS.Service.gradeSchedule
             return students;
         }
 
-        public async Task<IEnumerable<StudentSubmission>> GetSubmissionOfStudentInExamNeedGradeAsync(Guid teacherId, int examId, Guid studentId)
+        public async Task<StudentSubmission> GetSubmissionOfStudentInExamNeedGradeAsync(Guid teacherId, int examId, Guid studentId)
         {
             var submissions = await _unitOfWork.GradeScheduleRepository.GetSubmissionOfStudentInExamNeedGradeAsync(teacherId, examId, studentId);
-            if (submissions == null || !submissions.Any())
+            if (submissions == null)
             {
-                return Enumerable.Empty<StudentSubmission>();
+                return null;
             }
             return submissions;
         }
