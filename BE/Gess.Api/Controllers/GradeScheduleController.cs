@@ -1,4 +1,6 @@
-﻿using GESS.Service.examSchedule;
+﻿using GESS.Model.PracticeTestQuestions;
+using GESS.Model.QuestionPracExam;
+using GESS.Service.examSchedule;
 using GESS.Service.examSlotService;
 using GESS.Service.gradeSchedule;
 using Microsoft.AspNetCore.Http;
@@ -55,6 +57,20 @@ namespace GESS.Api.Controllers
             }
             return Ok(result);
         }
-        //API to save grade for student by studentId and 
+        //API to save grade for student by teacher id and exam id and student id and questionId
+        [HttpPost("teacher/{teacherId}/exam/{examId}/student/{studentId}/grade")]
+        public async Task<IActionResult> SaveGradeForStudent(Guid teacherId, int examId, Guid studentId, [FromBody] QuestionPracExamDTO questionPracExamDTO)
+        {
+            if (questionPracExamDTO == null|| questionPracExamDTO.GradedScore<0)
+            {
+                return BadRequest("Invalid submission data.");
+            }
+            var result = await _gradeScheduleService.GradeSubmission(teacherId, examId, studentId, questionPracExamDTO);
+            if (!result)
+            {
+                return NotFound("No submission found for the specified student in the exam.");
+            }
+            return Ok("Grade saved successfully.");
+        }
     }
 }
