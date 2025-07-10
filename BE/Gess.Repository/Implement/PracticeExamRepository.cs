@@ -489,7 +489,7 @@ namespace GESS.Repository.Implement
         }
 
         // Helper: Validation time frame cho thi giữa kỳ  
-        private bool ValidateExamTimeFrame(DateTime startDay, DateTime endDay)
+        private bool ValidateExamTimeFrame(DateTime? startDay, DateTime? endDay)
         {
             var currentTime = DateTime.Now;
             return currentTime >= startDay && currentTime <= endDay;

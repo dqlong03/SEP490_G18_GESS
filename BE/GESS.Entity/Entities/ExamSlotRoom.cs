@@ -20,6 +20,8 @@ namespace GESS.Entity.Entities
         public int ExamSlotId { get; set; }
         public ExamSlot ExamSlot { get; set; }
 
+        public DateTime ExamDate { get; set; }
+
         // Khóa ngoại liên kết đến phòng thi (Room)
         public int RoomId { get; set; }
         public Room Room { get; set; }

@@ -67,21 +67,35 @@ namespace GESS.Repository.Implement
                 .Include(e => e.MultiExam)
                 .Include(e => e.PracticeExam)
                 .FirstOrDefaultAsync();
+
             if (examSlotRoom == null)
             {
                 return null;
             }
+
+            var examDate = examSlotRoom.MultiOrPractice.Equals("Multiple")
+                ? examSlotRoom.MultiExam?.StartDay
+                : examSlotRoom.PracticeExam?.StartDay;
+
+            if (!examDate.HasValue)
+            {
+                throw new InvalidOperationException("Exam date is null.");
+            }
+
             var examSlotRoomDetail = new ExamSlotRoomDetail
             {
                 ExamSlotRoomId = examSlotRoom.ExamSlotRoomId,
                 SubjectName = examSlotRoom.Subject?.SubjectName ?? "N/A",
-                ExamDate = examSlotRoom.MultiOrPractice.Equals("Multiple") ? examSlotRoom.MultiExam.StartDay : examSlotRoom.PracticeExam.StartDay,
+                ExamDate = examDate.Value, // Explicitly cast nullable DateTime to DateTime
                 RoomName = examSlotRoom.Room?.RoomName ?? "N/A",
                 SlotName = examSlotRoom.ExamSlot?.SlotName ?? "N/A",
-                ExamName = examSlotRoom.MultiOrPractice.Equals("Multiple") ? examSlotRoom.MultiExam.MultiExamName : examSlotRoom.PracticeExam.PracExamName,
+                ExamName = examSlotRoom.MultiOrPractice.Equals("Multiple")
+                    ? examSlotRoom.MultiExam?.MultiExamName
+                    : examSlotRoom.PracticeExam?.PracExamName,
                 StartTime = examSlotRoom.ExamSlot?.StartTime,
                 EndTime = examSlotRoom.ExamSlot?.EndTime
             };
+
             return examSlotRoomDetail;
         }
 
