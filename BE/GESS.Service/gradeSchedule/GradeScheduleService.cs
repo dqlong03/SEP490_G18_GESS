@@ -4,6 +4,7 @@ using GESS.Model.Chapter;
 using GESS.Model.ExamSlotRoomDTO;
 using GESS.Model.GradeSchedule;
 using GESS.Model.PracticeTestQuestions;
+using GESS.Model.QuestionPracExam;
 using GESS.Model.Student;
 using GESS.Model.Subject;
 using System;
@@ -55,6 +56,20 @@ namespace GESS.Service.gradeSchedule
                 return null;
             }
             return submissions;
+        }
+
+        public async Task<bool> GradeSubmission(Guid teacherId, int examId, Guid studentId, QuestionPracExamDTO questionPracExamDTO)
+        {
+           var result = await _unitOfWork.GradeScheduleRepository.GradeSubmission(teacherId, examId, studentId, questionPracExamDTO);
+            if (result)
+            {
+                await _unitOfWork.SaveChangesAsync();
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
     }
 

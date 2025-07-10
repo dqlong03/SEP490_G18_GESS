@@ -95,7 +95,7 @@ namespace GESS.Repository.Implement
         public async Task<StudentSubmission> GetSubmissionOfStudentInExamNeedGradeAsync(Guid teacherId, int examId, Guid studentId)
         {
             var submissions = await _context.PracticeExamHistories
-                .Where(p => p.StudentId == studentId && p.PracticeExam.PracExamId == examId && p.IsGraded == false)
+                .Where(p => p.StudentId == studentId && p.PracticeExam.PracExamId == examId)
                 .Select(p => new StudentSubmission
                 {
                    PracExamHistoryId = p.PracExamHistoryId,
@@ -119,10 +119,45 @@ namespace GESS.Repository.Implement
                     .Where(ptq => ptq.PracticeQuestionId == q.PracticeQuestionId)
                     .Select(ptq => ptq.Score)
                     .FirstOrDefault(),
+                    GradedScore = q.Score,
                     GradingCriteria = q.PracticeQuestion.PracticeAnswer.GradingCriteria,
                 }).ToListAsync();
             submissions.QuestionPracExamDTO = questions;
             return submissions;
         }
+
+        public async Task<bool> GradeSubmission(Guid teacherId, int examId, Guid studentId, QuestionPracExamDTO questionPracExamDTO)
+        {
+            // Tìm bài làm của học sinh trong đề thi
+            var submission = await _context.PracticeExamHistories
+                .Where(p => p.StudentId == studentId
+                            && p.PracticeExam.PracExamId == examId)
+                .Select(p => new
+                {
+                    p.PracExamHistoryId,
+                    p.PracExamPaperId
+                }).FirstOrDefaultAsync();
+
+            if (submission == null)
+            {
+                return false;
+            }
+
+            // Lấy câu hỏi cần chấm điểm
+            var question = await _context.QuestionPracExams
+                .FirstOrDefaultAsync(q => q.PracExamHistoryId == submission.PracExamHistoryId
+                                          && q.PracticeQuestionId == questionPracExamDTO.PracticeQuestionId);
+
+            if (question == null)
+            {
+                return false;
+            }
+
+            // Cập nhật điểm
+            question.Score = questionPracExamDTO.GradedScore;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
     }
 }
