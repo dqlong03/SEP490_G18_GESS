@@ -84,11 +84,11 @@ namespace GESS.Api.Controllers
         }
         // Example endpoint to add a new student
         [HttpPost]
-        public async Task<ActionResult<StudentResponse>> AddStudentAsync([FromBody] StudentCreationRequest request)
+        public async Task<ActionResult<StudentResponse>> AddStudentAsync([FromForm] StudentCreationRequest request, IFormFile? avatar)
         {
             try
             {
-                var student = await _studentService.AddStudentAsync(request);
+                var student = await _studentService.AddStudentAsync(request, avatar);
                 return CreatedAtAction(nameof(GetStudentById), new { studentId = student.StudentId }, student);
             }
             catch (Exception ex)
@@ -99,11 +99,11 @@ namespace GESS.Api.Controllers
 
         // Example endpoint to update a student
         [HttpPut("{studentId}")]
-        public async Task<ActionResult<StudentResponse>> UpdateStudentAsync(Guid studentId, [FromBody] StudentUpdateRequest request)
+        public async Task<ActionResult<StudentResponse>> UpdateStudentAsync(Guid studentId, [FromBody] StudentUpdateRequest request, IFormFile? avatar)
         {
             try
             {
-                var student = await _studentService.UpdateStudentAsync(studentId, request);
+                var student = await _studentService.UpdateStudentAsync(studentId, request, avatar);
                 if (student == null)
                 {
                     return NotFound($"Student with ID {studentId} not found.");

@@ -18,7 +18,7 @@ namespace GESS.Model.Student
         public bool Gender { get; set; }
         public bool IsActive { get; set; }
         public string? Password { get; set; }
-
+        public string? AvatarUrl { get; set; }
         public DateTime EnrollDate { get; set; } = DateTime.Now;
         public DateTime? EndDate { get; set; }
         public int? CohortId { get; set; }

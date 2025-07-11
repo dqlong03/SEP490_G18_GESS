@@ -14,13 +14,13 @@ namespace GESS.Service.student
     public interface IStudentService : IBaseService<Student>
     {
 
-        Task<StudentResponse> AddStudentAsync(StudentCreationRequest request);
+        Task<StudentResponse> AddStudentAsync(StudentCreationRequest request , IFormFile? avatar);
         Task<int> CountPageAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageSize);
         Task<List<StudentResponse>> GetAllStudentsAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageNumber, int pageSize);
         Task<StudentResponse> GetStudentByIdAsync(Guid studentId);
         Task<List<StudentResponse>> ImportStudentsFromExcelAsync(IFormFile file);
         Task<List<StudentResponse>> SearchStudentsAsync(string keyword);
-        Task<StudentResponse> UpdateStudentAsync(Guid studentId, StudentUpdateRequest request);
+        Task<StudentResponse> UpdateStudentAsync(Guid studentId, StudentUpdateRequest request, IFormFile? avatar);
         Task<Student> AddStudentAsync(Guid id, StudentCreateDTO student);
 
         Task<IEnumerable<StudentFileExcel>> StudentFileExcelsAsync(IFormFile file);
