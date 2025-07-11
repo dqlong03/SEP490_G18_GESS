@@ -35,6 +35,7 @@ namespace GESS.Repository.Implement
             {
                 UserId = id,
                 EnrollDate = request.EnrollDate,
+                AvatarURL = request.AvatarUrl,
             };
 
             _context.Students.Add(student);
@@ -50,6 +51,7 @@ namespace GESS.Repository.Implement
                 StudentId = entity.StudentId,
                 UserName = student.User.UserName,
                 Email = student.User.Email,
+                AvatarUrl = student.AvatarURL,
                 PhoneNumber = student.User.PhoneNumber,
                 DateOfBirth = student.User.DateOfBirth,
                 Fullname = student.User.Fullname,
@@ -129,6 +131,7 @@ namespace GESS.Repository.Implement
                 DateOfBirth = student.User.DateOfBirth,
                 Fullname = student.User.Fullname,
                 Gender = student.User.Gender,
+                AvatarUrl = student.AvatarURL,
                 IsActive = student.User.IsActive,
                 Code = student.User.Code,
                 EnrollDate = student.EnrollDate,
@@ -151,6 +154,7 @@ namespace GESS.Repository.Implement
                 PhoneNumber = student.User.PhoneNumber,
                 DateOfBirth = student.User.DateOfBirth,
                 Gender = student.User.Gender,
+                AvatarUrl = student.AvatarURL,
                 IsActive = student.User.IsActive,
                 EnrollDate = student.EnrollDate,
                 Code = student.User.Code
@@ -179,6 +183,7 @@ namespace GESS.Repository.Implement
                 PhoneNumber = examination.User.PhoneNumber,
                 DateOfBirth = examination.User.DateOfBirth,
                 Fullname = examination.User.Fullname,
+                AvatarUrl = examination.AvatarURL,
                 Gender = examination.User.Gender,
                 IsActive = examination.User.IsActive,
                 EnrollDate = examination.EnrollDate,
@@ -211,6 +216,7 @@ namespace GESS.Repository.Implement
             existing.User.Gender = request.Gender;
             existing.User.IsActive = request.IsActive;
             existing.User.Code = request.Code;
+            existing.AvatarURL = request.AvatarUrl ?? existing.AvatarURL;
 
             var updateResult = await _userManager.UpdateAsync(existing.User);
             if (!updateResult.Succeeded)
@@ -228,6 +234,7 @@ namespace GESS.Repository.Implement
                 PhoneNumber = existing.User.PhoneNumber,
                 DateOfBirth = existing.User.DateOfBirth,
                 Fullname = existing.User.Fullname,
+                AvatarUrl = existing.AvatarURL,
                 Gender = existing.User.Gender,
                 IsActive = existing.User.IsActive,
                 Code = existing.User.Code,
@@ -254,6 +261,7 @@ namespace GESS.Repository.Implement
                 StudentId = id,
                 UserId = student.UserId,
                 CohortId = student.CohortId,
+                AvatarURL = student.AvatarURL,
                 EnrollDate = student.EnrollDate
             };
 

@@ -49,6 +49,8 @@ using GESS.Service.multianswer;
 using GESS.Service.practiceExam;
 using GESS.Service.examSchedule;
 using GESS.Service.examSlotService;
+using CloudinaryDotNet;
+using GESS.Service.cloudinary;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -146,7 +148,7 @@ builder.Services.AddScoped<IStudentService, StudentService>();
 builder.Services.AddScoped<IPracticeQuestionService, PracticeQuestionService>();
 builder.Services.AddScoped<IExamScheduleService, ExamScheduleService>();
 builder.Services.AddScoped<IExamService, GESS.Service.exam.ExamService>();
-
+builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<ILevelQuestionService, LevelQuestionService>();
 
 // ThaiNH_Initialize_Begin
@@ -189,6 +191,20 @@ builder.Services.AddScoped<IPracticeExamRepository, PracticeExamRepository>();
 builder.Services.AddScoped<IExamScheduleRepository, ExamScheduleRepository>();
 builder.Services.AddScoped<IExamSlotRepository, ExamSlotRepository>();
 
+// Đọc cấu hình Cloudinary từ appsettings.json
+var cloudinaryConfig = builder.Configuration.GetSection("Cloudinary");
+var cloudName = cloudinaryConfig["CloudName"];
+var apiKey = cloudinaryConfig["ApiKey"];
+var apiSecret = cloudinaryConfig["ApiSecret"];
+
+if (string.IsNullOrEmpty(cloudName) || string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(apiSecret))
+{
+    throw new ArgumentException("Cloudinary configuration is missing or incomplete.");
+}
+
+var account = new Account(cloudName, apiKey, apiSecret);
+var cloudinary = new Cloudinary(account);
+builder.Services.AddSingleton(cloudinary);
 
 // Đăng ký EmailService
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));

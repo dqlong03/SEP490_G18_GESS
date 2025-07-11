@@ -15,6 +15,7 @@ namespace GESS.Model.Student
         public string Fullname { get; set; }
         public bool Gender { get; set; }
         public string Code { get; set; }
+        public string? AvatarUrl { get; set; }
 
         /// <summary>
         /// Defaults to true, indicating that the student is active.
