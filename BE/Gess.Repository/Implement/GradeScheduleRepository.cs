@@ -27,7 +27,7 @@ namespace GESS.Repository.Implement
         public async Task<int> CountExamNeedGradeByTeacherIdAsync(Guid teacherId, int subjectId, int statusExam, int semesterId, int year, int pagesze)
         {
             int pageNumber = _context.ExamSlotRooms
-                .Where(e => e.ExamGradedId == teacherId && e.SubjectId == subjectId && e.IsGraded == statusExam && e.SemesterId == semesterId && e.PracticeExam.StartDay.Year == year)
+                .Where(e => e.ExamGradedId == teacherId && e.SubjectId == subjectId && e.IsGraded == statusExam && e.SemesterId == semesterId && e.PracticeExam.StartDay.HasValue && e.PracticeExam.StartDay.Value.Year == year)
                 .Count();
             pageNumber = (int)Math.Ceiling((double)pageNumber / pagesze);
             return await Task.FromResult(pageNumber);
@@ -36,7 +36,7 @@ namespace GESS.Repository.Implement
         public async Task<IEnumerable<ExamNeedGrade>> GetExamNeedGradeByTeacherIdAsync(Guid teacherId, int subjectId, int statusExam, int semesterId, int year, int pagesze, int pageindex)
         {
             var exams = await _context.ExamSlotRooms
-                .Where(e => e.ExamGradedId == teacherId && e.SubjectId == subjectId && e.IsGraded == statusExam && e.SemesterId == semesterId && e.PracticeExam.StartDay.Year == year)
+                .Where(e => e.ExamGradedId == teacherId && e.SubjectId == subjectId && e.IsGraded == statusExam && e.SemesterId == semesterId && e.PracticeExam.StartDay.HasValue && e.PracticeExam.StartDay.Value.Year == year)
                 .Skip((pageindex - 1) * pagesze)
                 .Take(pagesze)
                 .Select(e => new ExamNeedGrade
@@ -92,36 +92,72 @@ namespace GESS.Repository.Implement
             return students;
         }
 
-        public async Task<IEnumerable<StudentSubmission>> GetSubmissionOfStudentInExamNeedGradeAsync(Guid teacherId, int examId, Guid studentId)
+        public async Task<StudentSubmission> GetSubmissionOfStudentInExamNeedGradeAsync(Guid teacherId, int examId, Guid studentId)
         {
             var submissions = await _context.PracticeExamHistories
-                .Where(p => p.StudentId == studentId && p.PracticeExam.PracExamId == examId && p.IsGraded == false)
+                .Where(p => p.StudentId == studentId && p.PracticeExam.PracExamId == examId)
                 .Select(p => new StudentSubmission
                 {
                    PracExamHistoryId = p.PracExamHistoryId,
                    StudentId = p.StudentId,
                    StudentCode = p.Student.User.Code,
                    FullName = p.Student.User.Fullname,
+
+                }).FirstOrDefaultAsync();
+            if (submissions == null)
+            {
+                return null;
+            }
+            var questions = await _context.QuestionPracExams
+                .Where(q => q.PracExamHistoryId == submissions.PracExamHistoryId)
+                .Select(q => new QuestionPracExamDTO
+                {
+                    PracticeQuestionId = q.PracticeQuestionId,
+                    QuestionContent= q.PracticeQuestion.Content,
+                    Answer = q.Answer,
+                    Score = q.PracticeExamHistory.PracticeExamPaper.PracticeTestQuestions
+                    .Where(ptq => ptq.PracticeQuestionId == q.PracticeQuestionId)
+                    .Select(ptq => ptq.Score)
+                    .FirstOrDefault(),
+                    GradedScore = q.Score,
+                    GradingCriteria = q.PracticeQuestion.PracticeAnswer.GradingCriteria,
                 }).ToListAsync();
-            if (submissions == null || !submissions.Any())
-            {
-                return Enumerable.Empty<StudentSubmission>();
-            }
-            for (int i = 0; i < submissions.Count; i++)
-            {
-                var submissionDetails = await _context.QuestionPracExams
-                    .Where(q => q.PracExamHistoryId== submissions[i].PracExamHistoryId)
-                    .Select(q => new QuestionPracExamDTO
-                    {
-                        PracExamHistoryId = q.PracExamHistoryId,
-                        QuestionContent = q.PracticeQuestion.Content,
-                        Answer = q.Answer,
-                        Score = q.Score,//Must update
-                        GradingCriteria = q.PracticeQuestion.PracticeAnswer.GradingCriteria
-                    }).ToListAsync();
-                submissions[i].QuestionPracExamDTO = submissionDetails;
-            }
+            submissions.QuestionPracExamDTO = questions;
             return submissions;
         }
+
+        public async Task<bool> GradeSubmission(Guid teacherId, int examId, Guid studentId, QuestionPracExamDTO questionPracExamDTO)
+        {
+            // Tìm bài làm của học sinh trong đề thi
+            var submission = await _context.PracticeExamHistories
+                .Where(p => p.StudentId == studentId
+                            && p.PracticeExam.PracExamId == examId)
+                .Select(p => new
+                {
+                    p.PracExamHistoryId,
+                    p.PracExamPaperId
+                }).FirstOrDefaultAsync();
+
+            if (submission == null)
+            {
+                return false;
+            }
+
+            // Lấy câu hỏi cần chấm điểm
+            var question = await _context.QuestionPracExams
+                .FirstOrDefaultAsync(q => q.PracExamHistoryId == submission.PracExamHistoryId
+                                          && q.PracticeQuestionId == questionPracExamDTO.PracticeQuestionId);
+
+            if (question == null)
+            {
+                return false;
+            }
+
+            // Cập nhật điểm
+            question.Score = questionPracExamDTO.GradedScore;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
     }
 }

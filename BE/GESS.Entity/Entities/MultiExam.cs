@@ -27,8 +27,8 @@ namespace GESS.Entity.Entities
 
         //Ngày thi, không được để trống
         [Required(ErrorMessage = "Ngày thi không được để trống!")]
-        public DateTime StartDay { get; set; }
-        public DateTime EndDay { get; set; }
+        public DateTime? StartDay { get; set; }
+        public DateTime? EndDay { get; set; }
 
         // Thời gian làm bài (phút), không được để trống
         [Required(ErrorMessage = "Thời gian làm bài không được để trống!")]
