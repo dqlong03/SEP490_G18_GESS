@@ -227,7 +227,75 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = Constants.Issuer,
         ValidAudience = Constants.Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Constants.SecretKey))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Constants.SecretKey)),
+        
+        // Explicitly set claim types to ensure proper role recognition
+        NameClaimType = ClaimTypes.Name,
+        RoleClaimType = ClaimTypes.Role
+    };
+    
+    // Enable detailed JWT logging
+    options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            Console.WriteLine($"[JWT AUTH] Authentication failed: {context.Exception.Message}");
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            var claims = context.Principal.Claims.Select(c => $"{c.Type}: {c.Value}").ToList();
+            Console.WriteLine($"[JWT AUTH] Token validated successfully. Claims: {string.Join(", ", claims)}");
+            
+            // Transform custom role claims to standard role claims
+            var identity = context.Principal.Identity as ClaimsIdentity;
+            if (identity != null)
+            {
+                // Check for both custom "Role" claims and standard role claims
+                var customRoleClaims = identity.FindAll("Role").ToList();
+                var standardRoleClaims = identity.FindAll(ClaimTypes.Role).ToList();
+                
+                Console.WriteLine($"[JWT AUTH] Found {customRoleClaims.Count} custom role claims, {standardRoleClaims.Count} standard role claims");
+                
+                // Transform custom role claims to standard if any exist
+                foreach (var roleClaim in customRoleClaims)
+                {
+                    identity.AddClaim(new Claim(ClaimTypes.Role, roleClaim.Value));
+                    Console.WriteLine($"[JWT AUTH] Transformed custom role claim to standard: {roleClaim.Value}");
+                }
+                
+                // Ensure standard name claim exists
+                var usernameClaim = identity.FindFirst("Username");
+                var nameClaimFromToken = identity.FindFirst(ClaimTypes.Name);
+                
+                if (usernameClaim != null && nameClaimFromToken == null)
+                {
+                    identity.AddClaim(new Claim(ClaimTypes.Name, usernameClaim.Value));
+                    Console.WriteLine($"[JWT AUTH] Added standard name claim: {usernameClaim.Value}");
+                }
+                
+                // Ensure standard name identifier exists
+                var useridClaim = identity.FindFirst("Userid");
+                var nameIdClaimFromToken = identity.FindFirst(ClaimTypes.NameIdentifier);
+                
+                if (useridClaim != null && nameIdClaimFromToken == null)
+                {
+                    identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, useridClaim.Value));
+                    Console.WriteLine($"[JWT AUTH] Added standard NameIdentifier claim: {useridClaim.Value}");
+                }
+                
+                // Debug: Print all claims after transformation
+                var finalClaims = identity.Claims.Select(c => $"{c.Type}: {c.Value}").ToList();
+                Console.WriteLine($"[JWT AUTH] Final claims after transformation: {string.Join(", ", finalClaims)}");
+            }
+            
+            return Task.CompletedTask;
+        },
+        OnChallenge = context =>
+        {
+            Console.WriteLine($"[JWT AUTH] Authentication challenge: {context.Error}, {context.ErrorDescription}");
+            return Task.CompletedTask;
+        }
     };
 });
 

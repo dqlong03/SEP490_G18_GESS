@@ -321,14 +321,14 @@ namespace GESS.Service.authservice
                 // Tạo claims
                 var claims = new List<Claim>
                 {
-                    new Claim("Username", user.UserName),
-                    new Claim("Userid", user.Id.ToString()),
+                    new Claim(ClaimTypes.Name, user.UserName),
+                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
                 };
 
                 foreach (var role in userRoles)
                 {
-                    claims.Add(new Claim("Role", role));
+                    claims.Add(new Claim(ClaimTypes.Role, role));
                 }
 
                 var accessToken = _jwtService.GenerateAccessToken(claims);
