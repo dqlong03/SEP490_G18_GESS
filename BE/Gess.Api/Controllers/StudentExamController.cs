@@ -1,11 +1,14 @@
-﻿using GESS.Model.MultipleExam;
+﻿using GESS.Common;
+using GESS.Model.MultipleExam;
 using GESS.Model.PracticeExam;
 using GESS.Service.multianswer;
 using GESS.Service.multipleExam;
 using GESS.Service.multipleQuestion;
 using GESS.Service.practiceExam;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Gess.Api.CustomAttributes;
 
 namespace GESS.Api.Controllers
 {
@@ -25,8 +28,9 @@ namespace GESS.Api.Controllers
             _multipleAnswerService = multiAnswerService;
             _practiceExamService = practiceExamService;
         }
-
+      
         [HttpPost("CheckExamNameAndCodeME")]
+        [CustomRoleAuth(PredefinedRole.STUDENT_ROLE)]
         public async Task<IActionResult> CheckExamNameAndCodeME([FromBody] CheckExamRequestDTO request)
         {
             try
