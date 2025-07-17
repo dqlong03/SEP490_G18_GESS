@@ -82,5 +82,22 @@ namespace GESS.Api.Controllers
             }
             return Ok(new { ExamCode = result, Message = "Exam code refreshed successfully." });
         }
+        //API to change status of exam by exam slot room id for final exam
+        [HttpPost("changestatus")]
+        public async Task<IActionResult> ChangeExamStatus(int examSlotRoomId, int status)
+        {
+            var examSlotRoom = await _examScheduleService.GetByIdAsync(examSlotRoomId);
+            if (examSlotRoom == null)
+            {
+                return NotFound($"No exam slot room found with ID {examSlotRoomId}.");
+            }
+            examSlotRoom.Status = status;
+            var isUpdated = await _examScheduleService.UpdateAsync(examSlotRoom);
+            if (!isUpdated)
+            {
+                return BadRequest("Failed to change exam status. Please try again.");
+            }
+            return Ok("Exam status changed successfully.");
+        }
     }
 }
