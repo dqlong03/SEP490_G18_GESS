@@ -1,11 +1,9 @@
-﻿using GESS.Model.MultipleQuestionDTO;
-using GESS.Service.categoryExam;
-using GESS.Service.chapter;
-using GESS.Service.levelquestion;
+﻿using GESS.Model.APIKey;
+using GESS.Model.MultipleQuestionDTO;
+using GESS.Model.PracticeQuestionDTO;
 using GESS.Service.multipleQuestion;
-using GESS.Service.semesters;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System.Net.Http.Headers;
 using System.Text;
@@ -16,35 +14,55 @@ namespace GESS.Api.Controllers
     [ApiController]
     public class GenerateQuestionsController : ControllerBase
     {
-        public GenerateQuestionsController()
+        private readonly string _apiKey;
+
+        public GenerateQuestionsController(IOptions<APIKeyOptions> apiKeyOptions)
         {
+            _apiKey = apiKeyOptions.Value.Key;
         }
-        //API tao caau hoi trac nghiem bang AI
+
         [HttpPost("GenerateMultipleQuestion")]
-        public async Task<IActionResult> PostGenerate(QuestionRequest request)
+        public async Task<IActionResult> PostGenerate([FromBody] QuestionRequest request)
         {
-            string apiKey = "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";
+            string materialContent = await GetMaterialContentAsync(request.MaterialLink);
+            if (string.IsNullOrWhiteSpace(materialContent))
+            {
+                return BadRequest("Không thể lấy nội dung tài liệu từ link.");
+            }
 
             StringBuilder promptBuilder = new StringBuilder();
-            promptBuilder.AppendLine($"Tạo các câu hỏi trắc nghiệm môn {request.SubjectName} từ tài liệu sau:\n{request.Material}");
-
+            promptBuilder.AppendLine($"Hãy tạo các câu hỏi trắc nghiệm môn {request.SubjectName} từ tài liệu dưới đây:");
+            promptBuilder.AppendLine(materialContent);
+            promptBuilder.AppendLine("Yêu cầu:");
             foreach (var level in request.Levels)
             {
                 promptBuilder.AppendLine($"- {level.NumberOfQuestions} câu hỏi mức độ {level.Difficulty}");
             }
 
-            promptBuilder.AppendLine("Mỗi câu gồm: nội dung, 4 đáp án và đáp án đúng.");
+            promptBuilder.AppendLine(@"
+                Mỗi câu hỏi phải có định dạng JSON như sau:
+                {
+                  ""Content"": ""Nội dung câu hỏi?"",
+                  ""Answers"": [
+                    { ""Text"": ""Đáp án A"", ""IsTrue"": false },
+                    { ""Text"": ""Đáp án B"", ""IsTrue"": true },
+                    { ""Text"": ""Đáp án C"", ""IsTrue"": false },
+                    { ""Text"": ""Đáp án D"", ""IsTrue"": false }
+                  ]
+                }
+                Trả về toàn bộ danh sách câu hỏi là 1 mảng JSON hợp lệ.
+                ");
+
             string prompt = promptBuilder.ToString();
 
             using (var httpClient = new HttpClient())
             {
-                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
                 var body = new
                 {
-                    model = "gpt-3.5-turbo",
-                    messages = new[]
-                    {
+                    model = "gpt-4",
+                    messages = new[] {
                         new { role = "user", content = prompt }
                     }
                 };
@@ -54,7 +72,6 @@ namespace GESS.Api.Controllers
                     new StringContent(json, Encoding.UTF8, "application/json"));
 
                 var responseString = await response.Content.ReadAsStringAsync();
-
                 if (!response.IsSuccessStatusCode)
                 {
                     return BadRequest("Lỗi khi gọi OpenAI: " + responseString);
@@ -63,8 +80,93 @@ namespace GESS.Api.Controllers
                 dynamic result = JsonConvert.DeserializeObject(responseString);
                 string output = result.choices[0].message.content;
 
-                return Ok(output);
+                try
+                {
+                    var questions = JsonConvert.DeserializeObject<List<GeneratedQuestion>>(output);
+                    return Ok(questions);
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest("Lỗi phân tích kết quả trả về: " + ex.Message + "\nOutput:\n" + output);
+                }
             }
+        }
+        [HttpPost("GenerateEssayQuestion")]
+        public async Task<IActionResult> GenerateEssay([FromBody] PracQuestionRequest request)
+        {
+            string materialContent = await GetMaterialContentAsync(request.MaterialLink);
+            if (string.IsNullOrWhiteSpace(materialContent))
+            {
+                return BadRequest("Không thể lấy nội dung tài liệu từ link.");
+            }
+
+            // Xây dựng prompt cho AI sinh câu hỏi tự luận
+            StringBuilder promptBuilder = new StringBuilder();
+            promptBuilder.AppendLine($"Hãy tạo các câu hỏi tự luận môn {request.SubjectName} dựa trên tài liệu sau:");
+            promptBuilder.AppendLine(materialContent);
+            promptBuilder.AppendLine("Yêu cầu:");
+            foreach (var level in request.Levels)
+            {
+                promptBuilder.AppendLine($"- {level.NumberOfQuestions} câu hỏi mức độ {level.Difficulty}");
+            }
+            promptBuilder.AppendLine(@"
+                Mỗi câu hỏi phải có định dạng JSON như sau:
+                {
+                  ""Content"": ""Nội dung câu hỏi?"",
+                  ""BandScoreGuide"": ""Hướng dẫn chấm điểm chi tiết (band điểm)""
+                }
+                Trả về toàn bộ danh sách câu hỏi là 1 mảng JSON hợp lệ.
+                ");
+
+            string prompt = promptBuilder.ToString();
+
+            using (var httpClient = new HttpClient())
+            {
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+
+                var body = new
+                {
+                    model = "gpt-4",
+                    messages = new[]
+                    {
+                new { role = "user", content = prompt }
+            }
+                };
+
+                var json = JsonConvert.SerializeObject(body);
+                var response = await httpClient.PostAsync("https://api.openai.com/v1/chat/completions",
+                    new StringContent(json, Encoding.UTF8, "application/json"));
+
+                var responseString = await response.Content.ReadAsStringAsync();
+                if (!response.IsSuccessStatusCode)
+                {
+                    return BadRequest("Lỗi khi gọi OpenAI: " + responseString);
+                }
+
+                dynamic result = JsonConvert.DeserializeObject(responseString);
+                string output = result.choices[0].message.content;
+
+                try
+                {
+                    var essayQuestions = JsonConvert.DeserializeObject<List<EssayQuestionResult>>(output);
+                    return Ok(essayQuestions);
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest("Lỗi phân tích kết quả trả về: " + ex.Message + "\nOutput:\n" + output);
+                }
+            }
+        }
+
+        private async Task<string> GetMaterialContentAsync(string link)
+        {
+            if (link.StartsWith("http"))
+            {
+                using var httpClient = new HttpClient();
+                return await httpClient.GetStringAsync(link);
+            }
+
+            return System.IO.File.Exists(link) ? await System.IO.File.ReadAllTextAsync(link) : null;
         }
     }
 }
