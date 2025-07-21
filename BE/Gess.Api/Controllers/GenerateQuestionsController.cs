@@ -61,7 +61,7 @@ namespace GESS.Api.Controllers
 
                 var body = new
                 {
-                    model = "gpt-4",
+                    model = "gpt-3.5-turbo",
                     messages = new[] {
                         new { role = "user", content = prompt }
                     }
@@ -126,7 +126,7 @@ namespace GESS.Api.Controllers
 
                 var body = new
                 {
-                    model = "gpt-4",
+                    model = "gpt-3.5-turbo",
                     messages = new[]
                     {
                 new { role = "user", content = prompt }
