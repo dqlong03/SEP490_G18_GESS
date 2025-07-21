@@ -50,7 +50,13 @@ namespace GESS.Service.examSchedule
                     ? (schedule.MultiExam?.StartDay ?? DateTime.MinValue)
                     : (schedule.PracticeExam?.StartDay ?? DateTime.MinValue),
                 RoomName = schedule.Room?.RoomName ?? "N/A",
-                ExamSlotId = schedule.ExamSlotId
+                ExamSlotId = schedule.ExamSlotId,
+                StartDay = schedule.MultiOrPractice.Equals("Multiple")
+                    ? (schedule.MultiExam?.StartDay ?? DateTime.MinValue)
+                    : (schedule.PracticeExam?.StartDay ?? DateTime.MinValue),
+                EndDay = schedule.MultiOrPractice.Equals("Multiple")
+                    ? (schedule.MultiExam?.EndDay ?? DateTime.MinValue)
+                    : (schedule.PracticeExam?.EndDay ?? DateTime.MinValue),
             });
             return examScheduleDtos;
         }

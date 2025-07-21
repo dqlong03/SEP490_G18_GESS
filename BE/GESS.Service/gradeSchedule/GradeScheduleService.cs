@@ -23,12 +23,14 @@ namespace GESS.Service.gradeSchedule
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<int> CountExamNeedGradeByTeacherIdAsync(Guid teacherId, int subjectId, int statusExam, int semesterId, int year, int pagesze)
+        public async Task<int> CountExamNeedGradeByTeacherIdAsync(Guid teacherId, int? subjectId, int? statusExam, int? semesterId, int? year, int? pagesze, int? pageindex)
         {
-            return await _unitOfWork.GradeScheduleRepository.CountExamNeedGradeByTeacherIdAsync(teacherId, subjectId, statusExam, semesterId, year, pagesze);
+            return await _unitOfWork.GradeScheduleRepository.CountExamNeedGradeByTeacherIdAsync(
+                teacherId, subjectId, statusExam, semesterId, year, pagesze, pageindex);
+
         }
 
-        public async Task<IEnumerable<ExamNeedGrade>> GetExamNeedGradeByTeacherIdAsync(Guid teacherId, int subjectId, int statusExam, int semesterId, int year, int pagesze, int pageindex)
+        public async Task<IEnumerable<ExamNeedGrade>> GetExamNeedGradeByTeacherIdAsync(Guid teacherId, int? subjectId, int? statusExam, int? semesterId, int? year, int? pagesze, int? pageindex)
         {
             var exams = await _unitOfWork.GradeScheduleRepository.GetExamNeedGradeByTeacherIdAsync(teacherId, subjectId, statusExam, semesterId, year, pagesze, pageindex);
             if (exams == null || !exams.Any())

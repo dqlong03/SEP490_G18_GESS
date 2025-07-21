@@ -26,7 +26,7 @@ namespace GESS.Repository.Interface
             int pageSize = 5
         );
         Task<int> CountPageAsync(string? name = null, int? subjectId = null, int? semesterId = null, int? categoryExamId = null, int pageSize = 5);
-        Task<IEnumerable<PracticeExamPaper>> GetAllPracticeExamPapersAsync(int? subjectId, int? categoryId, Guid? teacherId);
+        Task<IEnumerable<PracticeExamPaper>> GetAllPracticeExamPapersAsync(int? subjectId, int? categoryId, Guid? teacherId, int? semesterId, string? year);
         Task<PracticeExamPaper> CreateWithQuestionsAsync(PracticeExamPaper examPaper, List<PracticeQuestion> questions, List<PracticeTestQuestion> testQuestions);
         Task<PracticeExamPaper> CreateAsync(PracticeExamPaper entity);
         Task<List<PracticeTestQuestion>> CreateTestQuestionsAsync(List<PracticeTestQuestion> testQuestions);

@@ -14,5 +14,8 @@ namespace GESS.Model.ExamSlotRoomDTO
         public string RoomName { get; set; }
         public string? SubjectName { get; set; }
         public DateTime ExamDate { get; set; }
+
+        public DateTime? StartDay { get; set; }   // Thêm dòng này
+        public DateTime? EndDay { get; set; }
     }
 }

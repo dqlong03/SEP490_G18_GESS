@@ -47,6 +47,12 @@ namespace GESS.Service.multipleExam
         {
             return await _unitOfWork.MultipleExamRepository.SubmitExamAsync(dto);
         }
+
+        public async Task<List<SubjectListDTO>> GetSubjectsByTeacherIdAsync(Guid teacherId)
+        {
+            return await _unitOfWork.MultipleExamRepository.GetSubjectsByTeacherIdAsync(teacherId);
+        }
+
     }
 
 }

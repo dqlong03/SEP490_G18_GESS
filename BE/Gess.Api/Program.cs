@@ -51,6 +51,7 @@ using GESS.Service.examSchedule;
 using GESS.Service.examSlotService;
 using CloudinaryDotNet;
 using GESS.Service.cloudinary;
+using GESS.Service.gradeSchedule;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -150,6 +151,8 @@ builder.Services.AddScoped<IExamScheduleService, ExamScheduleService>();
 builder.Services.AddScoped<IExamService, GESS.Service.exam.ExamService>();
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<ILevelQuestionService, LevelQuestionService>();
+builder.Services.AddScoped<IGradeScheduleService, GradeScheduleService>();
+
 
 // ThaiNH_Initialize_Begin
 builder.Services.AddScoped<ICateExamSubService, CateExamSubService>();

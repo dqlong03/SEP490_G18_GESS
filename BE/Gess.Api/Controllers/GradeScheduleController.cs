@@ -18,21 +18,42 @@ namespace GESS.Api.Controllers
             _gradeScheduleService = gradeScheduleService;
         }
         //API to get all exam need grade by teacher id paggiation
-        [HttpGet("teacher/{teacherId}")]
-        public async Task<IActionResult> GetExamNeedGradeByTeacherId(Guid teacherId, int subjectId, int statusExam, int semesterId, int year, int pagesze, int pageindex)
+        [HttpGet("teacher")]
+        public async Task<IActionResult> GetExamNeedGradeByTeacherId(
+            [FromQuery] Guid teacherId,
+            [FromQuery] int? subjectId,
+            [FromQuery] int? statusExam,
+            [FromQuery] int? semesterId,
+            [FromQuery] int? year ,
+            [FromQuery] int? pagesze,
+            [FromQuery] int? pageindex)
         {
-            var result = await _gradeScheduleService.GetExamNeedGradeByTeacherIdAsync(teacherId, subjectId, statusExam, semesterId, year, pagesze, pageindex);
+            // Gán giá trị mặc định nếu cần
+       
+            int size = pagesze ?? 10;
+            int page = pageindex ?? 1;
+
+            var result = await _gradeScheduleService.GetExamNeedGradeByTeacherIdAsync(
+                teacherId, subjectId, statusExam, semesterId, year, size, page);
+
             if (result == null || !result.Any())
             {
                 return NotFound("No exams found for grading.");
             }
             return Ok(result);
         }
+
         //API to count number of pages for exam need grade by teacher id
-        [HttpGet("teacher/{teacherId}/count")]
-        public async Task<int> CountExamNeedGradeByTeacherId(Guid teacherId, int subjectId, int statusExam, int semesterId, int year, int pagesze)
+        [HttpGet("teacher/count")]
+        public async Task<int> CountExamNeedGradeByTeacherId([FromQuery] Guid teacherId,
+            [FromQuery] int? subjectId,
+            [FromQuery] int? statusExam,
+            [FromQuery] int? semesterId,
+            [FromQuery] int? year,
+            [FromQuery] int? pagesze,
+            [FromQuery] int? pageindex)
         {
-            return await _gradeScheduleService.CountExamNeedGradeByTeacherIdAsync(teacherId, subjectId, statusExam, semesterId, year, pagesze);
+            return await _gradeScheduleService.CountExamNeedGradeByTeacherIdAsync(teacherId, subjectId, statusExam, semesterId, year, pagesze, pageindex);
 
         }
         //API to get all students in exam need grade by teacher id

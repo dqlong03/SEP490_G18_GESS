@@ -58,46 +58,50 @@ namespace GESS.Repository.Implement
             return await Task.FromResult(false);
         }
 
-        public async Task<ExamSlotRoomDetail> GetExamBySlotIdsAsync(int examSlotId)
-        {
-            var examSlotRoom = await _context.ExamSlotRooms
-                .Where(e => e.ExamSlotRoomId == examSlotId)
-                .Include(e => e.Subject)
-                .Include(e => e.Room)
-                .Include(e => e.MultiExam)
-                .Include(e => e.PracticeExam)
-                .FirstOrDefaultAsync();
-
-            if (examSlotRoom == null)
+            public async Task<ExamSlotRoomDetail> GetExamBySlotIdsAsync(int examSlotId)
             {
-                return null;
+                var examSlotRoom = await _context.ExamSlotRooms
+                    .Where(e => e.ExamSlotRoomId == examSlotId)
+                    .Include(e => e.Subject)
+                    .Include(e => e.Room)
+                    .Include(e => e.MultiExam)
+                    .Include(e => e.PracticeExam)
+                    .Include(e => e.ExamSlot)
+                    .FirstOrDefaultAsync();
+
+                if (examSlotRoom == null)
+                {
+                    return null;
+                }
+
+                var examDate = examSlotRoom.MultiOrPractice.Equals("Multiple")
+                    ? examSlotRoom.MultiExam?.StartDay
+                    : examSlotRoom.PracticeExam?.StartDay;
+
+                if (!examDate.HasValue)
+                {
+                    throw new InvalidOperationException("Exam date is null.");
+                }
+
+                var examSlotRoomDetail = new ExamSlotRoomDetail
+                {
+                    ExamSlotRoomId = examSlotRoom.ExamSlotRoomId,
+                    SubjectName = examSlotRoom.Subject?.SubjectName ?? "N/A",
+                    ExamDate = examDate.Value, // Explicitly cast nullable DateTime to DateTime
+                    RoomName = examSlotRoom.Room?.RoomName ?? "N/A",
+                    SlotName = examSlotRoom.ExamSlot?.SlotName ?? "N/A",
+                    ExamName = examSlotRoom.MultiOrPractice.Equals("Multiple")
+                        ? examSlotRoom.MultiExam?.MultiExamName
+                        : examSlotRoom.PracticeExam?.PracExamName,
+                    StartTime = examSlotRoom.ExamSlot?.StartTime,
+                    EndTime = examSlotRoom.ExamSlot?.EndTime,
+                    Code = examSlotRoom.MultiOrPractice.Equals("Multiple")
+                        ? examSlotRoom.MultiExam?.CodeStart
+                        : examSlotRoom.PracticeExam?.CodeStart,
+                };
+
+                return examSlotRoomDetail;
             }
-
-            var examDate = examSlotRoom.MultiOrPractice.Equals("Multiple")
-                ? examSlotRoom.MultiExam?.StartDay
-                : examSlotRoom.PracticeExam?.StartDay;
-
-            if (!examDate.HasValue)
-            {
-                throw new InvalidOperationException("Exam date is null.");
-            }
-
-            var examSlotRoomDetail = new ExamSlotRoomDetail
-            {
-                ExamSlotRoomId = examSlotRoom.ExamSlotRoomId,
-                SubjectName = examSlotRoom.Subject?.SubjectName ?? "N/A",
-                ExamDate = examDate.Value, // Explicitly cast nullable DateTime to DateTime
-                RoomName = examSlotRoom.Room?.RoomName ?? "N/A",
-                SlotName = examSlotRoom.ExamSlot?.SlotName ?? "N/A",
-                ExamName = examSlotRoom.MultiOrPractice.Equals("Multiple")
-                    ? examSlotRoom.MultiExam?.MultiExamName
-                    : examSlotRoom.PracticeExam?.PracExamName,
-                StartTime = examSlotRoom.ExamSlot?.StartTime,
-                EndTime = examSlotRoom.ExamSlot?.EndTime
-            };
-
-            return examSlotRoomDetail;
-        }
 
         public async Task<IEnumerable<ExamSlotRoom>> GetExamScheduleByTeacherIdAsync(Guid teacherId, DateTime fromDate, DateTime toDate)
         {

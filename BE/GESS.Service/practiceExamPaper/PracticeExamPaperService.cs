@@ -51,9 +51,9 @@ namespace GESS.Service.practiceExamPaper
         {
             return await _unitOfWork.PracticeExamPaperRepository.CountPageAsync(name, subjectId, semesterId, categoryExamId, pageSize);
         }
-        public async Task<IEnumerable<PracticeExamPaperDTO>> GetAllPracticeExamPapers(int? subjectId, int? categoryId, Guid? teacherId)
+        public async Task<IEnumerable<PracticeExamPaperDTO>> GetAllPracticeExamPapers(int? subjectId, int? categoryId, Guid? teacherId, int? semesterId, string? year)
         {
-            var practiceExamPapers = await _unitOfWork.PracticeExamPaperRepository.GetAllPracticeExamPapersAsync(subjectId, categoryId, teacherId);
+            var practiceExamPapers = await _unitOfWork.PracticeExamPaperRepository.GetAllPracticeExamPapersAsync(subjectId, categoryId, teacherId, semesterId,year);
             if (practiceExamPapers == null || !practiceExamPapers.Any())
             {
                 return Enumerable.Empty<PracticeExamPaperDTO>();
@@ -61,7 +61,9 @@ namespace GESS.Service.practiceExamPaper
             var practiceExamPaperDtos = practiceExamPapers.Select(paper => new PracticeExamPaperDTO
             {
                 PracExamPaperId = paper.PracExamPaperId,
-                PracExamPaperName = paper.PracExamPaperName
+                PracExamPaperName = paper.PracExamPaperName,
+                Semester = paper.Semester?.SemesterName ?? "Không xác định",
+                Year = paper.CreateAt.Year.ToString()
             });
             return practiceExamPaperDtos;
         }
