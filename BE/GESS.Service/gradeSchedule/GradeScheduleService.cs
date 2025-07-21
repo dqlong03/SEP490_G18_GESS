@@ -38,6 +38,16 @@ namespace GESS.Service.gradeSchedule
             return exams;
         }
 
+        public async Task<IEnumerable<ExamNeedGradeMidTerm>> GetExamNeedGradeByTeacherIdMidTermAsync(Guid teacherId, int classID, int semesterId, int year, int pagesze, int pageindex)
+        {
+            var exams = await _unitOfWork.GradeScheduleRepository.GetExamNeedGradeByTeacherIdMidTermAsync(teacherId, classID, semesterId, year, pagesze, pageindex);
+            if (exams == null || !exams.Any())
+            {
+                return Enumerable.Empty<ExamNeedGradeMidTerm>();
+            }
+            return exams;
+        }
+
         public async Task<IEnumerable<StudentGradeDTO>> GetStudentsInExamNeedGradeAsync(Guid teacherId, int examId)
         {
             var students = await _unitOfWork.GradeScheduleRepository.GetStudentsInExamNeedGradeAsync(teacherId, examId);
@@ -48,9 +58,38 @@ namespace GESS.Service.gradeSchedule
             return students;
         }
 
+        public async Task<IEnumerable<StudentGradeDTO>> GetStudentsInExamNeedGradeMidTermAsync(Guid teacherId, int classID, int ExamType)
+        {
+            var students = await _unitOfWork.GradeScheduleRepository.GetStudentsInExamNeedGradeMidTermAsync(teacherId, classID, ExamType);
+            if (students == null || !students.Any())
+            {
+                return Enumerable.Empty<StudentGradeDTO>();
+            }
+            return students;
+        }
+
         public async Task<StudentSubmission> GetSubmissionOfStudentInExamNeedGradeAsync(Guid teacherId, int examId, Guid studentId)
         {
             var submissions = await _unitOfWork.GradeScheduleRepository.GetSubmissionOfStudentInExamNeedGradeAsync(teacherId, examId, studentId);
+            if (submissions == null)
+            {
+                return null;
+            }
+            return submissions;
+        }
+
+        public async Task<StudentSubmission> GetSubmissionOfStudentInExamNeedGradeMidTerm(Guid teacherId, int examId, Guid studentId)
+        {
+            var submissions = await _unitOfWork.GradeScheduleRepository.GetSubmissionOfStudentInExamNeedGradeMidTerm(teacherId, examId, studentId);
+            if (submissions == null)
+            {
+                return null;
+            }
+            return submissions;
+        }
+        public async Task<StudentSubmissionMultiExam> GetSubmissionOfStudentInExamNeedGradeMidTermMulti(Guid teacherId, int examId, Guid studentId)
+        {
+            var submissions = await _unitOfWork.GradeScheduleRepository.GetSubmissionOfStudentInExamNeedGradeMidTermMulti(teacherId, examId, studentId);
             if (submissions == null)
             {
                 return null;
