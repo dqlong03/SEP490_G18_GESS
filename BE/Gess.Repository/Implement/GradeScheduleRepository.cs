@@ -2,6 +2,7 @@
 using GESS.Entity.Entities;
 using GESS.Model.ExamSlotRoomDTO;
 using GESS.Model.GradeSchedule;
+using GESS.Model.PracticeQuestionDTO;
 using GESS.Model.PracticeTestQuestions;
 using GESS.Model.QuestionPracExam;
 using GESS.Model.Student;
@@ -106,6 +107,50 @@ namespace GESS.Repository.Implement
         }
 
 
+        public async Task<IEnumerable<ExamNeedGradeMidTerm>> GetExamNeedGradeByTeacherIdMidTermAsync(
+            Guid teacherId, int classID, int semesterId, int year, int pagesize, int pageindex)
+        {
+            var multiExamQuery = _context.MultiExams
+                .Where(x => x.TeacherId == teacherId
+                         && x.ClassId == classID
+                         && x.Status == "Đã đóng ca"
+                         && x.SemesterId == semesterId
+                         && x.StartDay.HasValue && x.StartDay.Value.Year == year)
+                .Select(x => new ExamNeedGradeMidTerm
+                {
+                    ExamId = x.MultiExamId,
+                    ExamName = x.MultiExamName,
+                    ExamType = 1,
+                    ClassId = x.ClassId,
+                    IsGrade = x.IsGraded,
+                    SemesterId = x.SemesterId
+                });
+
+            var pracExamQuery = _context.PracticeExams
+                .Where(x => x.TeacherId == teacherId
+                         && x.ClassId == classID
+                         && x.Status == "Đã đóng ca"
+                         && x.SemesterId == semesterId
+                         && x.StartDay.HasValue && x.StartDay.Value.Year == year)
+                .Select(x => new ExamNeedGradeMidTerm
+                {
+                    ExamId = x.PracExamId,
+                    ExamName = x.PracExamName,
+                    ExamType = 2,
+                    ClassId = x.ClassId,
+                    IsGrade = x.IsGraded,
+                    SemesterId = x.SemesterId
+                });
+
+            var combinedQuery = multiExamQuery.Union(pracExamQuery);
+
+            var result = await combinedQuery.ToListAsync();
+            return result;
+        }
+
+
+
+
         public async Task<IEnumerable<StudentGradeDTO>> GetStudentsInExamNeedGradeAsync(Guid teacherId, int examId)
         {
             var students = await _context.ExamSlotRooms
@@ -141,6 +186,55 @@ namespace GESS.Repository.Implement
             return students;
         }
 
+        public async Task<IEnumerable<StudentGradeDTO>> GetStudentsInExamNeedGradeMidTermAsync(Guid teacherId, int classID, int examType)
+        {
+            if (examType == 1)
+            {
+                var examIds = await _context.MultiExams
+                    .Where(x => x.TeacherId == teacherId && x.ClassId == classID)
+                    .Select(x => x.MultiExamId)
+                    .ToListAsync();
+
+                var students = await _context.MultiExamHistories
+                    .Where(h => examIds.Contains(h.MultiExamId))
+                    .Select(h => new StudentGradeDTO
+                    {
+                        Id = h.StudentId,
+                        FullName = h.Student.User.Fullname,
+                        Code = h.Student.User.Code,
+                        AvatarURL = h.Student.AvatarURL,
+                    })
+                    .Distinct()
+                    .ToListAsync();
+
+                return students;
+            }
+            else if (examType == 2)
+            {
+                var examIds = await _context.PracticeExams
+                    .Where(x => x.TeacherId == teacherId && x.ClassId == classID)
+                    .Select(x => x.PracExamId)
+                    .ToListAsync();
+
+                var students = await _context.PracticeExamHistories
+                    .Where(h => examIds.Contains(h.PracExamId))
+                    .Select(h => new StudentGradeDTO
+                    {
+                        Id = h.StudentId,
+                        FullName = h.Student.User.Fullname,
+                        Code = h.Student.User.Code,
+                        AvatarURL = h.Student.AvatarURL,
+                    })
+                    .Distinct()
+                    .ToListAsync();
+
+                return students;
+            }
+
+            return Enumerable.Empty<StudentGradeDTO>();
+        }
+
+
         public async Task<StudentSubmission> GetSubmissionOfStudentInExamNeedGradeAsync(Guid teacherId, int examId, Guid studentId)
         {
             var submissions = await _context.PracticeExamHistories
@@ -175,6 +269,74 @@ namespace GESS.Repository.Implement
             return submissions;
         }
 
+        public async Task<StudentSubmissionMultiExam> GetSubmissionOfStudentInExamNeedGradeMidTermMulti(Guid teacherId, int examId, Guid studentId)
+        {
+            var submission = await _context.MultiExamHistories
+                .Where(p => p.StudentId == studentId && p.MultiExam.MultiExamId == examId)
+                .Select(p => new StudentSubmissionMultiExam
+                {
+                    MultiExamHistoryId = p.ExamHistoryId,
+                    StudentId = p.StudentId,
+                    StudentCode = p.Student.User.Code,
+                    FullName = p.Student.User.Fullname,
+                }).FirstOrDefaultAsync();
+
+            if (submission == null) return null;
+
+            var questions = await _context.QuestionMultiExams
+                .Where(q => q.MultiExamHistoryId == submission.MultiExamHistoryId)
+                .Select(q => new QuestionMultiExamDTO
+                {
+                    MultipleQuestionId = q.MultiQuestionId,
+                    QuestionContent = q.MultiQuestion.Content,
+                    StudentAnswer = q.Answer,
+                    Order = q.QuestionOrder,
+                    Answers = q.MultiQuestion.MultiAnswers
+                        .Select(a => new MultipleAnswerDTO
+                        {
+                            AnswerId = a.AnswerId,
+                            AnswerContent = a.AnswerContent,
+                            IsCorrect = a.IsCorrect
+                        }).ToList()
+                }).ToListAsync();
+
+            submission.QuestionMultiExamDTO = questions;
+            return submission;
+        }
+
+        public async Task<StudentSubmission> GetSubmissionOfStudentInExamNeedGradeMidTerm(Guid teacherId, int examId, Guid studentId)
+        {
+            var submissions = await _context.PracticeExamHistories
+                .Where(p => p.StudentId == studentId && p.PracticeExam.PracExamId == examId)
+                .Select(p => new StudentSubmission
+                {
+                    PracExamHistoryId = p.PracExamHistoryId,
+                    StudentId = p.StudentId,
+                    StudentCode = p.Student.User.Code,
+                    FullName = p.Student.User.Fullname,
+
+                }).FirstOrDefaultAsync();
+            if (submissions == null)
+            {
+                return null;
+            }
+            var questions = await _context.QuestionPracExams
+                .Where(q => q.PracExamHistoryId == submissions.PracExamHistoryId)
+                .Select(q => new QuestionPracExamDTO
+                {
+                    PracticeQuestionId = q.PracticeQuestionId,
+                    QuestionContent = q.PracticeQuestion.Content,
+                    Answer = q.Answer,
+                    Score = q.PracticeExamHistory.PracticeExamPaper.PracticeTestQuestions
+                    .Where(ptq => ptq.PracticeQuestionId == q.PracticeQuestionId)
+                    .Select(ptq => ptq.Score)
+                    .FirstOrDefault(),
+                    GradedScore = q.Score,
+                    GradingCriteria = q.PracticeQuestion.PracticeAnswer.GradingCriteria,
+                }).ToListAsync();
+            submissions.QuestionPracExamDTO = questions;
+            return submissions;
+        }
         public async Task<bool> GradeSubmission(Guid teacherId, int examId, Guid studentId, QuestionPracExamDTO questionPracExamDTO)
         {
             // Tìm bài làm của học sinh trong đề thi

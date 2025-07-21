@@ -41,6 +41,9 @@ namespace GESS.Entity.Entities
         // Trạng thái kỳ thi (VD: "Draft", "Published"), tối đa 20 ký tự
         [StringLength(20, ErrorMessage = "Trạng thái không được vượt quá 20 ký tự!")]
         public string ? Status { get; set; }
+        // Trạng thái chaasm thi (VD: "Done", "Not yet"), tối đa 20 ký tự
+        [StringLength(20, ErrorMessage = "Trạng thái không được vượt quá 20 ký tự!")]
+        public int IsGraded { get; set; } = 0; // 0 - Chưa chấm, 1 - Đã chấm
 
         // Mã để bắt đầu kỳ thi, tối đa 50 ký tự
         [StringLength(50, ErrorMessage = "Mã bắt đầu không được vượt quá 50 ký tự!")]

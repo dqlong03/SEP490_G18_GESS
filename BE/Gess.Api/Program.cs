@@ -1,4 +1,5 @@
 
+using CloudinaryDotNet;
 using Gess.Repository.Infrastructures;
 using GESS.Api.HandleException;
 using GESS.Auth;
@@ -6,6 +7,7 @@ using GESS.Common;
 using GESS.Entity.Base;
 using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
+using GESS.Model.APIKey;
 using GESS.Model.Email;
 using GESS.Repository.Implement;
 using GESS.Repository.Interface;
@@ -14,19 +16,33 @@ using GESS.Service;
 using GESS.Service.authservice;
 using GESS.Service.categoryExam;
 using GESS.Service.chapter;
+using GESS.Service.cloudinary;
 using GESS.Service.email;
+using GESS.Service.exam;
 using GESS.Service.examination;
 using GESS.Service.examination;
+using GESS.Service.examination;
+using GESS.Service.examSchedule;
+using GESS.Service.examSlotService;
 using GESS.Service.GradeCompoService;
+using GESS.Service.levelquestion;
 using GESS.Service.major;
+using GESS.Service.multianswer;
+using GESS.Service.multipleExam;
+using GESS.Service.multipleQuestion;
 using GESS.Service.otp;
+using GESS.Service.practiceExam;
+using GESS.Service.practiceExamPaper;
+using GESS.Service.practicequestion;
+using GESS.Service.room;
 using GESS.Service.semesters;
 using GESS.Service.student;
+using GESS.Service.student;
+using GESS.Service.subject;
 using GESS.Service.subject;
 using GESS.Service.teacher;
 using GESS.Service.trainingProgram;
-using GESS.Service.multipleExam;
-using GESS.Service.multipleQuestion;
+using GESS.Service.trainingProgram;
 using GESS.Service.users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -35,6 +51,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Security.Claims;
 using System.Text;
+
 using GESS.Service.practiceExamPaper;
 using GESS.Service.levelquestion;
 using GESS.Service.practicequestion;
@@ -52,6 +69,7 @@ using GESS.Service.examSlotService;
 using CloudinaryDotNet;
 using GESS.Service.cloudinary;
 using GESS.Service.gradeSchedule;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -213,6 +231,7 @@ builder.Services.AddSingleton(cloudinary);
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddMemoryCache();
+builder.Services.Configure<APIKeyOptions>(builder.Configuration.GetSection("APIKey"));
 
 // Cấu hình JWT Authentication
 builder.Services.AddAuthentication(options =>

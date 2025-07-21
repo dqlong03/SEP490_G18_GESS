@@ -17,4 +17,13 @@ namespace GESS.Model.PracticeTestQuestions
         public ICollection<QuestionPracExamDTO> QuestionPracExamDTO { get; set; }
 
     }
+    public class StudentSubmissionMultiExam
+    {
+        public Guid MultiExamHistoryId { get; set; }
+        public Guid StudentId { get; set; }
+        public string StudentCode { get; set; }
+        public string FullName { get; set; }
+        public ICollection<QuestionMultiExamDTO> QuestionMultiExamDTO { get; set; }
+
+    }
 }

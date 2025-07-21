@@ -18,6 +18,7 @@ namespace GESS.Entity.Entities
 
         // Khóa ngoại liên kết đến ca thi (ExamSlot)
         public int ExamSlotId { get; set; }
+        public int Status { get; set; } = 0; // Trạng thái của ca thi (VD: 0 - Chưa bắt đầu, 1 - Đang diễn ra, 2 - Đã kết thúc)
         public ExamSlot ExamSlot { get; set; }
 
         public DateTime ExamDate { get; set; }
