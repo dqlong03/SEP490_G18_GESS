@@ -1,0 +1,48 @@
+h2 {
+  font-family: "Roboto";
+  /* font-style: italic; */
+  font-weight: 900;
+  color: #333;
+}
+
+/* Input focus */
+input[type="email"],
+input[type="password"] {
+  background-color: #f9fafb;
+  border: 1px solid #d2d6dc;
+  border-radius: 8px;
+  padding: 12px;
+  width: 100%;
+  transition: all 0.3s ease;
+}
+
+input[type="email"]:focus,
+input[type="password"]:focus {
+  border-color: #4a90e2;
+  outline: none;
+  box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
+}
+
+/* Button hover effect */
+button:hover {
+  transform: scale(1.05);
+  transition: transform 0.3s ease;
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 1s ease-out;
+}
+@media (max-width: 768px) {
+  .school-info span {
+    font-size: 1.2rem; /* Điều chỉnh font-size cho màn hình nhỏ */
+  }
+}

@@ -1,0 +1,62 @@
+/*  
+.header {
+  background-color: #e5e7eb;
+  color: #1f2937;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.school-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.school-name {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.dropdown {
+  position: relative;
+}
+
+.dropdown-button {
+  width: 2.5rem;
+  height: 2.5rem;
+  background-color: #10b981;
+  color: #ffffff;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  width: 12rem;
+  background-color: #ffffff;
+  border-radius: 0.375rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.dropdown-item {
+  display: block;
+  padding: 0.5rem 1rem;
+  color: #1f2937;
+  text-decoration: none;
+}
+
+.dropdown-item:hover {
+  background-color: #f3f4f6;
+}
+
+*/

@@ -1,0 +1,69 @@
+/* Keyframes for fadeIn effect */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 1s ease-out;
+}
+
+.animate-fadeInDelayed {
+  animation-delay: 0.5s; /* Delay for each element */
+}
+
+/* Style for header title */
+h2 {
+  font-family: "Roboto";
+  font-weight: 900;
+  color: #333;
+}
+
+/* Input styles for email */
+input[type="email"] {
+  background-color: #f9fafb;
+  border: 1px solid #d2d6dc;
+  border-radius: 8px;
+  padding: 12px;
+  width: 100%;
+  transition: all 0.3s ease;
+}
+
+input[type="email"]:focus {
+  border-color: #4a90e2;
+  outline: none;
+  box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
+}
+
+/* Button hover effect */
+button:hover {
+  transform: scale(1.05);
+  transition: transform 0.3s ease;
+}
+
+/* Additional hover effect for the "back to login" link */
+a:hover {
+  color: #4a90e2; /* Change color on hover */
+  text-decoration: underline; /* Underline on hover */
+  transition:
+    color 0.3s ease,
+    text-decoration 0.3s ease;
+}
+
+/* Effect for the whole page fade-in on load */
+.min-h-screen {
+  animation: fadeIn 1s ease-out;
+}
+
+/* Mobile responsive header */
+@media (max-width: 768px) {
+  .school-info span {
+    font-size: 1.2rem; /* Adjust font size for smaller screens */
+  }
+}
