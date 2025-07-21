@@ -34,6 +34,25 @@ namespace GESS.Service.multipleExam
             return multipleExamCreateDto;
 
         }
+        public async Task<ExamInfoResponseDTO> CheckExamNameAndCodeMEAsync(CheckExamRequestDTO request)
+        {
+            return await _unitOfWork.MultipleExamRepository.CheckAndPrepareExamAsync(request.ExamId, request.Code, request.StudentId);
+        }
+        public async Task<UpdateMultiExamProgressResponseDTO> UpdateProgressAsync(UpdateMultiExamProgressDTO dto)
+        {
+            return await _unitOfWork.MultipleExamRepository.UpdateProgressAsync(dto);
+        }
+
+        public async Task<SubmitExamResponseDTO> SubmitExamAsync(UpdateMultiExamProgressDTO dto)
+        {
+            return await _unitOfWork.MultipleExamRepository.SubmitExamAsync(dto);
+        }
+
+        public async Task<List<SubjectListDTO>> GetSubjectsByTeacherIdAsync(Guid teacherId)
+        {
+            return await _unitOfWork.MultipleExamRepository.GetSubjectsByTeacherIdAsync(teacherId);
+        }
+
     }
 
 }

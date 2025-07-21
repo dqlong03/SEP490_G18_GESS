@@ -1,5 +1,6 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Entities;
+using GESS.Model.MultipleQuestionDTO;
 using GESS.Model.TrainingProgram;
 using System;
 using System.Collections.Generic;
@@ -11,6 +12,8 @@ namespace GESS.Repository.Interface
 {
     public interface IMultipleQuestionRepository : IBaseRepository<MultiQuestion>
     {
-        Task<int> GetQuestionCountAsync(int? chapterId, int? categoryId, int? levelId, bool? isPublic, string? createdBy);
+        Task<IEnumerable<MultipleQuestionListDTO>> GetAllMultipleQuestionsAsync();
+        Task<int> GetQuestionCountAsync(int? chapterId, int? categoryId, int? levelId, bool? isPublic, Guid? createdBy);
+        Task<List<QuestionMultiExamSimpleDTO>> GetAllQuestionMultiExamByMultiExamIdAsync(int multiExamId);
     }
 }

@@ -15,15 +15,22 @@ namespace GESS.Auth
             try
             {
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Constants.SecretKey));
+                var expiryTime = DateTime.UtcNow.AddMilliseconds(Constants.Expires);
+                
+       
+                
                 var token = new JwtSecurityToken(
                     issuer: Constants.Issuer,
                     audience: Constants.Audience,
-                    expires: DateTime.UtcNow.AddMinutes(Constants.Expires),
+                    expires: expiryTime,
                     claims: claims,
                     signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
                 );
 
-                return new JwtSecurityTokenHandler().WriteToken(token);
+                var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+                Console.WriteLine($"[JWT DEBUG] Generated token: {tokenString.Substring(0, Math.Min(50, tokenString.Length))}...");
+                
+                return tokenString;
             }
             catch (Exception ex)
             {

@@ -1,4 +1,5 @@
 
+using CloudinaryDotNet;
 using Gess.Repository.Infrastructures;
 using GESS.Api.HandleException;
 using GESS.Auth;
@@ -6,6 +7,7 @@ using GESS.Common;
 using GESS.Entity.Base;
 using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
+using GESS.Model.APIKey;
 using GESS.Model.Email;
 using GESS.Repository.Implement;
 using GESS.Repository.Interface;
@@ -14,24 +16,32 @@ using GESS.Service;
 using GESS.Service.authservice;
 using GESS.Service.categoryExam;
 using GESS.Service.chapter;
+using GESS.Service.cloudinary;
 using GESS.Service.email;
+using GESS.Service.exam;
 using GESS.Service.examination;
-using GESS.Service.GradeCompoService;
-using GESS.Service.major;
-using GESS.Service.otp;
-using GESS.Service.semesters;
-using GESS.Service.student;
-using GESS.Service.subject;
-using GESS.Service.teacher;
-using GESS.Service.trainingProgram;
 using GESS.Service.examination;
+using GESS.Service.examination;
+using GESS.Service.examSchedule;
+using GESS.Service.examSlotService;
 using GESS.Service.GradeCompoService;
+using GESS.Service.levelquestion;
 using GESS.Service.major;
+using GESS.Service.multianswer;
 using GESS.Service.multipleExam;
 using GESS.Service.multipleQuestion;
 using GESS.Service.otp;
+using GESS.Service.practiceExam;
+using GESS.Service.practiceExamPaper;
+using GESS.Service.practicequestion;
+using GESS.Service.room;
+using GESS.Service.semesters;
+using GESS.Service.student;
+using GESS.Service.student;
+using GESS.Service.subject;
 using GESS.Service.subject;
 using GESS.Service.teacher;
+using GESS.Service.trainingProgram;
 using GESS.Service.trainingProgram;
 using GESS.Service.users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -42,10 +52,24 @@ using Microsoft.OpenApi.Models;
 using System.Security.Claims;
 using System.Text;
 
+using GESS.Service.practiceExamPaper;
+using GESS.Service.levelquestion;
+using GESS.Service.practicequestion;
+
 using GESS.Service.subject;
 using GESS.Service.trainingProgram;
 using GESS.Service.examination;
 using GESS.Service.student;
+using GESS.Service.exam;
+using GESS.Service.room;
+using GESS.Service.multianswer;
+using GESS.Service.practiceExam;
+using GESS.Service.examSchedule;
+using GESS.Service.examSlotService;
+using CloudinaryDotNet;
+using GESS.Service.cloudinary;
+using GESS.Service.gradeSchedule;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -140,12 +164,29 @@ builder.Services.AddScoped<IClassService, ClassService>();
 builder.Services.AddScoped<ICategoryExamService, CategoryExamService>();
 builder.Services.AddScoped<IMultipleQuestionService, MultipleQuestionService>();
 builder.Services.AddScoped<IStudentService, StudentService>();
+builder.Services.AddScoped<IPracticeQuestionService, PracticeQuestionService>();
+builder.Services.AddScoped<IExamScheduleService, ExamScheduleService>();
+builder.Services.AddScoped<IExamService, GESS.Service.exam.ExamService>();
+builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
+builder.Services.AddScoped<ILevelQuestionService, LevelQuestionService>();
+builder.Services.AddScoped<IGradeScheduleService, GradeScheduleService>();
+
 
 // ThaiNH_Initialize_Begin
 builder.Services.AddScoped<ICateExamSubService, CateExamSubService>();
 builder.Services.AddScoped<ISemestersService, SemestersService>();
+builder.Services.AddScoped<IPracticeExamPaperService, PracticeExamPaperService>();
+builder.Services.AddScoped<IPracticeQuestionService, PracticeQuestionService>();  
+builder.Services.AddScoped<IRoomRepository, RoomRepository>();
+builder.Services.AddScoped<IRoomService, RoomService>();
+builder.Services.AddScoped<IMultiAnswerService, MultiAnswerService>();
+builder.Services.AddScoped<IPracticeExamService, PracticeExamService>();
 
+//LongDQ
+builder.Services.AddScoped<IExamSlotService, ExamSlotService>();
+builder.Services.AddScoped<IGradeScheduleRepository, GradeScheduleRepository>();
 // Đăng ký các repository
+
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IChapterRepository, ChapterRepository>();
 builder.Services.AddScoped<ITeacherRepository, TeacherRepository>();
@@ -161,12 +202,36 @@ builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 builder.Services.AddScoped<ISemesterRepository, SemesterRepository>();
 builder.Services.AddScoped<ICateExamSubRepository, CateExamSubRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+builder.Services.AddScoped<IExamRepository, ExamRepository>();
+builder.Services.AddScoped<IPracticeExamPaperRepository, PracticeExamPaperRepository>();
+builder.Services.AddScoped<IPracticeQuestionsRepository, PracticeQuestionsRepository>();
+builder.Services.AddScoped<ILevelQuestionRepository, LevelQuestionRepository>();
+builder.Services.AddScoped<IPracticeAnswersRepository, PracticeAnswersRepository>();
+builder.Services.AddScoped<IMultipleAnswerRepository, MultiAnswerRepository>();
+builder.Services.AddScoped<IPracticeExamRepository, PracticeExamRepository>();
+builder.Services.AddScoped<IExamScheduleRepository, ExamScheduleRepository>();
+builder.Services.AddScoped<IExamSlotRepository, ExamSlotRepository>();
 
+// Đọc cấu hình Cloudinary từ appsettings.json
+var cloudinaryConfig = builder.Configuration.GetSection("Cloudinary");
+var cloudName = cloudinaryConfig["CloudName"];
+var apiKey = cloudinaryConfig["ApiKey"];
+var apiSecret = cloudinaryConfig["ApiSecret"];
+
+if (string.IsNullOrEmpty(cloudName) || string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(apiSecret))
+{
+    throw new ArgumentException("Cloudinary configuration is missing or incomplete.");
+}
+
+var account = new Account(cloudName, apiKey, apiSecret);
+var cloudinary = new Cloudinary(account);
+builder.Services.AddSingleton(cloudinary);
 
 // Đăng ký EmailService
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddMemoryCache();
+builder.Services.Configure<APIKeyOptions>(builder.Configuration.GetSection("APIKey"));
 
 // Cấu hình JWT Authentication
 builder.Services.AddAuthentication(options =>
@@ -184,7 +249,75 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = Constants.Issuer,
         ValidAudience = Constants.Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Constants.SecretKey))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Constants.SecretKey)),
+        
+        // Explicitly set claim types to ensure proper role recognition
+        NameClaimType = ClaimTypes.Name,
+        RoleClaimType = ClaimTypes.Role
+    };
+    
+    // Enable detailed JWT logging
+    options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            Console.WriteLine($"[JWT AUTH] Authentication failed: {context.Exception.Message}");
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            var claims = context.Principal.Claims.Select(c => $"{c.Type}: {c.Value}").ToList();
+            Console.WriteLine($"[JWT AUTH] Token validated successfully. Claims: {string.Join(", ", claims)}");
+            
+            // Transform custom role claims to standard role claims
+            var identity = context.Principal.Identity as ClaimsIdentity;
+            if (identity != null)
+            {
+                // Check for both custom "Role" claims and standard role claims
+                var customRoleClaims = identity.FindAll("Role").ToList();
+                var standardRoleClaims = identity.FindAll(ClaimTypes.Role).ToList();
+                
+                Console.WriteLine($"[JWT AUTH] Found {customRoleClaims.Count} custom role claims, {standardRoleClaims.Count} standard role claims");
+                
+                // Transform custom role claims to standard if any exist
+                foreach (var roleClaim in customRoleClaims)
+                {
+                    identity.AddClaim(new Claim(ClaimTypes.Role, roleClaim.Value));
+                    Console.WriteLine($"[JWT AUTH] Transformed custom role claim to standard: {roleClaim.Value}");
+                }
+                
+                // Ensure standard name claim exists
+                var usernameClaim = identity.FindFirst("Username");
+                var nameClaimFromToken = identity.FindFirst(ClaimTypes.Name);
+                
+                if (usernameClaim != null && nameClaimFromToken == null)
+                {
+                    identity.AddClaim(new Claim(ClaimTypes.Name, usernameClaim.Value));
+                    Console.WriteLine($"[JWT AUTH] Added standard name claim: {usernameClaim.Value}");
+                }
+                
+                // Ensure standard name identifier exists
+                var useridClaim = identity.FindFirst("Userid");
+                var nameIdClaimFromToken = identity.FindFirst(ClaimTypes.NameIdentifier);
+                
+                if (useridClaim != null && nameIdClaimFromToken == null)
+                {
+                    identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, useridClaim.Value));
+                    Console.WriteLine($"[JWT AUTH] Added standard NameIdentifier claim: {useridClaim.Value}");
+                }
+                
+                // Debug: Print all claims after transformation
+                var finalClaims = identity.Claims.Select(c => $"{c.Type}: {c.Value}").ToList();
+                Console.WriteLine($"[JWT AUTH] Final claims after transformation: {string.Join(", ", finalClaims)}");
+            }
+            
+            return Task.CompletedTask;
+        },
+        OnChallenge = context =>
+        {
+            Console.WriteLine($"[JWT AUTH] Authentication challenge: {context.Error}, {context.ErrorDescription}");
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -193,20 +326,39 @@ Constants.Initialize(builder.Configuration);
 
 var app = builder.Build();
 
-// Seed dữ liệu
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    try
-    {
-        await SeedData.InitializeAsync(services);
-    }
-    catch (Exception ex)
-    {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while seeding the database.");
-    }
-}
+//Seed dữ liệu
+//using (var scope = app.Services.CreateScope())
+//{
+//    var services = scope.ServiceProvider;
+//    var context = services.GetRequiredService<GessDbContext>();
+//    var logger = services.GetRequiredService<ILogger<Program>>();
+
+//    try
+//    {
+//        // Kiểm tra arguments để xem có muốn xóa dữ liệu không
+//        if (args.Contains("--clear-data"))
+//        {
+//            logger.LogInformation("Clearing all data from database...");
+//            logger.LogInformation("All data cleared successfully.");
+//        }
+//        else if (args.Contains("--reseed"))
+//        {
+//            logger.LogInformation("Clearing and reseeding database...");
+//            await SeedData.InitializeAsync(services);
+//            logger.LogInformation("Database reseeded successfully.");
+//        }
+//        else
+//        {
+//            // Chỉ seed nếu không có args đặc biệt
+//            await SeedData.InitializeAsync(services);
+//        }
+//    }
+//    catch (Exception ex)
+//    {
+//        logger.LogError(ex, "An error occurred while seeding the database.");
+//        throw; // Re-throw để dừng ứng dụng nếu có lỗi
+//    }
+//}
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())

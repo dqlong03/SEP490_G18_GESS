@@ -40,6 +40,23 @@ namespace GESS.Api.Controllers
                 return NotFound(ex.Message);
             }
         }
+
+        // ThaiNH_add_UpdateMark&UserProfile_Begin
+
+        [HttpGet("GetAllChapterBySub/{subjectId}")]
+        public async Task<IActionResult> GetAllchapterBySubIdAsync(int subjectId)
+        {
+            try
+            {
+                var chapter = await _chapterService.GetChaptersBySubjectId(subjectId);
+                return Ok(chapter);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+        // ThaiNH_add_UpdateMark&UserProfile_End
         [HttpPost("{subjectId}/CreateChapter")]
         public async Task<ActionResult<ChapterCreateDTO>> CreateChapter([FromBody] ChapterCreateDTO chapterCreateDto, int subjectId)
         {

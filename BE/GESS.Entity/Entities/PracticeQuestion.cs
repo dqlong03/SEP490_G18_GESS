@@ -29,9 +29,8 @@ namespace GESS.Entity.Entities
         [Column(TypeName = "BIT")]
         public bool IsActive { get; set; }
 
-        // Người tạo câu hỏi, tối đa 50 ký tự
-        [StringLength(50, ErrorMessage = "Người tạo không được vượt quá 50 ký tự!")]
-        public string CreatedBy { get; set; }
+        public Guid CreatedBy { get; set; }
+        public User User { get; set; }
 
         // Trạng thái công khai (true = công khai, false = không công khai)
         [Column(TypeName = "BIT")]
@@ -52,6 +51,9 @@ namespace GESS.Entity.Entities
         // Khóa ngoại liên kết đến học kỳ (Semester), 1 câu hỏi thuộc 1 học kỳ
         public int SemesterId { get; set; }
         public Semester Semester { get; set; }
+        // Ngày tạo câu hỏi, không được để trống
+        [Required(ErrorMessage = "Ngày tạo không được để trống!")]
+        public DateTime CreateAt { get; set; }
 
         // Đáp án của câu hỏi tự luận này (1 câu hỏi tự luận có 1 đáp án)
         public PracticeAnswer PracticeAnswer { get; set; }

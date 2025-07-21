@@ -1,4 +1,6 @@
 ﻿using GESS.Entity.Entities;
+using GESS.Model.MultipleQuestionDTO;
+using GESS.Model.PracticeQuestionDTO;
 using GESS.Model.Subject;
 using GESS.Model.TrainingProgram;
 using System;
@@ -11,6 +13,9 @@ namespace GESS.Service.multipleQuestion
 {
     public interface IMultipleQuestionService : IBaseService<MultiQuestion>
     {
-        Task<int> GetQuestionCount(int? chapterId, int? categoryId, int? levelId, bool? isPublic, string? createdBy);
+        Task<IEnumerable<MultipleQuestionListDTO>> GetAllMultipleQuestionsAsync();
+        Task<int> GetQuestionCount(int? chapterId, int? categoryId, int? levelId, bool? isPublic, Guid? createdBy);
+        Task<MultipleQuestionCreateDTO> MultipleQuestionCreateAsync(MultipleQuestionCreateDTO multipleQuestionCreateDTO);
+        Task<List<QuestionMultiExamSimpleDTO>> GetAllQuestionMultiExamByMultiExamIdAsync(int multiExamId);
     }
 }

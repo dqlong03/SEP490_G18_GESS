@@ -25,6 +25,11 @@ namespace GESS.Entity.Entities
         [Required(ErrorMessage = "Số lượng câu hỏi không được để trống!")]
         public int NumberQuestion { get; set; }
 
+        //Ngày thi, không được để trống
+        [Required(ErrorMessage = "Ngày thi không được để trống!")]
+        public DateTime? StartDay { get; set; }
+        public DateTime? EndDay { get; set; }
+
         // Thời gian làm bài (phút), không được để trống
         [Required(ErrorMessage = "Thời gian làm bài không được để trống!")]
         public int Duration { get; set; }
@@ -36,6 +41,9 @@ namespace GESS.Entity.Entities
         // Trạng thái kỳ thi (VD: "Draft", "Published"), tối đa 20 ký tự
         [StringLength(20, ErrorMessage = "Trạng thái không được vượt quá 20 ký tự!")]
         public string ? Status { get; set; }
+        // Trạng thái chaasm thi (VD: "Done", "Not yet"), tối đa 20 ký tự
+        [StringLength(20, ErrorMessage = "Trạng thái không được vượt quá 20 ký tự!")]
+        public int IsGraded { get; set; } = 0; // 0 - Chưa chấm, 1 - Đã chấm
 
         // Mã để bắt đầu kỳ thi, tối đa 50 ký tự
         [StringLength(50, ErrorMessage = "Mã bắt đầu không được vượt quá 50 ký tự!")]
@@ -56,6 +64,10 @@ namespace GESS.Entity.Entities
         // Khóa ngoại liên kết đến học kỳ (Semester), 1 kỳ thi thuộc 1 học kỳ
         public int SemesterId { get; set; }
         public Semester Semester { get; set; }
+
+        // Khóa ngoại liên kết đến lớp học (Class), 1 kỳ thi thuộc 1 lớp học
+        public int ClassId { get; set; }
+        public Class Class { get; set; }
 
         // Trạng thái công khai của kỳ thi (true = công khai, false = không công khai)
         [Column(TypeName = "BIT")]

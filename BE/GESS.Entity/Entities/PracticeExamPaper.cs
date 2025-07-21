@@ -34,8 +34,8 @@ namespace GESS.Entity.Entities
         public string Status { get; set; }
 
         // Người tạo đề thi, tối đa 50 ký tự
-        [StringLength(50, ErrorMessage = "Người tạo không được vượt quá 50 ký tự!")]
-        public string CreateBy { get; set; }
+        public Guid TeacherId { get; set; }
+        public Teacher Teacher { get; set; }
 
         // Khóa ngoại liên kết đến danh mục kỳ thi (CategoryExam), 1 đề thi thuộc 1 danh mục
         public int CategoryExamId { get; set; }
@@ -55,11 +55,15 @@ namespace GESS.Entity.Entities
         // Danh sách kỳ thi tự luận sử dụng đề thi này (qua bảng trung gian NoPEPaperInPE)
         public ICollection<NoPEPaperInPE> NoPEPaperInPEs { get; set; }
 
+        // Danh sách lịch sử thi của sinh viên sử dụng đề thi này
+        public ICollection<PracticeExamHistory> PracticeExamHistories { get; set; }
+
         // Constructor khởi tạo các danh sách
         public PracticeExamPaper()
         {
             PracticeTestQuestions = new List<PracticeTestQuestion>();
             NoPEPaperInPEs = new List<NoPEPaperInPE>();
+            PracticeExamHistories = new List<PracticeExamHistory>();
         }
     }
 }

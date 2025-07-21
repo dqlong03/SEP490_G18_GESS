@@ -24,6 +24,10 @@ namespace GESS.Entity.Entities
         // Thời gian làm bài (phút), không được để trống
         [Required(ErrorMessage = "Thời gian làm bài không được để trống!")]
         public int Duration { get; set; }
+        //Ngày thi, không được để trống
+        [Required(ErrorMessage = "Ngày thi không được để trống!")]
+        public DateTime? StartDay { get; set; }
+        public DateTime? EndDay { get; set; }
 
         // Ngày tạo kỳ thi, không được để trống
         [Required(ErrorMessage = "Ngày tạo không được để trống!")]
@@ -31,15 +35,18 @@ namespace GESS.Entity.Entities
 
         // Trạng thái kỳ thi (VD: "Draft", "Published"), tối đa 20 ký tự
         [StringLength(20, ErrorMessage = "Trạng thái không được vượt quá 20 ký tự!")]
-        public string Status { get; set; }
+        public string ? Status { get; set; }
+        // Trạng thái chaasm thi (VD: "Done", "Not yet"), tối đa 20 ký tự
+        [StringLength(20, ErrorMessage = "Trạng thái không được vượt quá 20 ký tự!")]
+        public int IsGraded { get; set; } = 0; // 0 - Chưa chấm, 1 - Đã chấm
 
         // Mã để bắt đầu kỳ thi, tối đa 50 ký tự
         [StringLength(50, ErrorMessage = "Mã bắt đầu không được vượt quá 50 ký tự!")]
-        public string CodeStart { get; set; }
+        public string ? CodeStart { get; set; }
 
         // Người tạo kỳ thi, tối đa 50 ký tự
-        [StringLength(50, ErrorMessage = "Người tạo không được vượt quá 50 ký tự!")]
-        public string CreateBy { get; set; }
+        public Guid TeacherId { get; set; }
+        public Teacher Teacher { get; set; }
 
         // Khóa ngoại liên kết đến danh mục kỳ thi (CategoryExam), 1 kỳ thi thuộc 1 danh mục
         public int CategoryExamId { get; set; }
@@ -52,6 +59,10 @@ namespace GESS.Entity.Entities
         // Khóa ngoại liên kết đến học kỳ (Semester), 1 kỳ thi thuộc 1 học kỳ
         public int SemesterId { get; set; }
         public Semester Semester { get; set; }
+
+        // Khóa ngoại liên kết đến lớp học (Class), 1 kỳ thi thuộc 1 lớp học
+        public int ClassId { get; set; }
+        public Class Class { get; set; }
 
         // Phòng thi và ca thi mà kỳ thi này diễn ra (1 kỳ thi diễn ra ở 1 phòng/ca)
         public ExamSlotRoom ExamSlotRoom { get; set; }

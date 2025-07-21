@@ -13,5 +13,10 @@ namespace GESS.Service.categoryExam
     {
         Task<IEnumerable<CategoryExamDTO>> GetCategoriesBySubjectId(int  majorId);
 
+        // ThaiNH_add_UpdateMark&UserProfile_Begin
+        Task<IEnumerable<CategoryExamDTO>> GetAllCategoryExamsAsync();
+        // ThaiNH_add_UpdateMark&UserProfile_End
+
+
     }
 }

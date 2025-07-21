@@ -285,5 +285,82 @@ namespace GESS.Service.authservice
             return false;
         }
 
+        // Xử lý đăng nhập với Google cho Desktop App - chỉ cho phép học sinh đã có trong hệ thống
+        public async Task<GoogleLoginDesktopResult> LoginWithGoogleDesktopAsync(GoogleLoginModel model)
+        {
+            try
+            {
+                var payload = await GoogleJsonWebSignature.ValidateAsync(model.IdToken, new GoogleJsonWebSignature.ValidationSettings
+                {
+                    Audience = new[] { _configuration["Authenticationdesk:Google:ClientId"] }
+                });
+
+                var user = await _userManager.FindByEmailAsync(payload.Email);
+                if (user == null)
+                {
+                    return new GoogleLoginDesktopResult { Success = false, ErrorMessage = "Tài khoản không tồn tại trong hệ thống" };
+                }
+
+                // Thêm thông tin đăng nhập Google vào AspNetUserLogins
+                await _userManager.AddLoginAsync(user, new UserLoginInfo("Google", payload.Subject, "Google"));
+
+                // Kiểm tra role - chỉ cho phép học sinh đăng nhập
+                var userRoles = await _userManager.GetRolesAsync(user);
+                if (!userRoles.Contains("Học sinh"))
+                {
+                    return new GoogleLoginDesktopResult { Success = false, ErrorMessage = "Chỉ học sinh mới có quyền đăng nhập qua desktop app" };
+                }
+
+                // Tìm thông tin sinh viên
+                var student = await _unitOfWork.StudentRepository.GetStudentbyUserId(user.Id);
+                if (student == null)
+                {
+                    return new GoogleLoginDesktopResult { Success = false, ErrorMessage = "Không tìm thấy thông tin sinh viên" };
+                }
+
+                // Tạo claims
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.Name, user.UserName),
+                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                };
+
+                foreach (var role in userRoles)
+                {
+                    claims.Add(new Claim(ClaimTypes.Role, role));
+                }
+
+                var accessToken = _jwtService.GenerateAccessToken(claims);
+
+                // Tạo refresh token
+                var refreshToken = new RefreshToken
+                {
+                    Id = Guid.NewGuid(),
+                    Token = Guid.NewGuid().ToString(),
+                    IssuedAt = DateTime.UtcNow,
+                    ExpiresAt = DateTime.UtcNow.AddDays(30),
+                    IsRevoked = false,
+                    UserId = user.Id
+                };
+                _unitOfWork.RefreshTokenRepository.Create(refreshToken);
+                await _unitOfWork.SaveChangesAsync();
+
+                return new GoogleLoginDesktopResult
+                {
+                    Success = true,
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken.Token,
+                    Username = user.UserName,
+                    StudentCode = user.Code,
+                    StudentId = student.StudentId,
+                    StudentName = user.Fullname
+                };
+            }
+            catch (Exception ex)
+            {
+                return new GoogleLoginDesktopResult { Success = false, ErrorMessage = "Token Google không hợp lệ: " + ex.Message };
+            }
+        }
     }
 }

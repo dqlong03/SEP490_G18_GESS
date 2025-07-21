@@ -1,6 +1,8 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
+using GESS.Model.MultipleQuestionDTO;
+using GESS.Model.PracticeQuestionDTO;
 using GESS.Model.TrainingProgram;
 using GESS.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
@@ -20,7 +22,33 @@ namespace GESS.Repository.Implement
             _context = context;
         }
 
-        public async Task<int> GetQuestionCountAsync(int? chapterId, int? categoryId, int? levelId, bool? isPublic, string? createdBy)
+        public async Task<IEnumerable<MultipleQuestionListDTO>> GetAllMultipleQuestionsAsync()
+        {
+            var multipleQuestions = await _context.MultiQuestions
+               .Include(q => q.Chapter)
+               .Include(q => q.CategoryExam)
+               .Include(q => q.LevelQuestion)
+               .Include(q => q.Semester)
+               .Include(q => q.MultiAnswers)
+               .ToListAsync();
+
+
+            return multipleQuestions.Select(q => new MultipleQuestionListDTO
+            {
+                PracticeQuestionId = q.MultiQuestionId,
+                Content = q.Content,
+                UrlImg = q.UrlImg,
+                IsActive = q.IsActive,
+                CreatedBy = q.CreatedBy,
+                IsPublic = q.IsPublic,
+                ChapterName = q.Chapter != null ? q.Chapter.ChapterName : "",
+                CategoryExamName = q.CategoryExam != null ? q.CategoryExam.CategoryExamName : "",
+                LevelQuestionName = q.LevelQuestion != null ? q.LevelQuestion.LevelQuestionName : "",
+                SemesterName = q.Semester != null ? q.Semester.SemesterName : ""
+            }).ToList();
+        }
+
+        public async Task<int> GetQuestionCountAsync(int? chapterId, int? categoryId, int? levelId, bool? isPublic, Guid? createdBy)
         {
             var query = _context.MultiQuestions.AsQueryable();
             if (chapterId.HasValue)
@@ -39,10 +67,11 @@ namespace GESS.Repository.Implement
             {
                 query = query.Where(q => q.IsPublic == isPublic.Value);
             }
-            if (!string.IsNullOrEmpty(createdBy))
+            if (createdBy.HasValue)
             {
-                query = query.Where(q => q.CreatedBy == createdBy);
+                query = query.Where(q => q.CreatedBy == createdBy.Value);
             }
+
             try
             {
                 return await query.CountAsync();
@@ -53,7 +82,19 @@ namespace GESS.Repository.Implement
             }
 
         }
+
+        public async Task<List<QuestionMultiExamSimpleDTO>> GetAllQuestionMultiExamByMultiExamIdAsync(int multiExamId)
+        {
+            return await _context.QuestionMultiExams
+                .Where(q => q.MultiExamHistory.MultiExamId == multiExamId)
+                .Select(q => new QuestionMultiExamSimpleDTO
+                {
+                    Id = q.MultiQuestionId, 
+                    QuestionOrder = q.QuestionOrder
+                })
+                .ToListAsync();
+        }
     }
-    
-    
+
+
 }

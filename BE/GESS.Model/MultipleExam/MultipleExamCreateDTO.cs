@@ -1,6 +1,7 @@
 ﻿using GESS.Entity.Entities;
 using GESS.Model.Class;
 using GESS.Model.NoQuestionInChapter;
+using GESS.Model.Student;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -25,6 +26,10 @@ namespace GESS.Model.MultipleExam
         // Thời gian làm bài (phút), không được để trống
         [Required(ErrorMessage = "Thời gian làm bài không được để trống!")]
         public int Duration { get; set; }
+        //Ngày thi, không được để trống
+        [Required(ErrorMessage = "Ngày thi không được để trống!")]
+        public DateTime StartDay { get; set; }
+        public DateTime EndDay { get; set; }
 
         // Ngày tạo kỳ thi, không được để trống
         [Required(ErrorMessage = "Ngày tạo không được để trống!")]
@@ -35,6 +40,9 @@ namespace GESS.Model.MultipleExam
         // Khóa ngoại liên kết đến môn học (Subject), 1 kỳ thi thuộc 1 môn học
         public int SubjectId { get; set; }
 
+        //Thêm
+        public int ClassId { get; set; }
+
         // Khóa ngoại liên kết đến danh mục kỳ thi (CategoryExam), 1 kỳ thi thuộc 1 danh mục
         public int CategoryExamId { get; set; }
 
@@ -44,6 +52,6 @@ namespace GESS.Model.MultipleExam
         [Column(TypeName = "BIT")]
         public bool IsPublish { get; set; }
         public ICollection<NoQuestionInChapterDTO> NoQuestionInChapterDTO { get; set; }
-        public ICollection<StudentDTO> StudentDTO { get; set; }
+        public ICollection<StudentExamDTO> StudentExamDTO { get; set; }
     }
 }

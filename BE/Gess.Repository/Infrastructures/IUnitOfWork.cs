@@ -36,12 +36,25 @@ namespace Gess.Repository.Infrastructures
         IStudentRepository StudentRepository { get; }
         IClassRepository ClassRepository { get; }
         IMultipleQuestionRepository MultipleQuestionRepository { get; }
-
-
+        IPracticeExamRepository PracticeExamRepository { get; }
+        IPracticeExamPaperRepository PracticeExamPaperRepository { get; }
         ISemesterRepository SemesterRepository { get; }
+
+        IMultipleAnswerRepository MultipleAnswerRepository { get; }
+
+        IExamRepository ExamRepository { get; }
+
+        IPracticeQuestionsRepository PracticeQuestionsRepository { get; }
+        ILevelQuestionRepository LevelQuestionRepository { get; }
         // ThaiNH_Initialize_Begin
+        IRoomRepository RoomRepository { get; }
         ICateExamSubRepository CateExamSubRepository { get; }
         // ThaiNH_Initialize_End
+        IPracticeAnswersRepository PracticeAnswersRepository { get; }
+
+        IExamScheduleRepository ExamScheduleRepository { get; }
+        IExamSlotRepository ExamSlotRepository { get; }
+        IGradeScheduleRepository GradeScheduleRepository { get; }
         UserManager<User> UserManager { get; }
         RoleManager<IdentityRole<Guid>> RoleManager { get; }
     }

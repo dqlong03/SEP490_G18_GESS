@@ -1,6 +1,7 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
+using GESS.Model.GradeComponent;
 using GESS.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -42,14 +43,26 @@ namespace GESS.Repository.Implement
         public async Task UpdateAllCESBySubIdAsync(List<CategoryExamSubject> entities)
          => _context.CategoryExamSubjects.UpdateRange(entities);
 
-        public async Task<IEnumerable<CategoryExamSubject>> GetAllCateExamSubBySubIdAsync(int subjectId)
-        => await _context.CategoryExamSubjects.Where(x => x.SubjectId == subjectId).ToListAsync();
+        // ThaiNH_add_UpdateMark&UserProfile_Begin
+        public async Task<IEnumerable<CategoryExamSubjectDTO>> GetAllCateExamSubBySubIdAsync(int subjectId)
+        =>   await _context.CategoryExamSubjects
+        .Where(x => x.SubjectId == subjectId)
+        .Select(x => new CategoryExamSubjectDTO
+        {
+            CategoryExamId = x.CategoryExamId,
+            SubjectId = x.SubjectId,
+            CategoryExamName = x.CategoryExam.CategoryExamName,
+            GradeComponent = x.GradeComponent,
+            
+    }).ToListAsync();
+        // ThaiNH_add_UpdateMark&UserProfile_End
 
         public async Task<CategoryExamSubject> GetBySubIdAndCateEIdAsync(int subjectId , int categoryExamId)
            => await _context.CategoryExamSubjects.FirstOrDefaultAsync(x => x.CategoryExamId == categoryExamId && x.SubjectId == subjectId);
 
 
+
         public async Task UpdateCateExamSubAsync(CategoryExamSubject entity)
-          => _context.CategoryExamSubjects.Update(entity);
+          =>  _context.CategoryExamSubjects.Update(entity);
     }
 }

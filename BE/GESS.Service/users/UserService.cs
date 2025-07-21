@@ -1,4 +1,5 @@
 ﻿using Gess.Repository.Infrastructures;
+using GESS.Common;
 using GESS.Common.HandleException;
 using GESS.Entity.Entities;
 using GESS.Model.Student;
@@ -33,8 +34,9 @@ namespace GESS.Service.users
             _unitOfWork = unitOfWork;
         }
 
-   
-        
+
+        // ThaiNH_modified_UpdateMark&UserProfile_Begin
+
         public async Task<UserListDTO> GetUserByIdAsync(Guid userId)
         {
             var user = await _unitOfWork.UserRepository.GetUserByIdAsync(userId);
@@ -44,6 +46,11 @@ namespace GESS.Service.users
             }
             var roles = await _userManager.GetRolesAsync(user);
 
+
+            // Tìm vai trò chính (chỉ lấy 1 role chính nếu bạn giới hạn vậy)
+            var mainRole = roles.FirstOrDefault(r =>
+                r == PredefinedRole.ADMIN_ROLE || r == PredefinedRole.EXAMINATION_ROLE || r == PredefinedRole.TEACHER_ROLE || r == PredefinedRole.STUDENT_ROLE || r == PredefinedRole.HEADOFDEPARTMENT_ROLE
+            );
             return new UserListDTO
             {
                 UserId = user.Id,
@@ -55,9 +62,10 @@ namespace GESS.Service.users
                 Gender = user.Gender,
                 IsActive = user.IsActive,
                 Code = user.Code,
-                Roles = roles.ToList()
+                MainRole = mainRole
             };
         }
+        // ThaiNH_modified_UpdateMark&UserProfile_End
 
 
 

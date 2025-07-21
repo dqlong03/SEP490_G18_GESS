@@ -1,6 +1,7 @@
 ﻿using GESS.Entity.Entities;
 using GESS.Model.Chapter;
 using GESS.Model.Class;
+using GESS.Model.GradeComponent;
 using GESS.Model.Student;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,16 @@ namespace GESS.Service
 {
     public interface IClassService : IBaseService<Class>
     {
+
+        //Tuan
+        Task<int?> GetSubjectIdByClassIdAsync(int classId);
+        Task<IEnumerable<StudentInClassDTO>> GetStudentsByClassIdAsync(int classId);
+        Task<IEnumerable<GradeComponentDTO>> GetGradeComponentsByClassIdAsync(int classId);
+        Task<IEnumerable<ChapterInClassDTO>> GetChaptersByClassIdAsync(int classId);
+
+        Task<ClassDetailResponseDTO?> GetClassDetailAsync(int classId);
+        //
+
         Task<ClassCreateDTO> CreateClassAsync(ClassCreateDTO classCreateDto);
         Task<IEnumerable<ClassListDTO>> GetAllClassAsync(string? name = null, int? subjectId = null, int? semesterId = null, int pageNumber = 1, int pageSize = 5);
         Task<IEnumerable<ClassListDTO>> GetAllClassByTeacherIdAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageNumber = 1, int pageSize = 5);

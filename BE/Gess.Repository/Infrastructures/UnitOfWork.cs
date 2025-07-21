@@ -30,7 +30,16 @@ namespace Gess.Repository.Infrastructures
         private IClassRepository _classRepository;
         private ISemesterRepository _semesterRepository;
         private ICateExamSubRepository _cateExamSubRepository;
-        
+        private IPracticeExamPaperRepository _practiceExamPaperRepository;
+        private IPracticeQuestionsRepository _practiceQuestionsRepository;
+        private ILevelQuestionRepository _levelQuestionRepository;
+        private IMultipleAnswerRepository _multipleAnswerRepository;
+        private IExamRepository _examRepository;
+        private IPracticeAnswersRepository _practiceAnswersRepository;
+        private IRoomRepository _roomRepository;
+        private IExamScheduleRepository _examSchelduleRepository;
+        private IExamSlotRepository _examSlotRepository;
+        private IGradeScheduleRepository _gradeScheduleRepository;
         public UnitOfWork(GessDbContext context, UserManager<User> userManager, RoleManager<IdentityRole<Guid>> roleManager)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -52,16 +61,28 @@ namespace Gess.Repository.Infrastructures
         public IClassRepository ClassRepository => _classRepository ??= new ClassRepository(_context);
         public ISemesterRepository SemesterRepository => _semesterRepository ??= new SemesterRepository(_context);
         public ICateExamSubRepository CateExamSubRepository => _cateExamSubRepository ??= new CateExamSubRepository(_context);
-
+        public IPracticeQuestionsRepository PracticeQuestionsRepository => _practiceQuestionsRepository ??= new PracticeQuestionsRepository(_context);
         public UserManager<User> UserManager => _userManager;
         public RoleManager<IdentityRole<Guid>> RoleManager => _roleManager;
 
-        
+        // ThaiNH_Initialize_Begin
+        public IRoomRepository RoomRepository => _roomRepository ??= new RoomRepository(_context);
 
+        // ThaiNH_Initialize_End
+
+        public IExamRepository ExamRepository => _examRepository ??= new ExamRepository(_context);
+
+        public IMultipleAnswerRepository MultipleAnswerRepository => _multipleAnswerRepository ??= new MultiAnswerRepository(_context);
         public IMultipleExamRepository MultipleExamRepository => new MultipleExamRepository(_context);
         public ICategoryExamRepository CategoryExamRepository => new CategoryExamRepository(_context);
         public IMultipleQuestionRepository MultipleQuestionRepository => new MultipleQuestionRepository(_context);
-
+        public ILevelQuestionRepository LevelQuestionRepository => _levelQuestionRepository ??= new LevelQuestionRepository(_context);
+        public IPracticeExamRepository PracticeExamRepository => new PracticeExamRepository(_context);
+        public IPracticeExamPaperRepository PracticeExamPaperRepository => new PracticeExamPaperRepository(_context);
+        public IPracticeAnswersRepository PracticeAnswersRepository => _practiceAnswersRepository??= new PracticeAnswersRepository(_context);
+        public IExamScheduleRepository ExamScheduleRepository => _examSchelduleRepository ??= new ExamScheduleRepository(_context);
+        public IExamSlotRepository ExamSlotRepository => new ExamSlotRepository(_context);
+        public IGradeScheduleRepository GradeScheduleRepository => _gradeScheduleRepository ??= new GradeScheduleRepository(_context);
         public UnitOfWork(GessDbContext context= null)
         {
             _context = context;
@@ -89,6 +110,6 @@ namespace Gess.Repository.Infrastructures
                 _context.Dispose();
                 _disposed = true;
             }
-        }
+            }
     }
 }

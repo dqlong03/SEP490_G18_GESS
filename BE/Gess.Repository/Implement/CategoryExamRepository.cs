@@ -25,12 +25,20 @@ namespace GESS.Repository.Implement
         {
             var query = _context.CategoryExamSubjects
                 .Include(ces => ces.CategoryExam)
-                .Where(ces => ces.SubjectId == subjectId)
+                .Where(ces => ces.SubjectId == subjectId && ces.IsDelete==false)
                 .Select(ces => ces.CategoryExam)
                 .AsNoTracking();
             return await Task.FromResult(query.AsEnumerable());
         }
+
+        // ThaiNH_add_UpdateMark&UserProfile_Begin
+        public async Task<IEnumerable<CategoryExam>> GetAllAsync()
+        {
+            return await Task.FromResult(_context.CategoryExams.ToList());
+        }
+        // ThaiNH_add_UpdateMark&UserProfile_End
+
     }
-    
-    
+
+
 }

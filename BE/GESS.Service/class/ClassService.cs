@@ -2,6 +2,7 @@
 using GESS.Entity.Entities;
 using GESS.Model.Chapter;
 using GESS.Model.Class;
+using GESS.Model.GradeComponent;
 using GESS.Model.Student;
 using Microsoft.AspNetCore.Identity;
 using System;
@@ -19,6 +20,41 @@ namespace GESS.Service
         {
             _unitOfWork = unitOfWork;
         }
+
+
+        //Tuan
+
+        public async Task<int?> GetSubjectIdByClassIdAsync(int classId)
+        {
+            return await _unitOfWork.ClassRepository.GetSubjectIdByClassIdAsync(classId);
+        }
+
+        public async Task<IEnumerable<StudentInClassDTO>> GetStudentsByClassIdAsync(int classId)
+        {
+            return await _unitOfWork.ClassRepository.GetStudentsByClassIdAsync(classId);
+        }
+
+
+        public async Task<IEnumerable<GradeComponentDTO>> GetGradeComponentsByClassIdAsync(int classId)
+        {
+            return await _unitOfWork.ClassRepository.GetGradeComponentsByClassIdAsync(classId);
+        }
+
+        public async Task<IEnumerable<ChapterInClassDTO>> GetChaptersByClassIdAsync(int classId)
+        {
+            return await _unitOfWork.ClassRepository.GetChaptersByClassIdAsync(classId);
+        }
+
+
+        public async Task<ClassDetailResponseDTO?> GetClassDetailAsync(int classId)
+        {
+            // Gọi repository qua unit of work, không tạo repository trực tiếp
+            return await _unitOfWork.ClassRepository.GetClassDetailAsync(classId);
+        }
+
+        //
+
+
 
 
         public async Task<ClassCreateDTO> CreateClassAsync(ClassCreateDTO classCreateDto)
@@ -40,6 +76,7 @@ namespace GESS.Service
                     TeacherId = classCreateDto.TeacherId,
                     SubjectId = classCreateDto.SubjectId,
                     SemesterId = classCreateDto.SemesterId,
+                    CreatedDate = DateTime.UtcNow,
                     ClassStudents = new List<ClassStudent>()
                 };
 
@@ -133,7 +170,8 @@ namespace GESS.Service
                             StudentId = Guid.NewGuid(),
                             UserId = userId,
                             // CohortId = studentDto.CohortId ?? 1, // Sửa typo: CohirtId -> CohortId (đã sửa trong đoạn trước)
-                            EnrollDate = DateTime.UtcNow
+                            EnrollDate = DateTime.UtcNow,
+                            AvatarURL = "DefaultAvatar.png" // Giả sử có ảnh đại diện mặc định
                         };
                         _unitOfWork.StudentRepository.Create(newStudent);
                         studentId = newStudent.StudentId;

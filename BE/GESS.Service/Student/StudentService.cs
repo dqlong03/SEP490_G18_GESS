@@ -11,6 +11,9 @@ using GESS.Common;
 using Microsoft.AspNetCore.Http;
 using GESS.Model.Teacher;
 using OfficeOpenXml;
+using GESS.Model.Subject;
+using GESS.Model.Exam;
+using GESS.Service.cloudinary;
 
 namespace GESS.Service.student
 {
@@ -18,17 +21,20 @@ namespace GESS.Service.student
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly UserManager<User> _userManager;
+
+        private readonly ICloudinaryService _cloudinaryService;
         private readonly RoleManager<IdentityRole<Guid>> _roleManager;
         public StudentService(IUnitOfWork unitOfWork, UserManager<User> userManager,
-      RoleManager<IdentityRole<Guid>> roleManager)
+      RoleManager<IdentityRole<Guid>> roleManager, ICloudinaryService cloudinaryService)
       : base(unitOfWork) // <- If BaseService has a constructor
         {
             _unitOfWork = unitOfWork;
             _userManager = userManager;
             _roleManager = roleManager;
+            _cloudinaryService = cloudinaryService;
         }
 
-        public async Task<StudentResponse> AddStudentAsync(StudentCreationRequest request)
+        public async Task<StudentResponse> AddStudentAsync(StudentCreationRequest request, IFormFile? avatar)
         {
             var defaultPassword = "Abc123@";
             // 1. Tạo user
@@ -57,6 +63,11 @@ namespace GESS.Service.student
             // 3. Gán role cho user
             await _userManager.AddToRoleAsync(user, PredefinedRole.STUDENT_ROLE);
 
+            // 4. Upload avatar nếu có
+            if (avatar != null)
+            {
+                request.AvatarUrl = await _cloudinaryService.UploadImageAsync(avatar, "students");
+            }
             return await _unitOfWork.StudentRepository.AddStudentAsync(user.Id, request);
 
         }
@@ -129,8 +140,8 @@ namespace GESS.Service.student
                                 continue;
                             }
 
-                            // Gọi phương thức AddTeacherAsync để thêm giáo viên
-                            var student = await AddStudentAsync(request);
+                            
+                            var student = await AddStudentAsync(request, null);
                             students.Add(student);
                         }
                         catch (Exception ex)
@@ -151,8 +162,13 @@ namespace GESS.Service.student
             return await _unitOfWork.StudentRepository.SearchStudentsAsync(keyword);
         }
 
-        public async Task<StudentResponse> UpdateStudentAsync(Guid studentId, StudentUpdateRequest request)
+        public async Task<StudentResponse> UpdateStudentAsync(Guid studentId, StudentUpdateRequest request , IFormFile? avatar)
         {
+            // Upload avatar nếu có
+            if (avatar != null)
+            {
+                request.AvatarUrl = await _cloudinaryService.UploadImageAsync(avatar, "students");
+            }
             await _unitOfWork.StudentRepository.UpdateStudentAsync(studentId, request);
             await _unitOfWork.SaveChangesAsync();
             var student = await _unitOfWork.StudentRepository.GetStudentByIdAsync(studentId);
@@ -269,6 +285,24 @@ namespace GESS.Service.student
 
 
             return students;
+        }
+
+        public async Task<List<AllSubjectBySemesterOfStudentDTOResponse>> GetAllSubjectBySemesterOfStudentAsync(int? semesterId, int? year, Guid userId)
+        {
+            if (semesterId <= 0 || year <= 0 )
+                throw new ArgumentException("Thông tin đầu vào không hợp lệ.");
+
+            return await _unitOfWork.StudentRepository.GetAllSubjectBySemesterOfStudentAsync(semesterId, year, userId);
+        }
+
+        public async Task<List<int>> GetAllYearOfStudentAsync(Guid studentId)
+        {
+            return await _unitOfWork.StudentRepository.GetAllYearOfStudentAsync(studentId);
+        }
+
+        public async Task<List<HistoryExamOfStudentDTOResponse>> GetHistoryExamOfStudentBySubIdAsync(int? semesterId, int? year, int subjectId, Guid studentId)
+        {
+            return await _unitOfWork.StudentRepository.GetHistoryExamOfStudentBySubIdAsync(semesterId, year, subjectId, studentId);
         }
     }
 }

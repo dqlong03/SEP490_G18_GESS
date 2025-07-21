@@ -1,7 +1,11 @@
-﻿using GESS.Model.Student;
+﻿using GESS.Model.Exam;
+using GESS.Model.Student;
+using GESS.Model.Subject;
 using GESS.Service.examination;
 using GESS.Service.student;
+using Microsoft.AspNet.Identity;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GESS.Api.Controllers
@@ -11,10 +15,12 @@ namespace GESS.Api.Controllers
     public class StudentController : ControllerBase
     {
         private readonly IStudentService _studentService;
+
         public StudentController(IStudentService studentService)
         {
             _studentService = studentService;
         }
+
 
         //Example endpoint to get all student with pagination
         [HttpGet]
@@ -78,11 +84,11 @@ namespace GESS.Api.Controllers
         }
         // Example endpoint to add a new student
         [HttpPost]
-        public async Task<ActionResult<StudentResponse>> AddStudentAsync([FromBody] StudentCreationRequest request)
+        public async Task<ActionResult<StudentResponse>> AddStudentAsync([FromForm] StudentCreationRequest request, IFormFile? avatar)
         {
             try
             {
-                var student = await _studentService.AddStudentAsync(request);
+                var student = await _studentService.AddStudentAsync(request, avatar);
                 return CreatedAtAction(nameof(GetStudentById), new { studentId = student.StudentId }, student);
             }
             catch (Exception ex)
@@ -93,11 +99,11 @@ namespace GESS.Api.Controllers
 
         // Example endpoint to update a student
         [HttpPut("{studentId}")]
-        public async Task<ActionResult<StudentResponse>> UpdateStudentAsync(Guid studentId, [FromBody] StudentUpdateRequest request)
+        public async Task<ActionResult<StudentResponse>> UpdateStudentAsync(Guid studentId, [FromBody] StudentUpdateRequest request, IFormFile? avatar)
         {
             try
             {
-                var student = await _studentService.UpdateStudentAsync(studentId, request);
+                var student = await _studentService.UpdateStudentAsync(studentId, request, avatar);
                 if (student == null)
                 {
                     return NotFound($"Student with ID {studentId} not found.");
@@ -143,5 +149,52 @@ namespace GESS.Api.Controllers
             }
         }
 
+
+        [HttpGet("subjects/{studentId}")]
+        public async Task<ActionResult<IEnumerable<AllSubjectBySemesterOfStudentDTOResponse>>> GetAllSubjectBySemesterOfStudent(Guid studentId, int? semesterId, int? year)
+        {
+            try
+            {
+                var subjects = await _studentService.GetAllSubjectBySemesterOfStudentAsync(semesterId, year, studentId);
+                return Ok(subjects);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+
+        [HttpGet("years/{studentId}")]
+        public async Task<ActionResult<IEnumerable<int>>> GetAllYearOfStudent(Guid studentId)
+        {
+            try
+            {
+                var years = await _studentService.GetAllYearOfStudentAsync(studentId);
+                return Ok(years);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet("exams/{subjectId}/{studentId}")]
+        public async Task<ActionResult<IEnumerable<HistoryExamOfStudentDTOResponse>>> GetHistoryExamOfStudentBySubId(int? semesterId, int? year, int subjectId, Guid studentId)
+        {
+            try
+            {
+                var exams = await _studentService.GetHistoryExamOfStudentBySubIdAsync(semesterId, year, subjectId, studentId);
+                return Ok(exams);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Đã xảy ra lỗi không mong muốn.");
+            }
+        }
     }
 }

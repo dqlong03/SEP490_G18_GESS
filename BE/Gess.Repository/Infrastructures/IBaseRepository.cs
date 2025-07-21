@@ -1,4 +1,5 @@
-﻿using System;
+﻿using GESS.Model.Subject;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -19,6 +20,8 @@ namespace Gess.Repository.Infrastructures
         /// Change state of entity to deleted
         /// </summary>
         /// <param name="entity"></param>
+
+        Task CreateAsync(TEntity entity);
         void Delete(TEntity entity);
 
         /// <summary>

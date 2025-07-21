@@ -30,6 +30,9 @@ namespace GESS.Entity.Entities
 
         public int? CohortId { get; set; }
         public Cohort? Cohort { get; set; }
+        // Ảnh đại diện của sinh viên, không được để trống
+        [Required(ErrorMessage = "Ảnh đại diện không được để trống!")]
+        public string AvatarURL { get; set; }
 
         // Danh sách lớp học mà sinh viên tham gia (qua bảng trung gian ClassStudent)
         public ICollection<ClassStudent> ClassStudents { get; set; }
@@ -39,13 +42,14 @@ namespace GESS.Entity.Entities
 
         // Lịch sử thi tự luận của sinh viên (qua bảng trung gian PracticeExamHistory)
         public ICollection<PracticeExamHistory> PracticeExamHistories { get; set; }
-
+        public ICollection<StudentExamSlotRoom> StudentExamSlotRooms { get; set; }
         // Constructor khởi tạo các danh sách
         public Student()
         {
             ClassStudents = new List<ClassStudent>();
             MultiExamHistories = new List<MultiExamHistory>();
             PracticeExamHistories = new List<PracticeExamHistory>();
+            StudentExamSlotRooms = new List<StudentExamSlotRoom>();
         }
     }
 }

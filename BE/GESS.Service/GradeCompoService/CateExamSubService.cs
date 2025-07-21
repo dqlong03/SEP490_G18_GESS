@@ -32,11 +32,10 @@ namespace GESS.Service.GradeCompoService
             }
 
             var categoryExamSubjects = await _unitOfWork.CateExamSubRepository.GetAllAsync(); // Await trước
-            var totalGradeComponent = categoryExamSubjects.Where(ces => ces.CategoryExamId == dto.CategoryExamId)
-            .Sum(ces => ces.GradeComponent);
+            var totalGradeComponent = categoryExamSubjects.Sum(ces => ces.GradeComponent);
             if (totalGradeComponent + dto.GradeComponent > 100)
             {
-                throw new BusinessRuleException("Tổng thành phần điểm cho các bài thi không được vượt quá 100.");
+                throw new BusinessRuleException("Tổng thành phần điểm cho các bài thi không được vượt quá 100%.");
             }
 
             var entity = new CategoryExamSubject
@@ -92,7 +91,7 @@ namespace GESS.Service.GradeCompoService
                 }
             try
             {
-                await _unitOfWork.CateExamSubRepository.UpdateAllCESBySubIdAsync(entities);
+                //await _unitOfWork.CateExamSubRepository.UpdateAllCESBySubIdAsync(entities);
                 // Lưu thay đổi vào database
                 await _unitOfWork.SaveChangesAsync();
             }
@@ -102,8 +101,10 @@ namespace GESS.Service.GradeCompoService
             }
         }
 
-        public async Task<IEnumerable<CategoryExamSubject>> GetAllCateExamSubBySubIdAsync(int subjectId)
+        // ThaiNH_add_UpdateMark&UserProfile_Begin
+        public async Task<IEnumerable<CategoryExamSubjectDTO>> GetAllCateExamSubBySubIdAsync(int subjectId)
            => await _unitOfWork.CateExamSubRepository.GetAllCateExamSubBySubIdAsync(subjectId);
+        // ThaiNH_add_UpdateMark&UserProfile_End
 
 
 
@@ -116,18 +117,24 @@ namespace GESS.Service.GradeCompoService
             // Check business rule (example: GradeComponent sum for a CategoryExam <= 100)
             var categoryExamSubjects = await _unitOfWork.CateExamSubRepository.GetAllCateExamSubBySubIdAsync(subjectId); // Await trước
             var totalGradeComponent = categoryExamSubjects
-                .Where(ces => ces.CategoryExamId == dto.CategoryExamId && (ces.CategoryExamId != categoryExamId || ces.SubjectId != subjectId))
                 .Sum(ces => ces.GradeComponent);
             if (totalGradeComponent + dto.GradeComponent > 100)
             {
-                throw new BusinessRuleException("Tổng thành phần điểm cho các bài thi không được vượt quá 100.");
+                throw new BusinessRuleException("Tổng thành phần điểm cho các bài thi không được vượt quá 100%.");
             }
 
             // Update entity
             entity.CategoryExamId = dto.CategoryExamId;
-            entity.SubjectId = dto.SubjectId;
             entity.GradeComponent = dto.GradeComponent;
 
+            await _unitOfWork.CateExamSubRepository.DeleteCateExamSubAsync(entity);
+            // Tạo entity mới với DTO
+            var newEntity = new CategoryExamSubject
+            {
+                SubjectId = subjectId,
+                CategoryExamId = dto.CategoryExamId,
+                GradeComponent = dto.GradeComponent,
+            };
             try
             {
                 await _unitOfWork.CateExamSubRepository.UpdateCateExamSubAsync(entity);

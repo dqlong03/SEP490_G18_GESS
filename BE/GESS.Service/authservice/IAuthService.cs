@@ -10,6 +10,7 @@ namespace GESS.Service.authservice
     public interface IAuthService
     {
         Task<LoginResult> LoginWithGoogleAsync(GoogleLoginModel model);
+        Task<GoogleLoginDesktopResult> LoginWithGoogleDesktopAsync(GoogleLoginModel model);
         Task<LoginResult> LoginAsync(LoginModel loginModel);
         Task<LoginResult> RefreshTokenAsync(string refreshToken);
         Task<bool> ResetPasswordAsync(ResetPasswordDTO model);
