@@ -1,6 +1,7 @@
 ﻿using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
 using GESS.Model.ExamSlotRoomDTO;
+using GESS.Model.MultiExamHistories;
 using GESS.Model.Student;
 using GESS.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
@@ -125,6 +126,82 @@ namespace GESS.Repository.Implement
 
         }
 
+        public async Task<MultipleExamDetail> GetMultiMidTermExamBySlotIdsAsync(Guid teacherId, int examId)
+        {
+            var multiExam = await _context.MultiExams
+                .Where(m => m.MultiExamId == examId && m.TeacherId == teacherId)
+                .Include(m => m.Subject)
+                .FirstOrDefaultAsync();
+            if (multiExam == null)
+                {
+                return null;
+            }
+            var students = await _context.MultiExamHistories
+                .Where(m => m.MultiExamId == multiExam.MultiExamId)
+                .Select(m => new StudentCheckIn
+                {
+                    Id = m.StudentId,
+                    IsCheckedIn = m.CheckIn == true ? 1 : 0,
+                    FullName = m.Student.User.Fullname,
+                    AvatarURL = m.Student.AvatarURL,
+                    Code = m.Student.User.Code
+                })
+                .ToListAsync();
+            if (students == null || !students.Any())
+            {
+                students = new List<StudentCheckIn>();
+            }
+            var multiExamDetail = new MultipleExamDetail
+            {
+                MultiExamId = multiExam.MultiExamId,
+                ExamName = multiExam.MultiExamName,
+                SubjectName = multiExam.Subject?.SubjectName ?? "N/A",
+                Status = multiExam.Status,
+                Duration = multiExam.Duration,
+                Category = multiExam.CategoryExam.CategoryExamName,
+                Students = students
+            };
+            return multiExamDetail;
+        }
+
+        public async Task<PraticeExamDetail> GetPracMidTermExamBySlotIdsAsync(Guid teacherId, int examId)
+        {
+            var pracExam = await _context.MultiExams
+               .Where(m => m.MultiExamId == examId && m.TeacherId == teacherId)
+               .Include(m => m.Subject)
+               .FirstOrDefaultAsync();
+            if (pracExam == null)
+            {
+                return null;
+            }
+            var students = await _context.MultiExamHistories
+                .Where(m => m.MultiExamId == pracExam.MultiExamId)
+                .Select(m => new StudentCheckIn
+                {
+                    Id = m.StudentId,
+                    IsCheckedIn = m.CheckIn == true ? 1 : 0,
+                    FullName = m.Student.User.Fullname,
+                    AvatarURL = m.Student.AvatarURL,
+                    Code = m.Student.User.Code
+                })
+                .ToListAsync();
+            if (students == null || !students.Any())
+            {
+                students = new List<StudentCheckIn>();
+            }
+            var pracExamDetail = new PraticeExamDetail
+            {
+                PracExamId = pracExam.MultiExamId,
+                ExamName = pracExam.MultiExamName,
+                SubjectName = pracExam.Subject?.SubjectName ?? "N/A",
+                Status = pracExam.Status,
+                Duration = pracExam.Duration,
+                Category = pracExam.CategoryExam.CategoryExamName,
+                Students = students
+            };
+            return pracExamDetail;
+        }
+
         public async Task<IEnumerable<StudentCheckIn>> GetStudentsByExamSlotIdAsync(int examSlotId)
         {
             var examSlotRoom = _context.ExamSlotRooms
@@ -165,6 +242,45 @@ namespace GESS.Repository.Implement
             return Enumerable.Empty<StudentCheckIn>();
         }
 
+        public async Task<bool> MidTermCheckInStudentAsync(int examId, Guid studentId, int examType)
+        {
+            if (examType == 1)
+            {
+                var examHistory = await _context.MultiExamHistories
+                    .FirstOrDefaultAsync(m => m.MultiExamId == examId && m.StudentId == studentId);
+
+                if (examHistory == null)
+                {
+                    return false;
+                }
+
+                // Đánh dấu đã check-in
+                examHistory.CheckIn = true;
+
+                _context.MultiExamHistories.Update(examHistory);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            else
+            {
+                var examHistory = await _context.PracticeExamHistories
+                    .FirstOrDefaultAsync(m => m.PracExamId == examId && m.StudentId == studentId);
+
+                if (examHistory == null)
+                {
+                    return false;
+                }
+
+                // Đánh dấu đã check-in
+                examHistory.CheckIn = true;
+
+                _context.PracticeExamHistories.Update(examHistory);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            return false;
+        }
+
         public async Task<bool> RefreshExamCodeAsync(int examSlotId, string codeStart)
         {
             var examSlotRoom = await _context.ExamSlotRooms
@@ -188,6 +304,33 @@ namespace GESS.Repository.Implement
             {
                 var practiceExam = await _context.PracticeExams
                     .FirstOrDefaultAsync(p => p.PracExamId == examSlotRoom.PracticeExamId);
+                if (practiceExam != null)
+                {
+                    practiceExam.CodeStart = codeStart;
+                    _context.PracticeExams.Update(practiceExam);
+                    return await _context.SaveChangesAsync().ContinueWith(t => true);
+                }
+            }
+            return await Task.FromResult(false);
+        }
+
+        public async Task<bool> RefreshMidTermExamCodeAsync(int examId, int examType, string codeStart)
+        {
+           if (examType == 1)
+            {
+                var multiExam = await _context.MultiExams
+                    .FirstOrDefaultAsync(m => m.MultiExamId == examId);
+                if (multiExam != null)
+                {
+                    multiExam.CodeStart = codeStart;
+                    _context.MultiExams.Update(multiExam);
+                    return await _context.SaveChangesAsync().ContinueWith(t => true);
+                }
+            }
+            else if (examType == 2)
+            {
+                var practiceExam = await _context.PracticeExams
+                    .FirstOrDefaultAsync(p => p.PracExamId == examId);
                 if (practiceExam != null)
                 {
                     practiceExam.CodeStart = codeStart;
