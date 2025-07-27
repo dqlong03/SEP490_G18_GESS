@@ -17,7 +17,7 @@ namespace GESS.Api.Controllers
         {
             _gradeScheduleService = gradeScheduleService;
         }
-        //API to get all exam need grade by teacher id paggiation
+        //API to get all exam need grade by teacher id
         [HttpGet("teacher/{teacherId}")]
         public async Task<IActionResult> GetExamNeedGradeByTeacherIdMidTermAsync(Guid teacherId, int classID, int semesterId, int year, int pagesze, int pageindex)
         {
