@@ -23,6 +23,18 @@ namespace GESS.Service.gradeSchedule
             _unitOfWork = unitOfWork;
         }
 
+
+
+        //------------------
+        public async Task<ExamSlotRoomGradingInfoDTO> GetGradingInfoByExamSlotRoomIdAsync(int examSlotRoomId)
+        {
+            // Chỉ gọi repository, không xử lý logic ở service
+            return await _unitOfWork.GradeScheduleRepository.GetGradingInfoByExamSlotRoomIdAsync(examSlotRoomId);
+        }
+
+
+
+
         public async Task<int> CountExamNeedGradeByTeacherIdAsync(Guid teacherId, int? subjectId, int? statusExam, int? semesterId, int? year, int? pagesze, int? pageindex)
         {
             return await _unitOfWork.GradeScheduleRepository.CountExamNeedGradeByTeacherIdAsync(

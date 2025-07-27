@@ -25,6 +25,55 @@ namespace GESS.Repository.Implement
             _context = context;
         }
 
+
+        //
+        public async Task<ExamSlotRoomGradingInfoDTO> GetGradingInfoByExamSlotRoomIdAsync(int examSlotRoomId)
+        {
+            var examSlotRoom = await _context.ExamSlotRooms
+                .Include(e => e.ExamSlot)
+                .Include(e => e.Subject)
+                .FirstOrDefaultAsync(e => e.ExamSlotRoomId == examSlotRoomId);
+
+            if (examSlotRoom == null) return null;
+
+            // Nếu là bài thi tự luận
+            if (examSlotRoom.PracticeExamId.HasValue)
+            {
+                var practiceExam = await _context.PracticeExams
+                    .FirstOrDefaultAsync(p => p.PracExamId == examSlotRoom.PracticeExamId.Value);
+
+                var students = await _context.PracticeExamHistories
+                    .Where(h => h.ExamSlotRoomId == examSlotRoomId)
+                    .Select(h => new StudentGradingDTO
+                    {
+                        PracticeExamHistoryId = h.PracExamHistoryId,
+                        StudentId = h.StudentId,
+                        StudentCode = h.Student.User.Code,
+                        FullName = h.Student.User.Fullname,
+                        IsGraded = h.IsGraded ? 1 : 0,
+                        Score = h.Score
+                    }).ToListAsync();
+
+                return new ExamSlotRoomGradingInfoDTO
+                {
+                    ExamSlotRoomId = examSlotRoomId,
+                    ExamName = practiceExam.PracExamName,
+                    Duration = practiceExam.Duration,
+                    StartDay = practiceExam.StartDay ?? DateTime.MinValue, // hoặc practiceExam.StartDay.Value nếu chắc chắn không null
+                    SlotName = examSlotRoom.ExamSlot.SlotName,
+                    SubjectName = examSlotRoom.Subject.SubjectName,
+                    Students = students
+                };
+            }
+
+            // Có thể xử lý MultiExamId tương tự ở đây
+
+            return null;
+        }
+
+
+
+
         public async Task<int> CountExamNeedGradeByTeacherIdAsync(
           Guid teacherId,
           int? subjectId,

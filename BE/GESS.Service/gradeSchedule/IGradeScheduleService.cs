@@ -1,5 +1,6 @@
 ﻿using GESS.Entity.Entities;
 using GESS.Model.Chapter;
+using GESS.Model.ExamSlotRoomDTO;
 using GESS.Model.GradeSchedule;
 using GESS.Model.PracticeTestQuestions;
 using GESS.Model.QuestionPracExam;
@@ -24,5 +25,10 @@ namespace GESS.Service.gradeSchedule
         Task<IEnumerable<StudentGradeDTO>> GetStudentsInExamNeedGradeMidTermAsync(Guid teacherId, int classID, int ExamType);
         Task<StudentSubmission> GetSubmissionOfStudentInExamNeedGradeMidTerm(Guid teacherId, int examId, Guid studentId);
         Task<StudentSubmissionMultiExam> GetSubmissionOfStudentInExamNeedGradeMidTermMulti(Guid teacherId, int examId, Guid studentId);
+
+        //
+        Task<ExamSlotRoomGradingInfoDTO> GetGradingInfoByExamSlotRoomIdAsync(int examSlotRoomId);
+
+
     }
 }

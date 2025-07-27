@@ -17,6 +17,20 @@ namespace GESS.Api.Controllers
         {
             _gradeScheduleService = gradeScheduleService;
         }
+
+
+        //API to get grading info by exam slot room id
+        [HttpGet("examslotroom/{examSlotRoomId}/grading-info")]
+        public async Task<IActionResult> GetGradingInfo(int examSlotRoomId)
+        {
+            var result = await _gradeScheduleService.GetGradingInfoByExamSlotRoomIdAsync(examSlotRoomId);
+            if (result == null)
+                return NotFound("Không tìm thấy thông tin ca thi hoặc bài thi.");
+            return Ok(result);
+        }
+
+
+
         //API to get all exam need grade by teacher id paggiation
         [HttpGet("teacher")]
         public async Task<IActionResult> GetExamNeedGradeByTeacherId(
