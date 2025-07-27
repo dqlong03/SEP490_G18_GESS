@@ -23,6 +23,19 @@ namespace GESS.Service.gradeSchedule
             _unitOfWork = unitOfWork;
         }
 
+        public async Task<bool> ChangeStatusGraded(Guid teacherId, int examId)
+        {
+            bool result = await _unitOfWork.GradeScheduleRepository.ChangeStatusGraded(teacherId, examId);
+            if (result)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         public async Task<int> CountExamNeedGradeByTeacherIdAsync(Guid teacherId, int? subjectId, int? statusExam, int? semesterId, int? year, int? pagesze, int? pageindex)
         {
             return await _unitOfWork.GradeScheduleRepository.CountExamNeedGradeByTeacherIdAsync(
@@ -99,7 +112,7 @@ namespace GESS.Service.gradeSchedule
             return submissions;
         }
 
-        public async Task<bool> GradeSubmission(Guid teacherId, int examId, Guid studentId, QuestionPracExamDTO questionPracExamDTO)
+        public async Task<bool> GradeSubmission(Guid teacherId, int examId, Guid studentId, QuestionPracExamGradeDTO questionPracExamDTO)
         {
            var result = await _unitOfWork.GradeScheduleRepository.GradeSubmission(teacherId, examId, studentId, questionPracExamDTO);
             if (result)
