@@ -1,6 +1,7 @@
 ﻿using GESS.Entity.Entities;
 using GESS.Model.Major;
 using GESS.Model.MultipleExam;
+using GESS.Model.Subject;
 using GESS.Model.TrainingProgram;
 using System;
 using System.Collections.Generic;
@@ -16,6 +17,8 @@ namespace GESS.Service.multipleExam
         Task<ExamInfoResponseDTO> CheckExamNameAndCodeMEAsync(CheckExamRequestDTO request);
         Task<UpdateMultiExamProgressResponseDTO> UpdateProgressAsync(UpdateMultiExamProgressDTO dto);
         Task<SubmitExamResponseDTO> SubmitExamAsync(UpdateMultiExamProgressDTO dto);
+
+        Task<List<SubjectListDTO>> GetSubjectsByTeacherIdAsync(Guid teacherId);
 
     }
 }

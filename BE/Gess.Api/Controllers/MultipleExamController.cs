@@ -134,5 +134,13 @@ namespace GESS.Api.Controllers
                 return BadRequest(ex.Message);
             }
         }
+
+        [HttpGet("subjects-by-teacher/{teacherId}")]
+        public async Task<IActionResult> GetSubjectsByTeacher(Guid teacherId)
+        {
+            var subjects = await _multipleExamService.GetSubjectsByTeacherIdAsync(teacherId);
+            return Ok(subjects);
+        }
+
     }
 } 

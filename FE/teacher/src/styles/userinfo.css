@@ -1,0 +1,14 @@
+/* Fade-in animation */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Apply fade-in effect to elements */
+.fadeIn {
+  animation: fadeIn 1.5s ease-out forwards;
+}

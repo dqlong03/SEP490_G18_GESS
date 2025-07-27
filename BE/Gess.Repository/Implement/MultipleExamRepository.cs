@@ -5,6 +5,7 @@ using GESS.Entity.Entities;
 using GESS.Model.MultiExamHistories;
 using GESS.Model.MultipleExam;
 using GESS.Model.NoQuestionInChapter;
+using GESS.Model.Subject;
 using GESS.Model.TrainingProgram;
 using GESS.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,24 @@ namespace GESS.Repository.Implement
         {
             _context = context;
         }
+
+
+
+        public async Task<List<SubjectListDTO>> GetSubjectsByTeacherIdAsync(Guid teacherId)
+        {
+            var subjects = await _context.Classes
+              .Where(c => c.TeacherId == teacherId)
+              .Select(c => new SubjectListDTO
+              {
+                  SubjectId = c.Subject.SubjectId,
+                  SubjectName = c.Subject.SubjectName
+              })
+              .Distinct()
+              .ToListAsync();
+            return subjects;
+        }
+
+
 
         // Helper: Validate có đủ câu hỏi để tạo đề
         private async Task ValidateQuestionAvailability(ICollection<NoQuestionInChapterDTO> questionConfigs)

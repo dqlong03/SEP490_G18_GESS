@@ -25,21 +25,68 @@ namespace GESS.Repository.Implement
             _context = context;
         }
 
-        public async Task<int> CountExamNeedGradeByTeacherIdAsync(Guid teacherId, int subjectId, int statusExam, int semesterId, int year, int pagesze)
+        public async Task<int> CountExamNeedGradeByTeacherIdAsync(
+          Guid teacherId,
+          int? subjectId,
+          int? statusExam,
+          int? semesterId,
+          int? year,
+          int? pagesze,
+          int? pageindex)
         {
-            int pageNumber = _context.ExamSlotRooms
-                .Where(e => e.ExamGradedId == teacherId && e.SubjectId == subjectId && e.IsGraded == statusExam && e.SemesterId == semesterId && e.PracticeExam.StartDay.HasValue && e.PracticeExam.StartDay.Value.Year == year)
-                .Count();
-            pageNumber = (int)Math.Ceiling((double)pageNumber / pagesze);
-            return await Task.FromResult(pageNumber);
+            int pageSize = pagesze ?? 10;
+
+            var query = _context.ExamSlotRooms
+                .Where(e => e.ExamGradedId == teacherId);
+
+            if (subjectId.HasValue)
+                query = query.Where(e => e.SubjectId == subjectId);
+
+            if (statusExam.HasValue)
+                query = query.Where(e => e.IsGraded == statusExam);
+
+            if (semesterId.HasValue)
+                query = query.Where(e => e.SemesterId == semesterId);
+
+            if (year.HasValue)
+                query = query.Where(e => e.PracticeExam.StartDay.HasValue && e.PracticeExam.StartDay.Value.Year == year);
+
+            int totalCount = await query.CountAsync();
+            int pageNumber = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            return pageNumber;
         }
 
-        public async Task<IEnumerable<ExamNeedGrade>> GetExamNeedGradeByTeacherIdAsync(Guid teacherId, int subjectId, int statusExam, int semesterId, int year, int pagesze, int pageindex)
+        public async Task<IEnumerable<ExamNeedGrade>> GetExamNeedGradeByTeacherIdAsync(
+          Guid teacherId,
+          int? subjectId,
+          int? statusExam,
+          int? semesterId,
+          int? year,
+          int? pagesze,
+          int? pageindex)
         {
-            var exams = await _context.ExamSlotRooms
-                .Where(e => e.ExamGradedId == teacherId && e.SubjectId == subjectId && e.IsGraded == statusExam && e.SemesterId == semesterId && e.PracticeExam.StartDay.HasValue && e.PracticeExam.StartDay.Value.Year == year)
-                .Skip((pageindex - 1) * pagesze)
-                .Take(pagesze)
+            int pageSize = pagesze ?? 10;
+            int pageIndex = pageindex ?? 1;
+
+            var query = _context.ExamSlotRooms
+                .Where(e => e.ExamGradedId == teacherId);
+
+            if (subjectId.HasValue)
+                query = query.Where(e => e.SubjectId == subjectId);
+
+            if (statusExam.HasValue)
+                query = query.Where(e => e.IsGraded == statusExam);
+
+            if (semesterId.HasValue)
+                query = query.Where(e => e.SemesterId == semesterId);
+
+            if (year.HasValue)
+                query = query.Where(e => e.PracticeExam.StartDay.HasValue && e.PracticeExam.StartDay.Value.Year == year);
+
+            var exams = await query
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize)
                 .Select(e => new ExamNeedGrade
                 {
                     ExamSlotRoomId = e.ExamSlotRoomId,
@@ -51,12 +98,14 @@ namespace GESS.Repository.Implement
                     IsGrade = e.IsGraded,
                 })
                 .ToListAsync();
+
             if (exams == null || !exams.Any())
             {
                 return Enumerable.Empty<ExamNeedGrade>();
             }
             return exams;
         }
+
 
         public async Task<IEnumerable<ExamNeedGradeMidTerm>> GetExamNeedGradeByTeacherIdMidTermAsync(
             Guid teacherId, int classID, int semesterId, int year, int pagesize, int pageindex)
@@ -98,6 +147,7 @@ namespace GESS.Repository.Implement
             var result = await combinedQuery.ToListAsync();
             return result;
         }
+
 
 
 

@@ -70,7 +70,8 @@ namespace GESS.Repository.Implement
                 var answer = new PracticeAnswer
                 {
                     AnswerContent = mq.Criteria,
-                    PracticeQuestionId = pq.PracticeQuestionId
+                    PracticeQuestionId = pq.PracticeQuestionId,
+                    GradingCriteria = mq.Criteria
                 };
                 _context.PracticeAnswers.Add(answer);
             }
@@ -119,9 +120,12 @@ namespace GESS.Repository.Implement
         }
 
 
-        public async Task<IEnumerable<PracticeExamPaper>> GetAllPracticeExamPapersAsync(int? subjectId, int? categoryId, Guid? teacherId)
+        public async Task<IEnumerable<PracticeExamPaper>> GetAllPracticeExamPapersAsync(
+        int? subjectId, int? categoryId, Guid? teacherId, int? semesterId, string? year)
         {
-            var query = _context.PracticeExamPapers.AsQueryable();
+            var query = _context.PracticeExamPapers
+                .Include(p => p.Semester) // Lấy luôn thông tin học kỳ
+                .AsQueryable();
 
             if (subjectId.HasValue)
                 query = query.Where(p => p.SubjectId == subjectId.Value);
@@ -132,9 +136,16 @@ namespace GESS.Repository.Implement
             if (teacherId.HasValue && teacherId.Value != Guid.Empty)
                 query = query.Where(p => p.TeacherId == teacherId.Value);
 
+            if (semesterId.HasValue)
+                query = query.Where(p => p.SemesterId == semesterId.Value);
+
+            if (!string.IsNullOrWhiteSpace(year))
+                query = query.Where(p => p.CreateAt.Year.ToString() == year);
+
             var practiceExamPapers = await query.ToListAsync();
             return practiceExamPapers;
         }
+
 
         public async Task<List<ExamPaperListDTO>> GetAllExamPaperListAsync(
             string? searchName = null,

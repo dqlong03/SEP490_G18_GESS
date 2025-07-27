@@ -10,5 +10,7 @@ namespace GESS.Model.PracticeExamPaper
     {
         public int PracExamPaperId { get; set; }
         public string PracExamPaperName { get; set; }
+        public string Year { get; set; }
+        public string Semester { get; set; }
     }
 }
