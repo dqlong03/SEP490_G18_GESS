@@ -21,10 +21,11 @@ namespace GESS.Service.gradeSchedule
         Task<IEnumerable<StudentGradeDTO>> GetStudentsInExamNeedGradeAsync(Guid teacherId, int examId);
         Task<StudentSubmission> GetSubmissionOfStudentInExamNeedGradeAsync(Guid teacherId, int examId, Guid studentId);
         Task<IEnumerable<ExamNeedGradeMidTerm>> GetExamNeedGradeByTeacherIdMidTermAsync(Guid teacherId, int subjectId, int semesterId, int year, int pagesze, int pageindex);
-        Task<bool> GradeSubmission(Guid teacherId, int examId, Guid studentId, QuestionPracExamDTO questionPracExamDTO);
+        Task<bool> GradeSubmission(Guid teacherId, int examId, Guid studentId, QuestionPracExamGradeDTO questionPracExamDTO);
         Task<IEnumerable<StudentGradeDTO>> GetStudentsInExamNeedGradeMidTermAsync(Guid teacherId, int classID, int ExamType);
         Task<StudentSubmission> GetSubmissionOfStudentInExamNeedGradeMidTerm(Guid teacherId, int examId, Guid studentId);
         Task<StudentSubmissionMultiExam> GetSubmissionOfStudentInExamNeedGradeMidTermMulti(Guid teacherId, int examId, Guid studentId);
+        Task<bool> ChangeStatusGraded(Guid teacherId, int examId);
 
         //
         Task<ExamSlotRoomGradingInfoDTO> GetGradingInfoByExamSlotRoomIdAsync(int examSlotRoomId);

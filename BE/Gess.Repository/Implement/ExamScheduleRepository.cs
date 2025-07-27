@@ -131,6 +131,7 @@ namespace GESS.Repository.Implement
             var multiExam = await _context.MultiExams
                 .Where(m => m.MultiExamId == examId && m.TeacherId == teacherId)
                 .Include(m => m.Subject)
+                .Include(m => m.CategoryExam)
                 .FirstOrDefaultAsync();
             if (multiExam == null)
                 {
@@ -161,6 +162,10 @@ namespace GESS.Repository.Implement
                 Category = multiExam.CategoryExam.CategoryExamName,
                 Students = students
             };
+            if (multiExamDetail == null)
+            {
+                multiExamDetail = new MultipleExamDetail();
+            }
             return multiExamDetail;
         }
 
@@ -169,6 +174,7 @@ namespace GESS.Repository.Implement
             var pracExam = await _context.MultiExams
                .Where(m => m.MultiExamId == examId && m.TeacherId == teacherId)
                .Include(m => m.Subject)
+               .Include(m => m.CategoryExam)
                .FirstOrDefaultAsync();
             if (pracExam == null)
             {

@@ -197,9 +197,6 @@ namespace GESS.Repository.Implement
             return result;
         }
 
-
-
-
         public async Task<IEnumerable<StudentGradeDTO>> GetStudentsInExamNeedGradeAsync(Guid teacherId, int examId)
         {
             var students = await _context.ExamSlotRooms
@@ -221,9 +218,9 @@ namespace GESS.Repository.Implement
                 var isGrade = _context.PracticeExamHistories
                     .Where(p => p.StudentId == students[i].Id && p.PracticeExam.PracExamId == examId)
                     .FirstOrDefault();
-                if (isGrade.IsGraded == null|| isGrade.IsGraded)
+                if (isGrade.IsGraded == null || isGrade.IsGraded)
                 {
-                    students[i].IsGraded = 0; 
+                    students[i].IsGraded = 0;
                     students[i].Grade = null;
                 }
                 else
@@ -231,7 +228,7 @@ namespace GESS.Repository.Implement
                     students[i].IsGraded = 1;
                     students[i].Grade = isGrade.Score;
                 }
-            }  
+            }
             return students;
         }
 
@@ -287,13 +284,13 @@ namespace GESS.Repository.Implement
         public async Task<StudentSubmission> GetSubmissionOfStudentInExamNeedGradeAsync(Guid teacherId, int examId, Guid studentId)
         {
             var submissions = await _context.PracticeExamHistories
-                .Where(p => p.StudentId == studentId && p.PracticeExam.PracExamId == examId)
+                .Where(p => p.StudentId == studentId && p.PracticeExam.ExamSlotRoom.ExamSlotRoomId == examId)
                 .Select(p => new StudentSubmission
                 {
-                   PracExamHistoryId = p.PracExamHistoryId,
-                   StudentId = p.StudentId,
-                   StudentCode = p.Student.User.Code,
-                   FullName = p.Student.User.Fullname,
+                    PracExamHistoryId = p.PracExamHistoryId,
+                    StudentId = p.StudentId,
+                    StudentCode = p.Student.User.Code,
+                    FullName = p.Student.User.Fullname,
 
                 }).FirstOrDefaultAsync();
             if (submissions == null)
@@ -305,7 +302,7 @@ namespace GESS.Repository.Implement
                 .Select(q => new QuestionPracExamDTO
                 {
                     PracticeQuestionId = q.PracticeQuestionId,
-                    QuestionContent= q.PracticeQuestion.Content,
+                    QuestionContent = q.PracticeQuestion.Content,
                     Answer = q.Answer,
                     Score = q.PracticeExamHistory.PracticeExamPaper.PracticeTestQuestions
                     .Where(ptq => ptq.PracticeQuestionId == q.PracticeQuestionId)
@@ -386,7 +383,7 @@ namespace GESS.Repository.Implement
             submissions.QuestionPracExamDTO = questions;
             return submissions;
         }
-        public async Task<bool> GradeSubmission(Guid teacherId, int examId, Guid studentId, QuestionPracExamDTO questionPracExamDTO)
+        public async Task<bool> GradeSubmission(Guid teacherId, int examId, Guid studentId, QuestionPracExamGradeDTO questionPracExamDTO)
         {
             // Tìm bài làm của học sinh trong đề thi
             var submission = await _context.PracticeExamHistories
@@ -419,5 +416,18 @@ namespace GESS.Repository.Implement
             return true;
         }
 
+        public async Task<bool> ChangeStatusGraded(Guid teacherId, int examId)
+        {
+            var pracMidTerm = await _context.PracticeExams
+                .FirstOrDefaultAsync(p => p.TeacherId == teacherId && p.PracExamId == examId);
+            if (pracMidTerm == null)
+            {
+                return false;
+            }
+            pracMidTerm.IsGraded = 1;
+            _context.PracticeExams.Update(pracMidTerm);
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }

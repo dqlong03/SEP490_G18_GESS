@@ -94,7 +94,7 @@ namespace GESS.Api.Controllers
         }
         //API to save grade for student by teacher id and exam id and student id and questionId
         [HttpPost("teacher/{teacherId}/exam/{examId}/student/{studentId}/grade")]
-        public async Task<IActionResult> SaveGradeForStudent(Guid teacherId, int examId, Guid studentId, [FromBody] QuestionPracExamDTO questionPracExamDTO)
+        public async Task<IActionResult> SaveGradeForStudent(Guid teacherId, int examId, Guid studentId, [FromBody] QuestionPracExamGradeDTO questionPracExamDTO)
         {
             if (questionPracExamDTO == null|| questionPracExamDTO.GradedScore<0)
             {
