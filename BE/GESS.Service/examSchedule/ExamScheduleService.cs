@@ -2,6 +2,7 @@
 using GESS.Entity.Entities;
 using GESS.Model.Chapter;
 using GESS.Model.ExamSlotRoomDTO;
+using GESS.Model.MultiExamHistories;
 using GESS.Model.Student;
 using GESS.Model.Subject;
 using System;
@@ -61,6 +62,26 @@ namespace GESS.Service.examSchedule
             return examScheduleDtos;
         }
 
+        public async Task<MultipleExamDetail> GetMultiMidTermExamBySlotIdsAsync(Guid teacherId, int examId)
+        {
+            var examDetails = await _unitOfWork.ExamScheduleRepository.GetMultiMidTermExamBySlotIdsAsync(teacherId, examId);
+            if (examDetails == null)
+            {
+                return null;
+            }
+            return examDetails;
+        }
+
+        public async Task<PraticeExamDetail> GetPracMidTermExamBySlotIdsAsync(Guid teacherId, int examId)
+        {
+            var examDetails = await _unitOfWork.ExamScheduleRepository.GetPracMidTermExamBySlotIdsAsync(teacherId, examId);
+            if (examDetails == null)
+            {
+                return null;
+            }
+            return examDetails;
+        }
+
         public async Task<IEnumerable<StudentCheckIn>> GetStudentsByExamSlotIdAsync(int examSlotId)
         {
             var students = await _unitOfWork.ExamScheduleRepository.GetStudentsByExamSlotIdAsync(examSlotId);
@@ -69,6 +90,11 @@ namespace GESS.Service.examSchedule
                 return new List<StudentCheckIn>();
             }
             return students;
+        }
+
+        public async Task<bool> MidTermCheckInStudentAsync(int examId, Guid studentId, int examType)
+        {
+            return await _unitOfWork.ExamScheduleRepository.MidTermCheckInStudentAsync(examId, studentId, examType);
         }
 
         public async Task<string> RefreshExamCodeAsync(int examSlotId)
@@ -85,6 +111,22 @@ namespace GESS.Service.examSchedule
                 throw new Exception("Failed to refresh exam code. Please try again.");
             }
         }
+
+        public async Task<string> RefreshMidTermExamCodeAsync(int examId, int examType)
+        {
+            //random codestart 000000 to 999999
+            var codeStart = new Random().Next(0, 1000000).ToString("D6");
+            var isUpdated = await _unitOfWork.ExamScheduleRepository.RefreshMidTermExamCodeAsync(examId, examType, codeStart);
+            if (isUpdated)
+            {
+                return codeStart;
+            }
+            else
+            {
+                throw new Exception("Failed to refresh exam code. Please try again.");
+            }
+        }
+
     }
 
 }

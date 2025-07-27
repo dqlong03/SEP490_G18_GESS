@@ -17,7 +17,7 @@ namespace GESS.Api.Controllers
         {
             _gradeScheduleService = gradeScheduleService;
         }
-        //API to get all exam need grade by teacher id paggiation
+        //API to get all exam need grade by teacher id 
         [HttpGet("teacher/{teacherId}")]
         public async Task<IActionResult> GetExamNeedGradeByTeacherIdMidTermAsync(Guid teacherId, int classID, int semesterId, int year, int pagesze, int pageindex)
         {
@@ -70,7 +70,7 @@ namespace GESS.Api.Controllers
 
         //API to save grade for student by teacher id and exam id and student id and questionId
         [HttpPost("teacher/{teacherId}/exam/{examId}/student/{studentId}/grade")]
-        public async Task<IActionResult> SaveGradeForStudent(Guid teacherId, int examId, Guid studentId, [FromBody] QuestionPracExamDTO questionPracExamDTO)
+        public async Task<IActionResult> SaveGradeForStudent(Guid teacherId, int examId, Guid studentId, [FromBody] QuestionPracExamGradeDTO questionPracExamDTO)
         {
             if (questionPracExamDTO == null|| questionPracExamDTO.GradedScore<0)
             {
@@ -82,6 +82,18 @@ namespace GESS.Api.Controllers
                 return NotFound("No submission found for the specified student in the exam.");
             }
             return Ok("Grade saved successfully.");
+        }
+        //API to change isGraded status of practiceExam
+        [HttpPost("teacher/{teacherId}/exam/{examId}/changeIsGraded")]
+        public async Task<IActionResult> ChangeIsGradedStatus(Guid teacherId, int examId, Guid studentId)
+        {
+            var submission = await _gradeScheduleService.ChangeStatusGraded(teacherId, examId);
+            if (!submission)
+            {
+                return NotFound("No submission found for the specified exam or student, or the status could not be updated.");
+            }
+
+            return Ok("Submission status updated successfully.");
         }
     }
 }

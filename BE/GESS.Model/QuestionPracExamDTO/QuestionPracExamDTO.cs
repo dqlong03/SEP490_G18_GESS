@@ -16,6 +16,12 @@ namespace GESS.Model.QuestionPracExam
         public double GradedScore { get; set; }
         public string? GradingCriteria { get; set; }
     }
+    public class QuestionPracExamGradeDTO
+    {
+        public Guid PracExamHistoryId { get; set; }
+        public int PracticeQuestionId { get; set; }
+        public double GradedScore { get; set; }
+    }
     public class QuestionMultiExamDTO
     {
         public Guid MultiExamHistoryId { get; set; }

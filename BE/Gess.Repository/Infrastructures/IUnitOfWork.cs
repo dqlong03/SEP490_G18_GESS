@@ -1,6 +1,7 @@
 ﻿using GESS.Entity.Base;
 using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
+using GESS.Model.Subject;
 using GESS.Repository.Implement;
 using GESS.Repository.Interface;
 using GESS.Repository.refreshtoken;
@@ -54,6 +55,7 @@ namespace Gess.Repository.Infrastructures
 
         IExamScheduleRepository ExamScheduleRepository { get; }
         IExamSlotRepository ExamSlotRepository { get; }
+        IAssignGradeCreateExamRepository AssignGradeCreateExamRepository { get; }
         IGradeScheduleRepository GradeScheduleRepository { get; }
         UserManager<User> UserManager { get; }
         RoleManager<IdentityRole<Guid>> RoleManager { get; }

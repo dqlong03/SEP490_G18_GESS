@@ -50,6 +50,7 @@ namespace GESS.Entity.Contexts
         public DbSet<Cohort> Cohorts { get; set; }
         public DbSet<ApplyTrainingProgram> ApplyTrainingPrograms { get; set; }
         public DbSet<StudentExamSlotRoom> StudentExamSlotRoom { get; set; }
+        public DbSet<SubjectTeacher> SubjectTeachers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -79,7 +80,7 @@ namespace GESS.Entity.Contexts
             modelBuilder.ApplyConfiguration(new ExamSlotConfig());
             modelBuilder.ApplyConfiguration(new MultiExamHistoryConfig());
             modelBuilder.ApplyConfiguration(new PracticeExamHistoryConfig());
-            //modelBuilder.ApplyConfiguration(new MajorTeacherConfig());
+            modelBuilder.ApplyConfiguration(new SubjectTeacherConfig());
             modelBuilder.ApplyConfiguration(new ClassStudentConfig());
             modelBuilder.ApplyConfiguration(new ApplyTrainingProgramConfig());
             modelBuilder.ApplyConfiguration(new SubjectTrainingProgramConfig());

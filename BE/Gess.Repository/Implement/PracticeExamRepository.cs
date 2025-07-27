@@ -38,7 +38,7 @@ namespace GESS.Repository.Implement
                 CategoryExamId = practiceExamCreateDto.CategoryExamId,
                 SemesterId = practiceExamCreateDto.SemesterId,
                 ClassId = practiceExamCreateDto.ClassId,
-                Status = practiceExamCreateDto.Status,
+                Status = practiceExamCreateDto.Status==null ? "Chưa mở ca" : practiceExamCreateDto.Status,
             };
             try
             {
