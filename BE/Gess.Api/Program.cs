@@ -13,6 +13,7 @@ using GESS.Repository.Implement;
 using GESS.Repository.Interface;
 using GESS.Repository.refreshtoken;
 using GESS.Service;
+using GESS.Service.assignGradeCreateExam;
 using GESS.Service.authservice;
 using GESS.Service.categoryExam;
 using GESS.Service.chapter;
@@ -20,11 +21,10 @@ using GESS.Service.cloudinary;
 using GESS.Service.email;
 using GESS.Service.exam;
 using GESS.Service.examination;
-using GESS.Service.examination;
-using GESS.Service.examination;
 using GESS.Service.examSchedule;
 using GESS.Service.examSlotService;
 using GESS.Service.GradeCompoService;
+using GESS.Service.gradeSchedule;
 using GESS.Service.levelquestion;
 using GESS.Service.major;
 using GESS.Service.multianswer;
@@ -37,11 +37,8 @@ using GESS.Service.practicequestion;
 using GESS.Service.room;
 using GESS.Service.semesters;
 using GESS.Service.student;
-using GESS.Service.student;
-using GESS.Service.subject;
 using GESS.Service.subject;
 using GESS.Service.teacher;
-using GESS.Service.trainingProgram;
 using GESS.Service.trainingProgram;
 using GESS.Service.users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -51,24 +48,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Security.Claims;
 using System.Text;
-
-using GESS.Service.practiceExamPaper;
-using GESS.Service.levelquestion;
-using GESS.Service.practicequestion;
-
-using GESS.Service.subject;
-using GESS.Service.trainingProgram;
-using GESS.Service.examination;
-using GESS.Service.student;
-using GESS.Service.exam;
-using GESS.Service.room;
-using GESS.Service.multianswer;
-using GESS.Service.practiceExam;
-using GESS.Service.examSchedule;
-using GESS.Service.examSlotService;
-using CloudinaryDotNet;
-using GESS.Service.cloudinary;
-using GESS.Service.gradeSchedule;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -170,7 +149,7 @@ builder.Services.AddScoped<IExamService, GESS.Service.exam.ExamService>();
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<ILevelQuestionService, LevelQuestionService>();
 builder.Services.AddScoped<IGradeScheduleService, GradeScheduleService>();
-
+builder.Services.AddScoped<IAssignGradeCreateExamService, AssignGradeCreateExamService>();
 
 // ThaiNH_Initialize_Begin
 builder.Services.AddScoped<ICateExamSubService, CateExamSubService>();
@@ -211,6 +190,7 @@ builder.Services.AddScoped<IMultipleAnswerRepository, MultiAnswerRepository>();
 builder.Services.AddScoped<IPracticeExamRepository, PracticeExamRepository>();
 builder.Services.AddScoped<IExamScheduleRepository, ExamScheduleRepository>();
 builder.Services.AddScoped<IExamSlotRepository, ExamSlotRepository>();
+builder.Services.AddScoped<IAssignGradeCreateExamRepository, AssignGradeCreateExamRepository>();
 
 // Đọc cấu hình Cloudinary từ appsettings.json
 var cloudinaryConfig = builder.Configuration.GetSection("Cloudinary");

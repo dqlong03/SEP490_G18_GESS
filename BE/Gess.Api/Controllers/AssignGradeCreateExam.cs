@@ -23,7 +23,7 @@ namespace GESS.Api.Controllers
                 {
                     return NotFound("No subjects found for the given teacher ID.");
                 }
-                return Ok(result);
+                return Ok(result.Result);
             }
             catch (Exception ex)
             {
@@ -62,7 +62,7 @@ namespace GESS.Api.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
-        //API to assign role craete exam to teacher
+        //API to assign role create exam to teacher
         [HttpPost("AssignRoleCreateExam")]
         public IActionResult AssignRoleCreateExam(Guid teacherId, int subjectId)
         {
