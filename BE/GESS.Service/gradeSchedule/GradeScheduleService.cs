@@ -23,6 +23,59 @@ namespace GESS.Service.gradeSchedule
             _unitOfWork = unitOfWork;
         }
 
+
+        //
+        public async Task<bool> MarkExamSlotRoomGradedAsync(int examSlotRoomId)
+        {
+            return await _unitOfWork.GradeScheduleRepository.MarkExamSlotRoomGradedAsync(examSlotRoomId);
+        }
+
+
+
+        //
+        public async Task<bool> MarkStudentExamGradedAsync(int examSlotRoomId, Guid studentId, double totalScore)
+        {
+            return await _unitOfWork.GradeScheduleRepository.MarkStudentExamGradedAsync(examSlotRoomId, studentId, Common.PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM, totalScore);
+        }
+
+
+
+        //
+        public async Task<int?> GetPracExamIdByHistoryIdAsync(Guid pracExamHistoryId)
+        {
+            return await _unitOfWork.GradeScheduleRepository.GetPracExamIdByHistoryIdAsync(pracExamHistoryId);
+        }
+
+        //
+        public async Task<object?> GetStudentExamDetailAsync(int examSlotRoomId, Guid studentId)
+        {
+            var pracExamHistory = await GetSubmissionOfStudentInExamNeedGradeAsync(Guid.Empty, examSlotRoomId, studentId);
+            if (pracExamHistory == null) return null;
+
+            var pracExamId = await GetPracExamIdByHistoryIdAsync(pracExamHistory.PracExamHistoryId);
+
+            return new
+            {
+                StudentId = pracExamHistory.StudentId,
+                StudentCode = pracExamHistory.StudentCode,
+                FullName = pracExamHistory.FullName,
+                PracExamId = pracExamId,
+                Questions = pracExamHistory.QuestionPracExamDTO.Select(q => new
+                {
+                    QuestionId = q.PracticeQuestionId,
+                    Content = q.QuestionContent,
+                    GradingCriteria = q.GradingCriteria,
+                    StudentAnswer = q.Answer,
+                    Score = q.GradedScore,
+                    PracticeExamHistoryId = pracExamHistory.PracExamHistoryId,
+                    PracticeQuestionId = q.PracticeQuestionId
+                }).ToList()
+            };
+        }
+
+
+
+
         public async Task<bool> ChangeStatusGraded(Guid teacherId, int examId)
         {
             bool result = await _unitOfWork.GradeScheduleRepository.ChangeStatusGraded(teacherId, examId);

@@ -5,6 +5,7 @@ using GESS.Service.examSlotService;
 using GESS.Service.gradeSchedule;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json.Linq;
 
 namespace GESS.Api.Controllers
 {
@@ -107,5 +108,50 @@ namespace GESS.Api.Controllers
             }
             return Ok("Grade saved successfully.");
         }
+
+       
+        [HttpGet("examslotroom/{examSlotRoomId}/student/{studentId}/exam-detail")]
+        public async Task<IActionResult> GetStudentExamDetail(int examSlotRoomId, Guid studentId)
+        {
+            var result = await _gradeScheduleService.GetStudentExamDetailAsync(examSlotRoomId, studentId);
+            if (result == null)
+                return NotFound("Không tìm thấy bài thi của sinh viên trong ca/phòng này.");
+            return Ok(result);
+        }
+
+        [HttpPost("examslotroom/{examSlotRoomId}/student/{studentId}/mark-graded")]
+        public async Task<IActionResult> MarkStudentExamGraded(int examSlotRoomId, Guid studentId)
+        {
+            // Đọc body và lấy totalScore
+            string body;
+            using (var reader = new StreamReader(Request.Body))
+            {
+                body = await reader.ReadToEndAsync();
+            }
+            if (string.IsNullOrWhiteSpace(body))
+                return BadRequest("Thiếu thông tin tổng điểm.");
+
+            var jObj = Newtonsoft.Json.Linq.JObject.Parse(body);
+            if (jObj["totalScore"] == null)
+                return BadRequest("Thiếu trường totalScore.");
+            double totalScore = jObj["totalScore"].Value<double>();
+
+            var success = await _gradeScheduleService.MarkStudentExamGradedAsync(examSlotRoomId, studentId, totalScore);
+            if (!success)
+                return NotFound("Không tìm thấy bài thi hoặc cập nhật thất bại.");
+            return Ok("Đã chuyển trạng thái chấm bài thành công và lưu điểm.");
+        }
+
+
+        [HttpPost("examslotroom/{examSlotRoomId}/mark-graded")]
+        public async Task<IActionResult> MarkExamSlotRoomGraded(int examSlotRoomId)
+        {
+            var success = await _gradeScheduleService.MarkExamSlotRoomGradedAsync(examSlotRoomId);
+            if (!success)
+                return NotFound("Không tìm thấy ca/phòng thi hoặc cập nhật thất bại.");
+            return Ok("Đã chuyển trạng thái chấm bài thành công cho ca/phòng thi.");
+        }
+
+
     }
 }

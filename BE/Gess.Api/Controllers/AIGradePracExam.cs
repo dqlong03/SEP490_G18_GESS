@@ -51,7 +51,7 @@ namespace GESS.Api.Controllers
 
             var body = new
             {
-                model = "gpt-3.5-turbo",
+                model = "gpt-4o-mini",
                 messages = new[]
                 {
             new { role = "user", content = prompt }
@@ -73,7 +73,26 @@ namespace GESS.Api.Controllers
 
             try
             {
-                var gradeResult = JsonConvert.DeserializeObject<EssayGradingResult>(output);
+                // Làm sạch output: loại bỏ phần ```json hoặc ``` nếu có
+                var cleanedOutput = output.Trim();
+                if (cleanedOutput.StartsWith("```"))
+                {
+                    int firstBrace = cleanedOutput.IndexOf('{');
+                    int lastBrace = cleanedOutput.LastIndexOf('}');
+                    if (firstBrace >= 0 && lastBrace > firstBrace)
+                    {
+                        cleanedOutput = cleanedOutput.Substring(firstBrace, lastBrace - firstBrace + 1);
+                    }
+                }
+
+                // Nếu vẫn còn ký tự thừa, dùng Regex lấy đoạn JSON đầu tiên
+                var match = System.Text.RegularExpressions.Regex.Match(cleanedOutput, @"\{[\s\S]*\}");
+                if (match.Success)
+                {
+                    cleanedOutput = match.Value;
+                }
+
+                var gradeResult = JsonConvert.DeserializeObject<EssayGradingResult>(cleanedOutput);
                 return Ok(gradeResult);
             }
             catch (Exception ex)

@@ -27,6 +27,38 @@ namespace GESS.Repository.Implement
 
 
         //
+        public async Task<bool> MarkExamSlotRoomGradedAsync(int examSlotRoomId)
+        {
+            var examSlotRoom = await _context.ExamSlotRooms.FindAsync(examSlotRoomId);
+            if (examSlotRoom == null)
+                return false;
+
+            examSlotRoom.IsGraded = 1;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+
+
+        //
+        public async Task<bool> MarkStudentExamGradedAsync(int examSlotRoomId, Guid studentId, string gradedStatus, double totalScore)
+        {
+            var history = await _context.PracticeExamHistories
+                .FirstOrDefaultAsync(h => h.ExamSlotRoomId == examSlotRoomId && h.StudentId == studentId);
+
+            if (history == null)
+                return false;
+
+            history.IsGraded = true;
+            history.StatusExam = gradedStatus;
+            history.Score = totalScore;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+
+
+        //
         public async Task<ExamSlotRoomGradingInfoDTO> GetGradingInfoByExamSlotRoomIdAsync(int examSlotRoomId)
         {
             var examSlotRoom = await _context.ExamSlotRooms
@@ -66,10 +98,20 @@ namespace GESS.Repository.Implement
                 };
             }
 
-            // Có thể xử lý MultiExamId tương tự ở đây
-
             return null;
         }
+
+        //
+        public async Task<int?> GetPracExamIdByHistoryIdAsync(Guid pracExamHistoryId)
+        {
+            var pracExamId = await _context.PracticeExamHistories
+                .Where(h => h.PracExamHistoryId == pracExamHistoryId)
+                .Select(h => (int?)h.PracExamId)
+                .FirstOrDefaultAsync();
+                
+            return pracExamId;
+        }
+
 
 
 

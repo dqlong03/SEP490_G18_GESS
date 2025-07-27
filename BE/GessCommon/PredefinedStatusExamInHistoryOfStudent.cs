@@ -12,6 +12,9 @@ namespace GESS.Common
         public const string IN_PROGRESS_EXAM = "Đang thi";
         public const string COMPLETED_EXAM = "Đã thi";
         public const string INCOMPLETE_EXAM = "Không hoàn thành";
+        public const string NOTGRADEDYET = "Chưa chấm bài";
+        public const string GRADED = "Đã chấm bài";
+
         private PredefinedStatusExamInHistoryOfStudent() { }
     }
 }

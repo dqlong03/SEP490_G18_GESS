@@ -30,6 +30,17 @@ namespace GESS.Service.gradeSchedule
         //
         Task<ExamSlotRoomGradingInfoDTO> GetGradingInfoByExamSlotRoomIdAsync(int examSlotRoomId);
 
+        //
+        Task<int?> GetPracExamIdByHistoryIdAsync(Guid pracExamHistoryId);
+
+        // 
+        Task<object?> GetStudentExamDetailAsync(int examSlotRoomId, Guid studentId);
+
+        //
+        Task<bool> MarkStudentExamGradedAsync(int examSlotRoomId, Guid studentId, double totalScore);
+
+        //
+        Task<bool> MarkExamSlotRoomGradedAsync(int examSlotRoomId);
 
     }
 }

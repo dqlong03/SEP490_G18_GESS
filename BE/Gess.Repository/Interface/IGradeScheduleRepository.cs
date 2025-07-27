@@ -29,10 +29,19 @@ namespace GESS.Repository.Interface
         Task<StudentSubmission> GetSubmissionOfStudentInExamNeedGradeMidTerm(Guid teacherId, int examId, Guid studentId);
         Task<StudentSubmissionMultiExam> GetSubmissionOfStudentInExamNeedGradeMidTermMulti(Guid teacherId, int examId, Guid studentId);
         Task<bool> GradeSubmission(Guid teacherId, int examId, Guid studentId, QuestionPracExamGradeDTO questionPracExamDTO);
-        Task<bool> GradeSubmission(Guid teacherId, int examId, Guid studentId, QuestionPracExamDTO questionPracExamDTO);
+       
 
         //
         Task<ExamSlotRoomGradingInfoDTO> GetGradingInfoByExamSlotRoomIdAsync(int examSlotRoomId);
+
+        //
+        Task<int?> GetPracExamIdByHistoryIdAsync(Guid pracExamHistoryId);
+
+        //
+        Task<bool> MarkStudentExamGradedAsync(int examSlotRoomId, Guid studentId, string gradedStatus, double totalScore);
+
+        //
+        Task<bool> MarkExamSlotRoomGradedAsync(int examSlotRoomId);
 
 
     }
