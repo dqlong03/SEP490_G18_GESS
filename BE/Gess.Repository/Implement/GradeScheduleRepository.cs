@@ -148,9 +148,6 @@ namespace GESS.Repository.Implement
             return result;
         }
 
-
-
-
         public async Task<IEnumerable<StudentGradeDTO>> GetStudentsInExamNeedGradeAsync(Guid teacherId, int examId)
         {
             var students = await _context.ExamSlotRooms
@@ -238,7 +235,7 @@ namespace GESS.Repository.Implement
         public async Task<StudentSubmission> GetSubmissionOfStudentInExamNeedGradeAsync(Guid teacherId, int examId, Guid studentId)
         {
             var submissions = await _context.PracticeExamHistories
-                .Where(p => p.StudentId == studentId && p.PracticeExam.PracExamId == examId)
+                .Where(p => p.StudentId == studentId && p.PracticeExam.ExamSlotRoom.ExamSlotRoomId == examId)
                 .Select(p => new StudentSubmission
                 {
                    PracExamHistoryId = p.PracExamHistoryId,
