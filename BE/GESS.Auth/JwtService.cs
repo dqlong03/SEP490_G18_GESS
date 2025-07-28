@@ -15,7 +15,7 @@ namespace GESS.Auth
             try
             {
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Constants.SecretKey));
-                var expiryTime = DateTime.UtcNow.AddMilliseconds(Constants.Expires);
+                var expiryTime = DateTime.UtcNow.AddMinutes(Constants.Expires);
                 
        
                 
@@ -28,7 +28,7 @@ namespace GESS.Auth
                 );
 
                 var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-                Console.WriteLine($"[JWT DEBUG] Generated token: {tokenString.Substring(0, Math.Min(50, tokenString.Length))}...");
+                
                 
                 return tokenString;
             }
