@@ -53,7 +53,7 @@ export default function MyExamsPage() {
         .then(data => setSubjects(Array.isArray(data) ? data : []));
     } else {
       setSubjects([]);
-      setSelectedSubject(null);
+      setSelectedSubject(null); 
     }
   }, [selectedMajor]);
 
