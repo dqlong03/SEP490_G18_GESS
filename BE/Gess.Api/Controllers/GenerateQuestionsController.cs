@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace GESS.Api.Controllers
 {
@@ -61,7 +62,7 @@ namespace GESS.Api.Controllers
 
                 var body = new
                 {
-                    model = "gpt-3.5-turbo",
+                    model = "gpt-4o-mini",
                     messages = new[] {
                         new { role = "user", content = prompt }
                     }
@@ -126,7 +127,7 @@ namespace GESS.Api.Controllers
 
                 var body = new
                 {
-                    model = "gpt-3.5-turbo",
+                    model = "gpt-4o-mini",
                     messages = new[]
                     {
                 new { role = "user", content = prompt }
@@ -157,16 +158,35 @@ namespace GESS.Api.Controllers
                 }
             }
         }
-
         private async Task<string> GetMaterialContentAsync(string link)
         {
-            if (link.StartsWith("http"))
+            using var httpClient = new HttpClient();
+
+            if (link.Contains("docs.google.com/document"))
             {
-                using var httpClient = new HttpClient();
+                var fileId = ExtractGoogleDocId(link);
+                if (fileId != null)
+                {
+                    var exportUrl = $"https://docs.google.com/document/d/{fileId}/export?format=txt";
+                    return await httpClient.GetStringAsync(exportUrl);
+                }
+            }
+            else if (link.StartsWith("http"))
+            {
                 return await httpClient.GetStringAsync(link);
             }
+            else if (System.IO.File.Exists(link))
+            {
+                return await System.IO.File.ReadAllTextAsync(link);
+            }
 
-            return System.IO.File.Exists(link) ? await System.IO.File.ReadAllTextAsync(link) : null;
+            return null;
+        }
+
+        private string ExtractGoogleDocId(string url)
+        {
+            var match = Regex.Match(url, @"document/d/([a-zA-Z0-9-_]+)");
+            return match.Success ? match.Groups[1].Value : null;
         }
     }
 }

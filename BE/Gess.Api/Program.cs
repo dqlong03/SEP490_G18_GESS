@@ -23,6 +23,7 @@ using GESS.Service.exam;
 using GESS.Service.examination;
 using GESS.Service.examSchedule;
 using GESS.Service.examSlotService;
+using GESS.Service.finalPracExam;
 using GESS.Service.GradeCompoService;
 using GESS.Service.gradeSchedule;
 using GESS.Service.levelquestion;
@@ -149,7 +150,9 @@ builder.Services.AddScoped<IExamService, GESS.Service.exam.ExamService>();
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<ILevelQuestionService, LevelQuestionService>();
 builder.Services.AddScoped<IGradeScheduleService, GradeScheduleService>();
+builder.Services.AddScoped<IFinalExamService, FinalExamService>();
 builder.Services.AddScoped<IAssignGradeCreateExamService, AssignGradeCreateExamService>();
+builder.Services.AddScoped<IFinaExamRepository, FinaExamRepository>();
 
 // ThaiNH_Initialize_Begin
 builder.Services.AddScoped<ICateExamSubService, CateExamSubService>();
