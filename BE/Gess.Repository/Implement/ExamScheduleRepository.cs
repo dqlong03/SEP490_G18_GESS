@@ -160,7 +160,8 @@ namespace GESS.Repository.Implement
                 Status = multiExam.Status,
                 Duration = multiExam.Duration,
                 Category = multiExam.CategoryExam.CategoryExamName,
-                Students = students
+                Students = students,
+                Code = multiExam.CodeStart
             };
             if (multiExamDetail == null)
             {
@@ -171,8 +172,8 @@ namespace GESS.Repository.Implement
 
         public async Task<PraticeExamDetail> GetPracMidTermExamBySlotIdsAsync(Guid teacherId, int examId)
         {
-            var pracExam = await _context.MultiExams
-               .Where(m => m.MultiExamId == examId && m.TeacherId == teacherId)
+            var pracExam = await _context.PracticeExams
+               .Where(m => m.PracExamId == examId && m.TeacherId == teacherId)
                .Include(m => m.Subject)
                .Include(m => m.CategoryExam)
                .FirstOrDefaultAsync();
@@ -180,8 +181,8 @@ namespace GESS.Repository.Implement
             {
                 return null;
             }
-            var students = await _context.MultiExamHistories
-                .Where(m => m.MultiExamId == pracExam.MultiExamId)
+            var students = await _context.PracticeExamHistories
+                .Where(m => m.PracExamId == pracExam.PracExamId)
                 .Select(m => new StudentCheckIn
                 {
                     Id = m.StudentId,
@@ -197,13 +198,14 @@ namespace GESS.Repository.Implement
             }
             var pracExamDetail = new PraticeExamDetail
             {
-                PracExamId = pracExam.MultiExamId,
-                ExamName = pracExam.MultiExamName,
+                PracExamId = pracExam.PracExamId,
+                ExamName = pracExam.PracExamName,
                 SubjectName = pracExam.Subject?.SubjectName ?? "N/A",
                 Status = pracExam.Status,
                 Duration = pracExam.Duration,
                 Category = pracExam.CategoryExam.CategoryExamName,
-                Students = students
+                Students = students,
+                Code = pracExam.CodeStart
             };
             return pracExamDetail;
         }

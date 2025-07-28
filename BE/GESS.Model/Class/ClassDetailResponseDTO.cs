@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace GESS.Model.Class
 {
@@ -19,6 +16,7 @@ namespace GESS.Model.Class
         public Guid StudentId { get; set; }
         public string FullName { get; set; }
         public string? AvatarURL { get; set; }
+        public string? Code { get; set; } // Mã người dùng
     }
 
     public class ExamInClassDTO
@@ -26,7 +24,11 @@ namespace GESS.Model.Class
         public int ExamId { get; set; }
         public string ExamName { get; set; }
         public string GradeComponent { get; set; }
-        public string Status { get; set; }
+        public int Duration { get; set; }         // Thời lượng
+        public int QuestionCount { get; set; }    // Số câu hỏi
+        public string ExamType { get; set; }      // "Practice" hoặc "Multi"
+        public string IsGraded { get; set; }         // 1: đã chấm, 0: chưa chấm
+        public string? Status { get; set; }           // Lấy từ cột status trong DB
         public int StudentCount { get; set; }
     }
 }
