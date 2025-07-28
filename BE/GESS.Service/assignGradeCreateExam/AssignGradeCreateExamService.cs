@@ -32,9 +32,9 @@ namespace GESS.Service.assignGradeCreateExam
             return await _unitOfWork.AssignGradeCreateExamRepository.AssignRoleGradeExam(teacherId, subjectId);
         }
 
-        public async Task<IEnumerable<SubjectDTO>> GetAllSubjectsByTeacherId(Guid teacherId)
+        public async Task<IEnumerable<SubjectDTO>> GetAllSubjectsByTeacherId(Guid teacherId, string? textSearch = null)
         {
-            var subjects = await _unitOfWork.AssignGradeCreateExamRepository.GetAllSubjectsByTeacherId(teacherId);
+            var subjects = await _unitOfWork.AssignGradeCreateExamRepository.GetAllSubjectsByTeacherId(teacherId,textSearch);
             if (subjects == null || !subjects.Any())
             {
                 return Enumerable.Empty<SubjectDTO>();
@@ -42,9 +42,19 @@ namespace GESS.Service.assignGradeCreateExam
             return subjects;
         }
 
-        public async Task<IEnumerable<TeacherResponse>> GetAllTeacherHaveSubject(int subjectId)
+        public async Task<IEnumerable<TeacherResponse>> GetAllTeacherHaveSubject(int subjectId, string? textSearch = null, int pageNumber = 1, int pageSize = 10)
         {
-            var teachers = await _unitOfWork.AssignGradeCreateExamRepository.GetAllTeacherHaveSubject(subjectId);
+            var teachers = await _unitOfWork.AssignGradeCreateExamRepository.GetAllTeacherHaveSubject(subjectId, textSearch, pageNumber, pageSize);
+            if (teachers == null || !teachers.Any())
+            {
+                return Enumerable.Empty<TeacherResponse>();
+            }
+            return teachers;
+        }
+
+        public async Task<IEnumerable<TeacherResponse>> GetAllTeacherInMajor(Guid teacherId)
+        {
+           var teachers = await _unitOfWork.AssignGradeCreateExamRepository.GetAllTeacherInMajor(teacherId);
             if (teachers == null || !teachers.Any())
             {
                 return Enumerable.Empty<TeacherResponse>();
