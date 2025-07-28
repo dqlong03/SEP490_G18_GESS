@@ -15,6 +15,7 @@ namespace GESS.Model.MultiExamHistories
         public int Duration { get; set; }
         public string Status { get; set; }
         public string Category { get; set; }
+        public string Code { get; set; }
         public List<StudentCheckIn> Students { get; set; }
     }
     public class PraticeExamDetail
@@ -25,6 +26,7 @@ namespace GESS.Model.MultiExamHistories
         public int Duration { get; set; }
         public string Status { get; set; }
         public string Category { get; set; }
+        public string Code { get; set; }
         public List<StudentCheckIn> Students { get; set; }
     }
 }
