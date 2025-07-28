@@ -1,98 +1,27 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-// Fake data for exams (should match the main page)
-const fakeExams = [
-  {
-    id: 1,
-    name: 'Bài thi cuối kỳ Toán lớp 10',
-    subject: 'Toán',
-    session: 1,
-    examDate: '2024-06-18T08:00:00',
-  },
-  {
-    id: 2,
-    name: 'Bài thi cuối kỳ Vật lý lớp 11',
-    subject: 'Vật lý',
-    session: 2,
-    examDate: '2024-06-12T09:00:00',
-  },
-  {
-    id: 3,
-    name: 'Bài thi cuối kỳ Hóa học lớp 12',
-    subject: 'Hóa học',
-    session: 2,
-    examDate: '2024-06-22T10:00:00',
-  },
-  {
-    id: 4,
-    name: 'Bài thi cuối kỳ Toán lớp 11',
-    subject: 'Toán',
-    session: 2,
-    examDate: '2024-06-28T08:00:00',
-  },
-  {
-    id: 5,
-    name: 'Bài thi cuối kỳ Vật lý lớp 12',
-    subject: 'Vật lý',
-    session: 1,
-    examDate: '2024-06-20T09:00:00',
-  },
-  {
-    id: 6,
-    name: 'Bài thi cuối kỳ Hóa học lớp 10',
-    subject: 'Hóa học',
-    session: 1,
-    examDate: '2024-06-25T10:00:00',
-  },
-];
-
-// Fake students in the exam session
-type Student = {
-  id: number;
-  name: string;
-  code: string;
-  avatar: string;
-  status: 'Đã chấm' | 'Chưa chấm';
+// DTO cho dữ liệu từ API
+type StudentGradingDTO = {
+  practiceExamHistoryId: string;
+  studentId: string;
+  studentCode: string;
+  fullName: string;
+  isGraded: number;
   score: number | null;
 };
 
-const fakeStudents: Student[] = [
-  {
-    id: 1,
-    name: 'Nguyễn Văn A',
-    code: 'SV001',
-    avatar: 'https://randomuser.me/api/portraits/men/1.jpg',
-    status: 'Chưa chấm',
-    score: null,
-  },
-  {
-    id: 2,
-    name: 'Trần Thị B',
-    code: 'SV002',
-    avatar: 'https://randomuser.me/api/portraits/women/2.jpg',
-    status: 'Đã chấm',
-    score: 8.5,
-  },
-  {
-    id: 3,
-    name: 'Lê Văn C',
-    code: 'SV003',
-    avatar: 'https://randomuser.me/api/portraits/men/3.jpg',
-    status: 'Chưa chấm',
-    score: null,
-  },
-  {
-    id: 4,
-    name: 'Phạm Thị D',
-    code: 'SV004',
-    avatar: 'https://randomuser.me/api/portraits/women/4.jpg',
-    status: 'Đã chấm',
-    score: 7.0,
-  },
-];
+type ExamSlotRoomGradingInfoDTO = {
+  examSlotRoomId: number;
+  examName: string;
+  duration: number;
+  startDay: string;
+  slotName: string;
+  subjectName: string;
+  students: StudentGradingDTO[];
+};
 
 interface PageProps {
   params: { examId: string };
@@ -101,25 +30,64 @@ interface PageProps {
 export default function ExamGradingDetailPage({ params }: PageProps) {
   const router = useRouter();
   const examId = Number(params.examId);
+  const searchParams = useSearchParams();
+  const action = searchParams.get('action'); 
 
-  // Find exam info
-  const exam = fakeExams.find(e => e.id === examId);
+  const [examInfo, setExamInfo] = useState<ExamSlotRoomGradingInfoDTO | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Local state for students
-  const [students, setStudents] = useState<Student[]>(fakeStudents);
+  useEffect(() => {
+    // Gọi API lấy thông tin bài thi và danh sách sinh viên
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`https://localhost:7074/api/GradeSchedule/examslotroom/${examId}/grading-info`);
+        if (!res.ok) {
+          setExamInfo(null);
+        } else {
+          const data: ExamSlotRoomGradingInfoDTO = await res.json();
+          setExamInfo(data);
+        }
+      } catch (error) {
+        setExamInfo(null);
+      }
+      setLoading(false);
+    };
+    fetchData();
+  }, [examId]);
 
-  // Handle grading a student: chuyển sang trang chấm bài cho sinh viên
-  const handleGradeStudent = (studentId: number) => {
-    router.push(`/teacher/givegrade/examroom/${examId}/gradeexampaper?studentId=${studentId}`);
+  // Chuyển sang trang chấm bài cho sinh viên
+  const handleGradeStudent = (studentId: string) => {
+    if (action === 'edit') {
+      router.push(`/teacher/givegrade/examroom/${examId}/gradeexampaper?studentId=${studentId}&action=edit`);
+    } else {
+      router.push(`/teacher/givegrade/examroom/${examId}/gradeexampaper?studentId=${studentId}`);
+    }
   };
 
-  // Handle confirm grading
-  const handleConfirm = () => {
-    alert('Đã xác nhận chấm xong phòng thi!');
-    router.push('/teacher/givegrade');
+  // Xác nhận chấm xong phòng thi
+  const handleConfirm = async () => {
+    try {
+      const res = await fetch(
+        `https://localhost:7074/api/GradeSchedule/examslotroom/${examId}/mark-graded`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+      if (!res.ok) {
+        const msg = await res.text();
+        alert(msg || 'Không thể cập nhật trạng thái chấm bài!');
+      } else {
+        alert('Đã chuyển trạng thái chấm bài thành công cho ca/phòng thi!');
+        router.push('/teacher/givegrade');
+      }
+    } catch (err) {
+      alert('Lỗi khi cập nhật trạng thái chấm bài!');
+    }
   };
 
-  // Handle back
+  // Quay lại
   const handleBack = () => {
     router.push('/teacher/givegrade');
   };
@@ -135,12 +103,14 @@ export default function ExamGradingDetailPage({ params }: PageProps) {
           ← Quay lại trang chấm thi
         </button>
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Chấm bài thi</h2>
-        {exam ? (
+        {loading ? (
+          <div className="mb-6 text-blue-500">Đang tải dữ liệu...</div>
+        ) : examInfo ? (
           <div className="mb-6 border rounded p-4 bg-gray-50">
-            <div className="mb-2"><span className="font-semibold">Tên bài thi:</span> {exam.name}</div>
-            <div className="mb-2"><span className="font-semibold">Ngày thi:</span> {new Date(exam.examDate).toLocaleString('vi-VN')}</div>
-            <div className="mb-2"><span className="font-semibold">Ca thi:</span> {exam.session}</div>
-            <div className="mb-2"><span className="font-semibold">Môn thi:</span> {exam.subject}</div>
+            <div className="mb-2"><span className="font-semibold">Tên bài thi:</span> {examInfo.examName}</div>
+            <div className="mb-2"><span className="font-semibold">Ngày thi:</span> {new Date(examInfo.startDay).toLocaleString('vi-VN')}</div>
+            <div className="mb-2"><span className="font-semibold">Ca thi:</span> {examInfo.slotName}</div>
+            <div className="mb-2"><span className="font-semibold">Môn thi:</span> {examInfo.subjectName}</div>
           </div>
         ) : (
           <div className="mb-6 text-red-500">Không tìm thấy thông tin bài thi.</div>
@@ -161,47 +131,57 @@ export default function ExamGradingDetailPage({ params }: PageProps) {
               </tr>
             </thead>
             <tbody>
-              {students.map((student, idx) => (
-                <tr key={student.id} className="hover:bg-blue-50 transition">
+              {examInfo?.students?.map((student, idx) => (
+                <tr key={student.studentId} className="hover:bg-blue-50 transition">
                   <td className="py-2 px-2 border-b text-center">{idx + 1}</td>
-                  <td className="py-2 px-2 border-b">{student.name}</td>
-                  <td className="py-2 px-2 border-b text-center">{student.code}</td>
+                  <td className="py-2 px-2 border-b">{student.fullName}</td>
+                  <td className="py-2 px-2 border-b text-center">{student.studentCode}</td>
                   <td className="py-2 px-2 border-b text-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={student.avatar}
-                      alt={student.name}
+                      src={'https://randomuser.me/api/portraits/men/1.jpg'}
+                      alt={student.fullName}
                       className="w-10 h-10 rounded-full object-cover mx-auto"
                     />
                   </td>
                   <td className="py-2 px-2 border-b text-center">
                     <span className={
-                      student.status === 'Đã chấm'
+                      student.isGraded === 1
                         ? 'text-green-600 font-semibold'
                         : 'text-blue-600 font-semibold'
                     }>
-                      {student.status}
+                      {student.isGraded === 1 ? 'Đã chấm' : 'Chưa chấm'}
                     </span>
                   </td>
                   <td className="py-2 px-2 border-b text-center">
-                    {student.status === 'Đã chấm' ? student.score : '-'}
+                    {student.isGraded === 1 ? student.score : '-'}
                   </td>
                   <td className="py-2 px-2 border-b text-center">
-                    {student.status === 'Chưa chấm' ? (
+                    {student.isGraded === 0 ? (
                       <button
-                        onClick={() => handleGradeStudent(student.id)}
+                        onClick={() => handleGradeStudent(student.studentId)}
                         className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition font-semibold"
                         type="button"
                       >
                         Chấm bài
                       </button>
                     ) : (
-                      <span className="text-gray-400">Đã chấm</span>
+                      action === 'edit' ? (
+                        <button
+                          onClick={() => handleGradeStudent(student.studentId)}
+                          className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 transition font-semibold"
+                          type="button"
+                        >
+                          Sửa điểm
+                        </button>
+                      ) : (
+                        <span className="text-gray-400">Đã chấm</span>
+                      )
                     )}
                   </td>
                 </tr>
               ))}
-              {students.length === 0 && (
+              {(!examInfo?.students || examInfo.students.length === 0) && (
                 <tr>
                   <td colSpan={7} className="text-center py-4 text-gray-500">
                     Không có sinh viên nào.
@@ -212,7 +192,7 @@ export default function ExamGradingDetailPage({ params }: PageProps) {
           </table>
         </div>
 
-        <div className="flex justify-between items-center">
+       <div className="flex justify-between items-center">
           <button
             onClick={handleBack}
             className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 font-semibold"
@@ -220,13 +200,15 @@ export default function ExamGradingDetailPage({ params }: PageProps) {
           >
             ← Quay lại trang chấm thi
           </button>
-          <button
-            onClick={handleConfirm}
-            className="px-6 py-2 rounded bg-green-600 hover:bg-green-700 text-white font-semibold"
-            type="button"
-          >
-           Xác nhận chấm xong phòng thi
-          </button>
+          {action !== 'edit' && (
+            <button
+              onClick={handleConfirm}
+              className="px-6 py-2 rounded bg-green-600 hover:bg-green-700 text-white font-semibold"
+              type="button"
+            >
+              Xác nhận chấm xong phòng thi
+            </button>
+          )}
         </div>
       </div>
     </div>

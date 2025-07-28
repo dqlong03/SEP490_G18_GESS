@@ -8,8 +8,7 @@ const teacherId = "2A96A929-C6A1-4501-FC19-08DDB5DCA989";
 
 const statusOptions = [
   { value: 0, label: 'Chưa chấm' },
-  { value: 1, label: 'Đang chấm' },
-  { value: 2, label: 'Đã chấm' },
+  { value: 1, label: 'Đang chấm' }
 ];
 
 // 10 năm gần nhất
@@ -97,8 +96,8 @@ export default function GiveGradePage() {
   }, [selectedSubject, selectedStatus, selectedSemester, selectedYear, page]);
 
   // Handle grading action
-  const handleGrade = (examSlotRoomId: number) => {
-    router.push(`/teacher/givegrade/examroom/${examSlotRoomId}`);
+  const handleGrade = (examSlotRoomId: number, action: "edit" | "grade" = "grade") => {
+    router.push(`/teacher/givegrade/examroom/${examSlotRoomId}?action=${action}`);
   };
 
   // Reset filter
@@ -113,8 +112,7 @@ export default function GiveGradePage() {
   // Format trạng thái
 const getStatusLabel = (isGrade: number | null) => {
   if (isGrade === null || isGrade === 0) return "Chưa chấm";
-  if (isGrade === 1) return "Đang chấm";
-  if (isGrade === 2) return "Đã chấm";
+  if (isGrade === 1) return "Đã chấm";
   return "";
 };
 
@@ -132,6 +130,8 @@ const getStatusClass = (isGrade: number | null) => {
     const d = new Date(dateStr);
     return d.toLocaleString("vi-VN");
   };
+
+  
 
   return (
     <div className="w-full min-h-screen bg-white font-sans p-0">
@@ -253,10 +253,15 @@ const getStatusClass = (isGrade: number | null) => {
                   </td>
                   <td className="py-2 px-2 border-b text-center">
                     {exam.isGrade === 1 ? (
-                      <span className="text-gray-400">Đã chấm</span>
+                      <button
+                        onClick={() => handleGrade(exam.examSlotRoomId, "edit")}
+                        className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 transition font-semibold"
+                      >
+                        Sửa điểm
+                      </button>
                     ) : (
                       <button
-                        onClick={() => handleGrade(exam.examSlotRoomId)}
+                        onClick={() => handleGrade(exam.examSlotRoomId, "grade")}
                         className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition font-semibold"
                       >
                         Chấm thi
