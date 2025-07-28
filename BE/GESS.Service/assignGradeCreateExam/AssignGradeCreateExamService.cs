@@ -22,14 +22,29 @@ namespace GESS.Service.assignGradeCreateExam
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<bool> AssignRoleCreateExam(Guid teacherId, int subjectId)
+        public bool AddTeacherToSubject(Guid teacherId, int subjectId)
         {
-            return await _unitOfWork.AssignGradeCreateExamRepository.AssignRoleCreateExam(teacherId, subjectId);
+            bool isAdded = _unitOfWork.AssignGradeCreateExamRepository.AddTeacherToSubject(teacherId, subjectId);
+            if (isAdded)
+            {
+                return true;
+            }
+            return false;
         }
 
-        public async Task<bool> AssignRoleGradeExam(Guid teacherId, int subjectId)
+        public bool AssignRoleCreateExam(Guid teacherId, int subjectId)
         {
-            return await _unitOfWork.AssignGradeCreateExamRepository.AssignRoleGradeExam(teacherId, subjectId);
+            return _unitOfWork.AssignGradeCreateExamRepository.AssignRoleCreateExam(teacherId, subjectId);
+        }
+
+        public bool AssignRoleGradeExam(Guid teacherId, int subjectId)
+        {
+            return _unitOfWork.AssignGradeCreateExamRepository.AssignRoleGradeExam(teacherId, subjectId);
+        }
+
+        public bool DeleteTeacherFromSubject(Guid teacherId, int subjectId)
+        {
+            return _unitOfWork.AssignGradeCreateExamRepository.DeleteTeacherFromSubject(teacherId, subjectId);
         }
 
         public async Task<IEnumerable<SubjectDTO>> GetAllSubjectsByTeacherId(Guid teacherId, string? textSearch = null)

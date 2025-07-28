@@ -1,4 +1,5 @@
 ﻿using GESS.Entity.Contexts;
+using GESS.Entity.Entities;
 using GESS.Model.Subject;
 using GESS.Model.Teacher;
 using GESS.Repository.Interface;
@@ -14,13 +15,41 @@ namespace GESS.Repository.Implement
             _context = context;
         }
 
-        public async Task<bool> AssignRoleCreateExam(Guid teacherId, int subjectId)
+        public bool AddTeacherToSubject(Guid teacherId, int subjectId)
         {
-            var subjectTeacher = await _context.SubjectTeachers
-                .FirstOrDefaultAsync(st => st.TeacherId == teacherId && st.SubjectId == subjectId);
+            var checkExist = _context.SubjectTeachers
+                .Any(st => st.TeacherId == teacherId && st.SubjectId == subjectId);
+            if (checkExist)
+            {
+                return false;
+            }
+            var subjectTeacher = new SubjectTeacher
+            {
+                TeacherId = teacherId,
+                SubjectId = subjectId,
+                IsGradeTeacher = false,
+                IsCreateExamTeacher = false,
+                IsActiveSubjectTeacher = true
+            };
+            try
+            {
+                _context.SubjectTeachers.Add(subjectTeacher);
+                _context.SaveChanges();
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        public bool AssignRoleCreateExam(Guid teacherId, int subjectId)
+        {
+            var subjectTeacher = _context.SubjectTeachers
+                .FirstOrDefault(st => st.TeacherId == teacherId && st.SubjectId == subjectId);
             if (subjectTeacher == null)
             {
-                return false; // Teacher is not assigned to this subject
+                return false;
             }
             if (subjectTeacher.IsCreateExamTeacher)
             {
@@ -33,7 +62,7 @@ namespace GESS.Repository.Implement
             try
             {
                 _context.SubjectTeachers.Update(subjectTeacher);
-                await _context.SaveChangesAsync();
+                _context.SaveChanges();
                 return true;
             }
             catch (Exception)
@@ -43,13 +72,13 @@ namespace GESS.Repository.Implement
             }
         }
 
-        public async Task<bool> AssignRoleGradeExam(Guid teacherId, int subjectId)
+        public bool AssignRoleGradeExam(Guid teacherId, int subjectId)
         {
-            var subjectTeacher = await _context.SubjectTeachers
-                .FirstOrDefaultAsync(st => st.TeacherId == teacherId && st.SubjectId == subjectId);
+            var subjectTeacher = _context.SubjectTeachers
+                .FirstOrDefault(st => st.TeacherId == teacherId && st.SubjectId == subjectId);
             if (subjectTeacher == null)
             {
-                return false; // Teacher is not assigned to this subject
+                return false;
             }
             if (subjectTeacher.IsGradeTeacher)
             {
@@ -62,13 +91,34 @@ namespace GESS.Repository.Implement
             try
             {
                 _context.SubjectTeachers.Update(subjectTeacher);
-                await _context.SaveChangesAsync();
+                _context.SaveChanges();
                 return true;
             }
             catch (Exception)
             {
                 return false;
 
+            }
+        }
+
+        public bool DeleteTeacherFromSubject(Guid teacherId, int subjectId)
+        {
+            var subjectTeacher = _context.SubjectTeachers
+                .FirstOrDefault(st => st.TeacherId == teacherId && st.SubjectId == subjectId);
+            if (subjectTeacher == null)
+            {
+                return false;
+            }
+            try
+            {
+                subjectTeacher.IsActiveSubjectTeacher = false;
+                _context.SubjectTeachers.Update(subjectTeacher);
+                _context.SaveChanges();
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
 

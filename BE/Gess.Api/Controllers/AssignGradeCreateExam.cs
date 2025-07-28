@@ -68,6 +68,43 @@ namespace GESS.Api.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
+        //API to add teacher to subject
+        [HttpPost("AddTeacherToSubject")]
+        public IActionResult AddTeacherToSubject(Guid teacherId, int subjectId)
+        {
+            try
+            {
+                var result = _assignGradeCreateExamService.AddTeacherToSubject(teacherId, subjectId);
+                if (result)
+                {
+                    return Ok("Teacher added to subject successfully.");
+                }
+                return BadRequest("Failed to add teacher to subject.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+        //API to delete teacher from subject
+        [HttpDelete("DeleteTeacherFromSubject")]
+        public IActionResult DeleteTeacherFromSubject(Guid teacherId, int subjectId)
+        {
+            try
+            {
+                var result = _assignGradeCreateExamService.DeleteTeacherFromSubject(teacherId, subjectId);
+                if (result)
+                {
+                    return Ok("Teacher removed from subject successfully.");
+                }
+                return BadRequest("Failed to remove teacher from subject.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
         //API to assign role grade exam to teacher
         [HttpPost("AssignRoleGradeExam")]
         public IActionResult AssignRoleGradeExam(Guid teacherId, int subjectId)

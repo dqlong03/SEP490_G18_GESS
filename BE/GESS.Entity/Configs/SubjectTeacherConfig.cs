@@ -32,6 +32,9 @@ namespace GESS.Entity.Configs
 
             builder.Property(st => st.IsCreateExamTeacher)
                    .HasDefaultValue(false);
+
+            builder.Property(st => st.IsActiveSubjectTeacher)
+                   .HasDefaultValue(false);
         }
     }
 }
