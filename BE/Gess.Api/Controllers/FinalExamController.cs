@@ -137,7 +137,7 @@ namespace GESS.Api.Controllers
         }
         //API to get all final exam by subject id and semester id and year and type and text search need pagination
         [HttpGet("GetAllFinalExam")]
-        public async Task<IActionResult> GetAllFinalExam(int subjectId, int semesterId, int year, int type, string textSearch, int pageNumber = 1, int pageSize = 10)
+        public async Task<IActionResult> GetAllFinalExam(int subjectId, int? semesterId, int? year, int type, string? textSearch, int pageNumber = 1, int pageSize = 10)
         {
             try
             {
@@ -147,6 +147,20 @@ namespace GESS.Api.Controllers
                     return NotFound("No final exams found for the specified criteria.");
                 }
                 return Ok(exams);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+        //API to count page number of final exam by subject id and semester id and year and type and text search
+        [HttpGet("CountPageNumberFinalExam")]
+        public async Task<IActionResult> CountPageNumberFinalExam(int subjectId, int? semesterId, int? year, int type, string? textSearch, int pageSize = 10)
+        {
+            try
+            {
+                var pageCount = await _finalExamService.CountPageNumberFinalExam(subjectId, semesterId, year, type, textSearch, pageSize);
+                return Ok(pageCount);
             }
             catch (Exception ex)
             {

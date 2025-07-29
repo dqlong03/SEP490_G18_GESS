@@ -4,6 +4,7 @@ using GESS.Model.Subject;
 using GESS.Model.Teacher;
 using GESS.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace GESS.Repository.Implement
 {
@@ -100,6 +101,31 @@ namespace GESS.Repository.Implement
 
             }
         }
+
+        public int CountPageNumberTeacherHaveSubject(int subjectId, string? textSearch, int pageSize)
+        {
+            var query = _context.SubjectTeachers
+                .Where(st => st.SubjectId == subjectId)
+                .Select(st => new
+                {
+                    st.Teacher.User.Fullname,
+                    st.Teacher.User.UserName,
+                    st.Teacher.User.Code
+                });
+
+            if (!string.IsNullOrWhiteSpace(textSearch))
+            {
+                string searchLower = textSearch.ToLower();
+                query = query.Where(t =>
+                    t.Fullname.ToLower().Contains(searchLower) ||
+                    t.UserName.ToLower().Contains(searchLower) ||
+                    t.Code.ToLower().Contains(searchLower));
+            }
+
+            int totalRecords = query.Count();
+            return (int)Math.Ceiling((double)totalRecords / pageSize);
+        }
+
 
         public bool DeleteTeacherFromSubject(Guid teacherId, int subjectId)
         {

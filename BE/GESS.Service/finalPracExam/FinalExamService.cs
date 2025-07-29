@@ -28,6 +28,16 @@ namespace GESS.Service.finalPracExam
             _unitOfWork = unitOfWork;
         }
 
+        public async Task<int> CountPageNumberFinalExam(int subjectId, int? semesterId, int? year, int type, string? textSearch, int pageSize)
+        {
+            var totalExams = await _unitOfWork.FinalPracExamRepository.CountPageNumberFinalExam(subjectId, semesterId, year, type, textSearch, pageSize);
+            if (totalExams <= 0)
+            {
+                return 0; // No exams found
+            }
+            return totalExams;
+        }
+
         public async Task<FinalMultipleExamCreateDTO> CreateFinalMultipleExamAsync(FinalMultipleExamCreateDTO multipleExamCreateDto)
         {
             var finalMultiExam = await _unitOfWork.FinalPracExamRepository.CreateFinalMultipleExamAsync(multipleExamCreateDto);

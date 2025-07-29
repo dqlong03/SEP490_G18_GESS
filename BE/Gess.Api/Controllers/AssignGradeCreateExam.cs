@@ -68,6 +68,20 @@ namespace GESS.Api.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
+        //API to count page number of teacher have subject
+        [HttpGet("CountPageNumberTeacherHaveSubject")]
+        public IActionResult CountPageNumberTeacherHaveSubject(int subjectId, string? textSearch = null, int pageSize = 10)
+        {
+            try
+            {
+                var result = _assignGradeCreateExamService.CountPageNumberTeacherHaveSubject(subjectId, textSearch, pageSize);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
         //API to add teacher to subject
         [HttpPost("AddTeacherToSubject")]
         public IActionResult AddTeacherToSubject(Guid teacherId, int subjectId)

@@ -21,6 +21,58 @@ namespace GESS.Repository.Implement
             _context = context;
         }
 
+        public async Task<int> CountPageNumberFinalExam(int subjectId, int? semesterId, int? year, int type, string? textSearch, int pageSize)
+        {
+            int totalRecords;
+
+            if (type == 1)
+            {
+                var query = _context.MultiExams
+                    .Where(e => e.SubjectId == subjectId && e.CategoryExamId == 2);
+
+                if (!string.IsNullOrEmpty(textSearch))
+                {
+                    query = query.Where(e => e.MultiExamName.Contains(textSearch));
+                }
+
+                if (semesterId.HasValue)
+                {
+                    query = query.Where(e => e.SemesterId == semesterId.Value);
+                }
+
+                if (year.HasValue)
+                {
+                    query = query.Where(e => e.CreateAt.Year == year.Value);
+                }
+
+                totalRecords = await query.CountAsync();
+            }
+            else
+            {
+                var query = _context.PracticeExams
+                    .Where(e => e.SubjectId == subjectId && e.CategoryExamId == 2);
+
+                if (!string.IsNullOrEmpty(textSearch))
+                {
+                    query = query.Where(e => e.PracExamName.Contains(textSearch));
+                }
+
+                if (semesterId.HasValue)
+                {
+                    query = query.Where(e => e.SemesterId == semesterId.Value);
+                }
+
+                if (year.HasValue)
+                {
+                    query = query.Where(e => e.CreateAt.Year == year.Value);
+                }
+
+                totalRecords = await query.CountAsync();
+            }
+            return (int)Math.Ceiling((double)totalRecords / pageSize);
+        }
+
+
         public async Task<FinalMultipleExamCreateDTO> CreateFinalMultipleExamAsync(FinalMultipleExamCreateDTO multipleExamCreateDto)
         {
             var multiExam = new MultiExam

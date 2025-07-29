@@ -20,6 +20,7 @@ namespace GESS.Service.finalPracExam
 {
     public interface IFinalExamService : IBaseService<PracticeExam>
     {
+        Task <int> CountPageNumberFinalExam(int subjectId, int? semesterId, int? year, int type, string? textSearch, int pageSize);
         Task<FinalMultipleExamCreateDTO> CreateFinalMultipleExamAsync(FinalMultipleExamCreateDTO multipleExamCreateDto);
         Task<FinalPracticeExamCreateDTO> CreateFinalPracExamAsync(FinalPracticeExamCreateDTO finalPracExamCreateDto);
         Task<List<ChapterInClassDTO>> GetAllChapterBySubjectId(int subjectId);
