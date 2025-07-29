@@ -37,24 +37,24 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProp
       )}
       <aside className={`sidebar ${isMobile ? (isSidebarOpen ? 'w-64 shadow-xl mt-10' : 'w-0') : 'w-64 shadow-xl'} ${isMobile && isSidebarOpen ? 'fixed' : ''}`}>
         <ul className="sidebar-list">
-          {role === 'Admin' && (
+          {role?.toLowerCase() === 'teacher' && (
             <>
               <li><Link href="/teacher/myclass" className="sidebar-link" onClick={handleClose}>Lớp của tôi</Link> </li>
-             
+              <li><Link href="/teacher/questionbank" className="sidebar-link" onClick={handleClose}>Ngân hàng câu hỏi</Link> </li>
+              <li><Link href="/teacher/examsupervisor" className="sidebar-link" onClick={handleClose}>Lịch coi thi</Link> </li>
+               <li><Link href="/teacher/givegrade" className="sidebar-link" onClick={handleClose}>Chấm thi</Link> </li>               
+               {/* <li><Link href="/teacher/createexampaperfinal" className="sidebar-link" onClick={handleClose}>Tạo lịch thi</Link> </li> */}
+
+            </>
+          )}
+          {role?.toLowerCase() == 'hod' && (
+            <>
+               <li><Link href="/teacher/myclass" className="sidebar-link" onClick={handleClose}>Lớp của tôi</Link> </li>
               <li><Link href="/teacher/questionbank" className="sidebar-link" onClick={handleClose}>Ngân hàng câu hỏi</Link> </li>
               <li><Link href="/teacher/examsupervisor" className="sidebar-link" onClick={handleClose}>Lịch coi thi</Link> </li>
                <li><Link href="/teacher/givegrade" className="sidebar-link" onClick={handleClose}>Chấm thi</Link> </li>
                <li><Link href="/leader/setrole" className="sidebar-link" onClick={handleClose}>Quản lý ngành</Link> </li>
-               <li><Link href="/teacher/createexampaperfinal" className="sidebar-link" onClick={handleClose}>Tạo lịch thi</Link> </li>
-
-            </>
-          )}
-          {role == 'Teacher Leader' && (
-            <>
-              <li><Link href="/examination/managemajor" className="sidebar-link" onClick={handleClose}>Quản lý ngành</Link></li>
-              <li><Link href="/examination/managesubject" className="sidebar-link" onClick={handleClose}>Quản lý môn học</Link></li>
-              <li><Link href="/examination/manageteacher" className="sidebar-link" onClick={handleClose}>Quản lý giáo viên</Link></li>
-              <li><Link href="/room-management" className="sidebar-link" onClick={handleClose}>Quản lý phòng học</Link></li>
+               {/* <li><Link href="/teacher/createexampaperfinal" className="sidebar-link" onClick={handleClose}>Tạo lịch thi</Link> </li> */}
             </>
           )}
           

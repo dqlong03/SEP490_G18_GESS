@@ -15,6 +15,7 @@ export const login = async (data: LoginData) => {
 export interface LoginGoogleData {
   idToken: string;
 }
+
 export const loginGoogle = async (data: LoginGoogleData) => {
   const response = await axios.post(`${API_URL}/Auth/login-google`, data);
   return response.data;
