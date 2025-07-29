@@ -96,11 +96,7 @@ Trả về toàn bộ danh sách câu hỏi là 1 mảng JSON hợp lệ.
                         }
                     }
 
-                    // Nếu vẫn còn text thừa, tìm mảng JSON đầu tiên
-                    var match = Regex.Match(cleanedOutput, @"\[\s*{[\s\S]*?}\s*\]", RegexOptions.Multiline);
-                    var jsonArray = match.Success ? match.Value : cleanedOutput;
-
-                    var questions = JsonConvert.DeserializeObject<List<GeneratedQuestion>>(jsonArray);
+                    var questions = JsonConvert.DeserializeObject<List<GeneratedQuestion>>(cleanedOutput);
                     return Ok(questions);
                 }
                 catch (Exception ex)
