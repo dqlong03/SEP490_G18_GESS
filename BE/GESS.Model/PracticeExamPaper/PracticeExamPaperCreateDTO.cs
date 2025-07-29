@@ -31,7 +31,16 @@ namespace GESS.Model.PracticeExamPaper
         public List<ManualQuestionDTO> ManualQuestions { get; set; }
         public List<SelectedQuestionDTO> SelectedQuestions { get; set; }
     }
-
+    public class FinalPracticeExamPaperCreateRequest
+    {
+        public string ExamName { get; set; }
+        public int TotalQuestion { get; set; }
+        public Guid TeacherId { get; set; }
+        public int SemesterId { get; set; }
+        public int SubjectId { get; set; }
+        public List<ManualQuestionDTO> ManualQuestions { get; set; }
+        public List<SelectedQuestionDTO> SelectedQuestions { get; set; }
+    }
     public class ManualQuestionDTO
     {
         [Required(ErrorMessage = "Nội dung câu hỏi không được để trống")]
