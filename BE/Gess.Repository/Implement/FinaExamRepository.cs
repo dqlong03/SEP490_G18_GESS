@@ -292,6 +292,21 @@ namespace GESS.Repository.Implement
             return examPapers ?? new List<ExamPaperDTO>();
         }
 
+        public async Task<List<ExamPaperDTO>> GetAllFinalExamPaper(int subjectId, int semesterId, int year)
+        {
+            var examPapers = await _context.PracticeExamPapers
+                .Where(e => e.SubjectId == subjectId && e.SemesterId == semesterId && e.CategoryExamId == 2 &&e.CreateAt.Year==year)
+                .Select(e => new ExamPaperDTO
+                {
+                    PracExamPaperId = e.PracExamPaperId,
+                    PracExamPaperName = e.PracExamPaperName,
+                    SemesterName = e.Semester.SemesterName
+
+                })
+                .ToListAsync();
+            return examPapers ?? new List<ExamPaperDTO>();
+        }
+
         public async Task<List<SubjectDTO>> GetAllMajorByTeacherId(Guid teacherId)
         {
             // get all subject id by teacher id in subjectteacher
