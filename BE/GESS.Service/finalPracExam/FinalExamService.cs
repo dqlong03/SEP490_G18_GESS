@@ -28,6 +28,16 @@ namespace GESS.Service.finalPracExam
             _unitOfWork = unitOfWork;
         }
 
+        public async Task<int> CountPageNumberFinalExam(int subjectId, int? semesterId, int? year, int type, string? textSearch, int pageSize)
+        {
+            var totalExams = await _unitOfWork.FinalPracExamRepository.CountPageNumberFinalExam(subjectId, semesterId, year, type, textSearch, pageSize);
+            if (totalExams <= 0)
+            {
+                return 0; // No exams found
+            }
+            return totalExams;
+        }
+
         public async Task<FinalMultipleExamCreateDTO> CreateFinalMultipleExamAsync(FinalMultipleExamCreateDTO multipleExamCreateDto)
         {
             var finalMultiExam = await _unitOfWork.FinalPracExamRepository.CreateFinalMultipleExamAsync(multipleExamCreateDto);
@@ -58,6 +68,16 @@ namespace GESS.Service.finalPracExam
             return chapters;
         }
 
+        public async Task<List<FinalExamListDTO>> GetAllFinalExam(int subjectId, int? semesterId, int? year, int type, string? textSearch, int pageNumber, int pageSize)
+        {
+            var finalExams = await _unitOfWork.FinalPracExamRepository.GetAllFinalExam(subjectId, semesterId, year, type, textSearch, pageNumber, pageSize);
+            if (finalExams == null || !finalExams.Any())
+            {
+                return new List<FinalExamListDTO>();
+            }
+            return finalExams;
+        }
+
         public async Task<List<ExamPaperDTO>> GetAllFinalExamPaper(int subjectId, int semesterId)
         {
             var examPapers = await _unitOfWork.FinalPracExamRepository.GetAllFinalExamPaper(subjectId, semesterId);
@@ -86,6 +106,27 @@ namespace GESS.Service.finalPracExam
                 throw new KeyNotFoundException($"No exam paper found with ID {examPaperId}.");
             }
             return examPaperDetail;
+        }
+
+        public async Task<MultipleExamResponseDTO> ViewMultiFinalExamDetail(int examId)
+        {
+            var examDetail = await _unitOfWork.FinalPracExamRepository.ViewMultiFinalExamDetail(examId);
+            if (examDetail == null)
+            {
+                throw new KeyNotFoundException($"No multiple exam found with ID {examId}.");
+            }
+            return examDetail;
+        }
+
+        public async Task<PracticeExamResponeDTO> ViewPracFinalExamDetail(int examId)
+        {
+            var examDetail = await _unitOfWork.FinalPracExamRepository.ViewPracFinalExamDetail(examId);
+            if (examDetail == null)
+            {
+                throw new KeyNotFoundException(
+                    $"No practice exam found with ID {examId}.");
+            }
+            return examDetail;
         }
     }
 

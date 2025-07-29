@@ -42,6 +42,16 @@ namespace GESS.Service.assignGradeCreateExam
             return _unitOfWork.AssignGradeCreateExamRepository.AssignRoleGradeExam(teacherId, subjectId);
         }
 
+        public int CountPageNumberTeacherHaveSubject(int subjectId, string? textSearch, int pageSize)
+        {
+            var totalCount = _unitOfWork.AssignGradeCreateExamRepository.CountPageNumberTeacherHaveSubject(subjectId, textSearch, pageSize);
+            if (totalCount <= 0)
+            {
+                return 0; // No teachers found
+            }
+            return totalCount;
+        }
+
         public bool DeleteTeacherFromSubject(Guid teacherId, int subjectId)
         {
             return _unitOfWork.AssignGradeCreateExamRepository.DeleteTeacherFromSubject(teacherId, subjectId);
