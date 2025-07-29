@@ -65,6 +65,33 @@ namespace GESS.Service.authservice
                     await _userManager.AddToRoleAsync(user, "Student");
                 }
 
+                // Check if account is active
+                if (!user.IsActive)
+                {
+                    return new LoginResult
+                    {
+                        Success = false,
+                        ErrorMessage = "Tài khoản không hoạt động hoặc đã bị khóa"
+                    };
+                }
+
+                var userRoles = await _userManager.GetRolesAsync(user);
+                // Only allow Admin, Teacher, Examination, HeadOfDepartment
+                var allowedRoles = new[] {
+            GESS.Common.PredefinedRole.ADMIN_ROLE,
+            GESS.Common.PredefinedRole.TEACHER_ROLE,
+            GESS.Common.PredefinedRole.EXAMINATION_ROLE,
+            GESS.Common.PredefinedRole.HEADOFDEPARTMENT_ROLE
+        };
+                if (!userRoles.Any(r => allowedRoles.Contains(r)))
+                {
+                    return new LoginResult
+                    {
+                        Success = false,
+                        ErrorMessage = "Bạn không có quyền truy cập hệ thống"
+                    };
+                }
+
                 // Tạo claims giống LoginAsync
                 var claims = new List<Claim>
         {
@@ -73,7 +100,6 @@ namespace GESS.Service.authservice
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
-                var userRoles = await _userManager.GetRolesAsync(user);
                 foreach (var role in userRoles)
                 {
                     claims.Add(new Claim("Role", role));
@@ -103,7 +129,7 @@ namespace GESS.Service.authservice
             }
             catch
             {
-                return new LoginResult { Success = false, ErrorMessage = "Invalid Google token" };
+                return new LoginResult { Success = false, ErrorMessage = "Token Google không hợp lệ" };
             }
         }
 
