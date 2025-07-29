@@ -148,7 +148,9 @@ namespace GESS.Repository.Implement
                 .Select(e =>
                 {
                     var histories = _context.PracticeExamHistories.Where(h => h.PracExamId == e.PracExamId).ToList();
-                    var isCompleted = histories.Any(h => h.StatusExam == "Completed");
+                    var isCompleted = histories.Any(h => h.IsGraded == true);
+                    var questionCount = _context.NoPEPaperInPEs.Count(n => n.PracExamId == e.PracExamId);
+
                     return new ExamInClassDTO
                     {
                         ExamId = e.PracExamId,
@@ -158,7 +160,8 @@ namespace GESS.Repository.Implement
                         StudentCount = histories.Count,
                         Duration = e.Duration,
                         ExamType = "Practice", // Loại bài thi
-                        Status = e.Status
+                        Status = e.Status,
+                        QuestionCount = questionCount
                     };
                 });
 
