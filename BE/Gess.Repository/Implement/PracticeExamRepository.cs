@@ -38,7 +38,9 @@ namespace GESS.Repository.Implement
                 CategoryExamId = practiceExamCreateDto.CategoryExamId,
                 SemesterId = practiceExamCreateDto.SemesterId,
                 ClassId = practiceExamCreateDto.ClassId,
-                Status = practiceExamCreateDto.Status==null ? "Chưa mở ca" : practiceExamCreateDto.Status,
+                Status = practiceExamCreateDto.Status == null ? "Chưa thi" : practiceExamCreateDto.Status,
+                CodeStart = Guid.NewGuid().ToString().Substring(0, 6), // Tạo mã thi ngẫu nhiên 6 ký tự
+                IsGraded = 0 // Chưa chấm điểm
             };
             try
             {

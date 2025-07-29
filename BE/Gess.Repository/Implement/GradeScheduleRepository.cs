@@ -25,6 +25,129 @@ namespace GESS.Repository.Implement
             _context = context;
         }
 
+
+
+        //
+        public async Task<PracticeExam> GetByIdAsync(int pracExamId)
+        {
+            return await _context.PracticeExams.FindAsync(pracExamId);
+        }
+
+        public async Task<bool> UpdateAsync(PracticeExam practiceExam)
+        {
+            _context.PracticeExams.Update(practiceExam);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+
+
+        //
+        public async Task<bool> MarkExamSlotRoomGradedAsync(int examSlotRoomId)
+        {
+            var examSlotRoom = await _context.ExamSlotRooms.FindAsync(examSlotRoomId);
+            if (examSlotRoom == null)
+                return false;
+
+            examSlotRoom.IsGraded = 1;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+
+
+        //
+        public async Task<bool> MarkStudentExamGradedMidTermAsync(int examId, Guid studentId, string gradedStatus, double totalScore)
+        {
+            var history = await _context.PracticeExamHistories
+                .FirstOrDefaultAsync(h => h.PracExamId == examId && h.StudentId == studentId);
+
+            if (history == null)
+                return false;
+
+            history.IsGraded = true;
+            history.StatusExam = gradedStatus;
+            history.Score = totalScore;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+
+        //
+        public async Task<bool> MarkStudentExamGradedAsync(int examSlotRoomId, Guid studentId, string gradedStatus, double totalScore)
+        {
+            var history = await _context.PracticeExamHistories
+                .FirstOrDefaultAsync(h => h.ExamSlotRoomId == examSlotRoomId && h.StudentId == studentId);
+
+            if (history == null)
+                return false;
+
+            history.IsGraded = true;
+            history.StatusExam = gradedStatus;
+            history.Score = totalScore;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+
+
+        //
+        public async Task<ExamSlotRoomGradingInfoDTO> GetGradingInfoByExamSlotRoomIdAsync(int examSlotRoomId)
+        {
+            var examSlotRoom = await _context.ExamSlotRooms
+                .Include(e => e.ExamSlot)
+                .Include(e => e.Subject)
+                .FirstOrDefaultAsync(e => e.ExamSlotRoomId == examSlotRoomId);
+
+            if (examSlotRoom == null) return null;
+
+            // Nếu là bài thi tự luận
+            if (examSlotRoom.PracticeExamId.HasValue)
+            {
+                var practiceExam = await _context.PracticeExams
+                    .FirstOrDefaultAsync(p => p.PracExamId == examSlotRoom.PracticeExamId.Value);
+
+                var students = await _context.PracticeExamHistories
+                    .Where(h => h.ExamSlotRoomId == examSlotRoomId)
+                    .Select(h => new StudentGradingDTO
+                    {
+                        PracticeExamHistoryId = h.PracExamHistoryId,
+                        StudentId = h.StudentId,
+                        StudentCode = h.Student.User.Code,
+                        FullName = h.Student.User.Fullname,
+                        IsGraded = h.IsGraded ? 1 : 0,
+                        Score = h.Score
+                    }).ToListAsync();
+
+                return new ExamSlotRoomGradingInfoDTO
+                {
+                    ExamSlotRoomId = examSlotRoomId,
+                    ExamName = practiceExam.PracExamName,
+                    Duration = practiceExam.Duration,
+                    StartDay = practiceExam.StartDay ?? DateTime.MinValue, // hoặc practiceExam.StartDay.Value nếu chắc chắn không null
+                    SlotName = examSlotRoom.ExamSlot.SlotName,
+                    SubjectName = examSlotRoom.Subject.SubjectName,
+                    Students = students
+                };
+            }
+
+            return null;
+        }
+
+        //
+        public async Task<int?> GetPracExamIdByHistoryIdAsync(Guid pracExamHistoryId)
+        {
+            var pracExamId = await _context.PracticeExamHistories
+                .Where(h => h.PracExamHistoryId == pracExamHistoryId)
+                .Select(h => (int?)h.PracExamId)
+                .FirstOrDefaultAsync();
+                
+            return pracExamId;
+        }
+
+
+
+
+
         public async Task<int> CountExamNeedGradeByTeacherIdAsync(
           Guid teacherId,
           int? subjectId,
@@ -183,7 +306,7 @@ namespace GESS.Repository.Implement
             return students;
         }
 
-        public async Task<IEnumerable<StudentGradeDTO>> GetStudentsInExamNeedGradeMidTermAsync(Guid teacherId, int classID, int examType)
+        public async Task<IEnumerable<StudentGradeDTO>> GetStudentsInExamNeedGradeMidTermAsync(Guid teacherId, int classID, int examType, int examId)
         {
             if (examType == 1)
             {
@@ -209,7 +332,7 @@ namespace GESS.Repository.Implement
             else if (examType == 2)
             {
                 var examIds = await _context.PracticeExams
-                    .Where(x => x.TeacherId == teacherId && x.ClassId == classID)
+                    .Where(x => x.TeacherId == teacherId && x.ClassId == classID && x.PracExamId == examId)
                     .Select(x => x.PracExamId)
                     .ToListAsync();
 
@@ -221,6 +344,8 @@ namespace GESS.Repository.Implement
                         FullName = h.Student.User.Fullname,
                         Code = h.Student.User.Code,
                         AvatarURL = h.Student.AvatarURL,
+                        IsGraded = h.IsGraded ? 1 : 0,
+                        Grade = h.Score
                     })
                     .Distinct()
                     .ToListAsync();
@@ -321,6 +446,7 @@ namespace GESS.Repository.Implement
                 .Where(q => q.PracExamHistoryId == submissions.PracExamHistoryId)
                 .Select(q => new QuestionPracExamDTO
                 {
+                    PracExamHistoryId = q.PracExamHistoryId,
                     PracticeQuestionId = q.PracticeQuestionId,
                     QuestionContent = q.PracticeQuestion.Content,
                     Answer = q.Answer,

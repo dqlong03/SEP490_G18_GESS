@@ -1,4 +1,5 @@
-﻿using GESS.Service.examSchedule;
+﻿using GESS.Entity.Entities;
+using GESS.Service.examSchedule;
 using GESS.Service.examSlotService;
 using GESS.Service.multipleExam;
 using GESS.Service.practiceExam;
@@ -90,7 +91,10 @@ namespace GESS.Api.Controllers
                 {
                     return NotFound($"No multiple exam found with ID {examId}.");
                 }
-                multiExam.Status = status;
+                multiExam.Status = Common.PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM;
+                //Trắc nghiệm sau khi coi thi chuyển trạng thái bài là đã chấm luôn
+                multiExam.IsGraded = 1;
+
                 var isUpdated = await _multipleExamService.UpdateAsync(multiExam);
                 if (!isUpdated)
                 {
@@ -104,7 +108,9 @@ namespace GESS.Api.Controllers
                 {
                     return NotFound($"No practice exam found with ID {examId}.");
                 }
-                pracExam.Status = status;
+                // pracExam.Status = status;
+                pracExam.Status = Common.PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM;
+
                 var isUpdated = await _practiceExamService.UpdateAsync(pracExam);
                 if (!isUpdated)
                 {

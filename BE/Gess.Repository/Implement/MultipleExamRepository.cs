@@ -141,6 +141,8 @@ namespace GESS.Repository.Implement
                 CreateAt = multipleExamCreateDto.CreateAt,
                 IsPublish = multipleExamCreateDto.IsPublish,
                 ClassId = multipleExamCreateDto.ClassId,
+                CodeStart = Guid.NewGuid().ToString().Substring(0, 5).ToUpper(),
+                Status = Common.PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM,
             };
             
             try
@@ -169,6 +171,7 @@ namespace GESS.Repository.Implement
                             StudentId = student.StudentId,
                             IsGrade = false,
                             CheckIn = false,
+                            StatusExam = PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM,
                         };
                         await _context.MultiExamHistories.AddAsync(multiExamHistory);
                         await _context.SaveChangesAsync();
@@ -427,7 +430,9 @@ namespace GESS.Repository.Implement
             throw new Exception($"Bài thi đã hết thời gian và được tự động chuyển sang trạng thái: {PredefinedStatusExamInHistoryOfStudent.INCOMPLETE_EXAM}. Điểm số: {history.Score}");
         }
 
-        // Helper: Random câu hỏi mới cho TH1 & TH2 (Clean approach - tránh gaps trong QuestionOrder)
+        // Helper: Tạo câu hỏi cho bài thi (Phân biệt giữa bài thi giữa kỳ và cuối kỳ)
+        // - Bài thi giữa kỳ: Random câu hỏi từ question bank
+        // - Bài thi cuối kỳ: Lấy câu hỏi từ bảng FinalExam
         private async Task<List<MultiQuestionDetailDTO>> GenerateRandomQuestions(MultiExam exam, Guid examHistoryId)
         {
             try
@@ -448,49 +453,101 @@ namespace GESS.Repository.Implement
                     Console.WriteLine($"[DEBUG] Removed all {existingQuestions.Count} existing questions");
                 }
 
-                // BƯỚC 2: Random tạo bộ đề mới hoàn toàn
-                var random = new Random();
-                var usedQuestionIds = new HashSet<int>();
-                var newQuestionIds = new List<int>();
+                // BƯỚC 2: Kiểm tra xem có phải bài thi cuối kỳ không (có dữ liệu trong bảng FinalExam)
+                var finalExamQuestions = await _context.FinalExams
+                    .Where(fe => fe.MultiExamId == exam.MultiExamId)
+                    .Select(fe => fe.MultiQuestionId)
+                    .ToListAsync();
 
-                Console.WriteLine($"[DEBUG] Processing {exam.NoQuestionInChapters.Count} chapters...");
+                List<int> newQuestionIds = new List<int>();
 
-                foreach (var chapterConfig in exam.NoQuestionInChapters)
+                if (finalExamQuestions.Any())
                 {
-                    Console.WriteLine($"[DEBUG] Chapter {chapterConfig.ChapterId}, Level {chapterConfig.LevelQuestionId}, Need {chapterConfig.NumberQuestion} questions");
-
-                    var availableQuestions = await _context.MultiQuestions
-                        .Where(q => q.ChapterId == chapterConfig.ChapterId &&
-                                    q.LevelQuestionId == chapterConfig.LevelQuestionId &&
-                                    q.IsPublic == true &&
-                                    q.IsActive == true &&
-                                    !usedQuestionIds.Contains(q.MultiQuestionId))
+                    // Đây là bài thi cuối kỳ - lấy câu hỏi từ bảng FinalExam
+                    Console.WriteLine($"[DEBUG] Final exam detected. Found {finalExamQuestions.Count} predefined questions in FinalExam table");
+                    
+                    // Kiểm tra số lượng câu hỏi có khớp với yêu cầu không
+                    if (finalExamQuestions.Count != exam.NumberQuestion)
+                    {
+                        throw new Exception($"Số lượng câu hỏi trong bài thi cuối kỳ không khớp. " +
+                                          $"Yêu cầu: {exam.NumberQuestion} câu, " +
+                                          $"Có trong FinalExam: {finalExamQuestions.Count} câu.");
+                    }
+                    
+                    // Kiểm tra xem các câu hỏi có tồn tại và có trạng thái phù hợp không
+                    var validQuestions = await _context.MultiQuestions
+                        .Where(q => finalExamQuestions.Contains(q.MultiQuestionId) && 
+                                   q.IsActive == true)
                         .Select(q => q.MultiQuestionId)
                         .ToListAsync();
-
-                    Console.WriteLine($"[DEBUG] Available questions for Chapter {chapterConfig.ChapterId}: {availableQuestions.Count} questions");
-
-                    if (availableQuestions.Count < chapterConfig.NumberQuestion)
+                    
+                    if (validQuestions.Count != finalExamQuestions.Count)
                     {
-                        throw new Exception($"Không đủ câu hỏi cho chương {chapterConfig.ChapterId}. " +
-                                          $"Cần {chapterConfig.NumberQuestion} câu, chỉ có {availableQuestions.Count} câu khả dụng.");
+                        throw new Exception($"Một số câu hỏi trong bài thi cuối kỳ không tồn tại hoặc không hoạt động. " +
+                                          $"Cần: {finalExamQuestions.Count} câu, " +
+                                          $"Hợp lệ: {validQuestions.Count} câu.");
                     }
+                    
+                    newQuestionIds = finalExamQuestions;
+                    Console.WriteLine($"[DEBUG] Using {newQuestionIds.Count} predefined questions from FinalExam table");
+                }
+                else
+                {
+                    // Đây là bài thi giữa kỳ - random câu hỏi từ question bank
+                    Console.WriteLine($"[DEBUG] Midterm exam detected. Generating random questions from question bank");
+                    
+                    var random = new Random();
+                    var usedQuestionIds = new HashSet<int>();
 
-                    var selectedQuestionIds = availableQuestions
-                        .OrderBy(id => random.Next())
-                        .Take(chapterConfig.NumberQuestion);
+                    Console.WriteLine($"[DEBUG] Processing {exam.NoQuestionInChapters.Count} chapters...");
 
-                    Console.WriteLine($"[DEBUG] Selected questions for Chapter {chapterConfig.ChapterId}: [{string.Join(", ", selectedQuestionIds)}]");
-
-                    foreach (var questionId in selectedQuestionIds)
+                    foreach (var chapterConfig in exam.NoQuestionInChapters)
                     {
-                        if (!usedQuestionIds.Contains(questionId))
+                        Console.WriteLine($"[DEBUG] Chapter {chapterConfig.ChapterId}, Level {chapterConfig.LevelQuestionId}, Need {chapterConfig.NumberQuestion} questions");
+
+                        var availableQuestions = await _context.MultiQuestions
+                            .Where(q => q.ChapterId == chapterConfig.ChapterId &&
+                                        q.LevelQuestionId == chapterConfig.LevelQuestionId &&
+                                        q.IsPublic == true &&
+                                        q.IsActive == true &&
+                                        !usedQuestionIds.Contains(q.MultiQuestionId))
+                            .Select(q => q.MultiQuestionId)
+                            .ToListAsync();
+
+                        Console.WriteLine($"[DEBUG] Available questions for Chapter {chapterConfig.ChapterId}: {availableQuestions.Count} questions");
+
+                        if (availableQuestions.Count < chapterConfig.NumberQuestion)
                         {
-                            usedQuestionIds.Add(questionId);
-                            newQuestionIds.Add(questionId);
+                            throw new Exception($"Không đủ câu hỏi cho chương {chapterConfig.ChapterId}. " +
+                                              $"Cần {chapterConfig.NumberQuestion} câu, chỉ có {availableQuestions.Count} câu khả dụng.");
+                        }
+
+                        var selectedQuestionIds = availableQuestions
+                            .OrderBy(id => random.Next())
+                            .Take(chapterConfig.NumberQuestion);
+
+                        Console.WriteLine($"[DEBUG] Selected questions for Chapter {chapterConfig.ChapterId}: [{string.Join(", ", selectedQuestionIds)}]");
+
+                        foreach (var questionId in selectedQuestionIds)
+                        {
+                            if (!usedQuestionIds.Contains(questionId))
+                            {
+                                usedQuestionIds.Add(questionId);
+                                newQuestionIds.Add(questionId);
+                            }
                         }
                     }
                 }
+                
+                // Kiểm tra tổng số câu hỏi có khớp với yêu cầu không (cho bài thi giữa kỳ)
+                if (!finalExamQuestions.Any() && newQuestionIds.Count != exam.NumberQuestion)
+                {
+                    throw new Exception($"Số lượng câu hỏi được random cho bài thi giữa kỳ không khớp. " +
+                                      $"Yêu cầu: {exam.NumberQuestion} câu, " +
+                                      $"Đã random: {newQuestionIds.Count} câu.");
+                }
+                
+                Console.WriteLine($"[DEBUG] Final question count validation: Required={exam.NumberQuestion}, Actual={newQuestionIds.Count}");
                 
                 Console.WriteLine($"[DEBUG] Total new question IDs: [{string.Join(", ", newQuestionIds)}]");
 

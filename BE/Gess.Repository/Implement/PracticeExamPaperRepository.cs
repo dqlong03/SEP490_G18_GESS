@@ -6,10 +6,10 @@ using GESS.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using Microsoft.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 
 namespace GESS.Repository.Implement
 {
@@ -26,14 +26,16 @@ namespace GESS.Repository.Implement
         /// Tạo đề thi thực hành với các câu hỏi thủ công và đã chọn
         public async Task<PracticeExamPaperCreateResponse> CreateExamPaperAsync(PracticeExamPaperCreateRequest request)
         {
-            // 1. Lấy SemesterId mới nhất
-            var semester = _context.Semesters.OrderByDescending(s => s.SemesterId).FirstOrDefault();
-            if (semester == null) throw new Exception("Không tìm thấy học kỳ.");
+            try
+            {
+                // 1. Lấy SemesterId mới nhất
+                var semester = _context.Semesters.OrderByDescending(s => s.SemesterId).FirstOrDefault();
+                if (semester == null) throw new InvalidOperationException("Không tìm thấy học kỳ.");
 
-            // 2. Lấy SubjectId từ ClassId
-            var classEntity = await _context.Classes.FindAsync(request.ClassId);
-            if (classEntity == null) throw new Exception("Không tìm thấy lớp học.");
-            int subjectId = classEntity.SubjectId;
+                // 2. Lấy SubjectId từ ClassId
+                var classEntity = await _context.Classes.FindAsync(request.ClassId);
+                if (classEntity == null) throw new InvalidOperationException("Không tìm thấy lớp học.");
+                int subjectId = classEntity.SubjectId;
 
             // 3. Tạo các PracticeQuestion từ manualQuestions
             var createdQuestions = new List<PracticeQuestion>();
@@ -117,33 +119,65 @@ namespace GESS.Repository.Implement
                 PracExamPaperId = examPaper.PracExamPaperId,
                 Message = "Tạo đề thi thành công"
             };
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw;
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+            {
+                throw new InvalidOperationException($"Lỗi database khi tạo đề thi: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Lỗi không xác định khi tạo đề thi: {ex.Message}", ex);
+            }
         }
 
 
         public async Task<IEnumerable<PracticeExamPaper>> GetAllPracticeExamPapersAsync(
         int? subjectId, int? categoryId, Guid? teacherId, int? semesterId, string? year)
         {
-            var query = _context.PracticeExamPapers
-                .Include(p => p.Semester) // Lấy luôn thông tin học kỳ
-                .AsQueryable();
+            try
+            {
+                var query = _context.PracticeExamPapers
+                    .Include(p => p.Semester) // Lấy luôn thông tin học kỳ
+                    .AsQueryable();
 
-            if (subjectId.HasValue)
-                query = query.Where(p => p.SubjectId == subjectId.Value);
+                if (subjectId.HasValue)
+                    query = query.Where(p => p.SubjectId == subjectId.Value);
 
-            if (categoryId.HasValue)
-                query = query.Where(p => p.CategoryExamId == categoryId.Value);
+                if (categoryId.HasValue)
+                    query = query.Where(p => p.CategoryExamId == categoryId.Value);
 
-            if (teacherId.HasValue && teacherId.Value != Guid.Empty)
-                query = query.Where(p => p.TeacherId == teacherId.Value);
+                if (teacherId.HasValue && teacherId.Value != Guid.Empty)
+                    query = query.Where(p => p.TeacherId == teacherId.Value);
 
-            if (semesterId.HasValue)
-                query = query.Where(p => p.SemesterId == semesterId.Value);
+                if (semesterId.HasValue)
+                    query = query.Where(p => p.SemesterId == semesterId.Value);
 
-            if (!string.IsNullOrWhiteSpace(year))
-                query = query.Where(p => p.CreateAt.Year.ToString() == year);
+                if (!string.IsNullOrWhiteSpace(year))
+                    query = query.Where(p => p.CreateAt.Year.ToString() == year);
 
-            var practiceExamPapers = await query.ToListAsync();
-            return practiceExamPapers;
+                var practiceExamPapers = await query.ToListAsync();
+                return practiceExamPapers;
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new InvalidOperationException($"Lỗi thao tác database: {ex.Message}", ex);
+            }
+            catch (SqlException ex)
+            {
+                throw new InvalidOperationException($"Lỗi kết nối database: {ex.Message}", ex);
+            }
+            catch (TimeoutException ex)
+            {
+                throw new TimeoutException($"Timeout khi truy vấn database: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Lỗi không xác định khi lấy danh sách đề thi: {ex.Message}", ex);
+            }
         }
 
 
@@ -156,56 +190,87 @@ namespace GESS.Repository.Implement
             int pageSize = 5
         )
         {
-            if (page < 1) page = 1;
-            if (pageSize < 1) pageSize = 5;
-
-            var query = _context.PracticeExamPapers
-                .Include(x => x.CategoryExam)
-                .Include(x => x.Subject)
-                .Include(x => x.Semester)
-                .AsNoTracking() // Tối ưu hóa nếu không cần theo dõi thay đổi
-                .AsQueryable();
-
-            // Áp dụng các bộ lọc
-            if (!string.IsNullOrWhiteSpace(searchName))
+            try
             {
-                query = query.Where(x => x.PracExamPaperName.Contains(searchName));
-            }
-            if (subjectId.HasValue)
-            {
-                query = query.Where(x => x.SubjectId == subjectId.Value);
-            }
-            if (semesterId.HasValue)
-            {
-                query = query.Where(x => x.SemesterId == semesterId.Value);
-            }
-            if (categoryExamId.HasValue)
-            {
-                query = query.Where(x => x.CategoryExamId == categoryExamId.Value); // Đảm bảo ánh xạ đúng
-            }
+                // Validate input parameters
+                if (page < 1) page = 1;
+                if (pageSize < 1) pageSize = 5;
+                
+                // Check for potential overflow
+                if (page > int.MaxValue / pageSize)
+                {
+                    throw new ArgumentException("Page hoặc pageSize quá lớn, có thể gây overflow");
+                }
 
-            // Đếm tổng số bản ghi trước khi phân trang
-            var totalItems = await query.CountAsync();
+                var query = _context.PracticeExamPapers
+                    .Include(x => x.CategoryExam)
+                    .Include(x => x.Subject)
+                    .Include(x => x.Semester)
+                    .AsNoTracking() // Tối ưu hóa nếu không cần theo dõi thay đổi
+                    .AsQueryable();
 
-            // Áp dụng phân trang
-            var items = await query
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(x => new ExamPaperListDTO
-        {
-                    PracExamPaperId = x.PracExamPaperId,
-                    PracExamPaperName = x.PracExamPaperName,
-                    NumberQuestion = x.NumberQuestion,
-                    CreateAt = x.CreateAt,
-                    Status = x.Status,
-                    //CreateBy = x.CreateBy,
-                    CategoryExamName = x.CategoryExam.CategoryExamName,
-                    SubjectName = x.Subject.SubjectName,
-                    SemesterName = x.Semester.SemesterName
-                })
-                 .ToListAsync();
+                // Áp dụng các bộ lọc
+                if (!string.IsNullOrWhiteSpace(searchName))
+                {
+                    query = query.Where(x => x.PracExamPaperName.Contains(searchName));
+                }
+                if (subjectId.HasValue)
+                {
+                    query = query.Where(x => x.SubjectId == subjectId.Value);
+                }
+                if (semesterId.HasValue)
+                {
+                    query = query.Where(x => x.SemesterId == semesterId.Value);
+                }
+                if (categoryExamId.HasValue)
+                {
+                    query = query.Where(x => x.CategoryExamId == categoryExamId.Value); // Đảm bảo ánh xạ đúng
+                }
 
-            return items;
+                // Đếm tổng số bản ghi trước khi phân trang
+                var totalItems = await query.CountAsync();
+
+                // Áp dụng phân trang
+                var items = await query
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(x => new ExamPaperListDTO
+                    {
+                        PracExamPaperId = x.PracExamPaperId,
+                        PracExamPaperName = x.PracExamPaperName,
+                        NumberQuestion = x.NumberQuestion,
+                        CreateAt = x.CreateAt,
+                        Status = x.Status,
+                        //CreateBy = x.CreateBy,
+                        CategoryExamName = x.CategoryExam == null ? "N/A" : x.CategoryExam.CategoryExamName,
+                        SubjectName = x.Subject == null ? "N/A" : x.Subject.SubjectName,
+                        SemesterName = x.Semester == null ? "N/A" : x.Semester.SemesterName
+                    })
+                     .ToListAsync();
+
+                return items;
+            }
+            catch (ArgumentException ex)
+            {
+                // Re-throw argument exceptions
+                throw;
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new InvalidOperationException($"Lỗi thao tác database: {ex.Message}", ex);
+            }
+            catch (SqlException ex)
+            {
+                throw new InvalidOperationException($"Lỗi kết nối database: {ex.Message}", ex);
+            }
+            catch (TimeoutException ex)
+            {
+                throw new TimeoutException($"Timeout khi truy vấn database: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Lỗi không xác định khi lấy danh sách đề thi: {ex.Message}", ex);
+            }
         }
         public async Task<PracticeExamPaper> CreateWithQuestionsAsync(PracticeExamPaper examPaper, List<PracticeQuestion> questions, List<PracticeTestQuestion> testQuestions)
         {
@@ -232,31 +297,50 @@ namespace GESS.Repository.Implement
         }
         public async Task<int> CountPageAsync(string? name = null, int? subjectId = null, int? semesterId = null, int? categoryExamId = null, int pageSize = 5)
         {
-            if (pageSize < 1) pageSize = 5;
+            try
+            {
+                if (pageSize < 1) pageSize = 5;
 
-            var query = _context.PracticeExamPapers
-                .AsNoTracking()
-                .AsQueryable();
+                var query = _context.PracticeExamPapers
+                    .AsNoTracking()
+                    .AsQueryable();
 
-            if (!string.IsNullOrWhiteSpace(name))
-            {
-                query = query.Where(x => x.PracExamPaperName.Contains(name));
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    query = query.Where(x => x.PracExamPaperName.Contains(name));
+                }
+                if (subjectId.HasValue)
+                {
+                    query = query.Where(x => x.SubjectId == subjectId.Value);
+                }
+                if (semesterId.HasValue)
+                {
+                    query = query.Where(x => x.SemesterId == semesterId.Value);
+                }
+                if (categoryExamId.HasValue)
+                {
+                    query = query.Where(x => x.CategoryExamId == categoryExamId.Value);
+                }
+        
+                var totalItems = await query.CountAsync();
+                return (int)Math.Ceiling((double)totalItems / pageSize);
             }
-            if (subjectId.HasValue)
+            catch (InvalidOperationException ex)
             {
-                query = query.Where(x => x.SubjectId == subjectId.Value);
+                throw new InvalidOperationException($"Lỗi thao tác database khi đếm trang: {ex.Message}", ex);
             }
-            if (semesterId.HasValue)
+            catch (SqlException ex)
             {
-                query = query.Where(x => x.SemesterId == semesterId.Value);
-        }
-            if (categoryExamId.HasValue)
+                throw new InvalidOperationException($"Lỗi kết nối database khi đếm trang: {ex.Message}", ex);
+            }
+            catch (TimeoutException ex)
             {
-                query = query.Where(x => x.CategoryExamId == categoryExamId.Value);
-    }
-    
-            var totalItems = await query.CountAsync();
-            return (int)Math.Ceiling((double)totalItems / pageSize);
+                throw new TimeoutException($"Timeout khi đếm trang: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Lỗi không xác định khi đếm trang: {ex.Message}", ex);
+            }
         }
         public async Task<List<ListPracticeQuestion>> GetPracticeQuestionsAsync(Guid teacherId)
         {

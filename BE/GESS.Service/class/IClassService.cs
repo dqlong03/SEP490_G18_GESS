@@ -13,15 +13,11 @@ namespace GESS.Service
 {
     public interface IClassService : IBaseService<Class>
     {
-
-        //Tuan
         Task<int?> GetSubjectIdByClassIdAsync(int classId);
         Task<IEnumerable<StudentInClassDTO>> GetStudentsByClassIdAsync(int classId);
         Task<IEnumerable<GradeComponentDTO>> GetGradeComponentsByClassIdAsync(int classId);
         Task<IEnumerable<ChapterInClassDTO>> GetChaptersByClassIdAsync(int classId);
-
         Task<ClassDetailResponseDTO?> GetClassDetailAsync(int classId);
-        //
 
         Task<ClassCreateDTO> CreateClassAsync(ClassCreateDTO classCreateDto);
         Task<IEnumerable<ClassListDTO>> GetAllClassAsync(string? name = null, int? subjectId = null, int? semesterId = null, int pageNumber = 1, int pageSize = 5);
@@ -31,5 +27,9 @@ namespace GESS.Service
         Task<int> CountPageAsync(string? name = null, int? subjectId = null, int? semesterId = null, int pageSize = 5);
         Task<int> CountPageByTeacherAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageSize = 5);
         Task AddStudentsToClassAsync(AddStudentsToClassRequest request);
+
+        //
+        Task<IEnumerable<StudentExamScoreDTO>> GetStudentScoresByExamAsync(int examId, int examType);
+
     }
 }
