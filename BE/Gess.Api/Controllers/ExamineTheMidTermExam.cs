@@ -91,6 +91,8 @@ namespace GESS.Api.Controllers
                     return NotFound($"No multiple exam found with ID {examId}.");
                 }
                 multiExam.Status = status;
+                //Trắc nghiệm sau khi coi thi chuyển trạng thái bài là đã chấm luôn
+                multiExam.IsGraded = 1;
                 var isUpdated = await _multipleExamService.UpdateAsync(multiExam);
                 if (!isUpdated)
                 {

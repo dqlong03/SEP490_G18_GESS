@@ -94,6 +94,7 @@ namespace GESS.Repository.Implement
             return chapters;
         }
 
+
         //Lay ra chi tiet lop học: học sinh trong lớp + các bài kiếm tra của lớp
         public async Task<ClassDetailResponseDTO?> GetClassDetailAsync(int classId)
         {
@@ -115,7 +116,8 @@ namespace GESS.Repository.Implement
                 {
                     StudentId = cs.Student.StudentId,
                     FullName = cs.Student.User.Fullname,
-                    AvatarURL = cs.Student.AvatarURL
+                    AvatarURL = cs.Student.AvatarURL,
+                    Code = cs.Student.User.Code
                 }).ToList();
 
             // Lọc các bài kiểm tra KHÔNG phải "cuối kỳ"
@@ -125,14 +127,18 @@ namespace GESS.Repository.Implement
                 .Select(e =>
                 {
                     var histories = _context.MultiExamHistories.Where(h => h.MultiExamId == e.MultiExamId).ToList();
-                    var isCompleted = histories.Any(h => h.StatusExam == "Completed");
+                    var isCompleted = histories.Any(h => h.IsGrade == true);
                     return new ExamInClassDTO
                     {
                         ExamId = e.MultiExamId,
                         ExamName = e.MultiExamName,
                         GradeComponent = e.CategoryExam?.CategoryExamName ?? "",
-                        Status = isCompleted ? "Đã chấm" : "Chưa chấm",
-                        StudentCount = histories.Count
+                        IsGraded = isCompleted ? "Đã chấm" : "Chưa chấm",
+                        StudentCount = histories.Count,
+                        Duration = e.Duration,
+                        QuestionCount = e.NumberQuestion,
+                        ExamType = "Multiple", // Loại bài thi
+                        Status = e.Status
                     };
                 });
 
@@ -142,14 +148,20 @@ namespace GESS.Repository.Implement
                 .Select(e =>
                 {
                     var histories = _context.PracticeExamHistories.Where(h => h.PracExamId == e.PracExamId).ToList();
-                    var isCompleted = histories.Any(h => h.StatusExam == "Completed");
+                    var isCompleted = histories.Any(h => h.IsGraded == true);
+                    var questionCount = _context.NoPEPaperInPEs.Count(n => n.PracExamId == e.PracExamId);
+
                     return new ExamInClassDTO
                     {
                         ExamId = e.PracExamId,
                         ExamName = e.PracExamName,
                         GradeComponent = e.CategoryExam?.CategoryExamName ?? "",
-                        Status = isCompleted ? "Đã chấm" : "Chưa chấm",
-                        StudentCount = histories.Count
+                        IsGraded = isCompleted ? "Đã chấm" : "Chưa chấm",
+                        StudentCount = histories.Count,
+                        Duration = e.Duration,
+                        ExamType = "Practice", // Loại bài thi
+                        Status = e.Status,
+                        QuestionCount = questionCount
                     };
                 });
 
@@ -164,13 +176,6 @@ namespace GESS.Repository.Implement
             };
         }
         //Tuan-----------------------------------
-
-
-
-
-
-
-
 
 
 

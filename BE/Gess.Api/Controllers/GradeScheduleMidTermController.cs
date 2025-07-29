@@ -5,6 +5,7 @@ using GESS.Service.examSlotService;
 using GESS.Service.gradeSchedule;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json.Linq;
 
 namespace GESS.Api.Controllers
 {
@@ -31,9 +32,9 @@ namespace GESS.Api.Controllers
 
         //API to get all students in exam need grade by teacher id
         [HttpGet("teacher/{teacherId}/exam/{examId}/students")]
-        public async Task<IActionResult> GetStudentsInExamNeedGrade(Guid teacherId, int classID, int ExamType)
+        public async Task<IActionResult> GetStudentsInExamNeedGrade(Guid teacherId, int classID, int ExamType, int examId)
         {
-            var result = await _gradeScheduleService.GetStudentsInExamNeedGradeMidTermAsync(teacherId, classID, ExamType);
+            var result = await _gradeScheduleService.GetStudentsInExamNeedGradeMidTermAsync(teacherId, classID, ExamType, examId);
             if (result == null || !result.Any())
             {
                 return NotFound("No students found for the specified exam.");
@@ -95,5 +96,42 @@ namespace GESS.Api.Controllers
 
             return Ok("Submission status updated successfully.");
         }
+
+
+
+        [HttpPost("examId/{examId}/student/{studentId}/mark-graded")]
+        public async Task<IActionResult> MarkStudentExamGraded(int examId, Guid studentId)
+        {
+            // Đọc body và lấy totalScore
+            string body;
+            using (var reader = new StreamReader(Request.Body))
+            {
+                body = await reader.ReadToEndAsync();
+            }
+            if (string.IsNullOrWhiteSpace(body))
+                return BadRequest("Thiếu thông tin tổng điểm.");
+
+            var jObj = Newtonsoft.Json.Linq.JObject.Parse(body);
+            if (jObj["totalScore"] == null)
+                return BadRequest("Thiếu trường totalScore.");
+            double totalScore = jObj["totalScore"].Value<double>();
+
+            var success = await _gradeScheduleService.MarkStudentExamGradeMidTermdAsync(examId, studentId, totalScore);
+            if (!success)
+                return NotFound("Không tìm thấy bài thi hoặc cập nhật thất bại.");
+            return Ok("Đã chuyển trạng thái chấm bài thành công và lưu điểm.");
+        }
+
+
+        [HttpPost("practice-exam/{pracExamId}/mark-graded")]
+        public async Task<IActionResult> MarkPracticeExamGraded(int pracExamId)
+        {
+            var result = await _gradeScheduleService.MarkPracticeExamGradedAsync(pracExamId);
+            if (!result)
+                return NotFound("PracticeExam not found or update failed.");
+            return Ok("PracticeExam marked as graded successfully.");
+        }
+
+
     }
 }
