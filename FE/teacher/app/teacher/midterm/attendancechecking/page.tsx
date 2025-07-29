@@ -77,7 +77,7 @@ export default function MidtermAttendancePage() {
   const handleFinishExam = async () => {
     if (!examInfo) return;
     await fetch(
-      `https://localhost:7074/api/ExamineTheMidTermExam/changestatus?examId=${examInfo.pracExamId}&status=Đã%20thi&examType=${examType}`,
+      `https://localhost:7074/api/ExamineTheMidTermExam/changestatus?examId=${examId}&status=Đã%20thi&examType=${examType}`,
       { method: "POST" }
     );
     router.push(`/teacher/myclass/classdetail/${classId}`);

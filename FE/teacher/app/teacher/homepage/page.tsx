@@ -24,7 +24,7 @@ export default function TeacherHomePage() {
           alt="Hệ thống quản lý thi"
           className="w-64 h-64 object-contain mb-6 rounded-xl shadow"
         />
-        <h1 className="text-3xl md:text-4xl font-extrabold text-black-500 mb-4 text-center">
+        <h1 className="text-3xl md:text-4xl font-bold text-black-500 mb-4 text-center">
           Hệ thống Quản lý Thi & Chấm điểm
         </h1>
         <p className="text-lg text-gray-700 mb-6 text-center">

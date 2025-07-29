@@ -118,7 +118,11 @@ export default function ClassDetailPage() {
     } else if (action === "edit") {
       router.push(`/teacher/myexam/edit/${exam.examId}`);
     } else if (action === "grade") {
-      router.push(`/teacher/givegrade/examroom/${exam.examId}`);
+      // Sửa tại đây: Nếu là trắc nghiệm thì examType=1, tự luận thì examType=2
+      const examType = exam.examType === "Multiple" ? 1 : 2;
+      router.push(
+        `/teacher/midterm/givegrade?examId=${exam.examId}&examType=${examType}&classId=${CLASS_ID}`
+      );
     } else if (action === "watch") {
       // Sửa tại đây: Nếu là trắc nghiệm thì examType=1, tự luận thì examType=2
       const examType = exam.examType === "Multiple" ? 1 : 2;
@@ -166,7 +170,10 @@ export default function ClassDetailPage() {
               </thead>
               <tbody>
                 {filteredStudents.map((sv, idx) => (
-                  <tr key={sv.studentId || idx} className="text-gray-800 bg-white">
+                  <tr
+                    key={`${sv.studentId}-${sv.code}`}
+                    className="text-gray-800 bg-white"
+                  >
                     <td className="py-2 px-2 border-b border-blue-100 text-center align-middle">{idx + 1}</td>
                     <td className="py-2 px-2 border-b border-blue-100 text-center align-middle">
                       {sv.code}
@@ -282,7 +289,7 @@ export default function ClassDetailPage() {
                     <th className="py-2 px-2 border-b border-blue-200 text-center w-32">Bài thi</th>
                     <th className="py-2 px-2 border-b border-blue-200 text-center w-20">Đầu điểm</th>
                     <th className="py-2 px-2 border-b border-blue-200 text-center w-16">Thời lượng</th>
-                    <th className="py-2 px-2 border-b border-blue-200 text-center w-16">Số câu</th>
+                    <th className="py-2 px-2 border-b border-blue-200 text-center w-16">Số câu/Số đề</th>
                     <th className="py-2 px-2 border-b border-blue-200 text-center w-20">Loại bài</th>
                     <th className="py-2 px-2 border-b border-blue-200 text-center w-16">Chấm bài</th>
                     <th className="py-2 px-2 border-b border-blue-200 text-center w-20">Trạng thái</th>
@@ -292,7 +299,10 @@ export default function ClassDetailPage() {
                 </thead>
                 <tbody>
                   {filteredExams.map((item, idx) => (
-                    <tr key={item.examId || idx} className="text-gray-800 bg-white">
+                    <tr
+                      key={`${item.examId}-${item.examName}`}
+                      className="text-gray-800 bg-white"
+                    >
                       <td className="py-2 px-2 border-b border-blue-100 text-center align-middle">{idx + 1}</td>
                       <td className="py-2 px-2 border-b border-blue-100 text-center align-middle truncate">{item.examName}</td>
                       <td className="py-2 px-2 border-b border-blue-100 text-center align-middle truncate">{item.gradeComponent}</td>
