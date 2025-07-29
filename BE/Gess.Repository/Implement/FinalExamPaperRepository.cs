@@ -72,7 +72,8 @@ namespace GESS.Repository.Implement
                 TeacherId = finalExamPaperCreateDto.TeacherId,
                 CategoryExamId = 2,
                 SubjectId = finalExamPaperCreateDto.SubjectId,
-                SemesterId = finalExamPaperCreateDto.SemesterId
+                SemesterId = finalExamPaperCreateDto.SemesterId,
+                Status= "Published"
             };
             _context.PracticeExamPapers.Add(examPaper);
 
