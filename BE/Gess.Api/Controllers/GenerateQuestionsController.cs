@@ -162,8 +162,20 @@ Trả về toàn bộ danh sách câu hỏi là 1 mảng JSON hợp lệ.
                 string output = result.choices[0].message.content;
 
                 try
-                {
-                    var essayQuestions = JsonConvert.DeserializeObject<List<EssayQuestionResult>>(output);
+                { // Loại bỏ markdown code block nếu có
+                    var cleanedOutput = output.Trim();
+
+                    // Nếu có markdown code block
+                    if (cleanedOutput.Contains("```"))
+                    {
+                        // Lấy phần nằm giữa hai dấu ```
+                        var codeBlocks = Regex.Matches(cleanedOutput, "```(?:json)?\\s*([\\s\\S]*?)\\s*```");
+                        if (codeBlocks.Count > 0)
+                        {
+                            cleanedOutput = codeBlocks[0].Groups[1].Value.Trim();
+                        }
+                    }
+                    var essayQuestions = JsonConvert.DeserializeObject<List<EssayQuestionResult>>(cleanedOutput);
                     return Ok(essayQuestions);
                 }
                 catch (Exception ex)
