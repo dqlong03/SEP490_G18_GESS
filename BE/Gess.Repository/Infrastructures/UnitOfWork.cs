@@ -41,6 +41,7 @@ namespace Gess.Repository.Infrastructures
         private IExamSlotRepository _examSlotRepository;
         private IGradeScheduleRepository _gradeScheduleRepository;
         private IAssignGradeCreateExamRepository _assignGradeCreateExamRepository;
+        private IFinaExamRepository _finalPracExamRepository;
         public UnitOfWork(GessDbContext context, UserManager<User> userManager, RoleManager<IdentityRole<Guid>> roleManager)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -86,7 +87,7 @@ namespace Gess.Repository.Infrastructures
         public IGradeScheduleRepository GradeScheduleRepository => _gradeScheduleRepository ??= new GradeScheduleRepository(_context);
 
         public IAssignGradeCreateExamRepository AssignGradeCreateExamRepository => _assignGradeCreateExamRepository??= new AssignGradeCreateExamRepository(_context);
-
+        public IFinaExamRepository FinalPracExamRepository => _finalPracExamRepository ??= new FinaExamRepository(_context);
         public UnitOfWork(GessDbContext context= null)
         {
             _context = context;

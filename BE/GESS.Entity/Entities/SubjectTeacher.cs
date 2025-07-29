@@ -18,6 +18,8 @@ namespace GESS.Entity.Entities
         public Teacher? Teacher { get; set; }
         public bool IsGradeTeacher { get; set; } = false; // Xác định xem giáo viên có phải là giáo viên chấm điểm không
         public bool IsCreateExamTeacher { get; set; } = false; // Xác định xem giáo viên có phải là giáo viên tạo đề thi không
+        public bool IsActiveSubjectTeacher { get; set; } = true;
+
     }
 
 }

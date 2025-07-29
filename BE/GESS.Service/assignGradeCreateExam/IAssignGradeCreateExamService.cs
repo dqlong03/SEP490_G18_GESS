@@ -1,4 +1,5 @@
-﻿using GESS.Entity.Entities;
+﻿using DocumentFormat.OpenXml.Wordprocessing;
+using GESS.Entity.Entities;
 using GESS.Model.Chapter;
 using GESS.Model.ExamSlotRoomDTO;
 using GESS.Model.MultiExamHistories;
@@ -15,9 +16,12 @@ namespace GESS.Service.assignGradeCreateExam
 {
     public interface IAssignGradeCreateExamService : IBaseService<SubjectTeacher>
     {
-        Task<bool> AssignRoleCreateExam(Guid teacherId, int subjectId);
-        Task <bool> AssignRoleGradeExam(Guid teacherId, int subjectId);
-        Task<IEnumerable<SubjectDTO>> GetAllSubjectsByTeacherId(Guid teacherId);
-        Task<IEnumerable<TeacherResponse>> GetAllTeacherHaveSubject(int subjectId);
+        bool AddTeacherToSubject(Guid teacherId, int subjectId);
+        bool AssignRoleCreateExam(Guid teacherId, int subjectId);
+        bool AssignRoleGradeExam(Guid teacherId, int subjectId);
+        bool DeleteTeacherFromSubject(Guid teacherId, int subjectId);
+        Task<IEnumerable<SubjectDTO>> GetAllSubjectsByTeacherId(Guid teacherId, string? textSearch = null);
+        Task<IEnumerable<TeacherResponse>> GetAllTeacherHaveSubject(int subjectId,string? textSearch, int pageNumber, int pageSize);
+        Task<IEnumerable<TeacherResponse>> GetAllTeacherInMajor(Guid teacherId);
     }
 }
