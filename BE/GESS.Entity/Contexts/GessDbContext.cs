@@ -50,6 +50,7 @@ namespace GESS.Entity.Contexts
         public DbSet<Cohort> Cohorts { get; set; }
         public DbSet<ApplyTrainingProgram> ApplyTrainingPrograms { get; set; }
         public DbSet<StudentExamSlotRoom> StudentExamSlotRoom { get; set; }
+        public DbSet<FinalExam> FinalExam { get; set; }
         public DbSet<SubjectTeacher> SubjectTeachers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -180,7 +180,6 @@ namespace GESS.Api.Controllers
                 }
             }
         }
-
         private async Task<string> GetMaterialContentAsync(string link)
         {
             using var httpClient = new HttpClient();
@@ -206,10 +205,12 @@ namespace GESS.Api.Controllers
             return null;
         }
 
+
         private string ExtractGoogleDocId(string url)
         {
             var match = Regex.Match(url, @"document/d/([a-zA-Z0-9-_]+)");
             return match.Success ? match.Groups[1].Value : null;
+
         }
 
     }
