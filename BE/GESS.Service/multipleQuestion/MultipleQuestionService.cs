@@ -74,6 +74,16 @@ namespace GESS.Service.multipleQuestion
         {
             return await _unitOfWork.MultipleQuestionRepository.GetAllQuestionMultiExamByMultiExamIdAsync(multiExamId);
         }
+
+        public async Task<int> GetFinalQuestionCount(int? chapterId, int? levelId, int? semesterId)
+        {
+            var questionCount = await _unitOfWork.MultipleQuestionRepository.GetFinalQuestionCount(chapterId, levelId, semesterId);
+            if (questionCount < 0)
+            {
+                throw new InvalidOperationException("Invalid question count retrieved.");
+            }
+            return questionCount;
+        }
     }
 
 }

@@ -27,9 +27,14 @@ namespace GESS.Model.PracticeExamPaper
         public string Status { get; set; }
 
         public string CreateBy { get; set; }
+    }
+    public class ExamPaperDTO
+    {
 
+        public int PracExamPaperId { get; set; }
 
+        public string PracExamPaperName { get; set; }
 
-
+        public string SemesterName { get; set; }
     }
 }

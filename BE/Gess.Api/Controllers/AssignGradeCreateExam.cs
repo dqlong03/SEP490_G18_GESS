@@ -1,4 +1,5 @@
-﻿using GESS.Service.assignGradeCreateExam;
+﻿using DocumentFormat.OpenXml.Wordprocessing;
+using GESS.Service.assignGradeCreateExam;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GESS.Api.Controllers
@@ -14,11 +15,11 @@ namespace GESS.Api.Controllers
         }
         //API to get all subjects in major by head of department id (teacher id)
         [HttpGet("GetAllSubjectsByTeacherId")]
-        public IActionResult Get(Guid teacherId)
+        public IActionResult Get(Guid teacherId, string? textSearch = null)
         {
             try
             {
-                var result = _assignGradeCreateExamService.GetAllSubjectsByTeacherId(teacherId);
+                var result = _assignGradeCreateExamService.GetAllSubjectsByTeacherId(teacherId,textSearch);
                 if (result == null || !result.Result.Any())
                 {
                     return NotFound("No subjects found for the given teacher ID.");
@@ -30,16 +31,16 @@ namespace GESS.Api.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
-        //API to get all teacher have subject by subject id
-        [HttpGet("GetAllTeacherHaveSubject")]
-        public IActionResult GetAllTeacherHaveSubject(int subjectId)
+        //APPI to get all teacher in majorid by teacher hod id
+        [HttpGet("GetAllTeacherInMajor")]
+        public IActionResult GetAllTeacherInMajor(Guid teacherId)
         {
             try
             {
-                var result = _assignGradeCreateExamService.GetAllTeacherHaveSubject(subjectId);
+                var result = _assignGradeCreateExamService.GetAllTeacherInMajor(teacherId);
                 if (result == null || !result.Result.Any())
                 {
-                    return NotFound("No teachers found with subjects.");
+                    return NotFound("No teachers found in the specified major.");
                 }
                 return Ok(result);
             }
@@ -48,6 +49,62 @@ namespace GESS.Api.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
+        //API to get all teacher have subject by subject id, need pagination and have text search
+        [HttpGet("GetAllTeacherHaveSubject")]
+        public IActionResult GetAllTeacherHaveSubject(int subjectId, string? textSearch = null, int pageNumber = 1, int pageSize = 10)
+        {
+            try
+            {
+                var result = _assignGradeCreateExamService.GetAllTeacherHaveSubject(subjectId, textSearch, pageNumber, pageSize);
+                if (result == null || !result.Result.Any())
+                {
+                    return NotFound("No teachers found for the specified subject.");
+                }
+                // Implement pagination and text search logic here if needed
+                return Ok(result.Result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+        //API to add teacher to subject
+        [HttpPost("AddTeacherToSubject")]
+        public IActionResult AddTeacherToSubject(Guid teacherId, int subjectId)
+        {
+            try
+            {
+                var result = _assignGradeCreateExamService.AddTeacherToSubject(teacherId, subjectId);
+                if (result)
+                {
+                    return Ok("Teacher added to subject successfully.");
+                }
+                return BadRequest("Failed to add teacher to subject.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+        //API to delete teacher from subject
+        [HttpDelete("DeleteTeacherFromSubject")]
+        public IActionResult DeleteTeacherFromSubject(Guid teacherId, int subjectId)
+        {
+            try
+            {
+                var result = _assignGradeCreateExamService.DeleteTeacherFromSubject(teacherId, subjectId);
+                if (result)
+                {
+                    return Ok("Teacher removed from subject successfully.");
+                }
+                return BadRequest("Failed to remove teacher from subject.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
         //API to assign role grade exam to teacher
         [HttpPost("AssignRoleGradeExam")]
         public IActionResult AssignRoleGradeExam(Guid teacherId, int subjectId)

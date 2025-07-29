@@ -94,6 +94,32 @@ namespace GESS.Repository.Implement
                 })
                 .ToListAsync();
         }
+
+        public async Task<int> GetFinalQuestionCount(int? chapterId, int? levelId, int ? semesterId)
+        {
+            var query = _context.MultiQuestions.AsQueryable();
+            query = query.Where(q => q.CategoryExam.CategoryExamName.Equals("Thi cuối kỳ"));
+            if (chapterId.HasValue)
+            {
+                query = query.Where(q => q.ChapterId == chapterId.Value);
+            }
+            if (levelId.HasValue)
+            {
+                query = query.Where(q => q.LevelQuestionId == levelId.Value);
+            }
+            if (semesterId.HasValue)
+            {
+                query = query.Where(q => q.SemesterId == semesterId.Value);
+            }
+            try
+            {
+                return await query.CountAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("An error occurred while retrieving the final question count.", ex);
+            }
+        }
     }
 
 
