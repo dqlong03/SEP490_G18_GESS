@@ -30,5 +30,9 @@ namespace GESS.Repository.Interface
         Task<IEnumerable<ClassListDTO>> GetAllClassByTeacherIdAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageNumber = 1, int pageSize = 5);
         Task<int> CountPageByTeacherAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageSize = 5);
         Task<bool> CheckIfStudentInClassAsync(int classId, Guid studentId);
+
+        //
+        Task<IEnumerable<StudentExamScoreDTO>> GetStudentScoresByExamAsync(int examId, int examType);
+
     }
 }

@@ -61,7 +61,7 @@ export default function MidtermAttendancePage() {
     if (!examInfo) return;
     try {
       await fetch(
-        `https://localhost:7074/api/ExamineTheMidTermExam/checkin?examId=${examInfo.pracExamId}&studentId=${studentId}&examType=${examType}`,
+        `https://localhost:7074/api/ExamineTheMidTermExam/checkin?examId=${examId}&studentId=${studentId}&examType=${examType}`,
         { method: "POST" }
       );
       setAttendance((prev) => ({

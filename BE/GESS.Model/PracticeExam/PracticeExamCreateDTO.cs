@@ -24,7 +24,7 @@ namespace GESS.Model.PracticeExam
         //Ngày thi, không được để trống
         [Required(ErrorMessage = "Ngày thi không được để trống!")]
         public DateTime StartDay { get; set; }
-        public DateTime EndDay { get; set; }
+        public DateTime EndDay { get; set; }    
 
         // Ngày tạo kỳ thi, không được để trống
         [Required(ErrorMessage = "Ngày tạo không được để trống!")]

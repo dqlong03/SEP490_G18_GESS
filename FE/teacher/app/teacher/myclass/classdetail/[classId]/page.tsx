@@ -114,7 +114,9 @@ export default function ClassDetailPage() {
   // Xử lý hành động bài thi
   const handleExamAction = (exam: Exam, action: string) => {
     if (action === "view") {
-      router.push(`/teacher/myexam/examresult/${exam.examId}`);
+      router.push(
+        `/teacher/myclass/classdetail/${CLASS_ID}/examstudentscore?classId=${CLASS_ID}&examId=${exam.examId}&examType=${exam.examType === "Multiple" ? 1 : 2}`
+      );    
     } else if (action === "edit") {
       router.push(`/teacher/myexam/edit/${exam.examId}`);
     } else if (action === "grade") {
