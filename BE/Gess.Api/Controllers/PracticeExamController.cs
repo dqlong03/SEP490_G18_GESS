@@ -148,5 +148,31 @@ namespace GESS.Api.Controllers
             }
         }
 
+
+        [HttpGet("GetPracticeExamForUpdate/{pracExamId}")]
+        public async Task<IActionResult> GetPracticeExamForUpdate(int pracExamId)
+        {
+            var exam = await _practiceExamService.GetPracticeExamForUpdateAsync(pracExamId);
+            if (exam == null)
+                return NotFound("Practice exam not found");
+            return Ok(exam);
+        }
+
+        //
+        [HttpPut("update")]
+        public async Task<IActionResult> UpdatePracticeExam([FromBody] PracticeExamUpdateDTO2 dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _practiceExamService.UpdatePracticeExamAsync(dto);
+            if (!result)
+                return NotFound("Practice exam not found or update failed.");
+
+            return Ok("Update successful.");
+        }
+
+
+
     }
 } 

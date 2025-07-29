@@ -18,5 +18,9 @@ namespace GESS.Service.practiceExam
         Task<List<PracticeAnswerOfQuestionDTO>> GetPracticeAnswerOfQuestion(int pracExamId);
         Task UpdatePEEach5minutesAsync(List<UpdatePracticeExamAnswerDTO> answers);
         Task<SubmitPracticeExamResponseDTO> SubmitPracticeExamAsync(SubmitPracticeExamRequest dto);
+        Task<PracticeExamUpdateDTO2> GetPracticeExamForUpdateAsync(int pracExamId);
+
+        Task<bool> UpdatePracticeExamAsync(PracticeExamUpdateDTO2 dto);
+
     }
 }

@@ -20,5 +20,9 @@ namespace GESS.Repository.Interface
 
         Task<List<SubjectListDTO>> GetSubjectsByTeacherIdAsync(Guid teacherId);
 
+        //
+        Task<MultipleExamUpdateDTO> GetMultipleExamForUpdateAsync(int multiExamId);
+        Task<bool> UpdateMultipleExamAsync(MultipleExamUpdateDTO dto);
+
     }
 }
