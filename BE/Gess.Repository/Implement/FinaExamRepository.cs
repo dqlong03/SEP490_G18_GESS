@@ -2,12 +2,14 @@
 using GESS.Entity.Entities;
 using GESS.Model.Chapter;
 using GESS.Model.MultipleExam;
+using GESS.Model.NoQuestionInChapter;
 using GESS.Model.PracticeExam;
 using GESS.Model.PracticeExamPaper;
 using GESS.Model.Subject;
 using GESS.Model.Teacher;
 using GESS.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace GESS.Repository.Implement
 {
@@ -21,7 +23,6 @@ namespace GESS.Repository.Implement
 
         public async Task<FinalMultipleExamCreateDTO> CreateFinalMultipleExamAsync(FinalMultipleExamCreateDTO multipleExamCreateDto)
         {
-            
             var multiExam = new MultiExam
             {
                 MultiExamName = multipleExamCreateDto.MultiExamName,
@@ -30,40 +31,53 @@ namespace GESS.Repository.Implement
                 Duration = 0,
                 StartDay = DateTime.Now,
                 EndDay = DateTime.Now,
-                CategoryExamId = 2,//Mac dinh la cuoi ky
+                CategoryExamId = 2,
                 SemesterId = multipleExamCreateDto.SemesterId,
                 TeacherId = multipleExamCreateDto.TeacherId,
                 CreateAt = multipleExamCreateDto.CreateAt,
                 IsPublish = true,
-                ClassId = 1 // Mac dinh id 1 la lop ao
+                ClassId = 1
             };
 
             try
             {
                 await _context.MultiExams.AddAsync(multiExam);
                 await _context.SaveChangesAsync();
+
+                var finalExamsToAdd = new List<FinalExam>();
                 foreach (var noQuestion in multipleExamCreateDto.NoQuestionInChapterDTO)
                 {
-                    //chon ngau nhien noQuestion.NumberQuestion theo chapter va level
                     var questions = await _context.MultiQuestions
                         .Where(q => q.ChapterId == noQuestion.ChapterId && q.LevelQuestionId == noQuestion.LevelQuestionId)
                         .OrderBy(q => Guid.NewGuid())
                         .Take(noQuestion.NumberQuestion)
                         .ToListAsync();
-                    //add cac cau hoi tren vao bang FinalExam
+
                     foreach (var question in questions)
                     {
-                        var finalExam = new FinalExam
+                        finalExamsToAdd.Add(new FinalExam
                         {
                             MultiExamId = multiExam.MultiExamId,
-                            MultiQuestionId = question.MultiQuestionId,
-                        };
-                        await _context.FinalExam.AddAsync(finalExam);
-                        await _context.SaveChangesAsync();
+                            MultiQuestionId = question.MultiQuestionId
+                        });
                     }
                 }
+
+                await _context.FinalExam.AddRangeAsync(finalExamsToAdd);
+
+                var noQuestionInChaptersToAdd = multipleExamCreateDto.NoQuestionInChapterDTO
+                    .Select(dto => new NoQuestionInChapter
+                    {
+                        MultiExamId = multiExam.MultiExamId,
+                        ChapterId = dto.ChapterId,
+                        LevelQuestionId = dto.LevelQuestionId,
+                        NumberQuestion = dto.NumberQuestion
+                    }).ToList();
+
+                await _context.NoQuestionInChapters.AddRangeAsync(noQuestionInChaptersToAdd);
+
                 await _context.SaveChangesAsync();
-                
+
                 return new FinalMultipleExamCreateDTO
                 {
                     MultiExamName = multiExam.MultiExamName,
@@ -144,6 +158,73 @@ namespace GESS.Repository.Implement
             return chapters ?? new List<ChapterInClassDTO>();
         }
 
+        public async Task<List<FinalExamListDTO>> GetAllFinalExam(int subjectId, int? semesterId, int? year, int type, string? textSearch, int pageNumber, int pageSize)
+        {
+            if (type == 1)
+            {
+               var query = _context.MultiExams
+                    .Where(e => e.SubjectId == subjectId && e.CategoryExamId == 2)
+                    .Select(e => new FinalExamListDTO
+                    {
+                        ExamId = e.MultiExamId,
+                        ExamName = e.MultiExamName,
+                        SemesterName = e.Semester.SemesterName,
+                        SubjectName = e.Subject.SubjectName,
+                        Year = e.CreateAt.Year,
+                        SemesterId = e.SemesterId,
+                        ExamType = 1 // 1 for multiple choice exam
+                    });
+                if (!string.IsNullOrEmpty(textSearch))
+                {
+                    query = query.Where(e => e.ExamName.Contains(textSearch));
+                }
+                if (semesterId.HasValue)
+                {
+                    query = query.Where(e => e.SemesterId == semesterId);
+                }
+                if (year.HasValue) {
+                    query = query.Where(e => e.Year == year.Value);
+                }
+                var finalMultiExams = await query
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+                return finalMultiExams ?? new List<FinalExamListDTO>();
+            }
+            else
+            {
+                var query = _context.PracticeExams
+                    .Where(e => e.SubjectId == subjectId && e.CategoryExamId == 2)
+                    .Select(e => new FinalExamListDTO
+                    {
+                        ExamId = e.PracExamId,
+                        ExamName = e.PracExamName,
+                        SemesterName = e.Semester.SemesterName,
+                        SubjectName = e.Subject.SubjectName,
+                        Year = e.CreateAt.Year,
+                        SemesterId = e.SemesterId,
+                        ExamType = 2 // 2 for practice exam
+                    });
+                if (!string.IsNullOrEmpty(textSearch))
+                {
+                    query = query.Where(e => e.ExamName.Contains(textSearch));
+                }
+                if (semesterId.HasValue)
+                {
+                    query = query.Where(e => e.SemesterId == semesterId);
+                }
+                if (year.HasValue)
+                {
+                    query = query.Where(e => e.Year == year.Value);
+                }
+                var finalPracExams = await query
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+                return finalPracExams ?? new List<FinalExamListDTO>();
+            }
+        }
+
         public async Task<List<ExamPaperDTO>> GetAllFinalExamPaper(int subjectId, int semesterId)
         {
             var examPapers = await _context.PracticeExamPapers
@@ -206,6 +287,63 @@ namespace GESS.Repository.Implement
                 }).ToList()
             };
             return examPaperDetail;
+        }
+
+        public async Task<MultipleExamResponseDTO> ViewMultiFinalExamDetail(int examId)
+        {
+            var multiExam = await _context.MultiExams
+                .Include(e => e.FinalExams)
+                .ThenInclude(fe => fe.MultiQuestion)
+                .FirstOrDefaultAsync(e => e.MultiExamId == examId);
+            if (multiExam == null)
+                {
+                throw new Exception("Multiple exam not found.");
+            }
+            var response = new MultipleExamResponseDTO
+            {
+                MultiExamId = multiExam.MultiExamId,
+                MultiExamName = multiExam.MultiExamName,
+                SubjectName = multiExam.Subject.SubjectName,
+                SemesterName = multiExam.Semester.SemesterName,
+                TeacherId = multiExam.TeacherId,
+                TeacherName = multiExam.Teacher.User.Fullname,
+                NoQuestionInChapterDTO = multiExam.NoQuestionInChapters.Select(nq => new NoQuestionInChapterDTO
+                {
+                    ChapterId = nq.ChapterId,
+                    LevelQuestionId = nq.LevelQuestionId,
+                    NumberQuestion = nq.NumberQuestion
+                }).ToList(),
+            };
+            return response;
+        }
+
+        public async Task<PracticeExamResponeDTO> ViewPracFinalExamDetail(int examId)
+        {
+            var pracExam = await _context.PracticeExams
+                .Include(e => e.NoPEPaperInPEs)
+                .ThenInclude(p => p.PracticeExamPaper)
+                .FirstOrDefaultAsync(e => e.PracExamId == examId);
+            if (pracExam == null)
+                {
+                throw new Exception("Practice exam not found.");
+            }
+            var response = new PracticeExamResponeDTO
+            {
+                ExamId = pracExam.PracExamId,
+                PracExamName = pracExam.PracExamName,
+                SubjectId = pracExam.SubjectId,
+                SubjectName = pracExam.Subject.SubjectName,
+                SemesterId = pracExam.SemesterId,
+                SemesterName = pracExam.Semester.SemesterName,
+                TeacherId = pracExam.TeacherId,
+                TeacherName = pracExam.Teacher.User.Fullname,
+                PracticeExamPaperDTO = pracExam.NoPEPaperInPEs.Select(p => new PracticeExamPaperDTO
+                {
+                    PracExamPaperId = p.PracticeExamPaper.PracExamPaperId,
+                    PracExamPaperName = p.PracticeExamPaper.PracExamPaperName
+                }).ToList()
+            };
+            return response;
         }
     }
 }

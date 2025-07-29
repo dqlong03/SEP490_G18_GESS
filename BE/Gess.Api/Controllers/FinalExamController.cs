@@ -135,6 +135,57 @@ namespace GESS.Api.Controllers
                 return BadRequest($"Error creating final practice exam: {ex.Message}");
             }
         }
-
+        //API to get all final exam by subject id and semester id and year and type and text search need pagination
+        [HttpGet("GetAllFinalExam")]
+        public async Task<IActionResult> GetAllFinalExam(int subjectId, int semesterId, int year, int type, string textSearch, int pageNumber = 1, int pageSize = 10)
+        {
+            try
+            {
+                var exams = await _finalExamService.GetAllFinalExam(subjectId, semesterId, year, type, textSearch, pageNumber, pageSize);
+                if (exams == null || !exams.Any())
+                {
+                    return NotFound("No final exams found for the specified criteria.");
+                }
+                return Ok(exams);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+        //API to view final exam detail by exam id and type
+        [HttpGet("ViewFinalExamDetail/{examId}/{type}")]
+        public async Task<IActionResult> ViewFinalExamDetail(int examId, int type)
+        {
+            try
+            {
+                if (type == 1) // Multiple Choice Exam
+                {
+                    var examDetail = await _finalExamService.ViewMultiFinalExamDetail(examId);
+                    if (examDetail == null)
+                    {
+                        return NotFound("No exam detail found for the specified exam ID.");
+                    }
+                    return Ok(examDetail);
+                }
+                else if (type == 2) // Practice Exam
+                {
+                    var examDetail = await _finalExamService.ViewPracFinalExamDetail(examId);
+                    if (examDetail == null)
+                    {
+                        return NotFound("No exam detail found for the specified exam ID.");
+                    }
+                    return Ok(examDetail);
+                }
+                else
+                {
+                    return BadRequest("Invalid exam type specified.");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
     }
 }

@@ -23,9 +23,12 @@ namespace GESS.Repository.Interface
         Task<FinalMultipleExamCreateDTO> CreateFinalMultipleExamAsync(FinalMultipleExamCreateDTO multipleExamCreateDto);
         Task<FinalPracticeExamCreateDTO> CreateFinalPracExamAsync(FinalPracticeExamCreateDTO finalPracExamCreateDto);
         Task<List<ChapterInClassDTO>> GetAllChapterBySubjectId(int subjectId);
+        Task<List<FinalExamListDTO>> GetAllFinalExam(int subjectId, int? semesterId, int? year, int type, string? textSearch, int pageNumber, int pageSize);
         Task<List<ExamPaperDTO>> GetAllFinalExamPaper(int subjectId, int semesterId);
         Task<List<SubjectDTO>> GetAllMajorByTeacherId(Guid teacherId);
         Task<PracticeExamPaperDetailDTO> ViewFinalExamPaperDetail(int examPaperId);
+        Task<MultipleExamResponseDTO> ViewMultiFinalExamDetail(int examId);
+        Task<PracticeExamResponeDTO> ViewPracFinalExamDetail(int examId);
     }
 
 }
