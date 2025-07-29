@@ -37,7 +37,10 @@ namespace GESS.Api.Controllers
             promptBuilder.AppendLine("Yêu cầu:");
             foreach (var level in request.Levels)
             {
+
                 promptBuilder.AppendLine($"- {level.NumberOfQuestions} câu hỏi mức độ {level.Difficulty}");
+                //promptBuilder.AppendLine("1 câu hỏi mức độ dễ");
+
             }
 
             promptBuilder.AppendLine(@"
@@ -81,15 +84,34 @@ namespace GESS.Api.Controllers
                 dynamic result = JsonConvert.DeserializeObject(responseString);
                 string output = result.choices[0].message.content;
 
-                try
+              try
+            {
+                // Làm sạch output: loại bỏ phần ```json hoặc ``` nếu có
+                var cleanedOutput = output.Trim();
+                if (cleanedOutput.StartsWith("```"))
                 {
-                    var questions = JsonConvert.DeserializeObject<List<GeneratedQuestion>>(output);
-                    return Ok(questions);
+                    int firstBrace = cleanedOutput.IndexOf('{');
+                    int lastBrace = cleanedOutput.LastIndexOf('}');
+                    if (firstBrace >= 0 && lastBrace > firstBrace)
+                    {
+                        cleanedOutput = cleanedOutput.Substring(firstBrace, lastBrace - firstBrace + 1);
+                    }
                 }
-                catch (Exception ex)
+
+                // Nếu vẫn còn ký tự thừa, dùng Regex lấy đoạn JSON đầu tiên
+                var match = System.Text.RegularExpressions.Regex.Match(cleanedOutput, @"\{[\s\S]*\}");
+                if (match.Success)
                 {
-                    return BadRequest("Lỗi phân tích kết quả trả về: " + ex.Message + "\nOutput:\n" + output);
+                    cleanedOutput = match.Value;
                 }
+
+                var gradeResult = JsonConvert.DeserializeObject<GeneratedQuestion>(cleanedOutput);
+                return Ok(gradeResult);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("Lỗi phân tích kết quả: " + ex.Message + "\nOutput:\n" + output);
+            }
             }
         }
         [HttpPost("GenerateEssayQuestion")]
@@ -110,7 +132,7 @@ namespace GESS.Api.Controllers
             {
                 promptBuilder.AppendLine($"- {level.NumberOfQuestions} câu hỏi mức độ {level.Difficulty}");
             }
-            promptBuilder.AppendLine(@"
+            promptBuilder.AppendLine(@" 
                 Mỗi câu hỏi phải có định dạng JSON như sau:
                 {
                   ""Content"": ""Nội dung câu hỏi?"",
@@ -183,10 +205,13 @@ namespace GESS.Api.Controllers
             return null;
         }
 
+
         private string ExtractGoogleDocId(string url)
         {
             var match = Regex.Match(url, @"document/d/([a-zA-Z0-9-_]+)");
             return match.Success ? match.Groups[1].Value : null;
+
         }
+
     }
 }

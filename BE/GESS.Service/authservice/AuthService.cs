@@ -167,10 +167,10 @@ namespace GESS.Service.authservice
             {
                 string claimRole = role switch
                 {
-                    "Khảo thí" => "Examination",
-                    "Giáo viên" => "Teacher",
-                    "Sinh viên" => "Student",
-                    "Trưởng bộ môn" => "Teacher Leader",
+                    "Khảo thí" => "EXAMINATION",
+                    "Giáo viên" => "TEACHER",
+                    "Sinh viên" => "STUDENT",
+                    "Trưởng bộ môn" => "HOD",
                     _ => role
                 };
                 claims.Add(new Claim("Role", claimRole));

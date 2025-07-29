@@ -25,6 +25,23 @@ namespace GESS.Service.gradeSchedule
 
 
         //
+        public async Task<bool> MarkPracticeExamGradedAsync(int pracExamId)
+        {
+            var practiceExam = await _unitOfWork.GradeScheduleRepository.GetByIdAsync(pracExamId);
+            if (practiceExam == null) return false;
+            practiceExam.IsGraded = 1;
+            return await _unitOfWork.GradeScheduleRepository.UpdateAsync(practiceExam);
+        }
+
+
+        //
+        public async Task<bool> MarkStudentExamGradeMidTermdAsync(int examId, Guid studentId, double totalScore)
+        {
+            return await _unitOfWork.GradeScheduleRepository.MarkStudentExamGradedMidTermAsync(examId, studentId, Common.PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM, totalScore);
+        }
+
+
+        //
         public async Task<bool> MarkExamSlotRoomGradedAsync(int examSlotRoomId)
         {
             return await _unitOfWork.GradeScheduleRepository.MarkExamSlotRoomGradedAsync(examSlotRoomId);
@@ -138,9 +155,9 @@ namespace GESS.Service.gradeSchedule
             return students;
         }
 
-        public async Task<IEnumerable<StudentGradeDTO>> GetStudentsInExamNeedGradeMidTermAsync(Guid teacherId, int classID, int ExamType)
+        public async Task<IEnumerable<StudentGradeDTO>> GetStudentsInExamNeedGradeMidTermAsync(Guid teacherId, int classID, int ExamType, int examId)
         {
-            var students = await _unitOfWork.GradeScheduleRepository.GetStudentsInExamNeedGradeMidTermAsync(teacherId, classID, ExamType);
+            var students = await _unitOfWork.GradeScheduleRepository.GetStudentsInExamNeedGradeMidTermAsync(teacherId, classID, ExamType,examId);
             if (students == null || !students.Any())
             {
                 return Enumerable.Empty<StudentGradeDTO>();
