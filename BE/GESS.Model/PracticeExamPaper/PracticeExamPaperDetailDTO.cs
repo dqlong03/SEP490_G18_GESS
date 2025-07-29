@@ -16,10 +16,10 @@ namespace GESS.Model.PracticeExamPaper
         public string CategoryExamName { get; set; }
         public string Status { get; set; }
 
-        public List<PracticeExamQuestionDetailDTO> Questions { get; set; } = new();
+        public List<LPracticeExamQuestionDetailDTO> Questions { get; set; } = new();
     }
 
-    public class PracticeExamQuestionDetailDTO
+    public class LPracticeExamQuestionDetailDTO
     {
         public int QuestionOrder { get; set; }
         public string Content { get; set; }

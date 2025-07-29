@@ -332,20 +332,25 @@ namespace GESS.Repository.Implement
         public async Task<PracticeExamPaperDetailDTO> ViewFinalExamPaperDetail(int examPaperId)
         {
             var examPaper = await _context.PracticeExamPapers
+                .Include(e => e.Semester) // ✅ Include thêm Semester
+                .Include(e => e.Subject)  // ✅ Include thêm Subject
                 .Include(e => e.PracticeTestQuestions)
-                .ThenInclude(q => q.PracticeQuestion)
+                    .ThenInclude(q => q.PracticeQuestion)
+                        .ThenInclude(pq => pq.PracticeAnswer) // ✅ Nếu cần lấy AnswerContent
                 .FirstOrDefaultAsync(e => e.PracExamPaperId == examPaperId);
+
             if (examPaper == null)
             {
                 throw new Exception("Exam paper not found.");
             }
+
             var examPaperDetail = new PracticeExamPaperDetailDTO
             {
                 PracExamPaperId = examPaper.PracExamPaperId,
                 PracExamPaperName = examPaper.PracExamPaperName,
                 SemesterName = examPaper.Semester.SemesterName,
                 SubjectName = examPaper.Subject.SubjectName,
-                Questions = examPaper.PracticeTestQuestions.Select(q => new Model.PracticeExamPaper.PracticeExamQuestionDetailDTO
+                Questions = examPaper.PracticeTestQuestions.Select(q => new LPracticeExamQuestionDetailDTO
                 {
                     QuestionOrder = q.QuestionOrder,
                     Content = q.PracticeQuestion.Content,
@@ -353,8 +358,10 @@ namespace GESS.Repository.Implement
                     Score = q.Score
                 }).ToList()
             };
+
             return examPaperDetail;
         }
+
 
         public async Task<MultipleExamResponseDTO> ViewMultiFinalExamDetail(int examId)
         {
@@ -387,13 +394,19 @@ namespace GESS.Repository.Implement
         public async Task<PracticeExamResponeDTO> ViewPracFinalExamDetail(int examId)
         {
             var pracExam = await _context.PracticeExams
+                .Include(e => e.Subject)                           // ✅ Include Subject
+                .Include(e => e.Semester)                          // ✅ Include Semester
+                .Include(e => e.Teacher)                           // ✅ Include Teacher
+                    .ThenInclude(t => t.User)                      // ✅ Include Teacher.User
                 .Include(e => e.NoPEPaperInPEs)
-                .ThenInclude(p => p.PracticeExamPaper)
+                    .ThenInclude(p => p.PracticeExamPaper)         // ✅ Include PracticeExamPaper
                 .FirstOrDefaultAsync(e => e.PracExamId == examId);
+
             if (pracExam == null)
-                {
+            {
                 throw new Exception("Practice exam not found.");
             }
+
             var response = new PracticeExamResponeDTO
             {
                 ExamId = pracExam.PracExamId,
@@ -410,7 +423,9 @@ namespace GESS.Repository.Implement
                     PracExamPaperName = p.PracticeExamPaper.PracExamPaperName
                 }).ToList()
             };
+
             return response;
         }
+
     }
 }

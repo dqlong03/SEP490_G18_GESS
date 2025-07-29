@@ -445,7 +445,7 @@ namespace GESS.Repository.Implement
                 Status = examPaper.Status,
                 Questions = examPaper.PracticeTestQuestions
                     .OrderBy(q => q.QuestionOrder)
-                    .Select(q => new PracticeExamQuestionDetailDTO
+                    .Select(q => new LPracticeExamQuestionDetailDTO
                     {
                         QuestionOrder = q.QuestionOrder,
                         Content = q.PracticeQuestion.Content,
