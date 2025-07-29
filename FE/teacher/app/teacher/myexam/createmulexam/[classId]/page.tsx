@@ -5,6 +5,8 @@ import Select from "react-select";
 import { getUserIdFromToken } from "@/utils/tokenUtils";
 import { useParams, useRouter } from 'next/navigation';
 
+
+
 const API_URL = "https://localhost:7074";
 
 export default function CreateMCQExamPage() {
@@ -15,7 +17,8 @@ export default function CreateMCQExamPage() {
   // State
   const [examName, setExamName] = useState("");
   const [duration, setDuration] = useState<number>(60);
-  const [examDate, setExamDate] = useState("");
+  const [startDate, setStartDate] = useState(""); // Ngày giờ bắt đầu
+  const [endDate, setEndDate] = useState("");     // Ngày giờ kết thúc
   const [gradeComponents, setGradeComponents] = useState<any[]>([]);
   const [selectedGradeComponent, setSelectedGradeComponent] = useState<any>(null);
   const [chapters, setChapters] = useState<any[]>([]);
@@ -34,6 +37,8 @@ export default function CreateMCQExamPage() {
   const [teacherId, setTeacherId] = useState<string>("");
   const [subjectId, setSubjectId] = useState<number | null>(null);
   const [questionInput, setQuestionInput] = useState<number>(0); // Số câu hỏi nhập vào
+  const [isPublic, setIsPublic] = useState(true); // Lưu public hay không
+  const [questionBankType, setQuestionBankType] = useState<"all" | "common" | "private">("all"); // Loại bank câu hỏi
 
   useEffect(() => {
     setTeacherId(getUserIdFromToken() || "");
@@ -57,9 +62,23 @@ export default function CreateMCQExamPage() {
       .then(data => setSubjectId(data));
   }, [classId]);
 
-  const fetchQuestionCount = async (chapterId: number, level: "easy" | "medium" | "hard") => {
+  const fetchQuestionCount = async (
+    chapterId: number,
+    level: "easy" | "medium" | "hard"
+  ) => {
     const levelId = level === "easy" ? 1 : level === "medium" ? 2 : 3;
-    const res = await fetch(`${API_URL}/api/MultipleExam/question-count?chapterId=${chapterId}&levelId=${levelId}`);
+    let url = `${API_URL}/api/MultipleExam/question-count?chapterId=${chapterId}&levelId=${levelId}`;
+    // Thêm isPublic nếu chọn bank chung hoặc riêng
+    if (questionBankType === "common") {
+      url += "&isPublic=true";
+    } else if (questionBankType === "private") {
+      url += "&isPublic=false";
+      const teacherId = getUserIdFromToken();
+      if (teacherId) {
+        url += `&teacherId=${teacherId}`;
+      }
+    }
+    const res = await fetch(url);
     return await res.json();
   };
 
@@ -197,7 +216,7 @@ export default function CreateMCQExamPage() {
   // Submit
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!examName || !selectedGradeComponent || !examDate || !duration || !semesterId || !teacherId) {
+    if (!examName || !selectedGradeComponent || !startDate || !endDate || !duration || !semesterId || !teacherId) {
       alert("Vui lòng nhập đầy đủ thông tin bắt buộc!");
       return;
     }
@@ -206,17 +225,19 @@ export default function CreateMCQExamPage() {
       return;
     }
     const payload = {
-      multiExamName: examName,
-      numberQuestion: totalQuestions,
-      duration,
-      examDate,
-      createAt: new Date().toISOString(),
+      MultiExamName: examName,
+      NumberQuestion: totalQuestions,
+      Duration:duration,
+      StartDay: startDate,
+      EndDay: endDate,
+      CreateAt: new Date().toISOString(),
       teacherId,
       subjectId, 
       classId,
       categoryExamId: selectedGradeComponent.value,
       semesterId,
-      isPublish: true,
+      isPublish: isPublic,
+      questionBankType,
       noQuestionInChapterDTO: buildNoQuestionInChapterDTO(),
       studentExamDTO: selectedStudents.map((sv: any) => ({
         studentId: sv.studentId
@@ -230,7 +251,6 @@ export default function CreateMCQExamPage() {
     if (res.ok) {
       alert("Tạo bài kiểm tra thành công!");
       router.push(`/teacher/myclass/classdetail/${classId.toString()}`);
-
     } else {
       alert("Tạo bài kiểm tra thất bại!");
     }
@@ -245,33 +265,49 @@ export default function CreateMCQExamPage() {
         <form onSubmit={handleSave} className="space-y-6">
           {/* Filter & Info */}
           <div className="flex flex-wrap gap-4 items-center mb-4">
-            <input
-              type="text"
-              value={examName}
-              onChange={e => setExamName(e.target.value)}
-              className="border rounded px-3 py-2 w-64"
-              placeholder="Tên bài kiểm tra"
-              required
-            />
-            <div className="w-44">
+            <div className="flex flex-col">
+              <label className="mb-1 font-semibold text-gray-700">Tên bài kiểm tra</label>
+              <input
+                type="text"
+                value={examName}
+                onChange={e => setExamName(e.target.value)}
+                className="border rounded px-3 py-2 w-64"
+                placeholder="Tên bài kiểm tra"
+                required
+              />
+            </div>
+            <div className="flex flex-col w-44">
+              <label className="mb-1 font-semibold text-gray-700">Chọn đầu điểm</label>
               <Select
                 options={gradeComponents}
                 value={selectedGradeComponent}
                 onChange={setSelectedGradeComponent}
-                placeholder="Chọn đầu điểm"
                 isClearable={false}
                 isSearchable={false}
               />
             </div>
-            <input
-              type="date"
-              value={examDate}
-              onChange={e => setExamDate(e.target.value)}
-              className="border rounded px-3 py-2 w-44"
-              required
-              placeholder="Chọn ngày thi"
-            />
-            <div className="relative w-32 z-20">
+            <div className="flex flex-col w-44">
+              <label className="mb-1 font-semibold text-gray-700">Thời gian bắt đầu</label>
+              <input
+                type="datetime-local"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                className="border rounded px-3 py-2 w-full"
+                required
+              />
+            </div>
+            <div className="flex flex-col w-44">
+              <label className="mb-1 font-semibold text-gray-700">Thời gian kết thúc</label>
+              <input
+                type="datetime-local"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+                className="border rounded px-3 py-2 w-full"
+                required
+              />
+            </div>
+            <div className="flex flex-col w-32">
+              <label className="mb-1 font-semibold text-gray-700">Thời lượng</label>
               <input
                 type="number"
                 min={1}
@@ -281,18 +317,63 @@ export default function CreateMCQExamPage() {
                 placeholder="Nhập thời lượng (phút)"
               />
             </div>
+            <div className="flex flex-col justify-end">
+              <label className="mb-1 font-semibold text-gray-700">Lưu public</label>
+              <input
+                type="checkbox"
+                checked={isPublic}
+                onChange={e => setIsPublic(e.target.checked)}
+                className="w-5 h-5"
+                style={{ marginTop: "7px" }}
+              />
+            </div>
             <button
               type="button"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold self-end"
               onClick={handleOpenStudentPopup}
             >
               Chọn sinh viên
             </button>
             {selectedStudents.length > 0 && (
-              <span className="text-base text-blue-700">
+              <span className="text-base text-blue-700 self-end">
                 Đã chọn {selectedStudents.length} sinh viên
               </span>
             )}
+          </div>
+
+          {/* Dropdown chọn loại bank câu hỏi */}
+          <div className="flex flex-col w-64 mb-2">
+            <label className="mb-1 font-semibold text-gray-700">Nguồn câu hỏi</label>
+            <select
+              className="border rounded px-3 py-2"
+              value={questionBankType}
+              onChange={e => setQuestionBankType(e.target.value as "all" | "common" | "private")}
+            >
+              <option value="all">Cả hai (chung & riêng)</option>
+              <option value="common">Chỉ bank chung</option>
+              <option value="private">Chỉ bank riêng</option>
+            </select>
+          </div>
+
+          {/* Chọn chương và nhập số câu hỏi */}
+          <div className="mt-6 flex gap-4 items-center">
+            <button
+              type="button"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold"
+              onClick={() => setShowChapterPopup(true)}
+            >
+              Chọn chương
+            </button>
+            <span>Nhập số câu hỏi</span>
+            <input
+              type="number"
+              min={1}
+              value={questionInput}
+              onChange={(e) => setQuestionInput(Number(e.target.value))}
+              className="border rounded px-3 py-2 w-44"
+              placeholder="Nhập số câu hỏi"
+              required
+            />
           </div>
 
           {/* Popup chọn sinh viên */}
@@ -339,7 +420,7 @@ export default function CreateMCQExamPage() {
                       {students.map((sv: any, idx: number) => (
                         <tr key={sv.studentId} className="hover:bg-blue-50 transition">
                           <td className="py-2 px-2 border-b text-center">{idx + 1}</td>
-                          <td className="py-2 px-2 border-b">{sv.studentId}</td>
+                          <td className="py-2 px-2 border-b">{sv.code}</td>
                           <td className="py-2 px-2 border-b">{sv.fullName}</td>
                           <td className="py-2 px-2 border-b text-center">
                             <input
@@ -374,26 +455,6 @@ export default function CreateMCQExamPage() {
               </div>
             </div>
           )}
-
-          {/* Chọn chương và nhập số câu hỏi */}
-          <div className="mt-6 flex gap-4 items-center">
-            <button
-              type="button"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold"
-              onClick={() => setShowChapterPopup(true)}
-            >
-              Chọn chương
-            </button>
-            <input
-              type="number"
-              min={1}
-              value={questionInput}
-              onChange={(e) => setQuestionInput(Number(e.target.value))}
-              className="border rounded px-3 py-2 w-44"
-              placeholder="Nhập số câu hỏi"
-              required
-            />
-          </div>
 
           {/* Popup chọn chương */}
           {showChapterPopup && (
@@ -602,7 +663,7 @@ export default function CreateMCQExamPage() {
           from { transform: scale(0.95); opacity: 0 }
           to { transform: scale(1); opacity: 1 }
         }
-       .animate-popup { animation: popup 0.2s }
+      animate-popup { animation: popup 0.2s }
       `}</style>
     </div>
   );

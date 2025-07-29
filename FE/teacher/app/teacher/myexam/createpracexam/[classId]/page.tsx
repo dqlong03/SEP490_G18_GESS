@@ -43,7 +43,8 @@ export default function CreateEssayExamPage() {
 
   // State
   const [examName, setExamName] = useState('');
-  const [examDate, setExamDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [duration, setDuration] = useState<number>(60);
   const [students, setStudents] = useState<any[]>([]);
   const [showStudentPopup, setShowStudentPopup] = useState(false);
@@ -61,7 +62,6 @@ export default function CreateEssayExamPage() {
 
   // subjectId, semesterId
   const [subjectId, setSubjectId] = useState<number | null>(null);
-  const [semesterId, setSemesterId] = useState<number | null>(null);
 
   // Kỳ và năm
   const [semesters, setSemesters] = useState<SemesterDTO[]>([]);
@@ -78,7 +78,7 @@ export default function CreateEssayExamPage() {
   const [hoveredExam, setHoveredExam] = useState<PracticeExamPaperDTO | null>(null);
   const [previewPosition, setPreviewPosition] = useState<{ x: number; y: number } | null>(null);
 
-  // Lấy danh sách sinh viên, đầu điểm, subjectId, semesterId, semesters, years
+  // Lấy danh sách sinh viên, đầu điểm, subjectId, semesters, years
   useEffect(() => {
     if (!classId) return;
     fetch(`${API_URL}/api/Class/${classId}/students`)
@@ -95,11 +95,6 @@ export default function CreateEssayExamPage() {
     fetch(`${API_URL}/api/Class/${classId}/subject-id`)
       .then(res => res.json())
       .then(data => setSubjectId(data));
-    fetch(`${API_URL}/api/Semesters/CurrentSemester`)
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) setSemesterId(data[0].semesterId);
-      });
     // Lấy danh sách kỳ
     fetch(`${API_URL}/api/Semesters`)
       .then(res => res.json())
@@ -269,24 +264,28 @@ export default function CreateEssayExamPage() {
     try {
       const teacherId = getUserIdFromToken();
       if (!subjectId) throw new Error('Không lấy được subjectId');
-      if (!semesterId) throw new Error('Không lấy được semesterId');
+      if (!selectedSemester) throw new Error('Vui lòng chọn kỳ');
       if (!selectedGradeComponent) throw new Error('Vui lòng chọn đầu điểm');
-      if (!examName || !examDate || !duration || !selectedExams.length || !selectedStudents.length) {
+      if (!examName || !startDate || !endDate || !duration || !selectedExams.length || !selectedStudents.length) {
         throw new Error('Vui lòng nhập đầy đủ thông tin');
       }
       const payload = {
         pracExamName: examName,
         duration: duration,
-        examDate: examDate,
+        startDay: startDate,
+        endDay: endDate,
         createAt: new Date().toISOString(),
         teacherId: teacherId,
         categoryExamId: selectedGradeComponent.value,
         subjectId: subjectId,
+        status: "Chưa thi",
         classId: classId,
-        semesterId: semesterId,
+        semesterId: selectedSemester.value,
         practiceExamPaperDTO: selectedExams.map(e => ({
           pracExamPaperId: e.pracExamPaperId,
-          pracExamPaperName: e.pracExamPaperName
+          pracExamPaperName: e.pracExamPaperName,
+          year: Date.now().toString().slice(0, 4), // Lấy năm hiện tại
+          semester: e.semester
         })),
         studentIds: selectedStudents.map((s: any) => s.studentId)
       };
@@ -314,16 +313,38 @@ export default function CreateEssayExamPage() {
               type="text"
               value={examName}
               onChange={e => setExamName(e.target.value)}
-              className="border rounded px-3 py-2 w-64"
+              className="border rounded px-3 py-2 w-64 mt-5"
               placeholder="Tên bài kiểm tra"
               required
             />
+          
             <div className="w-44">
+               <label className="mb-1 font-semibold text-gray-700">Chọn đầu điểm</label>
+
               <Select
                 options={gradeComponents}
                 value={selectedGradeComponent}
                 onChange={setSelectedGradeComponent}
                 placeholder="Chọn đầu điểm"
+                isClearable={false}
+                isSearchable={false}
+                  styles={{
+                    control: (provided) => ({
+                    ...provided,
+                    minHeight: '40px',
+                    borderColor: '#d1d5db',
+                    boxShadow: 'none',
+                  }),
+                }}
+              />
+            </div>
+            <div className="w-44">
+              <label className="mb-1 font-semibold text-gray-700">Chọn kỳ</label>
+              <Select
+                options={semesters.map(s => ({ value: s.semesterId, label: s.semesterName }))}
+                value={selectedSemester}
+                onChange={setSelectedSemester}
+                placeholder="Chọn kỳ"
                 isClearable={false}
                 isSearchable={false}
                 styles={{
@@ -336,15 +357,29 @@ export default function CreateEssayExamPage() {
                 }}
               />
             </div>
-            <input
-              type="date"
-              value={examDate}
-              onChange={e => setExamDate(e.target.value)}
-              className="border rounded px-3 py-2 w-44"
-              required
-              placeholder="Chọn ngày thi"
-            />
+            <div className="flex flex-col w-44">
+              <label className="mb-1 font-semibold text-gray-700">Thời gian bắt đầu</label>
+              <input
+                type="datetime-local"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                className="border rounded px-3 py-2 w-full"
+                required
+              />
+            </div>
+            <div className="flex flex-col w-44">
+              <label className="mb-1 font-semibold text-gray-700">Thời gian kết thúc</label>
+              <input
+                type="datetime-local"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+                className="border rounded px-3 py-2 w-full"
+                required
+              />
+            </div>
             <div className="relative w-32 z-20">
+               <label className="mb-1 font-semibold text-gray-700">Thời lượng thi</label>
+
               <input
                 type="number"
                 min={1}
@@ -412,7 +447,7 @@ export default function CreateEssayExamPage() {
                       {students.map((sv, idx) => (
                         <tr key={sv.studentId} className="hover:bg-blue-50 transition">
                           <td className="py-2 px-2 border-b text-center">{idx + 1}</td>
-                          <td className="py-2 px-2 border-b">{sv.studentId}</td>
+                          <td className="py-2 px-2 border-b">{sv.code}</td>
                           <td className="py-2 px-2 border-b">{sv.fullName}</td>
                           <td className="py-2 px-2 border-b text-center">
                             <input
@@ -514,15 +549,12 @@ export default function CreateEssayExamPage() {
                   >
                     Bỏ chọn tất cả
                   </button>
-
-                  {/* Nút tạo đề thi */}
-                 <Link
-                  href={`/teacher/myexampaper/createexampaper/${classId}`}
-                  className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition font-semibold"
-               
-                >
-                  Tạo đề thi
-                </Link>
+                  <Link
+                    href={`/teacher/myexampaper/createexampaper/${classId}`}
+                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition font-semibold"
+                  >
+                    Tạo đề thi
+                  </Link>
                 </div>
                 {loadingExams ? (
                   <div>Đang tải đề thi...</div>
@@ -732,7 +764,7 @@ export default function CreateEssayExamPage() {
         .animate-fadeIn { animation: fadeIn 0.2s }
         @keyframes popup {
           from { transform: scale(0.95); opacity: 0 }
-          to { transform: scale(1); opacity: 1 }
+         to { transform: scale(1); opacity: 1 }
         }
        .animate-popup { animation: popup 0.2s }
       `}</style>
