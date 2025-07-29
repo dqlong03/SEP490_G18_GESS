@@ -24,9 +24,49 @@ namespace GESS.Repository.Implement
 
 
 
+        //
+        public async Task<IEnumerable<StudentExamScoreDTO>> GetStudentScoresByExamAsync(int examId, int examType)
+        {
+            if (examType == 1)
+            {
+                // Multiple choice
+                return await (from meh in _context.MultiExamHistories
+                              join s in _context.Students on meh.StudentId equals s.StudentId
+                              join u in _context.Users on s.UserId equals u.Id
+                              where meh.MultiExamId == examId
+                              select new StudentExamScoreDTO
+                              {
+                                  StudentId = s.StudentId,
+                                  FullName = u.Fullname,
+                                  Code = u.Code,
+                                  Score = meh.Score
+                              }).ToListAsync();
+            }
+            else if (examType == 2)
+            {
+                // Essay
+                return await (from peh in _context.PracticeExamHistories
+                              join s in _context.Students on peh.StudentId equals s.StudentId
+                              join u in _context.Users on s.UserId equals u.Id
+                              where peh.PracExamId == examId
+                              select new StudentExamScoreDTO
+                              {
+                                  StudentId = s.StudentId,
+                                  FullName = u.Fullname,
+                                  Code = u.Code,
+                                  Score = peh.Score
+                              }).ToListAsync();
+            }
+            else
+            {
+                return new List<StudentExamScoreDTO>();
+            }
+        }
 
 
-        //Tuan----------------------------------------------------------------------
+
+
+
 
         //Lấy subjectId theo classId
         public async Task<int?> GetSubjectIdByClassIdAsync(int classId)
@@ -46,7 +86,8 @@ namespace GESS.Repository.Implement
                 {
                     StudentId = cs.Student.StudentId,
                     FullName = cs.Student.User.Fullname,
-                    AvatarURL = cs.Student.AvatarURL
+                    AvatarURL = cs.Student.AvatarURL,
+                    Code = cs.Student.User.Code
                 })
                 .ToListAsync();
 
@@ -69,11 +110,13 @@ namespace GESS.Repository.Implement
             var gradeComponents = await (from ces in _context.CategoryExamSubjects
                                          join ce in _context.CategoryExams on ces.CategoryExamId equals ce.CategoryExamId
                                          where ces.SubjectId == subjectId
+                                               && !EF.Functions.Like(ce.CategoryExamName.ToLower(), Common.PredefinedCategoryExam.Final_EXAM_CATEGORY)
                                          select new GradeComponentDTO
                                          {
                                              CategoryExamId = ce.CategoryExamId,
                                              CategoryExamName = ce.CategoryExamName
                                          }).Distinct().ToListAsync();
+
 
             return gradeComponents;
         }
@@ -175,12 +218,6 @@ namespace GESS.Repository.Implement
                 Exams = exams
             };
         }
-        //Tuan-----------------------------------
-
-
-
-
-
 
         public Task<bool> ClassExistsAsync(string className)
         {

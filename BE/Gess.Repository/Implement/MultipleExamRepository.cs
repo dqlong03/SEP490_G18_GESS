@@ -141,6 +141,8 @@ namespace GESS.Repository.Implement
                 CreateAt = multipleExamCreateDto.CreateAt,
                 IsPublish = multipleExamCreateDto.IsPublish,
                 ClassId = multipleExamCreateDto.ClassId,
+                CodeStart = Guid.NewGuid().ToString().Substring(0, 5).ToUpper(),
+                Status = Common.PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM,
             };
             
             try
@@ -169,6 +171,7 @@ namespace GESS.Repository.Implement
                             StudentId = student.StudentId,
                             IsGrade = false,
                             CheckIn = false,
+                            StatusExam = PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM,
                         };
                         await _context.MultiExamHistories.AddAsync(multiExamHistory);
                         await _context.SaveChangesAsync();

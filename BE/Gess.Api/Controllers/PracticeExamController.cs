@@ -41,6 +41,7 @@ namespace GESS.Api.Controllers
             _categoryExamService = categoryExamService;
             _chapterService = chapterService;
         }
+
         //API to get all Major
         [HttpGet("major")]
         public async Task<ActionResult<IEnumerable<MajorUpdateDTO>>> GetAllMajors()
@@ -55,6 +56,7 @@ namespace GESS.Api.Controllers
                 return NotFound(ex.Message);
             }
         }
+
         //API to get all Subject by MajorId
         [HttpGet("subject/{majorId}")]
         public async Task<ActionResult<IEnumerable<SubjectDTO>>> GetAllSubjectsByMajorId(int? majorId)
@@ -73,6 +75,7 @@ namespace GESS.Api.Controllers
                 return NotFound(ex.Message);
             }
         }
+
         //API to get category by subjectId
         [HttpGet("category/{subjectId}")]
         public async Task<ActionResult<IEnumerable<CategoryExamDTO>>> GetCategoriesBySubjectId(int subjectId)
@@ -91,6 +94,7 @@ namespace GESS.Api.Controllers
                 return NotFound(ex.Message);
             }
         }
+
         //API to get all chapters by subjectId
         [HttpGet("chapter/{subjectId}")]
         public async Task<ActionResult<IEnumerable<ChapterDTO>>> GetChaptersBySubjectId(int subjectId)
@@ -124,7 +128,6 @@ namespace GESS.Api.Controllers
                 return NotFound(ex.Message);
             }
         }
-
 
         //API to create a new practice exam
         [HttpPost("create")]

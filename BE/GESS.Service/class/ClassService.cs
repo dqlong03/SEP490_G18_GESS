@@ -22,7 +22,12 @@ namespace GESS.Service
         }
 
 
-        //Tuan
+        //
+        public async Task<IEnumerable<StudentExamScoreDTO>> GetStudentScoresByExamAsync(int examId, int examType)
+        {
+            return await _unitOfWork.ClassRepository.GetStudentScoresByExamAsync(examId, examType);
+        }
+
 
         public async Task<int?> GetSubjectIdByClassIdAsync(int classId)
         {

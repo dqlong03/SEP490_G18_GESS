@@ -19,8 +19,16 @@ namespace GESS.Api.Controllers
         }
 
 
+        //
+        [HttpGet("exam-scores")]
+        public async Task<IActionResult> GetStudentScoresByExam([FromQuery] int examId, [FromQuery] int examType)
+        {
+            var scores = await _classService.GetStudentScoresByExamAsync(examId, examType);
+            if (scores == null || !scores.Any())
+                return NotFound("No scores found for the given parameters.");
+            return Ok(scores);
+        }
 
-        //Tuan
 
         //API hiển thị danh sách lớp học theo id môn học
         [HttpGet("{classId}/subject-id")]
@@ -65,9 +73,6 @@ namespace GESS.Api.Controllers
                 return NotFound("Class not found");
             return Ok(result);
         }
-
-        //-------------------------
-
 
 
         //API hiển thị danh sách lớp học thực hiện search, lọc theo semester, subject
