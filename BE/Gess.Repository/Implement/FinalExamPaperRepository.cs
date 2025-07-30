@@ -1,7 +1,9 @@
 ﻿using GESS.Entity.Contexts;
 using GESS.Entity.Entities;
 using GESS.Model.PracticeExamPaper;
+using GESS.Model.PracticeQuestionDTO;
 using GESS.Repository.Interface;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +18,34 @@ namespace GESS.Repository.Implement
         public FinalExamPaperRepository(GessDbContext context)
         {
             _context = context;
+        }
+
+        public async Task<int> CountPageNumberFinalExamQuestion(int? semesterId, int? chapterId, int? levelId, string? textSearch, int pageSize)
+        {
+            var query = _context.PracticeQuestions
+                .Where(q => q.CategoryExamId == 2 && q.IsActive && q.IsPublic);
+            if (semesterId.HasValue)
+            {
+                query = query.Where(q => q.SemesterId == semesterId.Value);
+            }
+            if (chapterId.HasValue)
+            {
+                query = query.Where(q => q.ChapterId == chapterId.Value);
+            }
+            if (levelId.HasValue)
+            {
+                query = query.Where(q => q.LevelQuestionId == levelId.Value);
+            }
+            if (!string.IsNullOrEmpty(textSearch))
+            {
+                query = query.Where(q => q.Content.Contains(textSearch));
+            }
+            var totalCount = await query.CountAsync();
+            if (totalCount < 0)
+            {
+                throw new InvalidOperationException("Failed to count the number of final exam questions.");
+            }
+            return (int)Math.Ceiling((double)totalCount / pageSize);
         }
 
         public async Task<FinalPracticeExamPaperCreateRequest> CreateFinalExamPaperAsync(FinalPracticeExamPaperCreateRequest finalExamPaperCreateDto)
@@ -73,7 +103,7 @@ namespace GESS.Repository.Implement
                 CategoryExamId = 2,
                 SubjectId = finalExamPaperCreateDto.SubjectId,
                 SemesterId = finalExamPaperCreateDto.SemesterId,
-                Status= "Published"
+                Status = "Published"
             };
             _context.PracticeExamPapers.Add(examPaper);
 
@@ -102,5 +132,48 @@ namespace GESS.Repository.Implement
                 ExamName = examPaper.PracExamPaperName
             };
         }
+
+        public async Task<List<PracticeQuestionExamPaperDTO>> GetFinalPracticeQuestion(
+    int? semesterId, int? chapterId, int? levelId, string? textSearch, int pageNumber, int pageSize)
+        {
+            var query = _context.PracticeQuestions
+                        .Include(q => q.LevelQuestion) 
+                        .Where(q => q.CategoryExamId == 2 && q.IsActive && q.IsPublic);
+
+            if (semesterId.HasValue)
+            {
+                query = query.Where(q => q.SemesterId == semesterId.Value);
+            }
+
+            if (chapterId.HasValue)
+            {
+                query = query.Where(q => q.ChapterId == chapterId.Value);
+            }
+
+            if (levelId.HasValue)
+            {
+                query = query.Where(q => q.LevelQuestionId == levelId.Value);
+            }
+
+            if (!string.IsNullOrEmpty(textSearch))
+            {
+                query = query.Where(q => q.Content.Contains(textSearch));
+            }
+
+            var questions = await query
+                .OrderBy(q => q.PracticeQuestionId)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(q => new PracticeQuestionExamPaperDTO
+                {
+                    Id = q.PracticeQuestionId,
+                    Content = q.Content,
+                    Level = q.LevelQuestion.LevelQuestionName
+                })
+                .ToListAsync();
+
+            return questions;
+        }
+
     }
 }
