@@ -195,7 +195,7 @@ namespace GESS.Repository.Implement
         public async Task<IEnumerable<TeacherResponse>> GetAllTeacherHaveSubject(int subjectId, string? textSearch = null, int pageNumber = 1, int pageSize = 10)
         {
             var query = _context.SubjectTeachers
-                .Where(st => st.SubjectId == subjectId)
+                .Where(st => st.SubjectId == subjectId && st.IsActiveSubjectTeacher)
                 .Select(st => new TeacherResponse
                 {
                     TeacherId = st.Teacher.TeacherId,
@@ -208,7 +208,9 @@ namespace GESS.Repository.Implement
                     DateOfBirth = st.Teacher.User.DateOfBirth,
                     Gender = st.Teacher.User.Gender,
                     HireDate = st.Teacher.HireDate,
-                    IsActive = st.Teacher.User.IsActive
+                    IsActive = st.Teacher.User.IsActive,
+                    IsGraded = st.IsGradeTeacher,
+                    IsCreateExam = st.IsCreateExamTeacher
                 });
 
             // Áp dụng tìm kiếm nếu có

@@ -23,6 +23,7 @@ using GESS.Service.exam;
 using GESS.Service.examination;
 using GESS.Service.examSchedule;
 using GESS.Service.examSlotService;
+using GESS.Service.finalExamPaper;
 using GESS.Service.finalPracExam;
 using GESS.Service.GradeCompoService;
 using GESS.Service.gradeSchedule;
@@ -152,7 +153,9 @@ builder.Services.AddScoped<ILevelQuestionService, LevelQuestionService>();
 builder.Services.AddScoped<IGradeScheduleService, GradeScheduleService>();
 builder.Services.AddScoped<IFinalExamService, FinalExamService>();
 builder.Services.AddScoped<IAssignGradeCreateExamService, AssignGradeCreateExamService>();
-builder.Services.AddScoped<IFinaExamRepository, FinaExamRepository>();
+builder.Services.AddScoped<IFinalExamPaperService, FinalExamPaperService>();
+
+
 
 // ThaiNH_Initialize_Begin
 builder.Services.AddScoped<ICateExamSubService, CateExamSubService>();
@@ -194,6 +197,9 @@ builder.Services.AddScoped<IPracticeExamRepository, PracticeExamRepository>();
 builder.Services.AddScoped<IExamScheduleRepository, ExamScheduleRepository>();
 builder.Services.AddScoped<IExamSlotRepository, ExamSlotRepository>();
 builder.Services.AddScoped<IAssignGradeCreateExamRepository, AssignGradeCreateExamRepository>();
+builder.Services.AddScoped<IFinalExamPaperRepository, FinalExamPaperRepository>();
+builder.Services.AddScoped<IFinaExamRepository, FinaExamRepository>();
+
 
 // Đọc cấu hình Cloudinary từ appsettings.json
 var cloudinaryConfig = builder.Configuration.GetSection("Cloudinary");

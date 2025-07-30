@@ -5,6 +5,7 @@ using GESS.Entity.Entities;
 using GESS.Model.MultiExamHistories;
 using GESS.Model.MultipleExam;
 using GESS.Model.NoQuestionInChapter;
+using GESS.Model.Student;
 using GESS.Model.Subject;
 using GESS.Model.TrainingProgram;
 using GESS.Repository.Interface;
@@ -24,6 +25,105 @@ namespace GESS.Repository.Implement
         {
             _context = context;
         }
+
+
+
+        //
+        public async Task<MultipleExamUpdateDTO> GetMultipleExamForUpdateAsync(int multiExamId)
+        {
+            var exam = await _context.MultiExams
+                .Include(e => e.NoQuestionInChapters)
+                .Include(e => e.MultiExamHistories)
+                .FirstOrDefaultAsync(e => e.MultiExamId == multiExamId);
+
+            if (exam == null) return null;
+
+            return new MultipleExamUpdateDTO
+            {
+                MultiExamId = exam.MultiExamId,
+                MultiExamName = exam.MultiExamName,
+                NumberQuestion = exam.NumberQuestion,
+                Duration = exam.Duration,
+                StartDay = exam.StartDay ?? DateTime.MinValue,
+                EndDay = exam.EndDay ?? DateTime.MinValue,
+                CreateAt = exam.CreateAt,
+                TeacherId = exam.TeacherId,
+                SubjectId = exam.SubjectId,
+                ClassId = exam.ClassId,
+                CategoryExamId = exam.CategoryExamId,
+                SemesterId = exam.SemesterId,
+                IsPublish = exam.IsPublish,
+                NoQuestionInChapterDTO = exam.NoQuestionInChapters?.Select(n => new NoQuestionInChapterDTO
+                {
+                    NumberQuestion = n.NumberQuestion,
+                    ChapterId = n.ChapterId,
+                    LevelQuestionId = n.LevelQuestionId
+                }).ToList(),
+                StudentExamDTO = exam.MultiExamHistories?.Select(h => new StudentExamDTO
+                {
+                    StudentId = h.StudentId
+                }).ToList()
+            };
+        }
+
+        public async Task<bool> UpdateMultipleExamAsync(MultipleExamUpdateDTO dto)
+        {
+            var exam = await _context.MultiExams
+                .Include(e => e.NoQuestionInChapters)
+                .Include(e => e.MultiExamHistories)
+                .FirstOrDefaultAsync(e => e.MultiExamId == dto.MultiExamId);
+
+            if (exam == null) return false;
+
+            // Update fields
+            exam.MultiExamName = dto.MultiExamName;
+            exam.NumberQuestion = dto.NumberQuestion;
+            exam.Duration = dto.Duration;
+            exam.StartDay = dto.StartDay;
+            exam.EndDay = dto.EndDay;
+            exam.CreateAt = dto.CreateAt;
+            exam.TeacherId = dto.TeacherId;
+            exam.SubjectId = dto.SubjectId;
+            exam.ClassId = dto.ClassId;
+            exam.CategoryExamId = dto.CategoryExamId;
+            exam.SemesterId = dto.SemesterId;
+            exam.IsPublish = dto.IsPublish;
+
+            // Update NoQuestionInChapters
+            _context.NoQuestionInChapters.RemoveRange(exam.NoQuestionInChapters);
+            if (dto.NoQuestionInChapterDTO != null)
+            {
+                foreach (var n in dto.NoQuestionInChapterDTO)
+                {
+                    _context.NoQuestionInChapters.Add(new NoQuestionInChapter
+                    {
+                        MultiExamId = exam.MultiExamId,
+                        ChapterId = n.ChapterId,
+                        LevelQuestionId = n.LevelQuestionId,
+                        NumberQuestion = n.NumberQuestion
+                    });
+                }
+            }
+
+            // Update StudentExamDTO (MultiExamHistories)
+            _context.MultiExamHistories.RemoveRange(exam.MultiExamHistories);
+            if (dto.StudentExamDTO != null)
+            {
+                foreach (var s in dto.StudentExamDTO)
+                {
+                    _context.MultiExamHistories.Add(new MultiExamHistory
+                    {
+                        MultiExamId = exam.MultiExamId,
+                        StudentId = s.StudentId
+                    });
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+
 
 
 

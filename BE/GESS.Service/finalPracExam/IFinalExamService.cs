@@ -26,6 +26,7 @@ namespace GESS.Service.finalPracExam
         Task<List<ChapterInClassDTO>> GetAllChapterBySubjectId(int subjectId);
         Task<List<FinalExamListDTO>> GetAllFinalExam(int subjectId, int? semesterId, int? year, int type, string? textSearch, int pageNumber, int pageSize);
         Task<List<ExamPaperDTO>> GetAllFinalExamPaper(int subjectId, int semesterId);
+        Task<List<ExamPaperDTO>> GetAllFinalExamPaper(int subjectId, int semesterId, int year);
         Task<List<SubjectDTO>> GetAllMajorByTeacherId(Guid teacherId);
         Task<PracticeExamPaperDetailDTO> ViewFinalExamPaperDetail(int examPaperId);
         Task<MultipleExamResponseDTO> ViewMultiFinalExamDetail(int examId);

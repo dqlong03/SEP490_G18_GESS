@@ -20,6 +20,19 @@ namespace GESS.Service.practiceExam
             _unitOfWork = unitOfWork;
         }
 
+        //
+        public async Task<bool> UpdatePracticeExamAsync(PracticeExamUpdateDTO2 dto)
+        {
+            return await _unitOfWork.PracticeExamRepository.UpdatePracticeExamAsync(dto);
+        }
+
+
+        //
+        public async Task<PracticeExamUpdateDTO2> GetPracticeExamForUpdateAsync(int pracExamId)
+        {
+            return await _unitOfWork.PracticeExamRepository.GetPracticeExamForUpdateAsync(pracExamId);
+        }
+
         public async Task<PracticeExamCreateDTO> CreatePracticeExamAsync(PracticeExamCreateDTO practiceExamCreateDto)
         {
             var practiceExam = await _unitOfWork.PracticeExamRepository.CreatePracticeExamAsync(practiceExamCreateDto);

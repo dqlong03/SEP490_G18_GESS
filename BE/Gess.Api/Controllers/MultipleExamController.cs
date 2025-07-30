@@ -142,5 +142,29 @@ namespace GESS.Api.Controllers
             return Ok(subjects);
         }
 
+        //
+        [HttpGet("get-for-update/{multiExamId}")]
+        public async Task<IActionResult> GetMultipleExamForUpdate(int multiExamId)
+        {
+            var exam = await _multipleExamService.GetMultipleExamForUpdateAsync(multiExamId);
+            if (exam == null)
+                return NotFound("Multiple exam not found");
+            return Ok(exam);
+        }
+
+        [HttpPut("update")]
+        public async Task<IActionResult> UpdateMultipleExam([FromBody] MultipleExamUpdateDTO dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _multipleExamService.UpdateMultipleExamAsync(dto);
+            if (!result)
+                return NotFound("Multiple exam not found or update failed.");
+
+            return Ok("Update successful.");
+        }
+
+
     }
 } 

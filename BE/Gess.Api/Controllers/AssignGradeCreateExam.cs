@@ -42,7 +42,7 @@ namespace GESS.Api.Controllers
                 {
                     return NotFound("No teachers found in the specified major.");
                 }
-                return Ok(result);
+                return Ok(result.Result);
             }
             catch (Exception ex)
             {

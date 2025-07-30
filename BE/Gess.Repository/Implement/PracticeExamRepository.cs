@@ -5,6 +5,7 @@ using GESS.Entity.Entities;
 using GESS.Model.MultiExamHistories;
 using GESS.Model.MultipleExam;
 using GESS.Model.PracticeExam;
+using GESS.Model.PracticeExamPaper;
 using GESS.Model.TrainingProgram;
 using GESS.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,109 @@ namespace GESS.Repository.Implement
         {
             _context = context;
         }
+
+
+        //
+        public async Task<bool> UpdatePracticeExamAsync(Model.PracticeExam.PracticeExamUpdateDTO2 dto)
+        {
+            var exam = await _context.PracticeExams
+                .Include(e => e.PracticeExamHistories)
+                .FirstOrDefaultAsync(e => e.PracExamId == dto.PracExamId);
+
+            if (exam == null) return false;
+
+            // Update fields
+            exam.PracExamName = dto.PracExamName;
+            exam.Duration = dto.Duration;
+            exam.StartDay = dto.StartDay;
+            exam.EndDay = dto.EndDay;
+            exam.CreateAt = dto.CreateAt;
+            exam.TeacherId = dto.TeacherId;
+            exam.CategoryExamId = dto.CategoryExamId;
+            exam.SubjectId = dto.SubjectId;
+            exam.ClassId = dto.ClassId;
+            exam.Status = dto.Status;
+            exam.SemesterId = dto.SemesterId;
+
+            // Xử lý cập nhật danh sách đề thi (PracticeExamPaper)
+            var oldPapers = _context.NoPEPaperInPEs.Where(x => x.PracExamId == exam.PracExamId);
+            _context.NoPEPaperInPEs.RemoveRange(oldPapers);
+            if (dto.PracticeExamPaperDTO != null)
+            {
+                foreach (var paper in dto.PracticeExamPaperDTO)
+                {
+                    _context.NoPEPaperInPEs.Add(new NoPEPaperInPE
+                    {
+                        PracExamId = exam.PracExamId,
+                        PracExamPaperId = paper.PracExamPaperId
+                    });
+                }
+            }
+
+            // Xử lý cập nhật danh sách sinh viên (PracticeExamHistory)
+            var oldHistories = _context.PracticeExamHistories.Where(h => h.PracExamId == exam.PracExamId);
+            _context.PracticeExamHistories.RemoveRange(oldHistories);
+            if (dto.StudentIds != null)
+            {
+                foreach (var studentId in dto.StudentIds)
+                {
+                    _context.PracticeExamHistories.Add(new PracticeExamHistory
+                    {
+                        PracExamHistoryId = Guid.NewGuid(),
+                        PracExamId = exam.PracExamId,
+                        StudentId = studentId,
+                        CheckIn = false,
+                        IsGraded = false
+                    });
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+
+        //
+        public async Task<Model.PracticeExam.PracticeExamUpdateDTO2> GetPracticeExamForUpdateAsync(int pracExamId)
+        {
+            var exam = await _context.PracticeExams
+                .Include(e => e.PracticeExamHistories)
+                .FirstOrDefaultAsync(e => e.PracExamId == pracExamId);
+
+            if (exam == null) return null;
+
+            // Lấy danh sách đề thi qua bảng trung gian
+            var examPapers = await _context.NoPEPaperInPEs
+                .Where(n => n.PracExamId == pracExamId)
+                .Include(n => n.PracticeExamPaper)
+                .Select(n => n.PracticeExamPaper)
+                .ToListAsync();
+
+            return new Model.PracticeExam.PracticeExamUpdateDTO2
+            {
+                PracExamId = exam.PracExamId,
+                PracExamName = exam.PracExamName,
+                Duration = exam.Duration,
+                StartDay = exam.StartDay,
+                EndDay = exam.EndDay,
+                CreateAt = exam.CreateAt,
+                TeacherId = exam.TeacherId,
+                CategoryExamId = exam.CategoryExamId,
+                SubjectId = exam.SubjectId,
+                ClassId = exam.ClassId,
+                Status = exam.Status,
+                SemesterId = exam.SemesterId,
+                PracticeExamPaperDTO = examPapers.Select(p => new PracticeExamPaperDTO
+                {
+                    PracExamPaperId = p.PracExamPaperId,
+                    PracExamPaperName = p.PracExamPaperName,
+                    Year = DateTime.Now.Year.ToString(),
+                    Semester = exam.SemesterId.ToString(),
+                }).ToList(),
+                StudentIds = exam.PracticeExamHistories?.Select(h => h.StudentId).Distinct().ToList() ?? new List<Guid>()
+            };
+        }
+
 
         public async Task<PracticeExam> CreatePracticeExamAsync(PracticeExamCreateDTO practiceExamCreateDto)
         {
@@ -310,7 +414,7 @@ namespace GESS.Repository.Implement
                                          join ptq in _context.PracticeTestQuestions on new { q.PracticeQuestionId, PaperId = history.PracExamPaperId } equals new { ptq.PracticeQuestionId, PaperId = (int?)ptq.PracExamPaperId }
                                          where q.PracExamHistoryId == history.PracExamHistoryId
                                          orderby ptq.QuestionOrder
-                                         select new PracticeExamQuestionDetailDTO
+                                         select new Model.PracticeExam.PracticeExamQuestionDetailDTO
                                          {
                                              QuestionOrder = ptq.QuestionOrder,
                                              Content = pq.Content,

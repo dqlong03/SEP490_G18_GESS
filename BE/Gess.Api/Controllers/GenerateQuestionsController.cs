@@ -37,25 +37,21 @@ namespace GESS.Api.Controllers
             promptBuilder.AppendLine("Yêu cầu:");
             foreach (var level in request.Levels)
             {
-
                 promptBuilder.AppendLine($"- {level.NumberOfQuestions} câu hỏi mức độ {level.Difficulty}");
-                //promptBuilder.AppendLine("1 câu hỏi mức độ dễ");
-
             }
-
             promptBuilder.AppendLine(@"
-                Mỗi câu hỏi phải có định dạng JSON như sau:
-                {
-                  ""Content"": ""Nội dung câu hỏi?"",
-                  ""Answers"": [
-                    { ""Text"": ""Đáp án A"", ""IsTrue"": false },
-                    { ""Text"": ""Đáp án B"", ""IsTrue"": true },
-                    { ""Text"": ""Đáp án C"", ""IsTrue"": false },
-                    { ""Text"": ""Đáp án D"", ""IsTrue"": false }
-                  ]
-                }
-                Trả về toàn bộ danh sách câu hỏi là 1 mảng JSON hợp lệ.
-                ");
+Mỗi câu hỏi phải có định dạng JSON như sau:
+{
+  ""Content"": ""Nội dung câu hỏi?"",
+  ""Answers"": [
+    { ""Text"": ""Đáp án A"", ""IsTrue"": false },
+    { ""Text"": ""Đáp án B"", ""IsTrue"": true },
+    { ""Text"": ""Đáp án C"", ""IsTrue"": false },
+    { ""Text"": ""Đáp án D"", ""IsTrue"": false }
+  ]
+}
+Trả về toàn bộ danh sách câu hỏi là 1 mảng JSON hợp lệ.
+");
 
             string prompt = promptBuilder.ToString();
 
@@ -67,8 +63,8 @@ namespace GESS.Api.Controllers
                 {
                     model = "gpt-4o-mini",
                     messages = new[] {
-                        new { role = "user", content = prompt }
-                    }
+                new { role = "user", content = prompt }
+            }
                 };
 
                 var json = JsonConvert.SerializeObject(body);
@@ -84,36 +80,32 @@ namespace GESS.Api.Controllers
                 dynamic result = JsonConvert.DeserializeObject(responseString);
                 string output = result.choices[0].message.content;
 
-              try
-            {
-                // Làm sạch output: loại bỏ phần ```json hoặc ``` nếu có
-                var cleanedOutput = output.Trim();
-                if (cleanedOutput.StartsWith("```"))
+                try
                 {
-                    int firstBrace = cleanedOutput.IndexOf('{');
-                    int lastBrace = cleanedOutput.LastIndexOf('}');
-                    if (firstBrace >= 0 && lastBrace > firstBrace)
+                    // Loại bỏ markdown code block nếu có
+                    var cleanedOutput = output.Trim();
+
+                    // Nếu có markdown code block
+                    if (cleanedOutput.Contains("```"))
                     {
-                        cleanedOutput = cleanedOutput.Substring(firstBrace, lastBrace - firstBrace + 1);
+                        // Lấy phần nằm giữa hai dấu ```
+                        var codeBlocks = Regex.Matches(cleanedOutput, "```(?:json)?\\s*([\\s\\S]*?)\\s*```");
+                        if (codeBlocks.Count > 0)
+                        {
+                            cleanedOutput = codeBlocks[0].Groups[1].Value.Trim();
+                        }
                     }
-                }
 
-                // Nếu vẫn còn ký tự thừa, dùng Regex lấy đoạn JSON đầu tiên
-                var match = System.Text.RegularExpressions.Regex.Match(cleanedOutput, @"\{[\s\S]*\}");
-                if (match.Success)
+                    var questions = JsonConvert.DeserializeObject<List<GeneratedQuestion>>(cleanedOutput);
+                    return Ok(questions);
+                }
+                catch (Exception ex)
                 {
-                    cleanedOutput = match.Value;
+                    return BadRequest("Lỗi phân tích kết quả: " + ex.Message + "\nOutput:\n" + output);
                 }
-
-                var gradeResult = JsonConvert.DeserializeObject<GeneratedQuestion>(cleanedOutput);
-                return Ok(gradeResult);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest("Lỗi phân tích kết quả: " + ex.Message + "\nOutput:\n" + output);
-            }
             }
         }
+
         [HttpPost("GenerateEssayQuestion")]
         public async Task<IActionResult> GenerateEssay([FromBody] PracQuestionRequest request)
         {
@@ -170,8 +162,20 @@ namespace GESS.Api.Controllers
                 string output = result.choices[0].message.content;
 
                 try
-                {
-                    var essayQuestions = JsonConvert.DeserializeObject<List<EssayQuestionResult>>(output);
+                { // Loại bỏ markdown code block nếu có
+                    var cleanedOutput = output.Trim();
+
+                    // Nếu có markdown code block
+                    if (cleanedOutput.Contains("```"))
+                    {
+                        // Lấy phần nằm giữa hai dấu ```
+                        var codeBlocks = Regex.Matches(cleanedOutput, "```(?:json)?\\s*([\\s\\S]*?)\\s*```");
+                        if (codeBlocks.Count > 0)
+                        {
+                            cleanedOutput = codeBlocks[0].Groups[1].Value.Trim();
+                        }
+                    }
+                    var essayQuestions = JsonConvert.DeserializeObject<List<EssayQuestionResult>>(cleanedOutput);
                     return Ok(essayQuestions);
                 }
                 catch (Exception ex)

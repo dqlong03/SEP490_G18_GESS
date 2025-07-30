@@ -88,6 +88,16 @@ namespace GESS.Service.finalPracExam
             return examPapers;
         }
 
+        public async Task<List<ExamPaperDTO>> GetAllFinalExamPaper(int subjectId, int semesterId, int year)
+        {
+            var examPapers = await _unitOfWork.FinalPracExamRepository.GetAllFinalExamPaper(subjectId, semesterId, year);
+            if (examPapers == null || !examPapers.Any())
+            {
+                return new List<ExamPaperDTO>();
+            }
+            return examPapers;
+        }
+
         public async Task<List<SubjectDTO>> GetAllMajorByTeacherId(Guid teacherId)
         {
             var subjects = await _unitOfWork.FinalPracExamRepository.GetAllMajorByTeacherId(teacherId);
