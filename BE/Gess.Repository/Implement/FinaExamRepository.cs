@@ -115,7 +115,7 @@ namespace GESS.Repository.Implement
                     }
                 }
 
-                await _context.FinalExam.AddRangeAsync(finalExamsToAdd);
+                await _context.FinalExams.AddRangeAsync(finalExamsToAdd);
 
                 var noQuestionInChaptersToAdd = multipleExamCreateDto.NoQuestionInChapterDTO
                     .Select(dto => new NoQuestionInChapter
@@ -366,13 +366,20 @@ namespace GESS.Repository.Implement
         public async Task<MultipleExamResponseDTO> ViewMultiFinalExamDetail(int examId)
         {
             var multiExam = await _context.MultiExams
-                .Include(e => e.FinalExams)
-                .ThenInclude(fe => fe.MultiQuestion)
+                .Include(e => e.Subject)                          
+                .Include(e => e.Semester)                        
+                .Include(e => e.Teacher)                         
+                    .ThenInclude(t => t.User)                   
+                .Include(e => e.NoQuestionInChapters)           
+                .Include(e => e.FinalExams)                       
+                    .ThenInclude(fe => fe.MultiQuestion)          
                 .FirstOrDefaultAsync(e => e.MultiExamId == examId);
+
             if (multiExam == null)
-                {
+            {
                 throw new Exception("Multiple exam not found.");
             }
+
             var response = new MultipleExamResponseDTO
             {
                 MultiExamId = multiExam.MultiExamId,
@@ -388,8 +395,10 @@ namespace GESS.Repository.Implement
                     NumberQuestion = nq.NumberQuestion
                 }).ToList(),
             };
+
             return response;
         }
+
 
         public async Task<PracticeExamResponeDTO> ViewPracFinalExamDetail(int examId)
         {
