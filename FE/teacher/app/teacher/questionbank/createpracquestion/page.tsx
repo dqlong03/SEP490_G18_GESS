@@ -31,6 +31,14 @@ export default function CreateEssayQuestionPage() {
   const [importError, setImportError] = useState<string>('');
   const [semesterId, setSemesterId] = useState<number | null>(null);
 
+  // AI form state
+  const [showAIGen, setShowAIGen] = useState(false);
+  const [aiSubject, setAISubject] = useState('');
+  const [aiLink, setAILink] = useState('');
+  const [aiNum, setAINum] = useState(2);
+  const [aiLevel, setAILevel] = useState('dễ');
+  const [aiLoading, setAILoading] = useState(false);
+
   // Lấy học kỳ hiện tại
   useEffect(() => {
     fetch('https://localhost:7074/api/MultipleQuestion/GetCurrentSemester')
@@ -141,6 +149,44 @@ export default function CreateEssayQuestionPage() {
     setQuestions(questions.filter((_, i) => i !== idx));
   };
 
+  // Tạo câu hỏi bằng AI
+  const handleGenerateAI = async () => {
+    if (!aiSubject || !aiLink || !aiNum || !aiLevel) {
+      alert('Vui lòng nhập đầy đủ thông tin!');
+      return;
+    }
+    setAILoading(true);
+    try {
+      const res = await fetch('https://localhost:7074/api/GenerateQuestions/GenerateEssayQuestion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subjectName: aiSubject,
+          materialLink: aiLink,
+          levels: [{ difficulty: aiLevel, numberOfQuestions: aiNum }]
+        })
+      });
+      const data = await res.json();
+      if (!Array.isArray(data)) throw new Error('Kết quả trả về không hợp lệ!');
+      // Chuyển đổi dữ liệu AI về dạng EssayQuestion
+      const newQuestions: EssayQuestion[] = data.map((q: any, idx: number) => ({
+        id: Date.now() + idx,
+        content: q.content,
+        criteria: q.bandScoreGuide,
+        difficulty: 1 // hoặc map theo aiLevel nếu muốn
+      }));
+      setQuestions(prev => [...prev, ...newQuestions]);
+      setShowAIGen(false);
+      setAISubject('');
+      setAILink('');
+      setAINum(2);
+      setAILevel('dễ');
+    } catch (err: any) {
+      alert('Lỗi tạo câu hỏi bằng AI: ' + err.message);
+    }
+    setAILoading(false);
+  };
+
   // Lưu câu hỏi lên server
   const handleSaveQuestions = async () => {
     if (!semesterId) {
@@ -175,8 +221,6 @@ export default function CreateEssayQuestionPage() {
     if (res.ok) {
       alert('Lưu thành công!');
       setQuestions([]);
-
-      // Chuyển hướng về trang ngân hàng câu hỏi, truyền chapterId và categoryExamId
       router.push(`/teacher/questionbank?${searchParams.toString()}`);
     } else {
       alert('Lưu thất bại!');
@@ -187,8 +231,8 @@ export default function CreateEssayQuestionPage() {
     <div className="w-full min-h-screen bg-white font-sans p-0">
       <div className="w-full py-8 px-4">
         <h2 className="text-2xl font-bold text-gray-800 mb-6 text-left">Tạo câu hỏi tự luận</h2>
-        {/* Nút thêm câu hỏi thủ công */}
-        <div className="mb-6">
+        {/* Nút thêm câu hỏi thủ công và AI */}
+        <div className="mb-6 flex gap-4">
           <button
             type="button"
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold"
@@ -196,7 +240,71 @@ export default function CreateEssayQuestionPage() {
           >
             Thêm câu hỏi thủ công
           </button>
+          <button
+            type="button"
+            className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition font-semibold"
+            onClick={() => setShowAIGen(true)}
+          >
+            Tạo câu hỏi bằng AI
+          </button>
         </div>
+        {/* Form tạo câu hỏi bằng AI */}
+        {showAIGen && (
+          <div className="bg-gray-50 rounded-lg p-4 mb-6">
+            <h3 className="font-semibold mb-2">Tạo câu hỏi tự luận bằng AI</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+              <input
+                type="text"
+                value={aiSubject}
+                onChange={e => setAISubject(e.target.value)}
+                placeholder="Tên môn học"
+                className="border rounded px-3 py-2 w-full"
+              />
+              <input
+                type="text"
+                value={aiLink}
+                onChange={e => setAILink(e.target.value)}
+                placeholder="Link tài liệu"
+                className="border rounded px-3 py-2 w-full"
+              />
+              <input
+                type="number"
+                min={1}
+                value={aiNum}
+                onChange={e => setAINum(Number(e.target.value))}
+                placeholder="Số câu hỏi"
+                className="border rounded px-3 py-2 w-full"
+              />
+              <select
+                value={aiLevel}
+                onChange={e => setAILevel(e.target.value)}
+                className="border rounded px-3 py-2 w-full"
+              >
+                <option value="dễ">Dễ</option>
+                <option value="trung bình">Trung bình</option>
+                <option value="khó">Khó</option>
+              </select>
+            </div>
+            <div className="flex gap-4">
+              <button
+                type="button"
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition font-semibold"
+                onClick={handleGenerateAI}
+                disabled={aiLoading}
+              >
+                {aiLoading ? 'Đang tạo...' : 'Tạo'}
+              </button>
+              <button
+                type="button"
+                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition font-semibold"
+                onClick={() => setShowAIGen(false)}
+                disabled={aiLoading}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        )}
         {/* Import file */}
         <div className="bg-gray-50 rounded-lg p-4 mb-6">
           <h3 className="font-semibold mb-2">Import file câu hỏi</h3>
@@ -298,6 +406,13 @@ export default function CreateEssayQuestionPage() {
                       onClick={handleAddManual}
                     >
                       Thêm câu hỏi
+                    </button>
+                    <button
+                      type="button"
+                      className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition font-semibold"
+                      onClick={() => setShowManualForm(false)}
+                    >
+                      Đóng
                     </button>
                   </div>
                 </div>

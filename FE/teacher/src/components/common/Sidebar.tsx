@@ -44,7 +44,10 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProp
               <li><Link href="/teacher/examsupervisor" className="sidebar-link" onClick={handleClose}>Lịch coi thi</Link> </li>
                <li><Link href="/teacher/givegrade" className="sidebar-link" onClick={handleClose}>Chấm thi</Link> </li>               
                {/* <li><Link href="/teacher/createexampaperfinal" className="sidebar-link" onClick={handleClose}>Tạo lịch thi</Link> </li> */}
+              <li><Link href="/teacher/finalexam" className="sidebar-link" onClick={handleClose}>Bài thi cuối kỳ</Link> </li>               
+               <li><Link href="/teacher/finalexampaper" className="sidebar-link" onClick={handleClose}>Đề thi cuối kỳ</Link> </li>               
 
+            
             </>
           )}
           {role?.toLowerCase() == 'hod' && (
@@ -55,6 +58,10 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProp
                <li><Link href="/teacher/givegrade" className="sidebar-link" onClick={handleClose}>Chấm thi</Link> </li>
                <li><Link href="/leader/setrole" className="sidebar-link" onClick={handleClose}>Quản lý ngành</Link> </li>
                {/* <li><Link href="/teacher/createexampaperfinal" className="sidebar-link" onClick={handleClose}>Tạo lịch thi</Link> </li> */}
+              <li><Link href="/teacher/finalexam" className="sidebar-link" onClick={handleClose}>Bài thi cuối kỳ</Link> </li>      
+             <li><Link href="/teacher/finalexampaper" className="sidebar-link" onClick={handleClose}>Đề thi cuối kỳ</Link> </li>               
+         
+
             </>
           )}
           

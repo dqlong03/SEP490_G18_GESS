@@ -7,8 +7,6 @@ import { useSearchParams } from 'next/navigation';
 import { getUserIdFromToken } from '@/utils/tokenUtils';
 import { useRouter } from 'next/navigation';
 
-
-
 type Answer = { text: string; isTrue: boolean };
 type Question = {
   id: number;
@@ -37,7 +35,29 @@ export default function CreateMCQQuestionPage() {
   const categoryExamId = Number(searchParams.get('categoryExamId'));
 
   const router = useRouter();
-  
+
+  // Thêm thủ công
+  const [manualQ, setManualQ] = useState<Question>({
+    id: Date.now(),
+    content: '',
+    answers: [
+      { text: '', isTrue: false },
+      { text: '', isTrue: false },
+      { text: '', isTrue: false },
+      { text: '', isTrue: false }
+    ],
+    difficulty: 1,
+  });
+  const [showManualForm, setShowManualForm] = useState(false);
+  const manualFormRef = useRef<HTMLDivElement>(null);
+
+  // Tạo bằng AI
+  const [showAIGen, setShowAIGen] = useState(false);
+  const [aiSubject, setAISubject] = useState('');
+  const [aiLink, setAILink] = useState('');
+  const [aiNum, setAINum] = useState(2);
+  const [aiLevel, setAILevel] = useState('dễ');
+  const [aiLoading, setAILoading] = useState(false);
 
   // Lấy mức độ khó và học kỳ hiện tại
   useEffect(() => {
@@ -53,16 +73,6 @@ export default function CreateMCQQuestionPage() {
       })
       .catch(() => setSemesterId(null));
   }, []);
-
-  // Thêm thủ công
-  const [manualQ, setManualQ] = useState<Question>({
-    id: Date.now(),
-    content: '',
-    answers: Array(6).fill({ text: '', isTrue: false }),
-    difficulty: 1,
-  });
-  const [showManualForm, setShowManualForm] = useState(false);
-  const manualFormRef = useRef<HTMLDivElement>(null);
 
   // Tải file mẫu
   const handleDownloadTemplate = () => {
@@ -154,19 +164,91 @@ export default function CreateMCQQuestionPage() {
     setManualQ({
       id: Date.now(),
       content: '',
-      answers: Array(6).fill({ text: '', isTrue: false }),
+      answers: [
+        { text: '', isTrue: false },
+        { text: '', isTrue: false },
+        { text: '', isTrue: false },
+        { text: '', isTrue: false }
+      ],
       difficulty: 1,
     });
     setShowManualForm(false);
   };
 
-  // Hiện form thêm thủ công
-  const handleShowManualForm = () => {
-    setShowManualForm(true);
-    setTimeout(() => {
-      manualFormRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+  // Thêm đáp án cho thủ công
+  const handleAddAnswerManual = () => {
+    if (manualQ.answers.length < 6) {
+      setManualQ({
+        ...manualQ,
+        answers: [...manualQ.answers, { text: '', isTrue: false }]
+      });
+    }
   };
+
+  // Xóa đáp án thủ công
+  const handleDeleteAnswerManual = (idx: number) => {
+    if (manualQ.answers.length > 4) {
+      setManualQ({
+        ...manualQ,
+        answers: manualQ.answers.filter((_, i) => i !== idx)
+      });
+    }
+  };
+
+  // Tạo câu hỏi bằng AI
+  const handleGenerateAI = async () => {
+  if (!aiSubject || !aiLink || !aiNum || !aiLevel) {
+    alert('Vui lòng nhập đầy đủ thông tin!');
+    return;
+  }
+  setAILoading(true);
+  try {
+    const res = await fetch('https://localhost:7074/api/GenerateQuestions/GenerateMultipleQuestion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subjectName: aiSubject,
+        materialLink: aiLink,
+        levels: [{ difficulty: aiLevel, numberOfQuestions: aiNum }]
+      })
+    });
+    const data = await res.json();
+    console.log('AI generated questions:', data);
+    if (!Array.isArray(data)) throw new Error('Kết quả trả về không hợp lệ!');
+    // Đảm bảo luôn có trường answers và hiển thị như các câu hỏi khác
+    const newQuestions: Question[] = data.map((q: any, idx: number) => {
+      // Lấy đáp án từ AI, nếu thiếu thì bổ sung cho đủ 4 đáp án
+      let answers: Answer[] = Array.isArray(q.answers)
+        ? q.answers.map((a: any) => ({
+            text: a.text || '',
+            isTrue: !!a.isTrue
+          }))
+        : [];
+      // Bổ sung đáp án rỗng cho đủ 4 đáp án
+      while (answers.length < 4) {
+        answers.push({ text: '', isTrue: false });
+      }
+      // Nếu AI trả về nhiều hơn 6 đáp án thì chỉ lấy 6 đáp án đầu
+      answers = answers.slice(0, 6);
+
+      return {
+        id: Date.now() + idx,
+        content: q.content || '',
+        answers,
+        difficulty: 1 // hoặc map theo aiLevel nếu muốn
+      };
+    });
+    setQuestions(prev => [...prev, ...newQuestions]);
+    setShowAIGen(false);
+    setAISubject('');
+    setAILink('');
+    setAINum(2);
+    setAILevel('dễ');
+  } catch (err: any) {
+    alert('Lỗi tạo câu hỏi bằng AI: ' + err.message);
+  }
+  setAILoading(false);
+};
 
   // Sửa câu hỏi
   const handleEditQuestion = (idx: number, key: keyof Question, value: any) => {
@@ -233,12 +315,12 @@ export default function CreateMCQQuestionPage() {
           content: a.text,
           isCorrect: a.isTrue
         }));
-         const teacherId = getUserIdFromToken();
+      const teacherId = getUserIdFromToken();
       const body = {
         content: q.content,
         urlImg: null,
         isActive: true,
-        createdBy:teacherId, 
+        createdBy: teacherId,
         isPublic: true,
         chapterId: chapterId,
         categoryExamId: categoryExamId,
@@ -261,16 +343,82 @@ export default function CreateMCQQuestionPage() {
     <div className="w-full min-h-screen bg-white font-sans p-0">
       <div className="w-full py-8 px-4">
         <h2 className="text-2xl font-bold text-gray-800 mb-6 text-left">Tạo câu hỏi trắc nghiệm</h2>
-        {/* Nút thêm câu hỏi thủ công */}
-        <div className="mb-6">
+        {/* Nút thêm câu hỏi thủ công và AI */}
+        <div className="mb-6 flex gap-4">
           <button
             type="button"
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold"
-            onClick={handleShowManualForm}
+            onClick={() => setShowManualForm(true)}
           >
             Thêm câu hỏi thủ công
           </button>
+          <button
+            type="button"
+            className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition font-semibold"
+            onClick={() => setShowAIGen(true)}
+          >
+            Tạo câu hỏi bằng AI
+          </button>
         </div>
+
+        {/* Form tạo câu hỏi bằng AI */}
+        {showAIGen && (
+          <div className="bg-gray-50 rounded-lg p-4 mb-6">
+            <h3 className="font-semibold mb-2">Tạo câu hỏi bằng AI</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+              <input
+                type="text"
+                value={aiSubject}
+                onChange={e => setAISubject(e.target.value)}
+                placeholder="Tên môn học"
+                className="border rounded px-3 py-2 w-full"
+              />
+              <input
+                type="text"
+                value={aiLink}
+                onChange={e => setAILink(e.target.value)}
+                placeholder="Link tài liệu"
+                className="border rounded px-3 py-2 w-full"
+              />
+              <input
+                type="number"
+                min={1}
+                value={aiNum}
+                onChange={e => setAINum(Number(e.target.value))}
+                placeholder="Số câu hỏi"
+                className="border rounded px-3 py-2 w-full"
+              />
+              <select
+                value={aiLevel}
+                onChange={e => setAILevel(e.target.value)}
+                className="border rounded px-3 py-2 w-full"
+              >
+                <option value="dễ">Dễ</option>
+                <option value="trung bình">Trung bình</option>
+                <option value="khó">Khó</option>
+              </select>
+            </div>
+            <div className="flex gap-4">
+              <button
+                type="button"
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition font-semibold"
+                onClick={handleGenerateAI}
+                disabled={aiLoading}
+              >
+                {aiLoading ? 'Đang tạo...' : 'Tạo'}
+              </button>
+              <button
+                type="button"
+                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition font-semibold"
+                onClick={() => setShowAIGen(false)}
+                disabled={aiLoading}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Import file */}
         <div className="bg-gray-50 rounded-lg p-4 mb-6">
           <h3 className="font-semibold mb-2">Import file câu hỏi</h3>
@@ -299,6 +447,7 @@ export default function CreateMCQQuestionPage() {
             <div className="text-red-600 font-semibold mt-2">{importError}</div>
           )}
         </div>
+
         {/* Danh sách câu hỏi dạng card */}
         <div className="mt-8">
           <h3 className="font-semibold mb-2">Danh sách câu hỏi ({questions.length})</h3>
@@ -398,9 +547,26 @@ export default function CreateMCQQuestionPage() {
                           />
                           Đúng
                         </label>
+                        {manualQ.answers.length > 4 && idx >= 4 && (
+                          <button
+                            type="button"
+                            className="text-red-500 hover:text-red-700"
+                            onClick={() => handleDeleteAnswerManual(idx)}
+                            title="Xóa đáp án"
+                          >×</button>
+                        )}
                       </div>
                     ))}
                   </div>
+                  {manualQ.answers.length < 6 && (
+                    <button
+                      type="button"
+                      className="mt-2 bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition font-semibold"
+                      onClick={handleAddAnswerManual}
+                    >
+                      + Thêm đáp án
+                    </button>
+                  )}
                   <div className="flex gap-4 mt-2">
                     <Select
                       options={levels}
@@ -416,6 +582,13 @@ export default function CreateMCQQuestionPage() {
                       onClick={handleAddManual}
                     >
                       Thêm câu hỏi
+                    </button>
+                    <button
+                      type="button"
+                      className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition font-semibold"
+                      onClick={() => setShowManualForm(false)}
+                    >
+                      Đóng
                     </button>
                   </div>
                 </div>

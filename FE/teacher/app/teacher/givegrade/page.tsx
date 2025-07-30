@@ -110,11 +110,11 @@ export default function GiveGradePage() {
   };
 
   // Format trạng thái
-const getStatusLabel = (isGrade: number | null) => {
-  if (isGrade === null || isGrade === 0) return "Chưa chấm";
-  if (isGrade === 1) return "Đã chấm";
-  return "";
-};
+  const getStatusLabel = (isGrade: number | null) => {
+    if (isGrade === null || isGrade === 0) return "Chưa chấm";
+    if (isGrade === 1) return "Đã chấm";
+    return "";
+  };
 
 // Format trạng thái màu
 const getStatusClass = (isGrade: number | null) => {

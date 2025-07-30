@@ -1,114 +1,161 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Select from 'react-select';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-// Fake data
-const subjects = [
-  { value: 'IT', label: 'Công nghệ thông tin' },
-  { value: 'MATH', label: 'Toán học' },
-  { value: 'ENG', label: 'Tiếng Anh' },
-];
+const TEACHER_ID = '2A96A929-C6A1-4501-FC19-08DDB5DCA989';
+const PAGE_SIZE = 10;
 
-const roleOptions = [
-  { value: 'create', label: 'Tạo đề' },
-  { value: 'grade', label: 'Chấm thi' },
-  { value: 'teacher', label: 'Giảng viên' },
-];
-
-// Mỗi môn 5 giáo viên, chỉ 1 người ra đề và 1 người chấm, còn lại là giảng viên
-const fakeTeachers = [
-  // IT
-  { id: 'GV001', name: 'Nguyễn Văn A', phone: '0912345678', email: 'a.nguyen@gess.edu.vn', role: 'create', subject: 'IT' },
-  { id: 'GV002', name: 'Trần Thị B', phone: '0987654321', email: 'b.tran@gess.edu.vn', role: 'grade', subject: 'IT' },
-  { id: 'GV007', name: 'Phạm Văn G', phone: '0911111111', email: 'g.pham@gess.edu.vn', role: 'teacher', subject: 'IT' },
-  { id: 'GV008', name: 'Lê Thị H', phone: '0922222222', email: 'h.le@gess.edu.vn', role: 'teacher', subject: 'IT' },
-  { id: 'GV009', name: 'Hoàng Văn I', phone: '0933333333', email: 'i.hoang@gess.edu.vn', role: 'teacher', subject: 'IT' },
-  // MATH
-  { id: 'GV003', name: 'Phạm Văn C', phone: '0934567890', email: 'c.pham@gess.edu.vn', role: 'create', subject: 'MATH' },
-  { id: 'GV004', name: 'Lê Thị D', phone: '0976543210', email: 'd.le@gess.edu.vn', role: 'grade', subject: 'MATH' },
-  { id: 'GV010', name: 'Nguyễn Văn J', phone: '0944444444', email: 'j.nguyen@gess.edu.vn', role: 'teacher', subject: 'MATH' },
-  { id: 'GV011', name: 'Trần Thị K', phone: '0955555555', email: 'k.tran@gess.edu.vn', role: 'teacher', subject: 'MATH' },
-  { id: 'GV012', name: 'Phạm Văn L', phone: '0966666666', email: 'l.pham@gess.edu.vn', role: 'teacher', subject: 'MATH' },
-  // ENG
-  { id: 'GV005', name: 'Hoàng Văn E', phone: '0923456789', email: 'e.hoang@gess.edu.vn', role: 'create', subject: 'ENG' },
-  { id: 'GV006', name: 'Đỗ Thị F', phone: '0965432109', email: 'f.do@gess.edu.vn', role: 'grade', subject: 'ENG' },
-  { id: 'GV013', name: 'Lê Thị M', phone: '0977777777', email: 'm.le@gess.edu.vn', role: 'teacher', subject: 'ENG' },
-  { id: 'GV014', name: 'Hoàng Văn N', phone: '0988888888', email: 'n.hoang@gess.edu.vn', role: 'teacher', subject: 'ENG' },
-  { id: 'GV015', name: 'Đỗ Thị O', phone: '0999999999', email: 'o.do@gess.edu.vn', role: 'teacher', subject: 'ENG' },
-];
-
-type Teacher = typeof fakeTeachers[0];
+type Subject = {
+  subjectId: number;
+  subjectName: string;
+  description: string;
+  course: string;
+  noCredits: number;
+};
+type Teacher = {
+  teacherId: string;
+  userName: string;
+  email: string;
+  phoneNumber: string;
+  dateOfBirth: string;
+  fullname: string;
+  gender: boolean;
+  code: string;
+  isActive: boolean;
+  majorId: number;
+  majorName: string | null;
+  hireDate: string;
+  isCreateExam?: boolean;
+  isGraded?: boolean;
+};
 
 export default function SetRolePage() {
-  const [selectedSubject, setSelectedSubject] = useState<any>(subjects[0]);
-  const [searchName, setSearchName] = useState('');
-  const [selectedRole, setSelectedRole] = useState<any>(null);
+  // State
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [selectedSubject, setSelectedSubject] = useState<any>(null);
+  const [teachersInSubject, setTeachersInSubject] = useState<Teacher[]>([]);
+  const [teachersInMajor, setTeachersInMajor] = useState<Teacher[]>([]);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [page, setPage] = useState(1);
-  const pageSize = 5;
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
 
-  // Lọc dữ liệu
-  const filteredTeachers = fakeTeachers.filter(
-    (t) =>
-      t.subject === selectedSubject?.value &&
-      (!searchName || t.name.toLowerCase().includes(searchName.toLowerCase())) &&
-      (!selectedRole || t.role === selectedRole.value)
-  );
+  // Fetch subjects
+  useEffect(() => {
+    fetch(`https://localhost:7074/api/AssignGradeCreateExam/GetAllSubjectsByTeacherId?teacherId=${TEACHER_ID}`)
+      .then(res => res.json())
+      .then(data => setSubjects(data))
+      .catch(() => toast.error('Không lấy được danh sách môn học'));
+  }, []);
 
-  const totalPages = Math.ceil(filteredTeachers.length / pageSize);
-  const pagedTeachers = filteredTeachers.slice((page - 1) * pageSize, page * pageSize);
+  // Fetch teachers in subject
+  const fetchTeachersInSubject = () => {
+    if (!selectedSubject) return;
+    setLoading(true);
+    fetch(`https://localhost:7074/api/AssignGradeCreateExam/GetAllTeacherHaveSubject?subjectId=${selectedSubject.subjectId}&pageNumber=${page}&pageSize=${PAGE_SIZE}`)
+      .then(res => res.json())
+      .then(data => setTeachersInSubject(data))
+      .catch(() => toast.error('Không lấy được danh sách giáo viên trong môn học'))
+      .finally(() => setLoading(false));
+    fetch(`https://localhost:7074/api/AssignGradeCreateExam/CountPageNumberTeacherHaveSubject?subjectId=${selectedSubject.subjectId}&pageSize=${PAGE_SIZE}`)
+      .then(res => res.json())
+      .then(data => setTotalPages(data))
+      .catch(() => setTotalPages(1));
+  };
 
-  // Đổi role (không validate, cho phép đổi bất kỳ ai)
-  const handleChangeRole = (teacher: Teacher, newRole: any) => {
-    teacher.role = newRole.value;
-    toast.success(`Đã đổi role cho ${teacher.name} thành "${newRole.label}"!`, { position: 'top-center' });
+  useEffect(() => {
+    fetchTeachersInSubject();
+    // eslint-disable-next-line
+  }, [selectedSubject, page]);
+
+  // Fetch teachers in major (for add modal)
+  const fetchTeachersInMajor = () => {
+    fetch(`https://localhost:7074/api/AssignGradeCreateExam/GetAllTeacherInMajor?teacherId=${TEACHER_ID}`)
+      .then(res => res.json())
+      .then(data => setTeachersInMajor(data))
+      .catch(() => toast.error('Không lấy được danh sách giáo viên trong ngành'));
+  };
+
+  // Add teacher to subject (giữ popup, chỉ toast và cập nhật lại danh sách major)
+  const handleAddTeacher = async (teacherId: string) => {
+    if (!selectedSubject) {
+      toast.warning('Vui lòng chọn môn học trước!');
+      return;
+    }
+    await fetch(`https://localhost:7074/api/AssignGradeCreateExam/AddTeacherToSubject?teacherId=${teacherId}&subjectId=${selectedSubject.subjectId}`, { method: 'POST' });
+    toast.success('Đã thêm giáo viên vào môn học!');
+    // Sau khi thêm, fetch lại danh sách giáo viên ngành để loại bỏ những người đã thêm
+    fetchTeachersInMajor();
+  };
+
+  // Remove teacher from subject
+  const handleRemoveTeacher = async (teacherId: string) => {
+    if (!selectedSubject) return;
+    if (!window.confirm('Bạn chắc chắn muốn xóa giáo viên này khỏi môn học?')) return;
+    await fetch(`https://localhost:7074/api/AssignGradeCreateExam/DeleteTeacherFromSubject?teacherId=${teacherId}&subjectId=${selectedSubject.subjectId}`, { method: 'DELETE' });
+    toast.success('Đã xóa giáo viên khỏi môn học!');
+    setTeachersInSubject(prev => prev.filter(t => t.teacherId !== teacherId));
+  };
+
+  // Toggle role create exam
+  const handleToggleCreateExam = async (teacher: Teacher) => {
+    if (!selectedSubject) return;
+    await fetch(`https://localhost:7074/api/AssignGradeCreateExam/AssignRoleCreateExam?teacherId=${teacher.teacherId}&subjectId=${selectedSubject.subjectId}`, { method: 'POST' });
+    toast.success('Đã cập nhật quyền tạo bài kiểm tra!');
+    // Cập nhật lại trạng thái toggle ngay trên UI
+    setTeachersInSubject(prev =>
+      prev.map(t =>
+        t.teacherId === teacher.teacherId
+          ? { ...t, isCreateExam: !t.isCreateExam }
+          : t
+      )
+    );
+  };
+
+  // Toggle role grade exam
+  const handleToggleGradeExam = async (teacher: Teacher) => {
+    if (!selectedSubject) return;
+    await fetch(`https://localhost:7074/api/AssignGradeCreateExam/AssignRoleGradeExam?teacherId=${teacher.teacherId}&subjectId=${selectedSubject.subjectId}`, { method: 'POST' });
+    toast.success('Đã cập nhật quyền chấm bài!');
+    setTeachersInSubject(prev =>
+      prev.map(t =>
+        t.teacherId === teacher.teacherId
+          ? { ...t, isGraded: !t.isGraded }
+          : t
+      )
+    );
+  };
+
+  // Subject options for react-select
+  const subjectOptions = subjects.map(s => ({
+    value: s.subjectId,
+    label: s.subjectName,
+    ...s,
+  }));
+
+  // Khi đóng modal, fetch lại danh sách giáo viên trong môn học
+  const handleCloseModal = () => {
+    setShowAddModal(false);
+    setTimeout(() => {
+      fetchTeachersInSubject();
+    }, 300);
   };
 
   return (
     <div className="w-full min-h-screen bg-gray-50 font-sans p-0">
       <div className="max-w-5xl mx-auto py-8 px-2">
-        <h2 className="text-2xl font-bold text-gray-800 mb-3 text-left">Quản lý ngành</h2>
-        <form className="flex flex-wrap gap-2 md:gap-4 items-center mb-8">
-          <div className="w-56">
+        <h2 className="text-2xl font-bold text-gray-800 mb-3 text-left">Quản lý phân quyền giáo viên theo môn học</h2>
+        <div className="flex flex-wrap gap-2 md:gap-4 items-center mb-8">
+          <div className="w-72">
             <Select
-              options={subjects}
-              value={selectedSubject}
+              options={subjectOptions}
+              value={selectedSubject ? subjectOptions.find(s => s.value === selectedSubject.subjectId) : null}
               onChange={option => { setSelectedSubject(option); setPage(1); }}
-              placeholder="Chọn ngành"
-              isSearchable={false}
-              styles={{
-                menu: provided => ({ ...provided, zIndex: 20 }),
-                control: provided => ({
-                  ...provided,
-                  minHeight: '40px',
-                  borderColor: '#d1d5db',
-                  boxShadow: 'none',
-                }),
-              }}
-            />
-          </div>
-          <input
-            type="text"
-            placeholder="Tìm giáo viên theo tên"
-            value={searchName}
-            onChange={e => { setSearchName(e.target.value); setPage(1); }}
-            className="border rounded px-3 py-2 text-base focus:ring-2 focus:ring-blue-200 transition w-56 h-10"
-            style={{
-              minHeight: '40px',
-              borderColor: '#d1d5db',
-              boxShadow: 'none',
-            }}
-          />
-          <div className="w-44">
-            <Select
-              options={roleOptions}
-              value={selectedRole}
-              onChange={option => { setSelectedRole(option); setPage(1); }}
-              placeholder="Tìm theo role"
-              isClearable
-              isSearchable={false}
+              placeholder="Chọn môn học"
+              isSearchable
               styles={{
                 menu: provided => ({ ...provided, zIndex: 20 }),
                 control: provided => ({
@@ -122,60 +169,84 @@ export default function SetRolePage() {
           </div>
           <button
             type="button"
-            onClick={() => toast.info('Thêm giáo viên (demo)', { position: 'top-center' })}
+            onClick={() => {
+              if (!selectedSubject) {
+                toast.warning('Vui lòng chọn môn học trước!');
+                return;
+              }
+              setShowAddModal(true);
+              fetchTeachersInMajor();
+            }}
             className="ml-auto bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold shadow"
           >
             + Thêm giáo viên
           </button>
-        </form>
-<div className="overflow-x-auto rounded shadow bg-white mb-4">
+        </div>
+
+        {/* Table teachers in subject */}
+        <div className="overflow-x-auto rounded shadow bg-white mb-4">
           <table className="w-full text-sm md:text-base border border-gray-200 table-fixed" style={{ minWidth: '1200px' }}>
             <thead>
               <tr className="bg-gray-100 text-gray-700 font-semibold">
-                <th className="py-2 px-2 border-b w-44 text-center">Role</th>
                 <th className="py-2 px-2 border-b w-20 text-center">STT</th>
                 <th className="py-2 px-2 border-b w-40 text-left">Mã GV</th>
                 <th className="py-2 px-2 border-b w-64 text-left">Tên GV</th>
                 <th className="py-2 px-2 border-b w-44 text-left">SĐT</th>
                 <th className="py-2 px-2 border-b w-72 text-left">Mail</th>
+                <th className="py-2 px-2 border-b w-32 text-center">Tạo đề</th>
+                <th className="py-2 px-2 border-b w-32 text-center">Chấm bài</th>
+                <th className="py-2 px-2 border-b w-32 text-center">Xóa</th>
               </tr>
             </thead>
             <tbody>
-              {pagedTeachers.length > 0 ? pagedTeachers.map((teacher, idx) => (
-                <tr key={teacher.id} className="hover:bg-blue-50 transition">
-                  <td className="py-2 px-2 border-b text-center">
-                    <Select
-                      options={roleOptions}
-                      value={roleOptions.find(r => r.value === teacher.role)}
-                      onChange={option => {
-                        if (option && option.value !== teacher.role) {
-                          if (window.confirm(`Bạn có chắc muốn đổi role cho ${teacher.name} thành "${option.label}"?`)) {
-                            handleChangeRole(teacher, option);
-                          }
-                        }
-                      }}
-                      isSearchable={false}
-                      styles={{
-                        menu: provided => ({ ...provided, zIndex: 30 }),
-                        control: provided => ({
-                          ...provided,
-                          minHeight: '32px',
-                          borderColor: '#d1d5db',
-                          boxShadow: 'none',
-                          width: '140px',
-                        }),
-                      }}
-                    />
-                  </td>
-                  <td className="py-2 px-2 border-b text-center">{(page - 1) * pageSize + idx + 1}</td>
-                  <td className="py-2 px-2 border-b">{teacher.id}</td>
-                  <td className="py-2 px-2 border-b">{teacher.name}</td>
-                  <td className="py-2 px-2 border-b">{teacher.phone}</td>
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-4 text-gray-500">Đang tải...</td>
+                </tr>
+              ) : teachersInSubject.length > 0 ? teachersInSubject.map((teacher, idx) => (
+                <tr key={teacher.teacherId} className="hover:bg-blue-50 transition">
+                  <td className="py-2 px-2 border-b text-center">{(page - 1) * PAGE_SIZE + idx + 1}</td>
+                  <td className="py-2 px-2 border-b">{teacher.code}</td>
+                  <td className="py-2 px-2 border-b">{teacher.fullname}</td>
+                  <td className="py-2 px-2 border-b">{teacher.phoneNumber}</td>
                   <td className="py-2 px-2 border-b">{teacher.email}</td>
+                  {/* Toggle tạo đề */}
+                  <td className="py-2 px-2 border-b text-center">
+                    <button
+                      type="button"
+                      className={`w-12 h-6 flex items-center rounded-full transition-colors duration-300 ${teacher.isCreateExam ? 'bg-green-500' : 'bg-gray-300'}`}
+                      onClick={() => handleToggleCreateExam(teacher)}
+                      aria-pressed={teacher.isCreateExam}
+                    >
+                      <span
+                        className={`inline-block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-300 ${teacher.isCreateExam ? 'translate-x-6' : ''}`}
+                      />
+                    </button>
+                  </td>
+                  {/* Toggle chấm bài */}
+                  <td className="py-2 px-2 border-b text-center">
+                    <button
+                      type="button"
+                      className={`w-12 h-6 flex items-center rounded-full transition-colors duration-300 ${teacher.isGraded ? 'bg-green-500' : 'bg-gray-300'}`}
+                      onClick={() => handleToggleGradeExam(teacher)}
+                      aria-pressed={teacher.isGraded}
+                    >
+                      <span
+                        className={`inline-block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-300 ${teacher.isGraded ? 'translate-x-6' : ''}`}
+                      />
+                    </button>
+                  </td>
+                  {/* Xóa */}
+                  <td className="py-2 px-2 border-b text-center">
+                    <button
+                      className="text-red-500 hover:text-red-700 font-semibold"
+                      onClick={() => handleRemoveTeacher(teacher.teacherId)}
+                    >Xóa</button>
+                  </td>
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={6} className="text-center py-4 text-gray-500">
+                  <td colSpan={8} className="text-center py-4 text-gray-500">
                     Không có giáo viên nào.
                   </td>
                 </tr>
@@ -205,10 +276,63 @@ export default function SetRolePage() {
           </button>
         </div>
       </div>
+
+      {/* Modal thêm giáo viên */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-[700px] max-h-[80vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold mb-4">Thêm giáo viên vào môn học</h3>
+            <table className="w-full mb-4 border">
+              <thead>
+                <tr className="bg-gray-100 text-gray-700 font-semibold">
+                  <th className="py-2 px-2 border-b">Mã GV</th>
+                  <th className="py-2 px-2 border-b">Tên GV</th>
+                  <th className="py-2 px-2 border-b">SĐT</th>
+                  <th className="py-2 px-2 border-b">Mail</th>
+                  <th className="py-2 px-2 border-b">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teachersInMajor.length > 0 ? teachersInMajor.map(teacher => (
+                  <tr key={teacher.teacherId}>
+                    <td className="py-2 px-2 border-b">{teacher.code}</td>
+                    <td className="py-2 px-2 border-b">{teacher.fullname}</td>
+                    <td className="py-2 px-2 border-b">{teacher.phoneNumber}</td>
+                    <td className="py-2 px-2 border-b">{teacher.email}</td>
+                    <td className="py-2 px-2 border-b">
+                      <button
+                        className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition font-semibold"
+                        onClick={() => handleAddTeacher(teacher.teacherId)}
+                      >
+                        Thêm
+                      </button>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={5} className="text-center py-4 text-gray-500">
+                      Không có giáo viên nào.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+            <div className="flex justify-end">
+              <button
+                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition font-semibold"
+                onClick={handleCloseModal}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ToastContainer />
       <style jsx global>{`
         .table-fixed { table-layout: fixed; }
       `}</style>
-      </div>
+    </div>
   );
 }
