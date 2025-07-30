@@ -37,7 +37,7 @@ namespace GESS.Entity.Contexts
         public DbSet<MultiQuestion> MultiQuestions { get; set; }
         public DbSet<MultiAnswer> MultiAnswers { get; set; }
         public DbSet<LevelQuestion> LevelQuestions { get; set; }
-        public DbSet<FinalExam> FinalExams { get; set; }
+        public DbSet<FinalExam> FinalExam { get; set; }
         public DbSet<PracticeQuestion> PracticeQuestions { get; set; }
         public DbSet<PracticeAnswer> PracticeAnswers { get; set; }
         public DbSet<PracticeExamPaper> PracticeExamPapers { get; set; }

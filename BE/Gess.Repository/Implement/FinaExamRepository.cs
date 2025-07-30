@@ -115,7 +115,7 @@ namespace GESS.Repository.Implement
                     }
                 }
 
-                await _context.FinalExams.AddRangeAsync(finalExamsToAdd);
+                await _context.FinalExam.AddRangeAsync(finalExamsToAdd);
 
                 var noQuestionInChaptersToAdd = multipleExamCreateDto.NoQuestionInChapterDTO
                     .Select(dto => new NoQuestionInChapter

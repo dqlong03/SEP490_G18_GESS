@@ -554,7 +554,7 @@ namespace GESS.Repository.Implement
                 }
 
                 // BƯỚC 2: Kiểm tra xem có phải bài thi cuối kỳ không (có dữ liệu trong bảng FinalExam)
-                var finalExamQuestions = await _context.FinalExams
+                var finalExamQuestions = await _context.FinalExam
                     .Where(fe => fe.MultiExamId == exam.MultiExamId)
                     .Select(fe => fe.MultiQuestionId)
                     .ToListAsync();
