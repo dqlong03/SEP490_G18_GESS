@@ -9,6 +9,7 @@ using GESS.Model.Subject;
 using GESS.Model.Teacher;
 using GESS.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
+using static GESS.Model.NoQuestionInChapter.NoQuestionInChapterDTO;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace GESS.Repository.Implement
@@ -392,7 +393,16 @@ namespace GESS.Repository.Implement
                 {
                     ChapterId = nq.ChapterId,
                     LevelQuestionId = nq.LevelQuestionId,
-                    NumberQuestion = nq.NumberQuestion
+                    NumberQuestion = nq.NumberQuestion,
+                    ChapterName = _context.Chapters
+                        .Where(c => c.ChapterId == nq.ChapterId)
+                        .Select(c => c.ChapterName)
+                        .FirstOrDefault(),
+                    LevelName = _context.LevelQuestions
+                        .Where(l => l.LevelQuestionId == nq.LevelQuestionId)
+                        .Select(l => l.LevelQuestionName)
+                        .FirstOrDefault()
+
                 }).ToList(),
             };
 
