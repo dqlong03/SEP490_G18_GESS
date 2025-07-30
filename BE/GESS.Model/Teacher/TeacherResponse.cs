@@ -22,5 +22,7 @@ namespace GESS.Model.Teacher
         public int? MajorId { get; set; }
         public string? MajorName { get; set; }
         public DateTime HireDate { get; set; }
+        public bool IsGraded { get; set; }
+        public bool IsCreateExam { get; set; }
     }
 }
