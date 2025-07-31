@@ -135,6 +135,31 @@ namespace GESS.Repository.Implement
             {
                 return false;
             }
+
+            // Kiểm tra xem giảng viên có đang chấm thi trong kỳ hiện tại không
+            // Lấy kỳ và năm mới nhất từ danh sách chấm thi của giảng viên
+            var teacherGradingAssignments = _context.ExamSlotRooms
+                .Where(esr => esr.ExamGradedId == teacherId)
+                .OrderByDescending(esr => esr.ExamDate.Year)
+                .ThenByDescending(esr => esr.SemesterId)
+                .Select(esr => new { esr.ExamDate.Year, esr.SemesterId })
+                .FirstOrDefault();
+            
+            if (teacherGradingAssignments != null)
+            {
+                // Kiểm tra xem giảng viên có đang chấm thi trong kỳ mới nhất không
+                var hasGradingAssignment = _context.ExamSlotRooms
+                    .Any(esr => esr.ExamGradedId == teacherId && 
+                                esr.SemesterId == teacherGradingAssignments.SemesterId &&
+                                esr.SubjectId == subjectId &&
+                                esr.ExamDate.Year == teacherGradingAssignments.Year);
+                
+                if (hasGradingAssignment)
+                {
+                    return false; // Không cho phép xóa vì giảng viên đang chấm thi trong kỳ hiện tại
+                }
+            }
+
             try
             {
                 subjectTeacher.IsActiveSubjectTeacher = false;
