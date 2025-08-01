@@ -1,6 +1,10 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Entities;
 using GESS.Model.ExamSlot;
+using GESS.Model.Major;
+using GESS.Model.RoomDTO;
+using GESS.Model.Subject;
+using GESS.Model.Teacher;
 using GESS.Service.examSchedule;
 using GESS.Service.examSlotService;
 using System;
@@ -34,6 +38,56 @@ namespace GESS.Service.examSlotService
                 SlotName = slot.SlotName
             });
             return examSlotDtos;
+        }
+
+        public async Task<IEnumerable<GradeTeacherResponse>> GetAllGradeTeacher(int majorId, int subjectId)
+        {
+            var gradeTeachers = await _unitOfWork.ExamSlotRepository.GetAllGradeTeacherAsync(majorId, subjectId);
+            if (gradeTeachers == null || !gradeTeachers.Any())
+            {
+                return new List<GradeTeacherResponse>();
+            }
+            return gradeTeachers;
+        }
+
+        public async Task<IEnumerable<MajorDTODDL>> GetAllMajor()
+        {
+            var majors = await _unitOfWork.BaseRepository<Major>().GetAllAsync();
+            if (majors == null || !majors.Any())
+            {
+                return new List<MajorDTODDL>();
+            }
+            var majorDtos = majors.Select(major => new MajorDTODDL
+            {
+                MajorId = major.MajorId,
+                MajorName = major.MajorName
+            });
+            return majorDtos;
+        }
+
+        public async Task<IEnumerable<RoomListDTO>> GetAllRoomsAsync()
+        {
+            var rooms = await _unitOfWork.ExamSlotRepository.GetAllRoomsAsync();
+            if (rooms == null || !rooms.Any())
+            {
+                return new List<RoomListDTO>();
+            }
+            return rooms;
+        }
+
+        public async Task<IEnumerable<SubjectDTODDL>> GetAllSubjectsByMajorId(int majorId)
+        {
+            var subjects = await _unitOfWork.ExamSlotRepository.GetAllSubjectsByMajorIdAsync(majorId);
+            if (subjects == null || !subjects.Any())
+            {
+                return new List<SubjectDTODDL>();
+            }
+            return subjects;
+        }
+
+        public bool IsRoomAvailable(int roomId, DateTime slotStart, DateTime slotEnd)
+        {
+            return _unitOfWork.ExamSlotRepository.IsRoomAvailable(roomId, slotStart, slotEnd);
         }
     }
 }

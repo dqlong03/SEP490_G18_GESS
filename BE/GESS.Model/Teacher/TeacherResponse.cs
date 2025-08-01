@@ -25,4 +25,10 @@ namespace GESS.Model.Teacher
         public bool IsGraded { get; set; }
         public bool IsCreateExam { get; set; }
     }
+    public class GradeTeacherResponse
+    {
+        public Guid ? TeacherId { get; set; }
+        public string FullName { get; set; }
+        
+    }
 }
