@@ -4,6 +4,7 @@ using GESS.Entity.Entities;
 using GESS.Model.Chapter;
 using GESS.Model.Class;
 using GESS.Model.GradeComponent;
+using GESS.Model.Subject;
 using GESS.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -209,7 +210,7 @@ namespace GESS.Repository.Implement
                         ExamId = e.MultiExamId,
                         ExamName = e.MultiExamName,
                         GradeComponent = e.CategoryExam?.CategoryExamName ?? "",
-                        IsGraded = isCompleted ? "Đã chấm" : "Chưa chấm",
+                        IsGraded = e.IsGraded == 1 ? "Đã chấm" : "Chưa chấm",
                         StudentCount = histories.Count,
                         Duration = e.Duration,
                         QuestionCount = e.NumberQuestion,
@@ -387,7 +388,7 @@ namespace GESS.Repository.Implement
         }
 
 
-        public async Task<IEnumerable<ClassListDTO>> GetAllClassByTeacherIdAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageNumber = 1, int pageSize = 5)
+        public async Task<IEnumerable<ClassListDTO>> GetAllClassByTeacherIdAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageNumber = 1, int pageSize = 5, int? year = null)
         {
             var query = _context.Classes
                 .Include(c => c.Subject)
@@ -416,6 +417,12 @@ namespace GESS.Repository.Implement
                 query = query.Where(c => c.SemesterId == semesterId.Value);
             }
 
+            if (year.HasValue)
+            {
+                query = query.Where(c => c.CreatedDate.HasValue && c.CreatedDate.Value.Year == year.Value);
+            }
+
+
             query = query
                 .OrderByDescending(c => c.ClassId)
                 .Skip((pageNumber - 1) * pageSize)
@@ -432,7 +439,7 @@ namespace GESS.Repository.Implement
                 StudentCount = c.ClassStudents?.Count ?? 0
             });
         }
-        public async Task<int> CountPageByTeacherAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageSize = 5)
+        public async Task<int> CountPageByTeacherAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageSize = 5, int? year = null)
         {
             var query = _context.Classes
                 .Include(c => c.Subject)
@@ -457,6 +464,11 @@ namespace GESS.Repository.Implement
             if (semesterId.HasValue)
             {
                 query = query.Where(c => c.SemesterId == semesterId.Value);
+            }
+
+            if (year.HasValue)
+            {
+                query = query.Where(c => c.CreatedDate.HasValue && c.CreatedDate.Value.Year == year.Value);
             }
 
             var totalCount = await query.CountAsync();
@@ -526,6 +538,24 @@ namespace GESS.Repository.Implement
                 throw new Exception($"Lỗi không xác định khi tạo lớp học: {ex.Message}", ex);
             }
         }
+
+
+        // Gess.Repository/Implement/ClassRepository.cs
+        public async Task<IEnumerable<SubjectListDTO>> GetSubjectsByTeacherIdAsync(Guid teacherId)
+        {
+            var result = await (from st in _context.SubjectTeachers
+                                join s in _context.Subjects on st.SubjectId equals s.SubjectId
+                                where st.TeacherId == teacherId
+                                select new SubjectListDTO
+                                {
+                                    SubjectId = s.SubjectId,
+                                    SubjectName = s.SubjectName
+                                })
+                                .Distinct()
+                                .ToListAsync();
+            return result;
+        }
+
 
     }
 }

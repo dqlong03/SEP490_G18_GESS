@@ -85,7 +85,9 @@ namespace GESS.Service.gradeSchedule
                     StudentAnswer = q.Answer,
                     Score = q.GradedScore,
                     PracticeExamHistoryId = pracExamHistory.PracExamHistoryId,
-                    PracticeQuestionId = q.PracticeQuestionId
+                    PracticeQuestionId = q.PracticeQuestionId,
+                    MaxScore = q.Score
+
                 }).ToList()
             };
         }

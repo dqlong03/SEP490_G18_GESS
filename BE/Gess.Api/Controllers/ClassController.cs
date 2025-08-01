@@ -160,11 +160,11 @@ namespace GESS.Api.Controllers
         }
         //API lớp của tôi
         [HttpGet("teacherId")]
-        public async Task<IActionResult> GetAllClassByTeacherIdAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageNumber = 1, int pageSize = 10)
+        public async Task<IActionResult> GetAllClassByTeacherIdAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageNumber = 1, int pageSize = 10, int? year= null)
         {
             try
             {
-                var classes = await _classService.GetAllClassByTeacherIdAsync(teacherId,name, subjectId, semesterId, pageNumber, pageSize);
+                var classes = await _classService.GetAllClassByTeacherIdAsync(teacherId,name, subjectId, semesterId, pageNumber, pageSize,year);
                 return Ok(classes);
             }
             catch (Exception ex)
@@ -174,11 +174,11 @@ namespace GESS.Api.Controllers
         }
         //API đếm số trang lớp của tôi
         [HttpGet("CountPagesByTeacher/{teacherId}")]
-        public async Task<IActionResult> CountPagesByTeacher(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageSize = 10)
+        public async Task<IActionResult> CountPagesByTeacher(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageSize = 10,int? year= null)
         {
             try
             {
-                var totalPages = await _classService.CountPageByTeacherAsync(teacherId,name, subjectId, semesterId, pageSize);
+                var totalPages = await _classService.CountPageByTeacherAsync(teacherId,name, subjectId, semesterId, pageSize,year);
                 return Ok(totalPages);
             }
             catch (Exception ex)
@@ -200,6 +200,18 @@ namespace GESS.Api.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+
+        // Gess.Api/Controllers/ClassController.cs
+        [HttpGet("subjects-by-teacher/{teacherId}")]
+        public async Task<IActionResult> GetSubjectsByTeacherId(Guid teacherId)
+        {
+            var subjects = await _classService.GetSubjectsByTeacherIdAsync(teacherId);
+            if (subjects == null || !subjects.Any())
+                return NotFound("No subjects found for this teacher.");
+            return Ok(subjects);
+        }
+
 
 
     }
