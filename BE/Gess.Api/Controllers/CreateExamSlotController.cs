@@ -82,7 +82,7 @@ namespace GESS.Api.Controllers
             if (examSlotCreateDTO.gradeTeachers == null || !examSlotCreateDTO.gradeTeachers.Any())
                 return BadRequest("No grade teachers provided.");
 
-            List<GeneratedExamSlot> examSlots;
+            List<GeneratedExamSlot> examSlots =null;
 
             if (examSlotCreateDTO.OptimizedBySlotExam)
             {
@@ -105,7 +105,11 @@ namespace GESS.Api.Controllers
                 return BadRequest("No optimization method selected.");
             }
 
-            return Ok();
+            if ( examSlots!= null && !examSlots.Any() )
+            {
+                return NotFound("No exam slots generated.");
+            }
+            return Ok(examSlots);
         }
         private List<GeneratedExamSlot> OptimizeBySlot(ExamSlotCreateDTO dto)
         {
