@@ -20,4 +20,5 @@ namespace GESS.Model.Student
         public DateTime? DateOfBirth { get; set; }
         //public int? CohortId { get; set; }
     }
+
 }
