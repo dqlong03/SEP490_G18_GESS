@@ -44,15 +44,18 @@ namespace GESS.Repository.Implement
         public async Task<IEnumerable<RoomListDTO>> GetAllRoomsAsync()
         {
             var rooms = await _context.Rooms
+                .Where(r => r.Status == "Available") 
                 .Select(r => new RoomListDTO
                 {
                     RoomId = r.RoomId,
                     RoomName = r.RoomName,
                     Capacity = r.Capacity
-                }).Where( r => r.Status == "Available")
+                })
                 .ToListAsync();
+
             return rooms;
         }
+
 
         public async Task<IEnumerable<SubjectDTODDL>> GetAllSubjectsByMajorIdAsync(int majorId)
         {

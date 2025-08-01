@@ -31,7 +31,7 @@ namespace GESS.Api.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
-        //APPI to get all teacher in majorid by teacher hod id
+        //APPI to get all teacher in major id by teacher hod id
         [HttpGet("GetAllTeacherInMajor")]
         public IActionResult GetAllTeacherInMajor(Guid teacherId)
         {
