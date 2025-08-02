@@ -76,6 +76,7 @@ namespace GESS.Api.Controllers
             }
             return Ok(new { ExamCode = result, Message = "Exam code refreshed successfully." });
         }
+
         //API to change status of exam by exam id for midterm exam
         [HttpPost("changestatus")]
         public async Task<IActionResult> ChangeMidTermExamStatus(int examId, string status,int examType)
