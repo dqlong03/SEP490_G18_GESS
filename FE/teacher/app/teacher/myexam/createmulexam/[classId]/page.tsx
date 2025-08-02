@@ -108,14 +108,18 @@ export default function CreateMCQExamPage() {
     setShowChapterPopup(false);
   };
 
-  const handleRemoveChapter = (id: number) => {
-    setSelectedChapters((prev) => prev.filter((c) => c.chapterId !== id));
-    setChapterQuestions((prev) => {
-      const newQ = { ...prev };
-      delete newQ[id];
-      return newQ;
-    });
-  };
+    const handleRemoveChapter = (id: number) => {
+      setSelectedChapters((prev) => prev.filter((c) => c.chapterId !== id));
+      setChapterQuestions((prev) => {
+        const newQ = { ...prev };
+        delete newQ[id];
+        return newQ;
+      });
+      setChapterChecks((prev) => ({
+        ...prev,
+        [id]: false, // Bỏ check khi xóa
+      }));
+    };
 
   const handleChangeQuestionCount = (
     chapterId: number,
@@ -215,46 +219,74 @@ export default function CreateMCQExamPage() {
 
   // Submit
   const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!examName || !selectedGradeComponent || !startDate || !endDate || !duration || !semesterId || !teacherId) {
-      alert("Vui lòng nhập đầy đủ thông tin bắt buộc!");
-      return;
-    }
-    if (questionInput > 0 && totalQuestions !== questionInput) {
-      alert("Tổng số câu đã chọn phải bằng số câu hỏi yêu cầu!");
-      return;
-    }
-    const payload = {
-      MultiExamName: examName,
-      NumberQuestion: totalQuestions,
-      Duration:duration,
-      StartDay: startDate,
-      EndDay: endDate,
-      CreateAt: new Date().toISOString(),
-      teacherId,
-      subjectId, 
-      classId,
-      categoryExamId: selectedGradeComponent.value,
-      semesterId,
-      isPublish: isPublic,
-      questionBankType,
-      noQuestionInChapterDTO: buildNoQuestionInChapterDTO(),
-      studentExamDTO: selectedStudents.map((sv: any) => ({
-        studentId: sv.studentId
-      })),
-    };
-    const res = await fetch(`${API_URL}/api/MultipleExam/create`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (res.ok) {
-      alert("Tạo bài kiểm tra thành công!");
-      router.push(`/teacher/myclass/classdetail/${classId.toString()}`);
-    } else {
-      alert("Tạo bài kiểm tra thất bại!");
-    }
+  e.preventDefault();
+  if (!examName || !selectedGradeComponent || !startDate || !endDate || !duration || !semesterId || !teacherId) {
+    alert("Vui lòng nhập đầy đủ thông tin bắt buộc!");
+    return;
+  }
+  if (selectedStudents.length === 0) {
+    alert("Vui lòng chọn ít nhất 1 sinh viên!");
+    return;
+  }
+  if (questionInput > 0 && totalQuestions !== questionInput) {
+    alert("Tổng số câu đã chọn phải bằng số câu hỏi yêu cầu!");
+    return;
+  }
+  const payload = {
+    MultiExamName: examName,
+    NumberQuestion: totalQuestions,
+    Duration: duration,
+    StartDay: startDate,
+    EndDay: endDate,
+    CreateAt: new Date().toISOString(),
+    teacherId,
+    subjectId,
+    classId,
+    categoryExamId: selectedGradeComponent.value,
+    semesterId,
+    isPublish: isPublic,
+    questionBankType,
+    noQuestionInChapterDTO: buildNoQuestionInChapterDTO(),
+    studentExamDTO: selectedStudents.map((sv: any) => ({
+      studentId: sv.studentId
+    })),
   };
+  const res = await fetch(`${API_URL}/api/MultipleExam/create`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (res.ok) {
+    alert("Tạo bài kiểm tra thành công!");
+    router.push(`/teacher/myclass/classdetail/${classId.toString()}`);
+  } else {
+    alert("Tạo bài kiểm tra thất bại!");
+  }
+};
+
+  // Hàm cập nhật lại số câu hỏi max cho các chương đã chọn
+const updateChapterMaxQuestions = async () => {
+  const newChapterQuestions: Record<number, any> = { ...chapterQuestions };
+  for (const chap of selectedChapters) {
+    const easy = await fetchQuestionCount(chap.chapterId, "easy");
+    const medium = await fetchQuestionCount(chap.chapterId, "medium");
+    const hard = await fetchQuestionCount(chap.chapterId, "hard");
+    // Giữ nguyên số lượng đã nhập, chỉ cập nhật max
+    newChapterQuestions[chap.chapterId] = {
+      ...newChapterQuestions[chap.chapterId],
+      max: { easy, medium, hard },
+      easy: Math.min(newChapterQuestions[chap.chapterId]?.easy ?? 0, easy),
+      medium: Math.min(newChapterQuestions[chap.chapterId]?.medium ?? 0, medium),
+      hard: Math.min(newChapterQuestions[chap.chapterId]?.hard ?? 0, hard),
+    };
+  }
+  setChapterQuestions(newChapterQuestions);
+};
+  useEffect(() => {
+    if (selectedChapters.length > 0) {
+      updateChapterMaxQuestions();
+    }
+  }, [selectedChapters, questionBankType]);
 
   return (
     <div className="w-full min-h-screen bg-white font-sans p-0">
@@ -496,14 +528,12 @@ export default function CreateMCQExamPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {chapters
-                        .filter(
-                          (chap) =>
-                            !selectedChapters.some(
-                              (selected) => selected.chapterId === chap.chapterId
-                            )
-                        )
-                        .map((chap: any, idx: number) => (
+                      {chapters.map((chap: any, idx: number) => {
+                        const checked =
+                          chapterChecks[chap.chapterId] !== undefined
+                            ? chapterChecks[chap.chapterId]
+                            : selectedChapters.some((selected) => selected.chapterId === chap.chapterId);
+                        return (
                           <tr key={chap.chapterId} className="hover:bg-blue-50 transition">
                             <td className="py-2 px-2 border-b text-center">
                               Chương {idx + 1}
@@ -512,7 +542,7 @@ export default function CreateMCQExamPage() {
                             <td className="py-2 px-2 border-b text-center">
                               <input
                                 type="checkbox"
-                                checked={!!chapterChecks[chap.chapterId]}
+                                checked={checked}
                                 onChange={(e) =>
                                   setChapterChecks((prev) => ({
                                     ...prev,
@@ -522,7 +552,8 @@ export default function CreateMCQExamPage() {
                               />
                             </td>
                           </tr>
-                        ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

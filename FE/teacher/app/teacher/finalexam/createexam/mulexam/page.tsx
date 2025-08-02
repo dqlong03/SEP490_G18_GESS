@@ -85,7 +85,7 @@ export default function CreateFinalMultipleExamPage() {
 
   // Lấy max số câu hỏi từng level cho từng chương
   const fetchMaxQuestions = async (chapterId: number, levelId: number): Promise<number> => {
-    const res = await fetch(`${API_URL}/api/FinalExam/GetFinalQuestionCount?chapterId=${chapterId}&levelId=${levelId}`);
+    const res = await fetch(`${API_URL}/api/FinalExam/GetFinalQuestionCount?chapterId=${chapterId}&levelId=${levelId}&semesterId=${selectedSemester?.semesterId}`);
     return await res.json();
   };
 
@@ -327,35 +327,34 @@ export default function CreateFinalMultipleExamPage() {
                         <th className="py-2 px-2 border-b w-20 text-center">Chọn</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {chapters
-                        .filter(
-                          (chap) =>
-                            !selectedChapters.some(
-                              (selected) => selected.chapterId === chap.chapterId
-                            )
-                        )
-                        .map((chap, idx) => (
-                          <tr key={chap.chapterId} className="hover:bg-blue-50 transition">
-                            <td className="py-2 px-2 border-b text-center">
-                              Chương {idx + 1}
-                            </td>
-                            <td className="py-2 px-2 border-b">{chap.chapterName}</td>
-                            <td className="py-2 px-2 border-b text-center">
-                              <input
-                                type="checkbox"
-                                checked={!!chapterChecks[chap.chapterId]}
-                                onChange={(e) =>
-                                  setChapterChecks((prev) => ({
-                                    ...prev,
-                                    [chap.chapterId]: e.target.checked,
-                                  }))
-                                }
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
+                      <tbody>
+                        {chapters.map((chap, idx) => {
+                          const checked =
+                            chapterChecks[chap.chapterId] !== undefined
+                              ? chapterChecks[chap.chapterId]
+                              : selectedChapters.some((selected) => selected.chapterId === chap.chapterId);
+                          return (
+                            <tr key={chap.chapterId} className="hover:bg-blue-50 transition">
+                              <td className="py-2 px-2 border-b text-center">
+                                Chương {idx + 1}
+                              </td>
+                              <td className="py-2 px-2 border-b">{chap.chapterName}</td>
+                              <td className="py-2 px-2 border-b text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) =>
+                                    setChapterChecks((prev) => ({
+                                      ...prev,
+                                      [chap.chapterId]: e.target.checked,
+                                    }))
+                                  }
+                                />
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
                   </table>
                 </div>
                 <div className="flex justify-end">

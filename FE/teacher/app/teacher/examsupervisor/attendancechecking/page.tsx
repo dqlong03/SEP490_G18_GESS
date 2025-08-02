@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
@@ -35,6 +35,10 @@ export default function AttendanceCheckingPage() {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
+  // Timer state
+  const [timer, setTimer] = useState(300); // 5 phút = 300 giây
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
   // Fetch exam info
   useEffect(() => {
     if (!examId) return;
@@ -63,6 +67,45 @@ export default function AttendanceCheckingPage() {
         setAttendance({});
       });
   }, [examId]);
+
+  // Timer countdown and refresh code
+  useEffect(() => {
+    if (timer <= 0) {
+      // Gọi API tạo mã code mới
+      if (examId) {
+        fetch(`https://localhost:7074/api/ExamSchedule/refresh-code?examSlotId=${examId}`, {
+          method: "POST",
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.code) {
+              setExamInfo(prev => prev ? { ...prev, code: data.code } : prev);
+            }
+            setTimer(300); // Reset lại 5 phút
+          })
+          .catch(() => setTimer(300));
+      } else {
+        setTimer(300);
+      }
+      return;
+    }
+    timerRef.current = setTimeout(() => setTimer(t => t - 1), 1000);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [timer, examId]);
+
+  // Khi examId đổi thì reset timer
+  useEffect(() => {
+    setTimer(300);
+  }, [examId]);
+
+  // Format mm:ss
+  const formatTime = (sec: number) => {
+    const m = Math.floor(sec / 60).toString().padStart(2, "0");
+    const s = (sec % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
 
   // Điểm danh từng sinh viên
   const handleCheck = async (studentId: string) => {
@@ -113,6 +156,9 @@ export default function AttendanceCheckingPage() {
             <div>
               <span className="font-semibold">Mã code vào thi:</span>{" "}
               <span className="text-blue-700 font-mono">{examInfo.code}</span>
+              <span className="ml-4 text-sm text-gray-600">
+                (Tự động đổi mã sau <span className="font-bold text-red-600">{formatTime(timer)}</span>)
+              </span>
             </div>
           </div>
         ) : (

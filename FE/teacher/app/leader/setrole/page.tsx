@@ -44,21 +44,42 @@ export default function SetRolePage() {
   const [loading, setLoading] = useState(false);
 
   // Fetch subjects
-  useEffect(() => {
-    fetch(`https://localhost:7074/api/AssignGradeCreateExam/GetAllSubjectsByTeacherId?teacherId=${TEACHER_ID}`)
-      .then(res => res.json())
-      .then(data => setSubjects(data))
-      .catch(() => toast.error('Không lấy được danh sách môn học'));
-  }, []);
+ useEffect(() => {
+  fetch(`https://localhost:7074/api/AssignGradeCreateExam/GetAllSubjectsByTeacherId?teacherId=${TEACHER_ID}`)
+    .then(res => res.json())
+    .then(data => {
+      setSubjects(data);
+      if (data && data.length > 0) {
+        setSelectedSubject({
+          value: data[0].subjectId,
+          label: data[0].subjectName,
+          ...data[0],
+        });
+      }
+    })
+    .catch(() => toast.error('Không lấy được danh sách môn học'));
+}, []);;
 
   // Fetch teachers in subject
   const fetchTeachersInSubject = () => {
-    if (!selectedSubject) return;
+    if (!selectedSubject) {
+      setTeachersInSubject([]); // Không có môn học thì cũng clear bảng
+      return;
+    }
     setLoading(true);
     fetch(`https://localhost:7074/api/AssignGradeCreateExam/GetAllTeacherHaveSubject?subjectId=${selectedSubject.subjectId}&pageNumber=${page}&pageSize=${PAGE_SIZE}`)
       .then(res => res.json())
-      .then(data => setTeachersInSubject(data))
-      .catch(() => toast.error('Không lấy được danh sách giáo viên trong môn học'))
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setTeachersInSubject(data);
+        } else {
+          setTeachersInSubject([]); // Không có dữ liệu
+        }
+      })
+      .catch(() => {
+        setTeachersInSubject([]); // Lỗi cũng clear bảng
+        toast.error('Không lấy được danh sách giáo viên trong môn học');
+      })
       .finally(() => setLoading(false));
     fetch(`https://localhost:7074/api/AssignGradeCreateExam/CountPageNumberTeacherHaveSubject?subjectId=${selectedSubject.subjectId}&pageSize=${PAGE_SIZE}`)
       .then(res => res.json())
@@ -183,77 +204,77 @@ export default function SetRolePage() {
           </button>
         </div>
 
-        {/* Table teachers in subject */}
-        <div className="overflow-x-auto rounded shadow bg-white mb-4">
-          <table className="w-full text-sm md:text-base border border-gray-200 table-fixed" style={{ minWidth: '1200px' }}>
-            <thead>
-              <tr className="bg-gray-100 text-gray-700 font-semibold">
-                <th className="py-2 px-2 border-b w-20 text-center">STT</th>
-                <th className="py-2 px-2 border-b w-40 text-left">Mã GV</th>
-                <th className="py-2 px-2 border-b w-64 text-left">Tên GV</th>
-                <th className="py-2 px-2 border-b w-44 text-left">SĐT</th>
-                <th className="py-2 px-2 border-b w-72 text-left">Mail</th>
-                <th className="py-2 px-2 border-b w-32 text-center">Tạo đề</th>
-                <th className="py-2 px-2 border-b w-32 text-center">Chấm bài</th>
-                <th className="py-2 px-2 border-b w-32 text-center">Xóa</th>
+       {/* Table teachers in subject */}
+      <div className="rounded shadow bg-white mb-4">
+        <table className="w-full text-sm md:text-base border border-gray-200">
+          <thead>
+            <tr className="bg-gray-100 text-gray-700 font-semibold">
+              <th className="py-2 px-2 border-b text-center">STT</th>
+              <th className="py-2 px-2 border-b text-left">Mã GV</th>
+              <th className="py-2 px-2 border-b text-left">Tên GV</th>
+              <th className="py-2 px-2 border-b text-left">SĐT</th>
+              <th className="py-2 px-2 border-b text-left">Mail</th>
+              <th className="py-2 px-2 border-b text-center">Tạo đề</th>
+              <th className="py-2 px-2 border-b text-center">Chấm bài</th>
+              <th className="py-2 px-2 border-b text-center">Xóa</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={8} className="text-center py-4 text-gray-500">Đang tải...</td>
               </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-4 text-gray-500">Đang tải...</td>
-                </tr>
-              ) : teachersInSubject.length > 0 ? teachersInSubject.map((teacher, idx) => (
-                <tr key={teacher.teacherId} className="hover:bg-blue-50 transition">
-                  <td className="py-2 px-2 border-b text-center">{(page - 1) * PAGE_SIZE + idx + 1}</td>
-                  <td className="py-2 px-2 border-b">{teacher.code}</td>
-                  <td className="py-2 px-2 border-b">{teacher.fullname}</td>
-                  <td className="py-2 px-2 border-b">{teacher.phoneNumber}</td>
-                  <td className="py-2 px-2 border-b">{teacher.email}</td>
-                  {/* Toggle tạo đề */}
-                  <td className="py-2 px-2 border-b text-center">
-                    <button
-                      type="button"
-                      className={`w-12 h-6 flex items-center rounded-full transition-colors duration-300 ${teacher.isCreateExam ? 'bg-green-500' : 'bg-gray-300'}`}
-                      onClick={() => handleToggleCreateExam(teacher)}
-                      aria-pressed={teacher.isCreateExam}
-                    >
-                      <span
-                        className={`inline-block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-300 ${teacher.isCreateExam ? 'translate-x-6' : ''}`}
-                      />
-                    </button>
-                  </td>
-                  {/* Toggle chấm bài */}
-                  <td className="py-2 px-2 border-b text-center">
-                    <button
-                      type="button"
-                      className={`w-12 h-6 flex items-center rounded-full transition-colors duration-300 ${teacher.isGraded ? 'bg-green-500' : 'bg-gray-300'}`}
-                      onClick={() => handleToggleGradeExam(teacher)}
-                      aria-pressed={teacher.isGraded}
-                    >
-                      <span
-                        className={`inline-block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-300 ${teacher.isGraded ? 'translate-x-6' : ''}`}
-                      />
-                    </button>
-                  </td>
-                  {/* Xóa */}
-                  <td className="py-2 px-2 border-b text-center">
-                    <button
-                      className="text-red-500 hover:text-red-700 font-semibold"
-                      onClick={() => handleRemoveTeacher(teacher.teacherId)}
-                    >Xóa</button>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={8} className="text-center py-4 text-gray-500">
-                    Không có giáo viên nào.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+            ) : teachersInSubject.length > 0 ? teachersInSubject.map((teacher, idx) => (
+              <tr key={teacher.teacherId} className="hover:bg-blue-50 transition">
+                <td className="py-2 px-2 border-b text-center">{(page - 1) * PAGE_SIZE + idx + 1}</td>
+                <td className="py-2 px-2 border-b">{teacher.code}</td>
+                <td className="py-2 px-2 border-b">{teacher.fullname}</td>
+                <td className="py-2 px-2 border-b">{teacher.phoneNumber}</td>
+                <td className="py-2 px-2 border-b">{teacher.email}</td>
+                {/* Toggle tạo đề */}
+                <td className="py-2 px-2 border-b text-center">
+                  <button
+                    type="button"
+                    className={`w-12 h-6 flex items-center rounded-full transition-colors duration-300 ${teacher.isCreateExam ? 'bg-green-500' : 'bg-gray-300'}`}
+                    onClick={() => handleToggleCreateExam(teacher)}
+                    aria-pressed={teacher.isCreateExam}
+                  >
+                    <span
+                      className={`inline-block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-300 ${teacher.isCreateExam ? 'translate-x-6' : ''}`}
+                    />
+                  </button>
+                </td>
+                {/* Toggle chấm bài */}
+                <td className="py-2 px-2 border-b text-center">
+                  <button
+                    type="button"
+                    className={`w-12 h-6 flex items-center rounded-full transition-colors duration-300 ${teacher.isGraded ? 'bg-green-500' : 'bg-gray-300'}`}
+                    onClick={() => handleToggleGradeExam(teacher)}
+                    aria-pressed={teacher.isGraded}
+                  >
+                    <span
+                      className={`inline-block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-300 ${teacher.isGraded ? 'translate-x-6' : ''}`}
+                    />
+                  </button>
+                </td>
+                {/* Xóa */}
+                <td className="py-2 px-2 border-b text-center">
+                  <button
+                    className="text-red-500 hover:text-red-700 font-semibold"
+                    onClick={() => handleRemoveTeacher(teacher.teacherId)}
+                  >Xóa</button>
+                </td>
+              </tr>
+            )) : (
+              <tr>
+                <td colSpan={8} className="text-center py-4 text-gray-500">
+                  Không có giáo viên nào.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
         {/* Pagination */}
         <div className="mt-2 flex flex-wrap justify-left items-center gap-2 text-base ">

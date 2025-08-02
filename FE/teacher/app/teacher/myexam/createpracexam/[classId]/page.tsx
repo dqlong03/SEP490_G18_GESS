@@ -269,6 +269,9 @@ export default function CreateEssayExamPage() {
       if (!examName || !startDate || !endDate || !duration || !selectedExams.length || !selectedStudents.length) {
         throw new Error('Vui lòng nhập đầy đủ thông tin');
       }
+       if (selectedStudents.length === 0) {
+          throw new Error('Vui lòng chọn ít nhất 1 sinh viên!');
+        }
       const payload = {
         pracExamName: examName,
         duration: duration,

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getUserIdFromToken } from "@/utils/tokenUtils";
+import Select from "react-select";
 
 type YearOption = { value: number; label: string };
 type WeekOption = { value: string; label: string };
@@ -17,11 +18,6 @@ type ApiExamSchedule = {
   endDay: string;
 };
 
-const yearOptions: YearOption[] = [
-  { value: 2025, label: "2025" },
-  { value: 2024, label: "2024" },
-];
-
 const weekdays = [
   "Thứ 2",
   "Thứ 3",
@@ -32,13 +28,8 @@ const weekdays = [
   "Chủ nhật",
 ];
 
-// Các ca thi mặc định (sẽ map theo giờ startDay/endDay thực tế)
-const slotTimes = [
-  { label: "Ca 1", start: 7, end: 9 },
-  { label: "Ca 2", start: 9, end: 11 },
-  { label: "Ca 3", start: 13, end: 15 },
-  { label: "Ca 4", start: 15, end: 20 },
-];
+// Các giờ từ 7h đến 19h
+const hourSlots = Array.from({ length: 13 }, (_, i) => 7 + i); // [7,8,...,19]
 
 // Lấy danh sách các ngày thứ 2 đầu tuần của năm
 function getWeekStartOptions(year: number): WeekOption[] {
@@ -71,30 +62,25 @@ function getWeekDatesFromStart(startDate: string): string[] {
   const dates: string[] = [];
   const d = new Date(startDate);
   for (let i = 0; i < 7; i++) {
-    const dateStr = new Date(d);
-    dateStr.setDate(d.getDate() + i);
-    dates.push(dateStr.toISOString().slice(0, 10));
+    const dateCopy = new Date(d);
+    dateCopy.setDate(d.getDate() + i);
+    dates.push(dateCopy.toISOString().slice(0, 10));
   }
   return dates;
 }
 
-// Lấy index ca thi dựa vào giờ bắt đầu (startDay)
-function getSlotIndexByHour(hour: number): number {
-  if (hour >= 7 && hour < 9) return 0;
-  if (hour >= 9 && hour < 11) return 1;
-  if (hour >= 13 && hour < 15) return 2;
-  if (hour >= 15 && hour < 20) return 3;
-  return -1;
-}
-
-// Group lịch thi theo ngày và ca
-function groupSchedulesByDayAndSlot(
+// Group lịch thi theo ngày và giờ
+function groupSchedulesByDayAndHour(
   schedules: ApiExamSchedule[],
   weekDates: string[]
 ) {
-  const grouped: { [date: string]: (ApiExamSchedule & { slotIdx: number; timeLabel: string })[] } = {};
+  // { [date]: { [hour]: [exam, ...] } }
+  const grouped: { [date: string]: { [hour: number]: (ApiExamSchedule & { timeLabel: string })[] } } = {};
   weekDates.forEach((date) => {
-    grouped[date] = [];
+    grouped[date] = {};
+    hourSlots.forEach((h) => {
+      grouped[date][h] = [];
+    });
   });
 
   schedules.forEach((exam) => {
@@ -102,52 +88,62 @@ function groupSchedulesByDayAndSlot(
     const start = new Date(exam.startDay);
     const end = new Date(exam.endDay);
     const hour = start.getHours();
-    const slotIdx = getSlotIndexByHour(hour);
     const timeLabel = `${start.getHours()}h${start.getMinutes() ? `:${start.getMinutes().toString().padStart(2, "0")}` : ""} - ${end.getHours()}h${end.getMinutes() ? `:${end.getMinutes().toString().padStart(2, "0")}` : ""}`;
-    if (weekDates.includes(date) && slotIdx !== -1) {
-      grouped[date].push({ ...exam, slotIdx, timeLabel });
+    if (weekDates.includes(date) && hourSlots.includes(hour)) {
+      grouped[date][hour].push({ ...exam, timeLabel });
     }
   });
   return grouped;
 }
 
+// Lấy danh sách năm hiện tại và 10 năm về trước
+function getYearOptions(): YearOption[] {
+  const currentYear = new Date().getFullYear();
+  return Array.from({ length: 11 }, (_, i) => ({
+    value: currentYear - i,
+    label: (currentYear - i).toString(),
+  }));
+}
+
+// Tìm tuần chứa ngày hiện tại
+function findWeekOfToday(weekOptions: WeekOption[]): WeekOption | undefined {
+  const today = new Date();
+  for (let i = 0; i < weekOptions.length; i++) {
+    const weekStart = new Date(weekOptions[i].value);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    if (today >= weekStart && today <= weekEnd) {
+      return weekOptions[i];
+    }
+  }
+  return weekOptions[0];
+}
+
 export default function ExamSchedulePage() {
-  const [selectedYear, setSelectedYear] = useState<number>(yearOptions[0].value);
+  const [yearOptions] = useState<YearOption[]>(getYearOptions());
+  const [selectedYear, setSelectedYear] = useState<YearOption>(yearOptions[0]);
   const [weekOptions, setWeekOptions] = useState<WeekOption[]>(getWeekStartOptions(yearOptions[0].value));
-
-  // Tìm tuần hiện tại trong danh sách tuần
-  const currentMonday = getCurrentMonday();
-  const defaultWeek =
-    weekOptions.find((w) => w.value === currentMonday)?.value ||
-    weekOptions[0]?.value ||
-    "";
-
-  const [selectedWeek, setSelectedWeek] = useState<string>(defaultWeek);
+  const [selectedWeek, setSelectedWeek] = useState<WeekOption | null>(null);
   const [examSchedules, setExamSchedules] = useState<ApiExamSchedule[]>([]);
   const router = useRouter();
 
+  // Khi đổi năm, cập nhật tuần và chọn tuần chứa ngày hiện tại
   useEffect(() => {
-    const options = getWeekStartOptions(selectedYear);
+    const options = getWeekStartOptions(selectedYear.value);
     setWeekOptions(options);
-
-    // Khi đổi năm, chọn tuần hiện tại nếu có, nếu không chọn tuần đầu tiên
-    const currentMonday = getCurrentMonday();
-    const weekValue =
-      options.find((w) => w.value === currentMonday)?.value ||
-      options[0]?.value ||
-      "";
-    setSelectedWeek(weekValue);
+    const weekOfToday = findWeekOfToday(options);
+    setSelectedWeek(weekOfToday || options[0] || null);
   }, [selectedYear]);
 
-  // Fetch exam schedules from API
+  // Khi đổi tuần, fetch lịch thi
   useEffect(() => {
     const teacherId = getUserIdFromToken();
     if (!teacherId || !selectedWeek) {
       setExamSchedules([]);
       return;
     }
-    const fromDate = selectedWeek;
-    const d = new Date(selectedWeek);
+    const fromDate = selectedWeek.value;
+    const d = new Date(selectedWeek.value);
     d.setDate(d.getDate() + 6); // 7 ngày
     const toDate = d.toISOString().slice(0, 10);
 
@@ -159,10 +155,8 @@ export default function ExamSchedulePage() {
       .catch(() => setExamSchedules([]));
   }, [selectedWeek]);
 
-  const weekDates = selectedWeek ? getWeekDatesFromStart(selectedWeek) : [];
-
-  // Group theo ngày và ca
-  const groupedSchedules = groupSchedulesByDayAndSlot(examSchedules, weekDates);
+  const weekDates = selectedWeek ? getWeekDatesFromStart(selectedWeek.value) : [];
+  const groupedSchedules = groupSchedulesByDayAndHour(examSchedules, weekDates);
 
   function formatDate(dateStr: string) {
     const d = new Date(dateStr);
@@ -170,40 +164,45 @@ export default function ExamSchedulePage() {
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-0 py-8 font-sans text-gray-800 bg-white">
+    <div className="w-full max-w-7xl mx-auto px-0 py-8 font-sans text-gray-800 bg-white">
       <div className="mb-6 flex gap-6 items-end">
         <div className="w-40">
           <label className="block mb-2 text-base font-medium text-blue-900">Chọn năm</label>
-          <select
-            className="border rounded px-2 py-1 w-full"
+          <Select
+            options={yearOptions}
             value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-          >
-            {yearOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            onChange={opt => setSelectedYear(opt as YearOption)}
+            isSearchable={false}
+            className="react-select-container"
+            classNamePrefix="react-select"
+            styles={{
+              control: (base) => ({
+                ...base,
+                minHeight: "38px",
+                borderColor: "#d1d5db",
+                boxShadow: "none",
+              }),
+            }}
+          />
         </div>
         <div className="w-56">
           <label className="block mb-2 text-base font-medium text-blue-900">Chọn tuần</label>
-          <select
-            className="border rounded px-2 py-1 w-full"
+          <Select
+            options={weekOptions}
             value={selectedWeek}
-            onChange={(e) => setSelectedWeek(e.target.value)}
-            disabled={weekOptions.length === 0}
-          >
-            {weekOptions.length === 0 ? (
-              <option value="">Không có tuần nào</option>
-            ) : (
-              weekOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))
-            )}
-          </select>
+            onChange={opt => setSelectedWeek(opt as WeekOption)}
+            isSearchable={false}
+            className="react-select-container"
+            classNamePrefix="react-select"
+            styles={{
+              control: (base) => ({
+                ...base,
+                minHeight: "38px",
+                borderColor: "#d1d5db",
+                boxShadow: "none",
+              }),
+            }}
+          />
         </div>
         <div>
           <div className="text-sm text-gray-600 mt-6">
@@ -218,68 +217,78 @@ export default function ExamSchedulePage() {
         </div>
       </div>
       {weekDates.length > 0 ? (
-        <table className="w-full border border-blue-200 rounded-lg shadow-sm">
-          <thead>
-            <tr>
-              <th className="p-3 border-b bg-blue-50 text-blue-900 text-center">Ca / Thời gian</th>
-              {weekdays.map((weekday, idx) => (
-                <th key={weekday} className="p-3 border-b bg-blue-50 text-blue-900 text-center">
-                  {weekday}
-                  <div className="text-xs text-gray-500 font-normal">
-                    {weekDates[idx] ? formatDate(weekDates[idx]) : ""}
+        <div className="overflow-x-auto">
+         <table className="w-full border border-blue-200 rounded-lg shadow-sm min-w-[1200px] table-fixed">
+  <thead>
+    <tr>
+      <th className="p-3 border-b bg-blue-50 text-blue-900 text-center">Giờ</th>
+      {weekdays.map((weekday, idx) => (
+        <th
+          key={weekday}
+          className="p-3 border-b bg-blue-50 text-blue-900 text-center w-1/7"
+        >
+          {weekday}
+          <div className="text-xs text-gray-500 font-normal">
+            {weekDates[idx] ? formatDate(weekDates[idx]) : ""}
+          </div>
+        </th>
+      ))}
+    </tr>
+  </thead>
+  <tbody>
+    {hourSlots.map((hour) => (
+      <tr key={hour}>
+        <td className="p-3 border-b font-semibold text-blue-700 text-center">
+          {hour}:00
+        </td>
+        {weekDates.map((date, dayIdx) => {
+          const exams = groupedSchedules[date]?.[hour] || [];
+          return (
+            <td
+              key={dayIdx}
+              className="p-3 border-b align-top text-center min-w-[120px] w-1/7"
+            >
+              {exams.length > 0 ? exams.map((exam, i) => (
+                <div
+                  key={exam.examSlotRoomId + '-' + i}
+                  className="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-2"
+                >
+                  <div className="font-medium text-blue-900">{exam.subjectName}</div>
+                  <div className="text-sm text-gray-700">
+                    <span className="font-semibold">Phòng:</span> {exam.roomName}
                   </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {slotTimes.map((slot, slotIdx) => (
-              <tr key={slot.label}>
-                <td className="p-3 border-b font-semibold text-blue-700 text-center">
-                  {slot.label}
-                  <div className="text-xs text-gray-500 font-normal">{`${slot.start}h - ${slot.end}h`}</div>
-                </td>
-                {weekDates.map((date, dayIdx) => {
-                  // Tìm lịch thi đúng ca
-                  const exams = groupedSchedules[date]?.filter(e => e.slotIdx === slotIdx) || [];
-                  return (
-                    <td key={dayIdx} className="p-3 border-b align-top text-center">
-                      {exams.length > 0 ? exams.map((exam, i) => (
-                        <div
-                          key={exam.examSlotRoomId + '-' + i}
-                          className="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-2"
-                        >
-                          <div className="font-medium text-blue-900">{exam.subjectName}</div>
-                          <div className="text-sm text-gray-700">
-                            <span className="font-semibold">Phòng:</span> {exam.roomName}
-                          </div>
-                          <div className="text-sm text-gray-700">
-                            <span className="font-semibold">Thời gian:</span> {exam.timeLabel}
-                          </div>
-                          <button
-                            className="mt-2 text-white text-xs font-semibold py-1 px-2 rounded transition bg-blue-600 hover:bg-blue-700"
-                            onClick={() =>
-                              router.push(
-                                `/teacher/examsupervisor/attendancechecking?examId=${exam.examSlotRoomId}`
-                              )
-                            }
-                          >
-                            Điểm danh
-                          </button>
-                        </div>
-                      )) : (
-                        <span className="text-gray-400 text-xs">Trống</span>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  <div className="text-sm text-gray-700">
+                    <span className="font-semibold">Bắt đầu:</span> {exam.startDay.slice(11, 16)}
+                  </div>
+                  <div className="text-sm text-gray-700">
+                    <span className="font-semibold">Kết thúc:</span> {exam.endDay.slice(11, 16)}
+                  </div>
+                  <button
+                    className="mt-2 text-white text-xs font-semibold py-1 px-2 rounded transition bg-blue-600 hover:bg-blue-700"
+                    style={{ width: "100%" }}
+                    onClick={() =>
+                      router.push(
+                        `/teacher/examsupervisor/attendancechecking?examId=${exam.examSlotRoomId}`
+                      )
+                    }
+                  >
+                    Điểm danh
+                  </button>
+                </div>
+              )) : (
+                <span className="text-gray-400 text-xs"></span>
+              )}
+            </td>
+          );
+        })}
+      </tr>
+    ))}
+  </tbody>
+</table>
+        </div>
       ) : (
-         <div className="text-center text-red-500 font-semibold mt-8">Không có dữ liệu tuần để hiển thị bảng</div>
+        <div className="text-center text-red-500 font-semibold mt-8">Không có dữ liệu tuần để hiển thị bảng</div>
       )}
-    </div>
+     </div>
   );
 }

@@ -24,6 +24,13 @@ export default function MyClassPage() {
   // Lấy teacherId từ token
   const teacherId = getUserIdFromToken();
 
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 10 }, (_, i) => ({
+    value: currentYear - i,
+    label: (currentYear - i).toString(),
+  }));
+  const [selectedYear, setSelectedYear] = useState({ value: currentYear, label: currentYear.toString() });
+
   // Lấy danh sách kỳ học hiện tại
   useEffect(() => {
     fetch('https://localhost:7074/api/Semesters/CurrentSemester')
@@ -39,29 +46,43 @@ export default function MyClassPage() {
   }, []);
 
   // Lấy danh sách lớp của giáo viên (API 6)
-  useEffect(() => {
-    if (!teacherId) return;
-    setLoading(true);
-    const params = new URLSearchParams();
-    params.append('teacherId', teacherId);
-    if (searchClassName) params.append('name', searchClassName);
-    if (selectedSubject) params.append('subjectId', selectedSubject.value);
-    if (selectedSemester) params.append('semesterId', selectedSemester.value);
-    params.append('pageNumber', page.toString());
-    params.append('pageSize', pageSize.toString());
+ useEffect(() => {
+  if (!teacherId) return;
+  setLoading(true);
 
-    fetch(`https://localhost:7074/api/Class/teacherId?${params.toString()}`)
-      .then(res => res.json())
-      .then(data => {
-        setClasses(data || []);
-        // Lấy tổng số trang (API 7)
-        fetch(`https://localhost:7074/api/Class/CountPagesByTeacher/${teacherId}?${selectedSubject ? `subjectId=${selectedSubject.value}&` : ''}${selectedSemester ? `semesterId=${selectedSemester.value}&` : ''}pageSize=${pageSize}`)
-          .then(res2 => res2.json())
-          .then(total => setTotalPages(total || 1));
+  // Tạo object params và loại bỏ key có giá trị rỗng/null/undefined
+  const rawParams: Record<string, string> = {
+    teacherId,
+    year: selectedYear?.value?.toString() || '',
+    name: searchClassName || '',
+    subjectId: selectedSubject?.value?.toString() || '',
+    semesterId: selectedSemester?.value?.toString() || '',
+    pageNumber: page.toString(),
+    pageSize: pageSize.toString(),
+  };
+  Object.keys(rawParams).forEach(
+    (key) => (rawParams[key] === '' || rawParams[key] == null) && delete rawParams[key]
+  );
+  const params = new URLSearchParams(rawParams);
+
+  fetch(`https://localhost:7074/api/Class/teacherId?${params.toString()}`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  })
+    .then(res => res.json())
+    .then(data => {
+      setClasses(data || []);
+      // Lấy tổng số trang (API 7)
+      fetch(`https://localhost:7074/api/Class/CountPagesByTeacher?${params.toString()}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
       })
-      .finally(() => setLoading(false));
-    // eslint-disable-next-line
-  }, [teacherId, searchClassName, selectedSubject, selectedSemester, page]);
+        .then(res2 => res2.json())
+        .then(total => setTotalPages(total || 1));
+    })
+    .finally(() => setLoading(false));
+  // eslint-disable-next-line
+}, [teacherId, searchClassName, selectedSubject, selectedSemester, selectedYear, page]);
 
   // Tạo options cho react-select
   const subjectOptions = subjects.map((s: any) => ({
@@ -120,6 +141,26 @@ export default function MyClassPage() {
               onChange={(option) => { setSelectedSemester(option); setPage(1); }}
               placeholder="Chọn kỳ học"
               isClearable
+              isSearchable={false}
+              styles={{
+                menu: (provided) => ({ ...provided, zIndex: 20 }),
+                control: (provided) => ({
+                  ...provided,
+                  minHeight: '40px',
+                  borderColor: '#d1d5db',
+                  boxShadow: 'none',
+                }),
+              }}
+            />
+          </div>
+
+          {/* Dropdown chọn năm */}
+          <div className="relative w-32 z-20">
+            <Select
+              options={yearOptions}
+              value={selectedYear}
+              onChange={option => { setSelectedYear(option); setPage(1); }}
+              placeholder="Chọn năm"
               isSearchable={false}
               styles={{
                 menu: (provided) => ({ ...provided, zIndex: 20 }),
@@ -196,12 +237,12 @@ export default function MyClassPage() {
                   <td className="py-2 px-2 border-b">{cls.semesterName}</td>
                   <td className="py-2 px-2 border-b text-center">{cls.studentCount}</td>
                   <td className="py-2 px-2 border-b text-center flex justify-center gap-2">
-                    <button
+                    {/* <button
                       onClick={() => handleEdit(cls.classId)}
                       className="bg-yellow-400 text-white px-3 py-1 rounded hover:bg-yellow-500 transition font-semibold"
                     >
                       Sửa
-                    </button>
+                    </button> */}
                     <button
                       onClick={() => handleDetail(cls.classId)}
                       className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition font-semibold"

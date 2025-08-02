@@ -36,13 +36,11 @@ export default function CreateMCQQuestionPage() {
 
   const router = useRouter();
 
-  // Thêm thủ công
+  // Thêm thủ công: chỉ 2 đáp án ban đầu
   const [manualQ, setManualQ] = useState<Question>({
     id: Date.now(),
     content: '',
     answers: [
-      { text: '', isTrue: false },
-      { text: '', isTrue: false },
       { text: '', isTrue: false },
       { text: '', isTrue: false }
     ],
@@ -166,8 +164,6 @@ export default function CreateMCQQuestionPage() {
       content: '',
       answers: [
         { text: '', isTrue: false },
-        { text: '', isTrue: false },
-        { text: '', isTrue: false },
         { text: '', isTrue: false }
       ],
       difficulty: 1,
@@ -187,7 +183,7 @@ export default function CreateMCQQuestionPage() {
 
   // Xóa đáp án thủ công
   const handleDeleteAnswerManual = (idx: number) => {
-    if (manualQ.answers.length > 4) {
+    if (manualQ.answers.length > 2) {
       setManualQ({
         ...manualQ,
         answers: manualQ.answers.filter((_, i) => i !== idx)
@@ -197,58 +193,53 @@ export default function CreateMCQQuestionPage() {
 
   // Tạo câu hỏi bằng AI
   const handleGenerateAI = async () => {
-  if (!aiSubject || !aiLink || !aiNum || !aiLevel) {
-    alert('Vui lòng nhập đầy đủ thông tin!');
-    return;
-  }
-  setAILoading(true);
-  try {
-    const res = await fetch('https://localhost:7074/api/GenerateQuestions/GenerateMultipleQuestion', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        subjectName: aiSubject,
-        materialLink: aiLink,
-        levels: [{ difficulty: aiLevel, numberOfQuestions: aiNum }]
-      })
-    });
-    const data = await res.json();
-    console.log('AI generated questions:', data);
-    if (!Array.isArray(data)) throw new Error('Kết quả trả về không hợp lệ!');
-    // Đảm bảo luôn có trường answers và hiển thị như các câu hỏi khác
-    const newQuestions: Question[] = data.map((q: any, idx: number) => {
-      // Lấy đáp án từ AI, nếu thiếu thì bổ sung cho đủ 4 đáp án
-      let answers: Answer[] = Array.isArray(q.answers)
-        ? q.answers.map((a: any) => ({
-            text: a.text || '',
-            isTrue: !!a.isTrue
-          }))
-        : [];
-      // Bổ sung đáp án rỗng cho đủ 4 đáp án
-      while (answers.length < 4) {
-        answers.push({ text: '', isTrue: false });
-      }
-      // Nếu AI trả về nhiều hơn 6 đáp án thì chỉ lấy 6 đáp án đầu
-      answers = answers.slice(0, 6);
-
-      return {
-        id: Date.now() + idx,
-        content: q.content || '',
-        answers,
-        difficulty: 1 // hoặc map theo aiLevel nếu muốn
-      };
-    });
-    setQuestions(prev => [...prev, ...newQuestions]);
-    setShowAIGen(false);
-    setAISubject('');
-    setAILink('');
-    setAINum(2);
-    setAILevel('dễ');
-  } catch (err: any) {
-    alert('Lỗi tạo câu hỏi bằng AI: ' + err.message);
-  }
-  setAILoading(false);
-};
+    if (!aiSubject || !aiLink || !aiNum || !aiLevel) {
+      alert('Vui lòng nhập đầy đủ thông tin!');
+      return;
+    }
+    setAILoading(true);
+    try {
+      const res = await fetch('https://localhost:7074/api/GenerateQuestions/GenerateMultipleQuestion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subjectName: aiSubject,
+          materialLink: aiLink,
+          levels: [{ difficulty: aiLevel, numberOfQuestions: aiNum }]
+        })
+      });
+      const data = await res.json();
+      if (!Array.isArray(data)) throw new Error('Kết quả trả về không hợp lệ!');
+      // Đảm bảo luôn có trường answers và hiển thị như các câu hỏi khác
+      const newQuestions: Question[] = data.map((q: any, idx: number) => {
+        let answers: Answer[] = Array.isArray(q.answers)
+          ? q.answers.map((a: any) => ({
+              text: a.text || '',
+              isTrue: !!a.isTrue
+            }))
+          : [];
+        while (answers.length < 2) {
+          answers.push({ text: '', isTrue: false });
+        }
+        answers = answers.slice(0, 6);
+        return {
+          id: Date.now() + idx,
+          content: q.content || '',
+          answers,
+          difficulty: 1 // hoặc map theo aiLevel nếu muốn
+        };
+      });
+      setQuestions(prev => [...prev, ...newQuestions]);
+      setShowAIGen(false);
+      setAISubject('');
+      setAILink('');
+      setAINum(2);
+      setAILevel('dễ');
+    } catch (err: any) {
+      alert('Lỗi tạo câu hỏi bằng AI: ' + err.message);
+    }
+    setAILoading(false);
+  };
 
   // Sửa câu hỏi
   const handleEditQuestion = (idx: number, key: keyof Question, value: any) => {
@@ -511,6 +502,17 @@ export default function CreateMCQQuestionPage() {
               <div ref={manualFormRef} className="bg-gray-50 rounded-lg p-4 mb-6">
                 <h3 className="font-semibold mb-2">Thêm câu hỏi thủ công</h3>
                 <div className="mb-2">
+                  {/* Dropdown chọn độ khó ở đầu */}
+                  <div className="flex gap-4 mb-2">
+                    <Select
+                      options={levels}
+                      value={levels.find(d => d.value === manualQ.difficulty)}
+                      onChange={opt => setManualQ({ ...manualQ, difficulty: opt?.value || 1 })}
+                      placeholder="Độ khó"
+                      className="w-44"
+                      isSearchable={false}
+                    />
+                  </div>
                   <input
                     type="text"
                     value={manualQ.content}
@@ -547,7 +549,7 @@ export default function CreateMCQQuestionPage() {
                           />
                           Đúng
                         </label>
-                        {manualQ.answers.length > 4 && idx >= 4 && (
+                        {manualQ.answers.length > 2 && idx >= 2 && (
                           <button
                             type="button"
                             className="text-red-500 hover:text-red-700"
@@ -558,30 +560,24 @@ export default function CreateMCQQuestionPage() {
                       </div>
                     ))}
                   </div>
-                  {manualQ.answers.length < 6 && (
+                  
+                  <div className="flex gap-4 mt-2">
+                    {manualQ.answers.length < 6 && (
                     <button
                       type="button"
-                      className="mt-2 bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition font-semibold"
+                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold"
                       onClick={handleAddAnswerManual}
                     >
                       + Thêm đáp án
                     </button>
                   )}
-                  <div className="flex gap-4 mt-2">
-                    <Select
-                      options={levels}
-                      value={levels.find(d => d.value === manualQ.difficulty)}
-                      onChange={opt => setManualQ({ ...manualQ, difficulty: opt?.value || 1 })}
-                      placeholder="Độ khó"
-                      className="w-44"
-                      isSearchable={false}
-                    />
+
                     <button
                       type="button"
                       className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold"
                       onClick={handleAddManual}
                     >
-                      Thêm câu hỏi
+                      Lưu câu hỏi
                     </button>
                     <button
                       type="button"

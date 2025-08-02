@@ -61,10 +61,20 @@ export default function ExamPaperListPage() {
     const teacherId = getUserIdFromToken();
     fetch(`${API_URL}/api/FinalExamPaper/GetAllMajorByTeacherId?teacherId=${teacherId}`)
       .then(res => res.json())
-      .then(data => setSubjects(data || []));
+      .then(data => {
+        setSubjects(data || []);
+        if (data && data.length > 0) {
+          setSelectedSubject({ value: data[0].subjectId, label: data[0].subjectName });
+        }
+      });
     fetch(`${API_URL}/api/Semesters`)
       .then(res => res.json())
-      .then(data => setSemesters(data || []));
+      .then(data => {
+        setSemesters(data || []);
+        if (data && data.length > 0) {
+          setSelectedSemester({ value: data[0].semesterId, label: data[0].semesterName });
+        }
+      });
     // Năm: 10 năm về trước kể từ năm hiện tại
     const currentYear = new Date().getFullYear();
     const yearArr = [];
@@ -72,6 +82,9 @@ export default function ExamPaperListPage() {
       yearArr.push({ value: y.toString(), label: y.toString() });
     }
     setYears(yearArr);
+    if (yearArr.length > 0) {
+      setSelectedYear(yearArr[0]);
+    }
   }, []);
 
   // Lấy danh sách đề thi khi chọn đủ bộ lọc
@@ -84,6 +97,7 @@ export default function ExamPaperListPage() {
         .finally(() => setLoading(false));
     } else {
       setExamPapers([]);
+    
     }
   }, [selectedSubject, selectedSemester, selectedYear]);
 
@@ -148,7 +162,7 @@ export default function ExamPaperListPage() {
           </div>
 
             <Link href="/teacher/finalexampaper/createfinalpaper" className="bg-blue-600 text-white px-4 py-2 mt-5 rounded hover:bg-blue-700 transition font-semibold shadow">
-                Tạo bài thi cuối kỳ </Link>
+                Tạo đề thi cuối kỳ </Link>
 
         </div>
         <div className="overflow-x-auto rounded shadow bg-white">

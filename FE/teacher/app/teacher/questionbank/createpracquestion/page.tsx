@@ -376,6 +376,14 @@ export default function CreateEssayQuestionPage() {
             {showManualForm && (
               <div ref={manualFormRef} className="bg-gray-50 rounded-lg p-4 mb-6">
                 <h3 className="font-semibold mb-2">Thêm câu hỏi thủ công</h3>
+                <Select
+                      options={difficulties}
+                      value={difficulties.find(d => d.value === manualQ.difficulty)}
+                      onChange={opt => setManualQ({ ...manualQ, difficulty: opt?.value || 1 })}
+                      placeholder="Độ khó"
+                      className="w-44 mb-2"
+                      isSearchable={false}
+                    />
                 <div className="mb-2">
                   <input
                     type="text"
@@ -392,14 +400,7 @@ export default function CreateEssayQuestionPage() {
                     className="border rounded px-3 py-2 w-full mb-2"
                   />
                   <div className="flex gap-4 mt-2">
-                    <Select
-                      options={difficulties}
-                      value={difficulties.find(d => d.value === manualQ.difficulty)}
-                      onChange={opt => setManualQ({ ...manualQ, difficulty: opt?.value || 1 })}
-                      placeholder="Độ khó"
-                      className="w-44"
-                      isSearchable={false}
-                    />
+                    
                     <button
                       type="button"
                       className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold"

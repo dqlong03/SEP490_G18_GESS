@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getUserIdFromToken } from '@/utils/tokenUtils';
+import Select from 'react-select';
 
 type Question = {
   id: number;
@@ -77,13 +78,19 @@ export default function CreateFinalExamPaperPage() {
     const teacherId = getUserIdFromToken();
     fetch(`${API_URL}/api/FinalExamPaper/GetAllMajorByTeacherId?teacherId=${teacherId}`)
       .then(res => res.json())
-      .then(data => setSubjects(data || []));
+      .then(data => {
+        setSubjects(data || []);
+        if (data && data.length > 0) setSelectedSubject(data[0]);
+      });
     fetch(`${API_URL}/api/Semesters`)
       .then(res => res.json())
-      .then(data => setSemesters(data || []));
+      .then(data => {
+        setSemesters(data || []);
+        if (data && data.length > 0) setSelectedSemester(data[0]);
+      });
   }, []);
 
-   useEffect(() => {
+  useEffect(() => {
     if (selectedSubject) {
       fetch(`${API_URL}/api/FinalExam/GetAllChapterBySubjectId?subjectId=${selectedSubject.subjectId}`)
         .then(res => res.json())
@@ -94,6 +101,7 @@ export default function CreateFinalExamPaperPage() {
     }
     setSelectedChapter(null);
   }, [selectedSubject]);
+
   // Lấy tất cả câu hỏi khi chọn đủ bộ lọc
   useEffect(() => {
     if (selectedSubject && selectedSemester) {
@@ -274,6 +282,10 @@ export default function CreateFinalExamPaperPage() {
     setShowManualInput(false);
   };
 
+  // react-select options
+  const subjectOptions = subjects.map(s => ({ value: s.subjectId, label: s.subjectName }));
+  const semesterOptions = semesters.map(s => ({ value: s.semesterId, label: s.semesterName }));
+
   return (
     <div className="w-full min-h-screen bg-white font-sans p-0">
       {(selectedQuestions.length > 0 || manualQuestions.length > 0) && (
@@ -307,41 +319,46 @@ export default function CreateFinalExamPaperPage() {
       <div className="w-full py-8 px-4">
         <h2 className="text-2xl font-bold text-gray-800 mb-6 text-left">Tạo đề thi cuối kỳ</h2>
         <form onSubmit={handleSave} className="space-y-6">
-          {/* Dropdown chọn môn học */}
-          <div className="mb-4 w-64">
-            <label className="block font-semibold mb-1">Chọn môn học</label>
-            <select
-              value={selectedSubject?.subjectId || ''}
-              onChange={e => {
-                const val = Number(e.target.value);
-                setSelectedSubject(val ? subjects.find(s => s.subjectId === val) || null : null);
-              }}
-              className="border rounded px-3 py-2 w-full"
-              required
-            >
-              <option value="">Chọn môn học</option>
-              {subjects.map(s => (
-                <option key={s.subjectId} value={s.subjectId}>{s.subjectName}</option>
-              ))}
-            </select>
-          </div>
-          {/* Dropdown chọn kỳ */}
-          <div className="mb-4 w-64">
-            <label className="block font-semibold mb-1">Chọn kỳ</label>
-            <select
-              value={selectedSemester?.semesterId || ''}
-              onChange={e => {
-                const val = Number(e.target.value);
-                setSelectedSemester(val ? semesters.find(s => s.semesterId === val) || null : null);
-              }}
-              className="border rounded px-3 py-2 w-full"
-              required
-            >
-              <option value="">Chọn kỳ</option>
-              {semesters.map(s => (
-                <option key={s.semesterId} value={s.semesterId}>{s.semesterName}</option>
-              ))}
-            </select>
+          {/* Dropdown chọn môn học và kỳ trên cùng 1 dòng */}
+          <div className="flex gap-6 mb-4 items-end">
+            <div className="w-64">
+              <label className="block font-semibold mb-1">Chọn môn học</label>
+              <Select
+                options={subjectOptions}
+                value={selectedSubject ? subjectOptions.find(s => s.value === selectedSubject.subjectId) : null}
+                onChange={option => setSelectedSubject(option ? subjects.find(s => s.subjectId === option.value) || null : null)}
+                placeholder="Chọn môn học"
+                isSearchable
+                styles={{
+                  menu: provided => ({ ...provided, zIndex: 20 }),
+                  control: provided => ({
+                    ...provided,
+                    minHeight: '40px',
+                    borderColor: '#d1d5db',
+                    boxShadow: 'none',
+                  }),
+                }}
+              />
+            </div>
+            <div className="w-64">
+              <label className="block font-semibold mb-1">Chọn kỳ</label>
+              <Select
+                options={semesterOptions}
+                value={selectedSemester ? semesterOptions.find(s => s.value === selectedSemester.semesterId) : null}
+                onChange={option => setSelectedSemester(option ? semesters.find(s => s.semesterId === option.value) || null : null)}
+                placeholder="Chọn kỳ"
+                isSearchable
+                styles={{
+                  menu: provided => ({ ...provided, zIndex: 20 }),
+                  control: provided => ({
+                    ...provided,
+                    minHeight: '40px',
+                    borderColor: '#d1d5db',
+                    boxShadow: 'none',
+                  }),
+                }}
+              />
+            </div>
           </div>
           {/* Nhập tên đề thi */}
           <div>
@@ -700,7 +717,7 @@ export default function CreateFinalExamPaperPage() {
           )}
         </form>
       </div>
-     <style jsx global>{`
+      <style jsx global>{`
         @keyframes fadeIn {
           from { opacity: 0 }
           to { opacity: 1 }
@@ -710,7 +727,7 @@ export default function CreateFinalExamPaperPage() {
           from { transform: scale(0.95); opacity: 0 }
           to { transform: scale(1); opacity: 1 }
         }
-       .animate-popup { animation: popup 0.2s }
+      .animate-popup { animation: popup 0.2s }
       `}</style>
     </div>
   );

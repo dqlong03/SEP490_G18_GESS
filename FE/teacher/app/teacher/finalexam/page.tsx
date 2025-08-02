@@ -20,7 +20,6 @@ type Semester = {
 type Exam = {
   examId: number;
   examName: string;
-  teacherCreateName: string | null;
   subjectName: string;
   semesterName: string;
   year: number;
@@ -43,6 +42,16 @@ export default function ExamListPage() {
   const [showModal, setShowModal] = useState(false);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
+
+  // Modal xem bài thi
+  const [examDetail, setExamDetail] = useState<any>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+
+  // Thêm filter loại bài thi
+  const [examTypeFilter, setExamTypeFilter] = useState<number>(0);
 
   const router = useRouter();
 
@@ -55,16 +64,26 @@ export default function ExamListPage() {
   // Fetch subjects (lớp học)
   useEffect(() => {
     if (!teacherId) return;
+    setLoading(true);
     fetch(`https://localhost:7074/api/AssignGradeCreateExam/GetAllSubjectsByTeacherId?teacherId=${teacherId}`)
       .then(res => res.json())
-      .then(data => setSubjects(data));
+      .then(data => {
+        setSubjects(data);
+        if (data && data.length > 0) setSelectedSubject(data[0]);
+        setFetchError(false);
+      })
+      .catch(() => setFetchError(true))
+      .finally(() => setLoading(false));
   }, [teacherId]);
 
   // Fetch semesters
   useEffect(() => {
     fetch('https://localhost:7074/api/Semesters')
       .then(res => res.json())
-      .then(data => setSemesters(data));
+      .then(data => {
+        setSemesters(data);
+        if (data && data.length > 0) setSelectedSemester(data[0]);
+      });
   }, []);
 
   // Fetch exams
@@ -74,22 +93,41 @@ export default function ExamListPage() {
     if (selectedSemester) params.append('semesterId', selectedSemester.semesterId.toString());
     if (selectedYear) params.append('year', selectedYear.toString());
     if (textSearch) params.append('textsearch', textSearch);
+    if (examTypeFilter !== 0) params.append('type', examTypeFilter.toString());
     params.append('pageNumber', page.toString());
     params.append('pageSize', PAGE_SIZE.toString());
 
+    setLoading(true);
+    setFetchError(false);
+
     fetch(`https://localhost:7074/api/FinalExam/GetAllFinalExam?${params.toString()}`)
       .then(res => res.json())
-      .then(data => setExams(data));
+      .then(data => {
+        // Sắp xếp: tự luận (2) trước, trắc nghiệm (1) sau
+        const sorted = [...data].sort((a, b) => {
+          if (a.examType === b.examType) return 0;
+          if (a.examType === 2) return -1;
+          if (b.examType === 2) return 1;
+          return 0;
+        });
+        setExams(sorted);
+      })
+      .catch(() => {
+        setExams([]);
+        setFetchError(true);
+      })
+      .finally(() => setLoading(false));
 
     fetch(`https://localhost:7074/api/FinalExam/CountPageNumberFinalExam?${params.toString()}`)
       .then(res => res.json())
-      .then(data => setTotalPages(data));
+      .then(data => setTotalPages(data))
+      .catch(() => setTotalPages(1));
   };
 
   useEffect(() => {
     fetchExams();
     // eslint-disable-next-line
-  }, [selectedSubject, selectedSemester, selectedYear, textSearch, page]);
+  }, [selectedSubject, selectedSemester, selectedYear, textSearch, page, examTypeFilter]);
 
   // Subject options for react-select
   const subjectOptions = subjects.map(s => ({
@@ -102,8 +140,28 @@ export default function ExamListPage() {
   const semesterOptions = semesters.map(s => ({
     value: s.semesterId,
     label: s.semesterName,
-    ...s,
+    ...s, 
   }));
+
+  // Xem chi tiết bài thi
+  const handleViewExam = async (exam: Exam) => {
+    setSelectedExam(exam);
+    setShowModal(true);
+    setExamDetail(null);
+    setDetailError(null);
+    setDetailLoading(true);
+    try {
+      const type = exam.examType; // 1: Trắc nghiệm, 2: Tự luận
+      const res = await fetch(`https://localhost:7074/api/FinalExam/ViewFinalExamDetail/${exam.examId}/${type}`);
+      if (!res.ok) throw new Error('Lỗi khi lấy dữ liệu');
+      const data = await res.json();
+      setExamDetail(data);
+    } catch (err) {
+      setDetailError('Không thể lấy thông tin bài thi.');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   return (
     <div className="w-full min-h-screen bg-gray-50 font-sans p-0">
@@ -134,6 +192,7 @@ export default function ExamListPage() {
                   boxShadow: 'none',
                 }),
               }}
+              noOptionsMessage={() => 'Không có dữ liệu'}
             />
           </div>
           <div className="w-48">
@@ -151,6 +210,7 @@ export default function ExamListPage() {
                   boxShadow: 'none',
                 }),
               }}
+              noOptionsMessage={() => 'Không có dữ liệu'}
             />
           </div>
           <div className="w-40">
@@ -168,6 +228,35 @@ export default function ExamListPage() {
                   boxShadow: 'none',
                 }),
               }}
+              noOptionsMessage={() => 'Không có dữ liệu'}
+            />
+          </div>
+          <div className="w-44">
+            <Select
+              options={[
+                { value: 2, label: 'Tự luận' },
+                { value: 1, label: 'Trắc nghiệm' },
+              ]}
+              value={
+                examTypeFilter === 1
+                  ? { value: 1, label: 'Trắc nghiệm' }
+                  : { value: 2, label: 'Tự luận' }
+              }
+              onChange={option => {
+                setExamTypeFilter(option?.value ?? 1);
+                setPage(1);
+              }}
+              placeholder="Loại bài thi"
+              styles={{
+                menu: provided => ({ ...provided, zIndex: 20 }),
+                control: provided => ({
+                  ...provided,
+                  minHeight: '40px',
+                  borderColor: '#d1d5db',
+                  boxShadow: 'none',
+                }),
+              }}
+              noOptionsMessage={() => 'Không có dữ liệu'}
             />
           </div>
           <input
@@ -189,12 +278,19 @@ export default function ExamListPage() {
                 <th className="py-2 px-2 border-b w-32 text-left">Kỳ</th>
                 <th className="py-2 px-2 border-b w-24 text-center">Năm</th>
                 <th className="py-2 px-2 border-b w-32 text-left">Loại</th>
-                <th className="py-2 px-2 border-b w-32 text-left">Người tạo</th>
                 <th className="py-2 px-2 border-b w-16 text-center">Xem</th>
               </tr>
             </thead>
             <tbody>
-              {exams.length > 0 ? exams.map((exam, idx) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-4 text-gray-500">Đang tải...</td>
+                </tr>
+              ) : fetchError ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-4 text-red-500">Không có dữ liệu</td>
+                </tr>
+              ) : exams.length > 0 ? exams.map((exam, idx) => (
                 <tr key={exam.examId} className="hover:bg-blue-50 transition">
                   <td className="py-2 px-2 border-b text-center">{(page - 1) * PAGE_SIZE + idx + 1}</td>
                   <td className="py-2 px-2 border-b">{exam.examName}</td>
@@ -202,13 +298,12 @@ export default function ExamListPage() {
                   <td className="py-2 px-2 border-b">{exam.semesterName}</td>
                   <td className="py-2 px-2 border-b text-center">{exam.year}</td>
                   <td className="py-2 px-2 border-b">
-                    {exam.examType === 1 ? 'Giữa kỳ' : exam.examType === 2 ? 'Cuối kỳ' : ''}
+                    {exam.examType === 1 ? 'Trắc nghiệm' : exam.examType === 2 ? 'Tự luận' : ''}
                   </td>
-                  <td className="py-2 px-2 border-b">{exam.teacherCreateName ?? ''}</td>
                   <td className="py-2 px-2 border-b text-center">
                     <button
                       className="text-blue-600 hover:text-blue-800"
-                      onClick={() => { setSelectedExam(exam); setShowModal(true); }}
+                      onClick={() => handleViewExam(exam)}
                       title="Xem bài thi"
                     >
                       <EyeIcon size={18} />
@@ -217,8 +312,8 @@ export default function ExamListPage() {
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={8} className="text-center py-4 text-gray-500">
-                    Không có bài thi nào.
+                  <td colSpan={7} className="text-center py-4 text-gray-500">
+                    Không có dữ liệu
                   </td>
                 </tr>
               )}
@@ -253,8 +348,55 @@ export default function ExamListPage() {
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 w-[500px] max-h-[80vh] overflow-y-auto">
             <h3 className="text-lg font-semibold mb-4">Xem bài thi</h3>
-            {/* Nội dung popup để trống */}
-            <div className="mb-6 text-gray-500 text-center">Nội dung bài thi sẽ hiển thị ở đây.</div>
+            <div className="mb-6 text-gray-700">
+              {detailLoading ? (
+                <div className="text-center text-gray-500">Đang tải...</div>
+              ) : detailError ? (
+                <div className="text-center text-red-500">{detailError}</div>
+              ) : examDetail ? (
+                <div>
+                  {/* Hiển thị thông tin chi tiết bài thi */}
+                  {selectedExam?.examType === 2 ? (
+                    // Tự luận
+                    <div>
+                      <div><b>Tên bài thi:</b> {examDetail.pracExamName}</div>
+                      <div><b>Môn học:</b> {examDetail.subjectName}</div>
+                      <div><b>Kỳ:</b> {examDetail.semesterName}</div>
+                      <div><b>Người tạo:</b> {examDetail.teacherName}</div>
+                      <div><b>Danh sách đề thi:</b>
+                        <ul className="list-disc ml-6">
+                          {examDetail.practiceExamPaperDTO?.map((item: any) => (
+                            <li key={item.pracExamPaperId}>
+                              {item.pracExamPaperName}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  ) : (
+                    // Trắc nghiệm
+                    <div>
+                      <div><b>Tên bài thi:</b> {examDetail.multiExamName}</div>
+                      <div><b>Môn học:</b> {examDetail.subjectName}</div>
+                      <div><b>Kỳ:</b> {examDetail.semesterName}</div>
+                      <div><b>Người tạo:</b> {examDetail.teacherName}</div>
+                      <div><b>Số lượng câu hỏi:</b> {examDetail.numberQuestion}</div>
+                      <div><b>Chi tiết số câu hỏi theo chương:</b>
+                        <ul className="list-disc ml-6">
+                          {examDetail.noQuestionInChapterDTO?.map((item: any, idx: number) => (
+                            <li key={idx}>
+                              {item.chapterName} - {item.levelName}: {item.numberQuestion} câu
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center text-gray-500">Không có dữ liệu</div>
+              )}
+            </div>
             <div className="flex justify-end">
               <button
                 className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition font-semibold"
