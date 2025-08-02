@@ -359,6 +359,27 @@ namespace GESS.Repository.Implement
 
         public async Task<StudentSubmission> GetSubmissionOfStudentInExamNeedGradeAsync(Guid teacherId, int examId, Guid studentId)
         {
+            // 1. Validate teacherId - kiểm tra teacher có tồn tại không
+            var teacher = await _context.Teachers.FirstOrDefaultAsync(t => t.TeacherId == teacherId);
+            if (teacher == null)
+            {
+                return null;
+            }
+
+            // 2. Validate examId - kiểm tra exam có tồn tại không
+            var exam = await _context.PracticeExams.FirstOrDefaultAsync(e => e.PracExamId == examId);
+            if (exam == null)
+            {
+                return null;
+            }
+
+            // 3. Validate studentId - kiểm tra student có tồn tại không
+            var student = await _context.Students.FirstOrDefaultAsync(s => s.StudentId == studentId);
+            if (student == null)
+            {
+                return null;
+            }
+
             var submissions = await _context.PracticeExamHistories
                 .Where(p => p.StudentId == studentId && p.PracticeExam.ExamSlotRoom.ExamSlotRoomId == examId)
                 .Select(p => new StudentSubmission
@@ -462,7 +483,50 @@ namespace GESS.Repository.Implement
         }
         public async Task<bool> GradeSubmission(Guid teacherId, int examId, Guid studentId, QuestionPracExamGradeDTO questionPracExamDTO)
         {
-            // Tìm bài làm của học sinh trong đề thi
+            // 1. Validate teacherId - kiểm tra teacher có tồn tại không
+            var teacher = await _context.Teachers.FirstOrDefaultAsync(t => t.TeacherId == teacherId);
+            if (teacher == null)
+            {
+                return false;
+            }
+
+            // 2. Validate examId - kiểm tra exam có tồn tại không
+            var exam = await _context.PracticeExamHistories.FirstOrDefaultAsync(e => e.PracExamId == examId);
+            if (exam == null)
+            {
+                return false;
+            }
+
+            // 3. Validate studentId - kiểm tra student có tồn tại không
+            var student = await _context.Students.FirstOrDefaultAsync(s => s.StudentId == studentId);
+            if (student == null)
+            {
+                return false;
+            }
+
+            // 4. Validate pracExamHistoryId từ DTO - kiểm tra history có tồn tại không
+            var history = await _context.PracticeExamHistories
+                .FirstOrDefaultAsync(h => h.PracExamHistoryId == questionPracExamDTO.PracExamHistoryId);
+            if (history == null)
+            {
+                return false;
+            }
+
+            // 5. Validate practiceQuestionId từ DTO - kiểm tra question có tồn tại không
+            var practiceQuestion = await _context.PracticeQuestions
+                .FirstOrDefaultAsync(pq => pq.PracticeQuestionId == questionPracExamDTO.PracticeQuestionId);
+            if (practiceQuestion == null)
+            {
+                return false;
+            }
+
+            // 6. Validate GradeScore - điểm phải trong khoảng >= 0 và <= 10
+            if (questionPracExamDTO.GradedScore < 0 || questionPracExamDTO.GradedScore > 10)
+            {
+                return false;
+            }
+
+            // 7. Tìm bài làm của học sinh trong đề thi
             var submission = await _context.PracticeExamHistories
                 .Where(p => p.StudentId == studentId
                             && p.PracticeExam.PracExamId == examId)
@@ -477,7 +541,7 @@ namespace GESS.Repository.Implement
                 return false;
             }
 
-            // Lấy câu hỏi cần chấm điểm
+            // 8. Lấy câu hỏi cần chấm điểm
             var question = await _context.QuestionPracExams
                 .FirstOrDefaultAsync(q => q.PracExamHistoryId == submission.PracExamHistoryId
                                           && q.PracticeQuestionId == questionPracExamDTO.PracticeQuestionId);
@@ -487,7 +551,7 @@ namespace GESS.Repository.Implement
                 return false;
             }
 
-            // Cập nhật điểm
+            // 9. Cập nhật điểm
             question.Score = questionPracExamDTO.GradedScore;
             await _context.SaveChangesAsync();
             return true;

@@ -76,6 +76,110 @@ namespace GESS.Repository.Implement
 
         public async Task<FinalMultipleExamCreateDTO> CreateFinalMultipleExamAsync(FinalMultipleExamCreateDTO multipleExamCreateDto)
         {
+            // 1. Validate MultiExamName
+            if (string.IsNullOrWhiteSpace(multipleExamCreateDto.MultiExamName))
+            {
+                throw new Exception("Tên kỳ thi không được để trống!");
+            }
+
+            // 2. Validate NumberQuestion
+            if (multipleExamCreateDto.NumberQuestion <= 0)
+            {
+                throw new Exception("Số lượng câu hỏi phải lớn hơn 0!");
+            }
+
+            // 3. Validate CreateAt
+            if (multipleExamCreateDto.CreateAt == default(DateTime))
+            {
+                throw new Exception("Ngày tạo không được để trống!");
+            }
+
+            if (multipleExamCreateDto.CreateAt < DateTime.Now)
+            {
+                throw new Exception("Ngày tạo không được nhỏ hơn ngày hiện tại!");
+            }
+
+            // 4. Validate TeacherId
+            var teacher = await _context.Teachers.FirstOrDefaultAsync(t => t.TeacherId == multipleExamCreateDto.TeacherId);
+            if (teacher == null)
+            {
+                throw new Exception("Giáo viên không tồn tại!");
+            }
+
+            // 5. Validate SubjectId
+            var subject = await _context.Subjects.FirstOrDefaultAsync(s => s.SubjectId == multipleExamCreateDto.SubjectId);
+            if (subject == null)
+            {
+                throw new Exception("Môn học không tồn tại!");
+            }
+
+            // 6. Validate SemesterId
+            var semester = await _context.Semesters.FirstOrDefaultAsync(s => s.SemesterId == multipleExamCreateDto.SemesterId);
+            if (semester == null)
+            {
+                throw new Exception("Học kỳ không tồn tại!");
+            }
+
+            // 7. Validate NoQuestionInChapterDTO
+            if (multipleExamCreateDto.NoQuestionInChapterDTO == null || !multipleExamCreateDto.NoQuestionInChapterDTO.Any())
+            {
+                throw new Exception("Danh sách câu hỏi theo chương không được để trống!");
+            }
+
+            // 8. Validate từng item trong NoQuestionInChapterDTO
+            foreach (var noQuestion in multipleExamCreateDto.NoQuestionInChapterDTO)
+            {
+                // Validate NumberQuestion
+                if (noQuestion.NumberQuestion <= 0)
+                {
+                    throw new Exception($"Số lượng câu hỏi trong chương {noQuestion.ChapterId} phải lớn hơn 0!");
+                }
+
+                // Validate ChapterId
+                var chapter = await _context.Chapters.FirstOrDefaultAsync(c => c.ChapterId == noQuestion.ChapterId);
+                if (chapter == null)
+                {
+                    throw new Exception($"Chương {noQuestion.ChapterId} không tồn tại!");
+                }
+
+                // Validate LevelQuestionId
+                var levelQuestion = await _context.LevelQuestions.FirstOrDefaultAsync(l => l.LevelQuestionId == noQuestion.LevelQuestionId);
+                if (levelQuestion == null)
+                {
+                    throw new Exception($"Cấp độ câu hỏi {noQuestion.LevelQuestionId} không tồn tại!");
+                }
+
+                // Validate số lượng câu hỏi có sẵn
+                var availableQuestions = await _context.MultiQuestions
+                    .Where(q => q.ChapterId == noQuestion.ChapterId && q.LevelQuestionId == noQuestion.LevelQuestionId)
+                    .CountAsync();
+
+                if (availableQuestions < noQuestion.NumberQuestion)
+                {
+                    throw new Exception($"Số lượng câu hỏi yêu cầu ({noQuestion.NumberQuestion}) vượt quá số lượng câu hỏi có sẵn ({availableQuestions}) trong chương {noQuestion.ChapterId} với cấp độ {noQuestion.LevelQuestionId}!");
+                }
+            }
+
+            // 9. Validate tổng số câu hỏi
+            var totalRequestedQuestions = multipleExamCreateDto.NoQuestionInChapterDTO.Sum(nq => nq.NumberQuestion);
+            if (totalRequestedQuestions != multipleExamCreateDto.NumberQuestion)
+            {
+                throw new Exception($"Tổng số câu hỏi trong danh sách ({totalRequestedQuestions}) phải bằng số lượng câu hỏi của kỳ thi ({multipleExamCreateDto.NumberQuestion})!");
+            }
+
+            // 10. Validate trùng tên kỳ thi trong cùng học kỳ và năm
+            var existingExamWithSameName = await _context.MultiExams
+                .Where(e => e.MultiExamName == multipleExamCreateDto.MultiExamName 
+                           && e.SemesterId == multipleExamCreateDto.SemesterId 
+                           && e.CreateAt.Year == multipleExamCreateDto.CreateAt.Year
+                           && e.CategoryExamId == 2) // Final exam
+                .FirstOrDefaultAsync();
+
+            if (existingExamWithSameName != null)
+            {
+                throw new Exception($"Đã tồn tại kỳ thi với tên '{multipleExamCreateDto.MultiExamName}' trong học kỳ này!");
+            }
+
             var multiExam = new MultiExam
             {
                 MultiExamName = multipleExamCreateDto.MultiExamName,
@@ -151,6 +255,80 @@ namespace GESS.Repository.Implement
         {
             try
             {
+                // 1. Validate PracExamName
+                if (string.IsNullOrWhiteSpace(finalPracExamCreateDto.PracExamName))
+                {
+                    throw new Exception("Tên kỳ thi không được để trống!");
+                }
+
+                if (finalPracExamCreateDto.PracExamName.Length > 100)
+                {
+                    throw new Exception("Tên kỳ thi không được vượt quá 100 ký tự!");
+                }
+
+                // 2. Validate TeacherId
+                var teacher = await _context.Teachers.FirstOrDefaultAsync(t => t.TeacherId == finalPracExamCreateDto.TeacherId);
+                if (teacher == null)
+                {
+                    throw new Exception("Giáo viên không tồn tại!");
+                }
+
+                // 3. Validate SubjectId
+                var subject = await _context.Subjects.FirstOrDefaultAsync(s => s.SubjectId == finalPracExamCreateDto.SubjectId);
+                if (subject == null)
+                {
+                    throw new Exception("Môn học không tồn tại!");
+                }
+
+                // 4. Validate SemesterId
+                var semester = await _context.Semesters.FirstOrDefaultAsync(s => s.SemesterId == finalPracExamCreateDto.SemesterId);
+                if (semester == null)
+                {
+                    throw new Exception("Học kỳ không tồn tại!");
+                }
+
+                // 5. Validate PracticeExamPaperDTO
+                if (finalPracExamCreateDto.PracticeExamPaperDTO == null || !finalPracExamCreateDto.PracticeExamPaperDTO.Any())
+                {
+                    throw new Exception("Danh sách đề thi không được để trống!");
+                }
+
+                // 6. Validate từng ExamPaperId
+                foreach (var paper in finalPracExamCreateDto.PracticeExamPaperDTO)
+                {
+                    var examPaper = await _context.PracticeExamPapers
+                        .FirstOrDefaultAsync(ep => ep.PracExamPaperId == paper.PracExamPaperId);
+                    
+                    if (examPaper == null)
+                    {
+                        throw new Exception($"Đề thi với ID {paper.PracExamPaperId} không tồn tại!");
+                    }
+
+                    // Kiểm tra xem đề thi có thuộc về môn học và học kỳ đã chọn không
+                    if (examPaper.SubjectId != finalPracExamCreateDto.SubjectId)
+                    {
+                        throw new Exception($"Đề thi {paper.PracExamPaperId} không thuộc về môn học đã chọn!");
+                    }
+
+                    if (examPaper.SemesterId != finalPracExamCreateDto.SemesterId)
+                    {
+                        throw new Exception($"Đề thi {paper.PracExamPaperId} không thuộc về học kỳ đã chọn!");
+                    }
+                }
+
+                // 7. Validate trùng tên kỳ thi trong cùng học kỳ và năm
+                var existingPracExamWithSameName = await _context.PracticeExams
+                    .Where(e => e.PracExamName == finalPracExamCreateDto.PracExamName 
+                               && e.SemesterId == finalPracExamCreateDto.SemesterId 
+                               && e.CreateAt.Year == DateTime.Now.Year
+                               && e.CategoryExamId == 2) // Final exam
+                    .FirstOrDefaultAsync();
+
+                if (existingPracExamWithSameName != null)
+                {
+                    throw new Exception($"Đã tồn tại kỳ thi với tên '{finalPracExamCreateDto.PracExamName}' trong học kỳ này!");
+                }
+
                 var pracExam = new PracticeExam
                 {
                     PracExamName = finalPracExamCreateDto.PracExamName,
@@ -191,7 +369,7 @@ namespace GESS.Repository.Implement
             catch (Exception ex)
             {
                 Console.WriteLine("Lỗi khi tạo FinalPracticeExam: " + ex.Message);
-                return null;
+                throw; // Re-throw để service layer có thể xử lý
             }
         }
 
