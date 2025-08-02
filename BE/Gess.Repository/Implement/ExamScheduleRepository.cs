@@ -252,6 +252,12 @@ namespace GESS.Repository.Implement
 
         public async Task<bool> MidTermCheckInStudentAsync(int examId, Guid studentId, int examType)
         {
+            // Validate examType - chỉ chấp nhận 1 (Multiple choice) hoặc 2 (Practice)
+            if (examType != 1 && examType != 2)
+            {
+                return false;
+            }
+
             if (examType == 1)
             {
                 var examHistory = await _context.MultiExamHistories
@@ -269,7 +275,7 @@ namespace GESS.Repository.Implement
                 await _context.SaveChangesAsync();
                 return true;
             }
-            else
+            else if (examType == 2)
             {
                 var examHistory = await _context.PracticeExamHistories
                     .FirstOrDefaultAsync(m => m.PracExamId == examId && m.StudentId == studentId);
@@ -286,6 +292,7 @@ namespace GESS.Repository.Implement
                 await _context.SaveChangesAsync();
                 return true;
             }
+            
             return false;
         }
 
