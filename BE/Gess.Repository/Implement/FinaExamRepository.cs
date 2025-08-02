@@ -9,6 +9,7 @@ using GESS.Model.Subject;
 using GESS.Model.Teacher;
 using GESS.Repository.Interface;
 using Microsoft.EntityFrameworkCore;
+using static GESS.Model.NoQuestionInChapter.NoQuestionInChapterDTO;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace GESS.Repository.Implement
@@ -366,13 +367,20 @@ namespace GESS.Repository.Implement
         public async Task<MultipleExamResponseDTO> ViewMultiFinalExamDetail(int examId)
         {
             var multiExam = await _context.MultiExams
-                .Include(e => e.FinalExams)
-                .ThenInclude(fe => fe.MultiQuestion)
+                .Include(e => e.Subject)                          
+                .Include(e => e.Semester)                        
+                .Include(e => e.Teacher)                         
+                    .ThenInclude(t => t.User)                   
+                .Include(e => e.NoQuestionInChapters)           
+                .Include(e => e.FinalExams)                       
+                    .ThenInclude(fe => fe.MultiQuestion)          
                 .FirstOrDefaultAsync(e => e.MultiExamId == examId);
+
             if (multiExam == null)
-                {
+            {
                 throw new Exception("Multiple exam not found.");
             }
+
             var response = new MultipleExamResponseDTO
             {
                 MultiExamId = multiExam.MultiExamId,
@@ -385,11 +393,22 @@ namespace GESS.Repository.Implement
                 {
                     ChapterId = nq.ChapterId,
                     LevelQuestionId = nq.LevelQuestionId,
-                    NumberQuestion = nq.NumberQuestion
+                    NumberQuestion = nq.NumberQuestion,
+                    ChapterName = _context.Chapters
+                        .Where(c => c.ChapterId == nq.ChapterId)
+                        .Select(c => c.ChapterName)
+                        .FirstOrDefault(),
+                    LevelName = _context.LevelQuestions
+                        .Where(l => l.LevelQuestionId == nq.LevelQuestionId)
+                        .Select(l => l.LevelQuestionName)
+                        .FirstOrDefault()
+
                 }).ToList(),
             };
+
             return response;
         }
+
 
         public async Task<PracticeExamResponeDTO> ViewPracFinalExamDetail(int examId)
         {

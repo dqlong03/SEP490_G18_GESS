@@ -39,6 +39,7 @@ namespace GESS.Model.Class
         public bool? Gender { get; set; }
         public DateTime? DateOfBirth { get; set; }
         public int? CohirtId { get; set; }
+        public string? Avartar { get; set; }
     }
 
 }

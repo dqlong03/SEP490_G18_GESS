@@ -4,6 +4,7 @@ using GESS.Model.Chapter;
 using GESS.Model.Class;
 using GESS.Model.GradeComponent;
 using GESS.Model.Student;
+using GESS.Model.Subject;
 using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
@@ -68,11 +69,11 @@ namespace GESS.Service
             try
             {
                 // Kiểm tra xem lớp học đã tồn tại chưa
-                var classExists = await _unitOfWork.ClassRepository.ClassExistsAsync(classCreateDto.ClassName);
-                if (classExists)
-                {
-                    throw new Exception("Lớp học đã tồn tại.");
-                }
+                //var classExists = await _unitOfWork.ClassRepository.ClassExistsAsync(classCreateDto.ClassName);
+                //if (classExists)
+                //{
+                //    throw new Exception("Lớp học đã tồn tại.");
+                //}
 
                 // Tạo thực thể lớp học mới
                 var classEntity = new Class
@@ -129,7 +130,9 @@ namespace GESS.Service
                             CreatedAt = DateTime.UtcNow,
                             UpdatedAt = DateTime.UtcNow,
                             IsActive = true,
-                            IsDeleted = false
+                            IsDeleted = false,
+                            
+                            
                         };
 
                         var result = await _unitOfWork.UserManager.CreateAsync(newUser, randomPassword);
@@ -176,7 +179,7 @@ namespace GESS.Service
                             UserId = userId,
                             // CohortId = studentDto.CohortId ?? 1, // Sửa typo: CohirtId -> CohortId (đã sửa trong đoạn trước)
                             EnrollDate = DateTime.UtcNow,
-                            AvatarURL = "DefaultAvatar.png" // Giả sử có ảnh đại diện mặc định
+                            AvatarURL = studentDto.Avartar // Giả sử có ảnh đại diện mặc định
                         };
                         _unitOfWork.StudentRepository.Create(newStudent);
                         studentId = newStudent.StudentId;
@@ -244,14 +247,14 @@ namespace GESS.Service
 
         }
 
-        public async Task<IEnumerable<ClassListDTO>> GetAllClassByTeacherIdAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageNumber = 1, int pageSize = 5)
+        public async Task<IEnumerable<ClassListDTO>> GetAllClassByTeacherIdAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageNumber = 1, int pageSize = 5, int? year = null)
         {
-            return await _unitOfWork.ClassRepository.GetAllClassByTeacherIdAsync(teacherId,name, subjectId, semesterId, pageNumber, pageSize);
+            return await _unitOfWork.ClassRepository.GetAllClassByTeacherIdAsync(teacherId,name, subjectId, semesterId, pageNumber, pageSize,year);
         }
 
-        public async Task<int> CountPageByTeacherAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageSize = 5)
+        public async Task<int> CountPageByTeacherAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageSize = 5, int? year = null)
         {
-            return await _unitOfWork.ClassRepository.CountPageByTeacherAsync(teacherId, name, subjectId, semesterId, pageSize);
+            return await _unitOfWork.ClassRepository.CountPageByTeacherAsync(teacherId, name, subjectId, semesterId, pageSize, year);
         }
         public async Task AddStudentsToClassAsync(AddStudentsToClassRequest request)
         {
@@ -378,5 +381,13 @@ namespace GESS.Service
                 throw;
             }
         }
+
+
+        // GESS.Service/class/ClassService.cs
+        public async Task<IEnumerable<SubjectListDTO>> GetSubjectsByTeacherIdAsync(Guid teacherId)
+        {
+            return await _unitOfWork.ClassRepository.GetSubjectsByTeacherIdAsync(teacherId);
+        }
+
     }
 }

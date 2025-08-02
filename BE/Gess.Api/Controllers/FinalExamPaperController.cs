@@ -1,4 +1,5 @@
-﻿using DocumentFormat.OpenXml.Wordprocessing;
+﻿using DocumentFormat.OpenXml.Bibliography;
+using DocumentFormat.OpenXml.Wordprocessing;
 using GESS.Model.MultipleExam;
 using GESS.Model.PracticeExam;
 using GESS.Model.PracticeExamPaper;
@@ -95,6 +96,38 @@ namespace GESS.Api.Controllers
                     return BadRequest("Failed to create exam paper.");
                 }
                 return Ok(createdExamPaper);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+        //API to get final practice question by semester id and chapter id and level id and text search need pagination
+        [HttpGet("GetFinalPracticeQuestion")]
+        public async Task<IActionResult> GetFinalPracticeQuestion(int? semesterId = null, int? chapterId = null, int? levelId = null, string? textSearch = null, int pageNumber = 1, int pageSize = 10)
+        {
+            try
+            {
+                var questions = await _finalExamPaperService.GetFinalPracticeQuestion(semesterId, chapterId, levelId, textSearch, pageNumber, pageSize);
+                if (questions == null || !questions.Any())
+                {
+                    return NotFound("No practice questions found for the specified criteria.");
+                }
+                return Ok(questions);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+        //API to count page number of final exam by subject id and semester id and year and type and text search
+        [HttpGet("CountPageNumberFinalExam")]
+        public async Task<IActionResult> CountPageNumberFinalExamQuestion(int? semesterId = null, int? chapterId = null, int? levelId = null, string? textSearch = null, int pageSize = 10)
+        {
+            try
+            {
+                var pageCount = await _finalExamPaperService.CountPageNumberFinalExamQuestion(semesterId, chapterId, levelId, textSearch, pageSize);
+                return Ok(pageCount);
             }
             catch (Exception ex)
             {

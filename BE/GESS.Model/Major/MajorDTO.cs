@@ -26,4 +26,17 @@ namespace GESS.Model.Major
         public List<TrainingProgramDTO> TrainingPrograms { get; set; }
 
     }
+    public class MajorDTODDL
+    {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        // PK và Identity tự tăng trong SQL
+        public int MajorId { get; set; }
+        // Tên ngành, không được để trống, tối đa 100 ký tự(NVARCHAR(100) NOT NULL trong SQL)
+        [Required(ErrorMessage = "Tên ngành không được để trống!")]
+        [StringLength(1000, ErrorMessage = "Tên ngành không được vượt quá 1000 ký tự!")]
+        public string MajorName { get; set; }
+
+
+    }
 }

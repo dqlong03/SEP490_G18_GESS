@@ -15,6 +15,7 @@ namespace GESS.Model.NoQuestionInChapter
         // Khóa ngoại liên kết đến chương (Chapter)
         public int ChapterId { get; set; }
         public int LevelQuestionId { get; set; }
-
+        public string? ChapterName { get; set; }
+        public string? LevelName { get; set; }
     }
 }
