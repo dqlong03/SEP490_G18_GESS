@@ -4,6 +4,21 @@ import React, { useEffect, useState } from "react";
 import Select from "react-select";
 import { getUserIdFromToken } from "@/utils/tokenUtils";
 import { useRouter } from "next/navigation";
+import { 
+  BookOpen, 
+  Plus, 
+  Trash2, 
+  Save, 
+  CheckSquare,
+  Calendar,
+  GraduationCap,
+  FileText,
+  Settings,
+  X,
+  ChevronLeft,
+  Target,
+  BarChart3
+} from 'lucide-react';
 
 const API_URL = "https://localhost:7074";
 
@@ -23,10 +38,10 @@ type Semester = {
 };
 
 type Level = "easy" | "medium" | "hard";
-const LEVELS: { key: Level; label: string; id: number }[] = [
-  { key: "easy", label: "Dễ", id: 1 },
-  { key: "medium", label: "Trung bình", id: 2 },
-  { key: "hard", label: "Khó", id: 3 },
+const LEVELS: { key: Level; label: string; id: number; color: string; bgColor: string }[] = [
+  { key: "easy", label: "Dễ", id: 1, color: "text-green-700", bgColor: "bg-green-50" },
+  { key: "medium", label: "Trung bình", id: 2, color: "text-yellow-700", bgColor: "bg-yellow-50" },
+  { key: "hard", label: "Khó", id: 3, color: "text-red-700", bgColor: "bg-red-50" },
 ];
 
 // Định nghĩa type riêng cho dữ liệu số câu hỏi của từng chương
@@ -54,22 +69,28 @@ export default function CreateFinalMultipleExamPage() {
   const [showChapterPopup, setShowChapterPopup] = useState<boolean>(false);
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [selectedSemester, setSelectedSemester] = useState<Semester | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const teacherId = getUserIdFromToken();
 
   // Lấy danh sách môn học
   useEffect(() => {
     if (!teacherId) return;
+    setLoading(true);
     fetch(`${API_URL}/api/FinalExam/GetAllMajorByTeacherId?teacherId=${teacherId}`)
       .then(res => res.json())
-      .then((data: Subject[]) => setSubjects(data));
+      .then((data: Subject[]) => setSubjects(data))
+      .catch(() => alert('Không thể tải danh sách môn học'))
+      .finally(() => setLoading(false));
   }, [teacherId]);
 
   // Lấy danh sách kỳ
   useEffect(() => {
     fetch(`${API_URL}/api/Semesters`)
       .then(res => res.json())
-      .then((data: Semester[]) => setSemesters(data));
+      .then((data: Semester[]) => setSemesters(data))
+      .catch(() => alert('Không thể tải danh sách học kỳ'));
   }, []);
 
   // Lấy danh sách chương khi chọn môn học
@@ -77,7 +98,8 @@ export default function CreateFinalMultipleExamPage() {
     if (!selectedSubject) return;
     fetch(`${API_URL}/api/FinalExam/GetAllChapterBySubjectId?subjectId=${selectedSubject.subjectId}`)
       .then(res => res.json())
-      .then((data: Chapter[]) => setChapters(data));
+      .then((data: Chapter[]) => setChapters(data))
+      .catch(() => alert('Không thể tải danh sách chương'));
     setSelectedChapters([]);
     setChapterQuestions({});
     setChapterChecks({});
@@ -96,17 +118,25 @@ export default function CreateFinalMultipleExamPage() {
       (chap) => !selectedChapters.some((selected) => selected.chapterId === chap.chapterId)
     );
     const newChapterQuestions = { ...chapterQuestions };
-    for (const chap of newChapters) {
-      const max: ChapterQuestion["max"] = { easy: 0, medium: 0, hard: 0 };
-      for (const lv of LEVELS) {
-        max[lv.key] = await fetchMaxQuestions(chap.chapterId, lv.id);
+    
+    setLoading(true);
+    try {
+      for (const chap of newChapters) {
+        const max: ChapterQuestion["max"] = { easy: 0, medium: 0, hard: 0 };
+        for (const lv of LEVELS) {
+          max[lv.key] = await fetchMaxQuestions(chap.chapterId, lv.id);
+        }
+        newChapterQuestions[chap.chapterId] = { easy: 0, medium: 0, hard: 0, max };
       }
-      newChapterQuestions[chap.chapterId] = { easy: 0, medium: 0, hard: 0, max };
+      setSelectedChapters([...selectedChapters, ...newChapters]);
+      setChapterQuestions(newChapterQuestions);
+      setShowChapterPopup(false);
+      setChapterChecks({});
+    } catch (error) {
+      alert('Có lỗi xảy ra khi tải thông tin câu hỏi');
+    } finally {
+      setLoading(false);
     }
-    setSelectedChapters([...selectedChapters, ...newChapters]);
-    setChapterQuestions(newChapterQuestions);
-    setShowChapterPopup(false);
-    setChapterChecks({});
   };
 
   // Xóa chương đã chọn
@@ -148,43 +178,55 @@ export default function CreateFinalMultipleExamPage() {
       alert("Tổng số câu đã chọn phải bằng số câu hỏi yêu cầu!");
       return;
     }
-    const now = new Date().toISOString();
-    const noQuestionInChapterDTO: {
-      numberQuestion: number;
-      chapterId: number;
-      levelQuestionId: number;
-    }[] = [];
-    selectedChapters.forEach((chap) => {
-      LEVELS.forEach((lv) => {
-        const num = chapterQuestions[chap.chapterId]?.[lv.key] || 0;
-        if (num > 0) {
-          noQuestionInChapterDTO.push({
-            numberQuestion: num,
-            chapterId: chap.chapterId,
-            levelQuestionId: lv.id,
-          });
-        }
+    
+    setIsSubmitting(true);
+    try {
+      const now = new Date().toISOString();
+      const noQuestionInChapterDTO: {
+        numberQuestion: number;
+        chapterId: number;
+        levelQuestionId: number;
+      }[] = [];
+      
+      selectedChapters.forEach((chap) => {
+        LEVELS.forEach((lv) => {
+          const num = chapterQuestions[chap.chapterId]?.[lv.key] || 0;
+          if (num > 0) {
+            noQuestionInChapterDTO.push({
+              numberQuestion: num,
+              chapterId: chap.chapterId,
+              levelQuestionId: lv.id,
+            });
+          }
+        });
       });
-    });
-    const payload = {
-      multiExamName: examName,
-      numberQuestion: totalQuestions,
-      createAt: now,
-      teacherId,
-      subjectId: selectedSubject.subjectId,
-      semesterId: selectedSemester.semesterId,
-      noQuestionInChapterDTO,
-    };
-    const res = await fetch(`${API_URL}/api/FinalExam/CreateFinalMultipleExam`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (res.ok) {
-      alert("Tạo bài kiểm tra thành công!");
-      router.push("/teacher/finalexam");
-    } else {
-      alert("Tạo bài kiểm tra thất bại!");
+      
+      const payload = {
+        multiExamName: examName,
+        numberQuestion: totalQuestions,
+        createAt: now,
+        teacherId,
+        subjectId: selectedSubject.subjectId,
+        semesterId: selectedSemester.semesterId,
+        noQuestionInChapterDTO,
+      };
+      
+      const res = await fetch(`${API_URL}/api/FinalExam/CreateFinalMultipleExam`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      
+      if (res.ok) {
+        alert("Tạo bài kiểm tra thành công!");
+        router.push("/teacher/finalexam");
+      } else {
+        alert("Tạo bài kiểm tra thất bại!");
+      }
+    } catch (error) {
+      alert("Có lỗi xảy ra khi tạo bài kiểm tra!");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -222,242 +264,445 @@ export default function CreateFinalMultipleExamPage() {
     ...s,
   }));
 
+  // Statistics for selected chapters
+  const easyTotal = Object.values(chapterQuestions).reduce((sum, q) => sum + (q.easy || 0), 0);
+  const mediumTotal = Object.values(chapterQuestions).reduce((sum, q) => sum + (q.medium || 0), 0);
+  const hardTotal = Object.values(chapterQuestions).reduce((sum, q) => sum + (q.hard || 0), 0);
+
   return (
-    <div className="w-full min-h-screen bg-white font-sans p-0">
-      <div className="w-full py-8 px-4">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-left">
-          Tạo bài kiểm tra trắc nghiệm cuối kỳ
-        </h2>
-        <form onSubmit={handleSave} className="space-y-6">
-          <div className="flex flex-wrap gap-4 items-center mb-4">
-            <div className="flex flex-col">
-              <label className="mb-1 font-semibold text-gray-700">Tên bài kiểm tra</label>
-              <input
-                type="text"
-                value={examName}
-                onChange={e => setExamName(e.target.value)}
-                className="border rounded px-3 py-2 w-64"
-                placeholder="Tên bài kiểm tra"
-                required
-              />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
+                <CheckSquare className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Tạo bài thi trắc nghiệm cuối kỳ</h1>
+                <p className="text-gray-600">Thiết lập và cấu hình bài thi trắc nghiệm theo chương</p>
+              </div>
             </div>
-            <div className="flex flex-col w-64">
-              <label className="mb-1 font-semibold text-gray-700">Chọn môn học</label>
-              <Select
-                options={subjectOptions}
-                value={selectedSubject ? subjectOptions.find(s => s.value === selectedSubject.subjectId) : null}
-                onChange={option => {
-                  setSelectedSubject(option as Subject);
-                  setSelectedChapters([]);
-                  setChapterQuestions({});
-                  setChapterChecks({});
-                }}
-                placeholder="Chọn môn học"
-                isSearchable
-              />
-            </div>
-            <div className="flex flex-col w-44">
-              <label className="mb-1 font-semibold text-gray-700">Chọn kỳ</label>
-              <Select
-                options={semesterOptions}
-                value={selectedSemester ? semesterOptions.find(s => s.value === selectedSemester.semesterId) : null}
-                onChange={option => setSelectedSemester(option as Semester)}
-                placeholder="Chọn kỳ"
-                isSearchable
-              />
-            </div>
-            <div className="flex flex-col w-44">
-              <label className="mb-1 font-semibold text-gray-700">Nhập số câu hỏi</label>
-              <input
-                type="number"
-                min={1}
-                value={questionInput}
-                onChange={(e) => setQuestionInput(Number(e.target.value))}
-                className="border rounded px-3 py-2 w-full"
-                placeholder="Nhập số câu hỏi"
-                required
-              />
-            </div>
+            
             <button
-              type="button"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold self-end"
-              onClick={() => setShowChapterPopup(true)}
-              disabled={!selectedSubject}
+              onClick={() => router.back()}
+              className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 font-medium text-gray-700"
             >
-              Chọn chương
+              <ChevronLeft className="w-4 h-4" />
+              <span>Quay lại</span>
             </button>
           </div>
+        </div>
 
-          {/* Popup chọn chương */}
-          {showChapterPopup && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30 animate-fadeIn">
-              <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-2xl relative animate-popup">
-                <button
-                  className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-2xl"
-                  onClick={() => setShowChapterPopup(false)}
-                  aria-label="Đóng"
-                >
-                  ×
-                </button>
-                <h3 className="text-xl font-bold mb-4 text-gray-700">
-                  Chọn chương
-                </h3>
-                <div className="flex gap-4 mb-4">
-                  <button
-                    type="button"
-                    className="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600 transition font-semibold"
-                    onClick={handleCheckAllChapters}
-                  >
-                    Chọn tất cả
-                  </button>
-                  <button
-                    type="button"
-                    className="bg-gray-300 text-gray-800 px-4 py-1 rounded hover:bg-gray-400 transition font-semibold"
-                    onClick={handleUncheckAllChapters}
-                  >
-                    Bỏ chọn tất cả
-                  </button>
+        <form onSubmit={handleSave} className="space-y-8">
+          {/* Basic Information */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center">
+              <Settings className="w-5 h-5 mr-2 text-blue-600" />
+              Thông tin cơ bản
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tên bài kiểm tra <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={examName}
+                  onChange={e => setExamName(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  placeholder="Nhập tên bài kiểm tra"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Môn học <span className="text-red-500">*</span>
+                </label>
+                <Select
+                  options={subjectOptions}
+                  value={selectedSubject ? subjectOptions.find(s => s.value === selectedSubject.subjectId) : null}
+                  onChange={option => {
+                    setSelectedSubject(option as Subject);
+                    setSelectedChapters([]);
+                    setChapterQuestions({});
+                    setChapterChecks({});
+                  }}
+                  placeholder="Chọn môn học"
+                  isSearchable
+                  styles={{
+                    control: (provided) => ({
+                      ...provided,
+                      minHeight: '48px',
+                      borderColor: '#d1d5db',
+                      '&:hover': { borderColor: '#3b82f6' }
+                    }),
+                    menu: (provided) => ({ ...provided, zIndex: 20 }),
+                  }}
+                  noOptionsMessage={() => 'Không có dữ liệu'}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Học kỳ <span className="text-red-500">*</span>
+                </label>
+                <Select
+                  options={semesterOptions}
+                  value={selectedSemester ? semesterOptions.find(s => s.value === selectedSemester.semesterId) : null}
+                  onChange={option => setSelectedSemester(option as Semester)}
+                  placeholder="Chọn học kỳ"
+                  isSearchable
+                  styles={{
+                    control: (provided) => ({
+                      ...provided,
+                      minHeight: '48px',
+                      borderColor: '#d1d5db',
+                      '&:hover': { borderColor: '#3b82f6' }
+                    }),
+                    menu: (provided) => ({ ...provided, zIndex: 20 }),
+                  }}
+                  noOptionsMessage={() => 'Không có dữ liệu'}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tổng số câu hỏi <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={questionInput}
+                  onChange={(e) => setQuestionInput(Number(e.target.value))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  placeholder="Nhập số câu hỏi"
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="mt-6">
+              <button
+                type="button"
+                className="flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+                onClick={() => setShowChapterPopup(true)}
+                disabled={!selectedSubject || !selectedSemester}
+              >
+                <Plus className="w-4 h-4" />
+                <span>Chọn chương</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Statistics */}
+          {selectedChapters.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Tổng câu hỏi</p>
+                    <p className="text-2xl font-bold text-blue-600">{totalQuestions}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Target className="w-6 h-6 text-blue-600" />
+                  </div>
                 </div>
-                <div className="overflow-x-auto rounded shadow bg-white mb-4">
-                  <table className="min-w-[500px] w-full text-sm md:text-base border border-gray-200">
-                    <thead>
-                      <tr className="bg-gray-100 text-gray-700 font-semibold">
-                        <th className="py-2 px-2 border-b w-20 text-center">Chương</th>
-                        <th className="py-2 px-2 border-b w-56 text-left">Tên chương</th>
-                        <th className="py-2 px-2 border-b w-20 text-center">Chọn</th>
-                      </tr>
-                    </thead>
-                      <tbody>
-                        {chapters.map((chap, idx) => {
-                          const checked =
-                            chapterChecks[chap.chapterId] !== undefined
-                              ? chapterChecks[chap.chapterId]
-                              : selectedChapters.some((selected) => selected.chapterId === chap.chapterId);
-                          return (
-                            <tr key={chap.chapterId} className="hover:bg-blue-50 transition">
-                              <td className="py-2 px-2 border-b text-center">
-                                Chương {idx + 1}
-                              </td>
-                              <td className="py-2 px-2 border-b">{chap.chapterName}</td>
-                              <td className="py-2 px-2 border-b text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={checked}
-                                  onChange={(e) =>
-                                    setChapterChecks((prev) => ({
-                                      ...prev,
-                                      [chap.chapterId]: e.target.checked,
-                                    }))
-                                  }
-                                />
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                  </table>
+              </div>
+              
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Câu dễ</p>
+                    <p className="text-2xl font-bold text-green-600">{easyTotal}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <BarChart3 className="w-6 h-6 text-green-600" />
+                  </div>
                 </div>
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleSaveChapters}
-                    className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition font-semibold"
-                  >
-                    Lưu
-                  </button>
+              </div>
+              
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Câu trung bình</p>
+                    <p className="text-2xl font-bold text-yellow-600">{mediumTotal}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                    <BarChart3 className="w-6 h-6 text-yellow-600" />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Câu khó</p>
+                    <p className="text-2xl font-bold text-red-600">{hardTotal}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                    <BarChart3 className="w-6 h-6 text-red-600" />
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Bảng chương đã chọn */}
+          {/* Chapter Selection Table */}
           {selectedChapters.length > 0 && (
-            <div className="overflow-x-auto rounded shadow bg-white mt-6 w-full">
-              <table className="min-w-[700px] w-full text-sm md:text-base border border-gray-200">
-                <thead>
-                  <tr className="bg-gray-100 text-gray-700 font-semibold">
-                    <th className="py-2 px-2 border-b w-56 text-left">Tên chương</th>
-                    {LEVELS.map(lv => (
-                      <th key={lv.key} className="py-2 px-2 border-b w-32 text-center">
-                        Số câu {lv.label}
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                  <BookOpen className="w-5 h-5 mr-2 text-blue-600" />
+                  Phân bổ câu hỏi theo chương ({selectedChapters.length})
+                </h3>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[800px]">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tên chương
                       </th>
-                    ))}
-                    <th className="py-2 px-2 border-b w-20 text-center">Xóa</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedChapters.map((chap) => (
-                    <tr key={chap.chapterId} className="hover:bg-blue-50 transition">
-                      <td className="py-2 px-2 border-b">{chap.chapterName}</td>
                       {LEVELS.map(lv => (
-                        <td key={lv.key} className="py-2 px-2 border-b text-center">
-                          <input
-                            type="number"
-                            min={0}
-                            max={chapterQuestions[chap.chapterId]?.max?.[lv.key] ?? 0}
-                            value={chapterQuestions[chap.chapterId]?.[lv.key] ?? 0}
-                            onChange={(e) =>
-                              handleChangeQuestionCount(
-                                chap.chapterId,
-                                lv.key,
-                                Number(e.target.value)
-                              )
-                            }
-                            className="border rounded px-2 py-1 w-20 text-center"
-                            disabled={chapterQuestions[chap.chapterId]?.max?.[lv.key] === 0}
-                            placeholder={`Số câu ${lv.label}`}
-                          />
-                          <span className="ml-2 text-gray-500 text-xs">
-                            / {chapterQuestions[chap.chapterId]?.max?.[lv.key] ?? 0}
+                        <th key={lv.key} className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${lv.bgColor} ${lv.color}`}>
+                            {lv.label}
                           </span>
-                        </td>
+                        </th>
                       ))}
-                      <td className="py-2 px-2 border-b text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveChapter(chap.chapterId)}
-                          className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition"
-                        >
-                          Xóa
-                        </button>
-                      </td>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Thao tác
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="mt-4 flex justify-between items-center">
-                <div className="font-semibold text-base">
-                  Tổng số câu đã chọn:{" "}
-                  <span className="text-blue-700">{totalQuestions}</span>
-                  {questionInput > 0 && (
-                    <span className="ml-2 text-gray-600">
-                      / {questionInput}
-                    </span>
-                  )}
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {selectedChapters.map((chap) => (
+                      <tr key={chap.chapterId} className="hover:bg-gray-50 transition-colors duration-200">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                              <BookOpen className="w-4 h-4 text-blue-600" />
+                            </div>
+                            <div className="text-sm font-medium text-gray-900">{chap.chapterName}</div>
+                          </div>
+                        </td>
+                        {LEVELS.map(lv => (
+                          <td key={lv.key} className="px-6 py-4 text-center">
+                            <div className="flex flex-col items-center space-y-1">
+                              <input
+                                type="number"
+                                min={0}
+                                max={chapterQuestions[chap.chapterId]?.max?.[lv.key] ?? 0}
+                                value={chapterQuestions[chap.chapterId]?.[lv.key] ?? 0}
+                                onChange={(e) =>
+                                  handleChangeQuestionCount(
+                                    chap.chapterId,
+                                    lv.key,
+                                    Number(e.target.value)
+                                  )
+                                }
+                                className="w-20 px-2 py-1 border border-gray-300 rounded text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-400"
+                                disabled={chapterQuestions[chap.chapterId]?.max?.[lv.key] === 0}
+                              />
+                              <span className="text-xs text-gray-500">
+                                / {chapterQuestions[chap.chapterId]?.max?.[lv.key] ?? 0}
+                              </span>
+                            </div>
+                          </td>
+                        ))}
+                        <td className="px-6 py-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveChapter(chap.chapterId)}
+                            className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                            title="Xóa chương"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="text-sm font-medium text-gray-900">
+                      Tổng số câu đã chọn: <span className="text-blue-600 font-bold">{totalQuestions}</span>
+                      {questionInput > 0 && (
+                        <span className="text-gray-600"> / {questionInput}</span>
+                      )}
+                    </div>
+                    {questionInput > 0 && totalQuestions !== questionInput && (
+                      <div className="text-sm text-red-600 font-medium">
+                        ⚠️ Số câu chưa đúng yêu cầu
+                      </div>
+                    )}
+                  </div>
+                  
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !examName || !selectedSubject || !selectedSemester || selectedChapters.length === 0 || (questionInput > 0 && totalQuestions !== questionInput)}
+                    className="flex items-center space-x-2 px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Đang tạo...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        <span>Tạo bài thi</span>
+                      </>
+                    )}
+                  </button>
                 </div>
-                <button
-                  type="submit"
-                  className="bg-blue-600 text-white px-20 py-2 rounded hover:bg-blue-700 transition font-semibold items-center mb-4"
-                >
-                  Lưu
-                </button>
               </div>
             </div>
           )}
         </form>
+
+        {/* Chapter Selection Modal */}
+        {showChapterPopup && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                    <BookOpen className="w-5 h-5 mr-2 text-blue-600" />
+                    Chọn chương học
+                  </h3>
+                  <button
+                    onClick={() => setShowChapterPopup(false)}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                  >
+                    <X className="w-5 h-5 text-gray-500" />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="p-6">
+                <div className="flex gap-4 mb-6">
+                  <button
+                    type="button"
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
+                    onClick={handleCheckAllChapters}
+                  >
+                    <CheckSquare className="w-4 h-4" />
+                    <span>Chọn tất cả</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="flex items-center space-x-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200"
+                    onClick={handleUncheckAllChapters}
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Bỏ chọn tất cả</span>
+                  </button>
+                </div>
+                
+                <div className="overflow-x-auto max-h-[50vh]">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên chương</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Chọn</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {chapters.map((chap, idx) => {
+                        const checked =
+                          chapterChecks[chap.chapterId] !== undefined
+                            ? chapterChecks[chap.chapterId]
+                            : selectedChapters.some((selected) => selected.chapterId === chap.chapterId);
+                        const isAlreadySelected = selectedChapters.some((selected) => selected.chapterId === chap.chapterId);
+                        
+                        return (
+                          <tr 
+                            key={chap.chapterId} 
+                            className={`hover:bg-gray-50 transition-colors duration-200 ${isAlreadySelected ? 'bg-blue-50' : ''}`}
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {idx + 1}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                  <BookOpen className="w-4 h-4 text-blue-600" />
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">{chap.chapterName}</div>
+                                  {isAlreadySelected && (
+                                    <div className="text-xs text-blue-600">Đã được chọn</div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                disabled={isAlreadySelected}
+                                onChange={(e) =>
+                                  setChapterChecks((prev) => ({
+                                    ...prev,
+                                    [chap.chapterId]: e.target.checked,
+                                  }))
+                                }
+                                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              
+              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div className="flex justify-end space-x-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowChapterPopup(false)}
+                    className="flex items-center space-x-2 px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Hủy</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveChapters}
+                    disabled={loading}
+                    className="flex items-center space-x-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 disabled:bg-gray-400"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Đang tải...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        <span>Lưu chương</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-      <style jsx global>{`
-        @keyframes fadeIn {
-          from { opacity: 0 }
-          to { opacity: 1 }
-        }
-        .animate-fadeIn { animation: fadeIn 0.2s }
-        @keyframes popup {
-          from { transform: scale(0.95); opacity: 0 }
-          to { transform: scale(1); opacity: 1 }
-        }
-        .animate-popup { animation: popup 0.2s }
-      `}</style>
     </div>
   );
 }

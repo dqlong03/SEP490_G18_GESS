@@ -2,7 +2,23 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { 
+  ChevronDown, 
+  ChevronUp, 
+  Clock, 
+  MapPin, 
+  BookOpen, 
+  Users, 
+  Calendar,
+  CheckCircle,
+  XCircle,
+  RefreshCw,
+  ChevronLeft,
+  User,
+  Hash,
+  Timer,
+  Shield
+} from "lucide-react";
 
 interface ExamInfo {
   examSlotRoomId: number;
@@ -34,6 +50,7 @@ export default function AttendanceCheckingPage() {
   const [attendance, setAttendance] = useState<{ [id: string]: boolean }>({});
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Timer state
   const [timer, setTimer] = useState(300); // 5 phút = 300 giây
@@ -42,10 +59,12 @@ export default function AttendanceCheckingPage() {
   // Fetch exam info
   useEffect(() => {
     if (!examId) return;
+    setLoading(true);
     fetch(`https://localhost:7074/api/ExamSchedule/slots/${examId}`)
       .then((res) => res.json())
       .then((data) => setExamInfo(data))
-      .catch(() => setExamInfo(null));
+      .catch(() => setExamInfo(null))
+      .finally(() => setLoading(false));
   }, [examId]);
 
   // Fetch students
@@ -133,126 +152,314 @@ export default function AttendanceCheckingPage() {
     router.push("/teacher/examsupervisor");
   };
 
+  const attendedCount = Object.values(attendance).filter(Boolean).length;
+  const totalStudents = students.length;
+  const attendanceRate = totalStudents > 0 ? Math.round((attendedCount / totalStudents) * 100) : 0;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="bg-white rounded-xl shadow-lg p-8 flex items-center space-x-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="text-gray-700 font-medium">Đang tải thông tin ca thi...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-8 font-sans text-gray-800 bg-white">
-      <div className="mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
+                <Shield className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Điểm danh coi thi</h1>
+                <p className="text-gray-600">Quản lý điểm danh và giám sát ca thi</p>
+              </div>
+            </div>
+            
+            <button
+              onClick={() => router.back()}
+              className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 font-medium text-gray-700"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Quay lại</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Exam Info */}
         {examInfo ? (
-          <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-base">
-            <div>
-              <span className="font-semibold">Môn thi:</span> {examInfo.subjectName}
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
+              <BookOpen className="w-5 h-5 mr-2 text-blue-600" />
+              Thông tin ca thi
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <BookOpen className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Môn thi</p>
+                    <p className="font-semibold text-gray-900">{examInfo.subjectName}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                    <MapPin className="w-4 h-4 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Phòng thi</p>
+                    <p className="font-semibold text-gray-900">{examInfo.roomName}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Clock className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Ca thi</p>
+                    <p className="font-semibold text-gray-900">{examInfo.slotName}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <Timer className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Thời gian</p>
+                    <p className="font-semibold text-gray-900">{examInfo.startTime} - {examInfo.endTime}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                    <Hash className="w-4 h-4 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Tên bài thi</p>
+                    <p className="font-semibold text-gray-900">{examInfo.examName}</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div>
-              <span className="font-semibold">Phòng thi:</span> {examInfo.roomName}
-            </div>
-            <div>
-              <span className="font-semibold">Ca thi:</span> {examInfo.slotName}
-            </div>
-            <div>
-              <span className="font-semibold">Thời gian:</span> {examInfo.startTime} - {examInfo.endTime}
-            </div>
-            <div>
-              <span className="font-semibold">Tên bài thi:</span> {examInfo.examName}
-            </div>
-            <div>
-              <span className="font-semibold">Mã code vào thi:</span>{" "}
-              <span className="text-blue-700 font-mono">{examInfo.code}</span>
-              <span className="ml-4 text-sm text-gray-600">
-                (Tự động đổi mã sau <span className="font-bold text-red-600">{formatTime(timer)}</span>)
-              </span>
+            
+            {/* Code Section */}
+            <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Mã code vào thi</p>
+                    <p className="text-2xl font-bold text-blue-700 font-mono tracking-wider">{examInfo.code}</p>
+                  </div>
+                </div>
+                
+                <div className="text-right">
+                  <p className="text-sm text-gray-600">Tự động đổi mã sau</p>
+                  <div className="flex items-center space-x-2">
+                    <RefreshCw className="w-4 h-4 text-red-600" />
+                    <span className="text-xl font-bold text-red-600 font-mono">{formatTime(timer)}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         ) : (
-          <div className="text-red-500">Không tìm thấy thông tin ca thi.</div>
-        )}
-      </div>
-      <div>
-        <div className="text-lg font-semibold text-blue-700 mb-3 flex items-center gap-2">
-          Danh sách sinh viên
-          {collapsed ? (
-            <button
-              className="ml-1 p-1 rounded hover:bg-blue-100"
-              onClick={() => setCollapsed(false)}
-              aria-label="Mở rộng danh sách"
-              type="button"
-            >
-              <ChevronDown size={20} className="text-blue-700" />
-            </button>
-          ) : (
-            <button
-              className="ml-1 p-1 rounded hover:bg-blue-100"
-              onClick={() => setCollapsed(true)}
-              aria-label="Thu gọn danh sách"
-              type="button"
-            >
-              <ChevronUp size={20} className="text-blue-700" />
-            </button>
-          )}
-        </div>
-        {!collapsed && (
-          <div className="overflow-x-auto">
-            <table className="min-w-full border border-blue-200 rounded-lg bg-blue-50">
-              <thead>
-                <tr className="bg-blue-100 text-blue-900 text-base">
-                  <th className="py-2 px-3 border-b border-blue-200 text-center w-16">STT</th>
-                  <th className="py-2 px-3 border-b border-blue-200 text-center w-40">Mã sinh viên</th>
-                  <th className="py-2 px-3 border-b border-blue-200 text-center">Tên sinh viên</th>
-                  <th className="py-2 px-3 border-b border-blue-200 text-center w-32">Điểm danh</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.map((sv, idx) => (
-                  <tr
-                    key={sv.id}
-                    className="text-gray-800 text-base bg-white"
-                  >
-                    <td className="py-2 px-3 border-b border-blue-100 text-center align-middle">{idx + 1}</td>
-                    <td className="py-2 px-3 border-b border-blue-100 text-center align-middle">{sv.code}</td>
-                    <td className="py-2 px-3 border-b border-blue-100 text-center align-middle">{sv.fullName}</td>
-                    <td className="py-2 px-3 border-b border-blue-100 text-center align-middle">
-                      <input
-                        type="checkbox"
-                        checked={!!attendance[sv.id]}
-                        onChange={() => handleCheck(sv.id)}
-                        className="w-5 h-5 accent-blue-600"
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="bg-white rounded-xl shadow-lg p-12 text-center mb-8">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <XCircle className="w-8 h-8 text-red-500" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">Không tìm thấy thông tin ca thi</h3>
+            <p className="text-gray-600">Vui lòng kiểm tra lại hoặc liên hệ quản trị viên</p>
           </div>
         )}
-        <div className="mt-6 flex flex-col items-start gap-4">
+
+        {/* Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Tổng sinh viên</p>
+                <p className="text-2xl font-bold text-blue-600">{totalStudents}</p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Đã điểm danh</p>
+                <p className="text-2xl font-bold text-green-600">{attendedCount}</p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Tỷ lệ tham dự</p>
+                <p className="text-2xl font-bold text-purple-600">{attendanceRate}%</p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Student List */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                <Users className="w-5 h-5 mr-2 text-blue-600" />
+                Danh sách sinh viên ({totalStudents})
+              </h3>
+              
+              <button
+                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                onClick={() => setCollapsed(!collapsed)}
+                type="button"
+              >
+                {collapsed ? (
+                  <>
+                    <span className="text-sm text-gray-600">Mở rộng</span>
+                    <ChevronDown className="w-4 h-4 text-gray-600" />
+                  </>
+                ) : (
+                  <>
+                    <span className="text-sm text-gray-600">Thu gọn</span>
+                    <ChevronUp className="w-4 h-4 text-gray-600" />
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+          
           {!collapsed && (
-            <button
-              className="bg-blue-600 hover:bg-blue-700 text-white text-base font-semibold py-2 px-6 rounded transition"
-              onClick={handleConfirmAttendance}
-            >
-              Xác nhận điểm danh
-            </button>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã sinh viên</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên sinh viên</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Điểm danh</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {students.map((sv, idx) => (
+                    <tr
+                      key={sv.id}
+                      className={`hover:bg-gray-50 transition-colors duration-200 ${
+                        attendance[sv.id] ? 'bg-green-50' : ''
+                      }`}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{idx + 1}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                            <User className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <span className="text-sm font-medium text-gray-900">{sv.code}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{sv.fullName}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        {attendance[sv.id] ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Có mặt
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            <XCircle className="w-3 h-3 mr-1" />
+                            Vắng mặt
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <label className="inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={!!attendance[sv.id]}
+                            onChange={() => handleCheck(sv.id)}
+                            className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                          />
+                          <span className="sr-only">Điểm danh {sv.fullName}</span>
+                        </label>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="confirm-finish"
-              checked={isConfirmed}
-              onChange={() => setIsConfirmed((v) => !v)}
-              className="w-5 h-5 accent-blue-600"
-            />
-            <label htmlFor="confirm-finish" className="text-base select-none">
-              Tôi xác nhận đã coi thi xong
-            </label>
-            <button
-              className={`ml-4 px-6 py-2 rounded text-base font-semibold transition ${
-                isConfirmed
-                  ? "bg-green-600 hover:bg-green-700 text-white cursor-pointer"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
-              disabled={!isConfirmed}
-              onClick={handleFinishExam}
-            >
-              Hoàn thành coi thi
-            </button>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
+            {!collapsed && (
+              <button
+                className="flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg"
+                onClick={handleConfirmAttendance}
+              >
+                <CheckCircle className="w-4 h-4" />
+                <span>Xác nhận điểm danh</span>
+              </button>
+            )}
+            
+            <div className="flex items-center space-x-4">
+              <label className="flex items-center space-x-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="confirm-finish"
+                  checked={isConfirmed}
+                  onChange={() => setIsConfirmed((v) => !v)}
+                  className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  Tôi xác nhận đã coi thi xong
+                </span>
+              </label>
+              
+              <button
+                className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors duration-200 shadow-lg ${
+                  isConfirmed
+                    ? "bg-green-600 hover:bg-green-700 text-white"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }`}
+                disabled={!isConfirmed}
+                onClick={handleFinishExam}
+              >
+                <Shield className="w-4 h-4" />
+                <span>Hoàn thành coi thi</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

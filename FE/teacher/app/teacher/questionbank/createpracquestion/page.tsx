@@ -6,6 +6,26 @@ import * as XLSX from 'xlsx';
 import { useSearchParams } from 'next/navigation';
 import { getUserIdFromToken } from '@/utils/tokenUtils';
 import { useRouter } from 'next/navigation';
+import { 
+  Plus, 
+  Download, 
+  Upload, 
+  Brain, 
+  Save, 
+  X, 
+  Edit3, 
+  Trash2, 
+  FileText,
+  AlertCircle,
+  ChevronLeft,
+  Award,
+  Target,
+  Hash,
+  Sparkles,
+  FileSpreadsheet,
+  CheckCircle,
+  PenTool
+} from 'lucide-react';
 
 const difficulties = [
   { value: 1, label: 'Dễ' },
@@ -39,6 +59,16 @@ export default function CreateEssayQuestionPage() {
   const [aiLevel, setAILevel] = useState('dễ');
   const [aiLoading, setAILoading] = useState(false);
 
+  const [manualQ, setManualQ] = useState<EssayQuestion>({
+    id: Date.now(),
+    content: '',
+    criteria: '',
+    difficulty: 1,
+  });
+
+  const [showManualForm, setShowManualForm] = useState(false);
+  const manualFormRef = useRef<HTMLDivElement>(null);
+
   // Lấy học kỳ hiện tại
   useEffect(() => {
     fetch('https://localhost:7074/api/MultipleQuestion/GetCurrentSemester')
@@ -49,16 +79,6 @@ export default function CreateEssayQuestionPage() {
       })
       .catch(() => setSemesterId(null));
   }, []);
-
-  const [manualQ, setManualQ] = useState<EssayQuestion>({
-    id: Date.now(),
-    content: '',
-    criteria: '',
-    difficulty: 1,
-  });
-
-  const [showManualForm, setShowManualForm] = useState(false);
-  const manualFormRef = useRef<HTMLDivElement>(null);
 
   // Download template
   const handleDownloadTemplate = () => {
@@ -117,6 +137,10 @@ export default function CreateEssayQuestionPage() {
 
   // Thêm thủ công
   const handleAddManual = () => {
+    if (!manualQ.content.trim()) {
+      alert('Vui lòng nhập nội dung câu hỏi!');
+      return;
+    }
     setQuestions([
       ...questions,
       { ...manualQ, id: Date.now() }
@@ -146,7 +170,9 @@ export default function CreateEssayQuestionPage() {
 
   // Xóa câu hỏi
   const handleDeleteQuestion = (idx: number) => {
-    setQuestions(questions.filter((_, i) => i !== idx));
+    if (window.confirm('Bạn có chắc chắn muốn xóa câu hỏi này?')) {
+      setQuestions(questions.filter((_, i) => i !== idx));
+    }
   };
 
   // Tạo câu hỏi bằng AI
@@ -168,12 +194,11 @@ export default function CreateEssayQuestionPage() {
       });
       const data = await res.json();
       if (!Array.isArray(data)) throw new Error('Kết quả trả về không hợp lệ!');
-      // Chuyển đổi dữ liệu AI về dạng EssayQuestion
       const newQuestions: EssayQuestion[] = data.map((q: any, idx: number) => ({
         id: Date.now() + idx,
         content: q.content,
         criteria: q.bandScoreGuide,
-        difficulty: 1 // hoặc map theo aiLevel nếu muốn
+        difficulty: 1
       }));
       setQuestions(prev => [...prev, ...newQuestions]);
       setShowAIGen(false);
@@ -181,6 +206,7 @@ export default function CreateEssayQuestionPage() {
       setAILink('');
       setAINum(2);
       setAILevel('dễ');
+      alert(`Đã tạo thành công ${newQuestions.length} câu hỏi bằng AI!`);
     } catch (err: any) {
       alert('Lỗi tạo câu hỏi bằng AI: ' + err.message);
     }
@@ -201,123 +227,174 @@ export default function CreateEssayQuestionPage() {
       alert('Không có câu hỏi để lưu!');
       return;
     }
-    const teacherId = getUserIdFromToken();
-    const body = questions.map(q => ({
-      content: q.content,
-      urlImg: "Default.png",
-      isActive: true,
-      createdBy: teacherId,
-      isPublic: true,
-      categoryExamId: categoryExamId,
-      levelQuestionId: q.difficulty,
-      semesterId: semesterId,
-      answerContent: q.criteria
-    }));
-    const res = await fetch(`https://localhost:7074/api/PracticeQuestion/CreateMultiple/${chapterId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (res.ok) {
-      alert('Lưu thành công!');
-      setQuestions([]);
-      router.push(`/teacher/questionbank?${searchParams.toString()}`);
-    } else {
-      alert('Lưu thất bại!');
+
+    // Validate all questions
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      if (!q.content.trim()) {
+        alert(`Câu hỏi ${i + 1} chưa có nội dung!`);
+        return;
+      }
+    }
+
+    try {
+      const teacherId = getUserIdFromToken();
+      const body = questions.map(q => ({
+        content: q.content,
+        urlImg: "Default.png",
+        isActive: true,
+        createdBy: teacherId,
+        isPublic: true,
+        categoryExamId: categoryExamId,
+        levelQuestionId: q.difficulty,
+        semesterId: semesterId,
+        answerContent: q.criteria
+      }));
+      const res = await fetch(`https://localhost:7074/api/PracticeQuestion/CreateMultiple/${chapterId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (res.ok) {
+        alert('Lưu thành công!');
+        setQuestions([]);
+        router.push(`/teacher/questionbank?${searchParams.toString()}`);
+      } else {
+        alert('Lưu thất bại!');
+      }
+    } catch (error) {
+      alert('Có lỗi xảy ra khi lưu câu hỏi!');
+    }
+  };
+
+  const getLevelColor = (level: number) => {
+    const levelObj = difficulties.find(d => d.value === level);
+    switch (levelObj?.label) {
+      case 'Dễ': return 'bg-green-100 text-green-800';
+      case 'Trung bình': return 'bg-yellow-100 text-yellow-800';
+      case 'Khó': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   return (
-    <div className="w-full min-h-screen bg-white font-sans p-0">
-      <div className="w-full py-8 px-4">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-left">Tạo câu hỏi tự luận</h2>
-        {/* Nút thêm câu hỏi thủ công và AI */}
-        <div className="mb-6 flex gap-4">
-          <button
-            type="button"
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold"
-            onClick={handleShowManualForm}
-          >
-            Thêm câu hỏi thủ công
-          </button>
-          <button
-            type="button"
-            className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition font-semibold"
-            onClick={() => setShowAIGen(true)}
-          >
-            Tạo câu hỏi bằng AI
-          </button>
-        </div>
-        {/* Form tạo câu hỏi bằng AI */}
-        {showAIGen && (
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <h3 className="font-semibold mb-2">Tạo câu hỏi tự luận bằng AI</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-              <input
-                type="text"
-                value={aiSubject}
-                onChange={e => setAISubject(e.target.value)}
-                placeholder="Tên môn học"
-                className="border rounded px-3 py-2 w-full"
-              />
-              <input
-                type="text"
-                value={aiLink}
-                onChange={e => setAILink(e.target.value)}
-                placeholder="Link tài liệu"
-                className="border rounded px-3 py-2 w-full"
-              />
-              <input
-                type="number"
-                min={1}
-                value={aiNum}
-                onChange={e => setAINum(Number(e.target.value))}
-                placeholder="Số câu hỏi"
-                className="border rounded px-3 py-2 w-full"
-              />
-              <select
-                value={aiLevel}
-                onChange={e => setAILevel(e.target.value)}
-                className="border rounded px-3 py-2 w-full"
-              >
-                <option value="dễ">Dễ</option>
-                <option value="trung bình">Trung bình</option>
-                <option value="khó">Khó</option>
-              </select>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl flex items-center justify-center">
+                <PenTool className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Tạo câu hỏi tự luận</h1>
+                <p className="text-gray-600">Tạo và quản lý câu hỏi tự luận cho ngân hàng câu hỏi</p>
+              </div>
             </div>
-            <div className="flex gap-4">
-              <button
-                type="button"
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition font-semibold"
-                onClick={handleGenerateAI}
-                disabled={aiLoading}
-              >
-                {aiLoading ? 'Đang tạo...' : 'Tạo'}
-              </button>
-              <button
-                type="button"
-                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition font-semibold"
-                onClick={() => setShowAIGen(false)}
-                disabled={aiLoading}
-              >
-                Đóng
-              </button>
+            
+            <button
+              onClick={() => router.back()}
+              className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 font-medium text-gray-700"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Quay lại</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Statistics */}
+        {questions.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Tổng câu hỏi</p>
+                  <p className="text-2xl font-bold text-blue-600">{questions.length}</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Hash className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Câu dễ</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {questions.filter(q => q.difficulty === 1).length}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Award className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Câu khó</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {questions.filter(q => q.difficulty === 3).length}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                  <Target className="w-6 h-6 text-red-600" />
+                </div>
+              </div>
             </div>
           </div>
         )}
-        {/* Import file */}
-        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <h3 className="font-semibold mb-2">Import file câu hỏi</h3>
-          <div className="flex gap-4 items-center mb-2">
+
+        {/* Action Buttons */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <h3 className="text-lg font-semibold text-gray-800 mb-6">Thêm câu hỏi</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button
+              type="button"
+              className="flex items-center justify-center space-x-2 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg"
+              onClick={handleShowManualForm}
+            >
+              <Edit3 className="w-5 h-5" />
+              <span>Thêm thủ công</span>
+            </button>
+            
+            <button
+              type="button"
+              className="flex items-center justify-center space-x-2 px-6 py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg"
+              onClick={() => setShowAIGen(true)}
+            >
+              <Brain className="w-5 h-5" />
+              <span>Tạo bằng AI</span>
+            </button>
+            
             <button
               type="button"
               onClick={handleDownloadTemplate}
-              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition font-semibold"
+              className="flex items-center justify-center space-x-2 px-6 py-4 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg"
             >
-              Tải file mẫu
+              <Download className="w-5 h-5" />
+              <span>Tải file mẫu</span>
             </button>
-            <label className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold cursor-pointer">
-              Tải lên file câu hỏi
+          </div>
+        </div>
+
+        {/* Import Section */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+            <FileSpreadsheet className="w-5 h-5 mr-2 text-green-600" />
+            Import từ file Excel
+          </h3>
+          
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <label className="cursor-pointer">
+              <span className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200">
+                <Upload className="w-4 h-4 mr-2" />
+                Chọn file Excel
+              </span>
               <input
                 type="file"
                 accept=".xlsx"
@@ -325,111 +402,295 @@ export default function CreateEssayQuestionPage() {
                 className="hidden"
               />
             </label>
+            <p className="text-gray-500 text-sm mt-2">Chỉ hỗ trợ file .xlsx</p>
+            
             {fileName && (
-              <span className="text-gray-600 text-sm ml-2">{fileName}</span>
+              <div className="mt-4 p-3 bg-green-50 rounded-lg">
+                <p className="text-green-700 font-medium">✓ Đã tải lên: {fileName}</p>
+              </div>
+            )}
+            
+            {importError && (
+              <div className="mt-4 p-3 bg-red-50 rounded-lg">
+                <p className="text-red-700 font-medium">✗ {importError}</p>
+              </div>
             )}
           </div>
-          {importError && (
-            <div className="text-red-600 font-semibold mt-2">{importError}</div>
-          )}
         </div>
-        {/* Danh sách câu hỏi dạng card */}
-        <div className="mt-8">
-          <h3 className="font-semibold mb-2">Danh sách câu hỏi ({questions.length})</h3>
-          <div className="grid gap-4">
-            {questions.map((q, idx) => (
-              <div key={q.id} className="border rounded-lg p-4 shadow bg-white relative">
-                <button
-                  className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-                  onClick={() => handleDeleteQuestion(idx)}
-                  title="Xóa câu hỏi"
-                >×</button>
-                <div className="mb-2 flex gap-4">
-                  <div>
-                    <span className="font-bold">STT:</span> {idx + 1}
-                  </div>
-                  <div>
-                    <span className="font-bold">Độ khó:</span> {difficulties.find(d => d.value === q.difficulty)?.label}
-                  </div>
-                </div>
-                <div className="mb-2">
-                  <input
-                    type="text"
-                    value={q.content}
-                    onChange={e => handleEditQuestion(idx, 'content', e.target.value)}
-                    className="border rounded px-3 py-2 w-full font-semibold"
-                    placeholder="Nội dung câu hỏi"
-                  />
-                </div>
-                <div className="mb-2">
-                  <input
-                    type="text"
-                    value={q.criteria}
-                    onChange={e => handleEditQuestion(idx, 'criteria', e.target.value)}
-                    className="border rounded px-3 py-2 w-full"
-                    placeholder="Tiêu chí chấm"
-                  />
-                </div>
-              </div>
-            ))}
-            {/* Form thêm thủ công nằm dưới cùng */}
-            {showManualForm && (
-              <div ref={manualFormRef} className="bg-gray-50 rounded-lg p-4 mb-6">
-                <h3 className="font-semibold mb-2">Thêm câu hỏi thủ công</h3>
-                <Select
-                      options={difficulties}
-                      value={difficulties.find(d => d.value === manualQ.difficulty)}
-                      onChange={opt => setManualQ({ ...manualQ, difficulty: opt?.value || 1 })}
-                      placeholder="Độ khó"
-                      className="w-44 mb-2"
-                      isSearchable={false}
-                    />
-                <div className="mb-2">
-                  <input
-                    type="text"
-                    value={manualQ.content}
-                    onChange={e => setManualQ({ ...manualQ, content: e.target.value })}
-                    placeholder="Nội dung câu hỏi"
-                    className="border rounded px-3 py-2 w-full mb-2"
-                  />
-                  <input
-                    type="text"
-                    value={manualQ.criteria}
-                    onChange={e => setManualQ({ ...manualQ, criteria: e.target.value })}
-                    placeholder="Tiêu chí chấm"
-                    className="border rounded px-3 py-2 w-full mb-2"
-                  />
-                  <div className="flex gap-4 mt-2">
-                    
-                    <button
-                      type="button"
-                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold"
-                      onClick={handleAddManual}
-                    >
-                      Thêm câu hỏi
-                    </button>
-                    <button
-                      type="button"
-                      className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition font-semibold"
-                      onClick={() => setShowManualForm(false)}
-                    >
-                      Đóng
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-            {/* Nút lưu ở cuối trang */}
-            <div className="flex justify-end">
+
+        {/* AI Generation Form */}
+        {showAIGen && (
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                <Sparkles className="w-5 h-5 mr-2 text-purple-600" />
+                Tạo câu hỏi bằng AI
+              </h3>
               <button
-                className="bg-green-600 text-white px-8 py-3 rounded font-semibold hover:bg-green-700 transition"
-                onClick={handleSaveQuestions}
+                onClick={() => setShowAIGen(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
               >
-                Lưu câu hỏi
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Tên môn học</label>
+                <input
+                  type="text"
+                  value={aiSubject}
+                  onChange={e => setAISubject(e.target.value)}
+                  placeholder="Nhập tên môn học"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Link tài liệu</label>
+                <input
+                  type="url"
+                  value={aiLink}
+                  onChange={e => setAILink(e.target.value)}
+                  placeholder="https://..."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Số câu hỏi</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={aiNum}
+                  onChange={e => setAINum(Number(e.target.value))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Độ khó</label>
+                <select
+                  value={aiLevel}
+                  onChange={e => setAILevel(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                >
+                  <option value="dễ">Dễ</option>
+                  <option value="trung bình">Trung bình</option>
+                  <option value="khó">Khó</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                type="button"
+                className="px-6 py-3 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg font-medium transition-colors duration-200"
+                onClick={() => setShowAIGen(false)}
+                disabled={aiLoading}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="flex items-center space-x-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200 disabled:bg-purple-400"
+                onClick={handleGenerateAI}
+                disabled={aiLoading}
+              >
+                {aiLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Đang tạo...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span>Tạo câu hỏi</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Manual Question Form */}
+        {showManualForm && (
+          <div ref={manualFormRef} className="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                <Edit3 className="w-5 h-5 mr-2 text-blue-600" />
+                Thêm câu hỏi thủ công
+              </h3>
+              <button
+                onClick={() => setShowManualForm(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Độ khó</label>
+                <Select
+                  options={difficulties}
+                  value={difficulties.find(d => d.value === manualQ.difficulty)}
+                  onChange={opt => setManualQ({ ...manualQ, difficulty: opt?.value || 1 })}
+                  placeholder="Chọn độ khó"
+                  className="w-48"
+                  isSearchable={false}
+                  styles={{
+                    control: (provided) => ({
+                      ...provided,
+                      minHeight: '44px',
+                      borderColor: '#d1d5db',
+                      '&:hover': { borderColor: '#3b82f6' }
+                    })
+                  }}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nội dung câu hỏi</label>
+                <textarea
+                  value={manualQ.content}
+                  onChange={e => setManualQ({ ...manualQ, content: e.target.value })}
+                  placeholder="Nhập nội dung câu hỏi..."
+                  rows={4}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Tiêu chí chấm</label>
+                <textarea
+                  value={manualQ.criteria}
+                  onChange={e => setManualQ({ ...manualQ, criteria: e.target.value })}
+                  placeholder="Nhập tiêu chí chấm điểm..."
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                type="button"
+                className="px-6 py-3 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg font-medium transition-colors duration-200"
+                onClick={() => setShowManualForm(false)}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
+                onClick={handleAddManual}
+              >
+                <Save className="w-4 h-4" />
+                <span>Lưu câu hỏi</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Questions List */}
+        {questions.length > 0 && (
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center">
+              <FileText className="w-5 h-5 mr-2 text-blue-600" />
+              Danh sách câu hỏi ({questions.length})
+            </h3>
+            
+            <div className="space-y-6">
+              {questions.map((q, idx) => (
+                <div key={q.id} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow duration-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-4">
+                      <span className="w-8 h-8 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-sm font-bold">
+                        {idx + 1}
+                      </span>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${getLevelColor(q.difficulty)}`}>
+                        {difficulties.find(d => d.value === q.difficulty)?.label || 'Không xác định'}
+                      </span>
+                    </div>
+                    <button
+                      className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                      onClick={() => handleDeleteQuestion(idx)}
+                      title="Xóa câu hỏi"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Nội dung câu hỏi</label>
+                      <textarea
+                        value={q.content}
+                        onChange={e => handleEditQuestion(idx, 'content', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors font-medium"
+                        rows={3}
+                        placeholder="Nội dung câu hỏi"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Tiêu chí chấm</label>
+                      <textarea
+                        value={q.criteria}
+                        onChange={e => handleEditQuestion(idx, 'criteria', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                        rows={2}
+                        placeholder="Tiêu chí chấm điểm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Save Button */}
+        {questions.length > 0 && (
+          <div className="flex justify-center">
+            <button
+              className="flex items-center space-x-2 px-8 py-4 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors duration-200 shadow-lg"
+              onClick={handleSaveQuestions}
+            >
+              <Save className="w-5 h-5" />
+              <span>Lưu tất cả câu hỏi ({questions.length})</span>
+            </button>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {questions.length === 0 && (
+          <div className="bg-white rounded-xl shadow-lg p-12 text-center">
+            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <PenTool className="w-12 h-12 text-gray-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">Chưa có câu hỏi nào</h3>
+            <p className="text-gray-600 mb-6">Bắt đầu tạo câu hỏi bằng cách thêm thủ công, sử dụng AI, hoặc import từ file Excel</p>
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={handleShowManualForm}
+                className="flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
+              >
+                <Edit3 className="w-4 h-4" />
+                <span>Thêm thủ công</span>
+              </button>
+              <button
+                onClick={() => setShowAIGen(true)}
+                className="flex items-center space-x-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200"
+              >
+                <Brain className="w-4 h-4" />
+                <span>Tạo bằng AI</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
