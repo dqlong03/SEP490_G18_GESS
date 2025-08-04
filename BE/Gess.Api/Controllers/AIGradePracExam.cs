@@ -1,4 +1,5 @@
 ﻿using GESS.Model.APIKey;
+using GESS.Model.CheckDup;
 using GESS.Model.MultipleQuestionDTO;
 using GESS.Model.PracticeQuestionDTO;
 using GESS.Service.multipleQuestion;
@@ -178,7 +179,113 @@ namespace GESS.Api.Controllers
             var match = Regex.Match(url, @"document/d/([a-zA-Z0-9-_]+)");
             return match.Success ? match.Groups[1].Value : null;
         }
+        [HttpPost("FindSimilar")]
+        public async Task<IActionResult> FindSimilar([FromBody] FindDuplicatesRequest request)
+        {
+            if (request.Questions == null || request.Questions.Count < 2)
+                return BadRequest("Phải gửi ít nhất 2 câu hỏi để so sánh.");
 
+            if (request.SimilarityThreshold < 0 || request.SimilarityThreshold > 1)
+                return BadRequest("SimilarityThreshold phải nằm trong [0,1].");
+
+            // Build the input JSON string for prompt (compact)
+            string questionsJson = JsonConvert.SerializeObject(request.Questions, Formatting.Indented);
+
+            // Build prompt
+            var prompt = new StringBuilder();
+            prompt.AppendLine("Bạn là một bộ phân tích câu hỏi.");
+            prompt.AppendLine("Đầu vào là một mảng JSON các câu hỏi, mỗi câu có QuestionID và Content.");
+            prompt.AppendLine("Nhiệm vụ: nhóm các câu giống nhau hoặc rất giống nhau về nội dung (không phân biệt hoa thường, bỏ dấu câu, bỏ khoảng trắng thừa, và chịu đựng khác biệt nhỏ về diễn đạt).");
+            prompt.AppendLine($"Chỉ tạo nhóm nếu trong nhóm có ít nhất 2 câu và mức độ tương đồng giữa các câu trong nhóm >= {request.SimilarityThreshold:0.00}.");
+            prompt.AppendLine("Tính điểm tương đồng chung của nhóm (SimilarityScore) là điểm trung bình của các cặp trong nhóm, từ 0 đến 1.");
+            prompt.AppendLine("Trả về kết quả theo định dạng JSON duy nhất, không thêm lời bình. Nếu có code block như ```json ...```, chỉ lấy phần JSON bên trong.");
+            prompt.AppendLine("\nInput:");
+            prompt.AppendLine("```json");
+            prompt.AppendLine(questionsJson);
+            prompt.AppendLine("```");
+            prompt.AppendLine("\nOutput format example:");
+            prompt.AppendLine(@"```json
+                [
+                  {
+                    ""SimilarityScore"": 0.92,
+                    ""Questions"": [
+                      { ""QuestionID"": 1, ""Content"": ""Chọn các đáp án đúng nói về hướng đối tượng trong JAVA."" },
+                      { ""QuestionID"": 2, ""Content"": ""Chọn các đáp án đúng nói về hướng đối tượng trong Java."" }
+                    ]
+                  }
+                ]
+                ```");
+            prompt.AppendLine("Nếu không có nhóm nào thỏa điều kiện, trả về mảng rỗng: []");
+
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+
+            var body = new
+            {
+                model = "gpt-4o-mini",
+                messages = new[]
+                {
+                    new { role = "user", content = prompt.ToString() }
+                },
+                temperature = 0.0
+            };
+
+            var payload = JsonConvert.SerializeObject(body);
+            var response = await httpClient.PostAsync("https://api.openai.com/v1/chat/completions",
+                new StringContent(payload, Encoding.UTF8, "application/json"));
+
+            var responseString = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                return BadRequest(new { error = "Lỗi khi gọi OpenAI", detail = responseString });
+            }
+
+            dynamic? result;
+            try
+            {
+                result = JsonConvert.DeserializeObject(responseString);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Không parse được response tổng: {ex.Message}");
+            }
+
+            string? output = result?.choices?[0]?.message?.content;
+            if (string.IsNullOrWhiteSpace(output))
+                return BadRequest("AI không trả về nội dung.");
+
+            try
+            {
+                // Clean code block if any
+                var cleaned = output.Trim();
+                if (cleaned.Contains("```"))
+                {
+                    var m = Regex.Matches(cleaned, "```(?:json)?\\s*([\\s\\S]*?)\\s*```");
+                    if (m.Count > 0)
+                        cleaned = m[0].Groups[1].Value.Trim();
+                }
+
+                // Deserialize to expected groups
+                var groups = JsonConvert.DeserializeObject<List<DuplicateGroup>>(cleaned);
+                if (groups == null)
+                {
+                    // fallback: trả về rỗng
+                    return Ok(new List<DuplicateGroup>());
+                }
+
+                return Ok(groups);
+            }
+            catch (Exception ex)
+            {
+                // Nếu AI trả ra form khác: trả về lỗi kèm raw để debug
+                return BadRequest(new
+                {
+                    message = "Lỗi phân tích kết quả từ AI",
+                    exception = ex.Message,
+                    rawOutput = output
+                });
+            }
+        }
 
     }
 }
