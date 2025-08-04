@@ -75,6 +75,20 @@ builder.Services.AddCors(options =>
         });
 });
 
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(443, listenOptions =>
+    {
+        listenOptions.UseHttps("certs/gess.pfx", "gess123!");
+    });
+});
+
+
+
+
+
+
 // Add services to the container
 builder.Services.AddControllers();
 
