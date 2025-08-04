@@ -3,6 +3,31 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getUserIdFromToken } from '@/utils/tokenUtils';
+import Select from 'react-select';
+import { 
+  BookOpen, 
+  Plus, 
+  Trash2, 
+  Save, 
+  PenTool,
+  Calendar,
+  GraduationCap,
+  FileText,
+  Settings,
+  X,
+  ChevronLeft,
+  Eye,
+  CheckSquare,
+  Users,
+  Target,
+  Clock,
+  Filter,
+  AlertCircle,
+  Search,
+  Edit3,
+  Star,
+  Hash
+} from 'lucide-react';
 
 type Question = {
   id: number;
@@ -27,9 +52,9 @@ type Semester = {
 };
 
 const levels = [
-  { value: 1, label: 'Dễ' },
-  { value: 2, label: 'Trung bình' },
-  { value: 3, label: 'Khó' },
+  { value: 1, label: 'Dễ', color: 'text-green-600', bgColor: 'bg-green-50' },
+  { value: 2, label: 'Trung bình', color: 'text-yellow-600', bgColor: 'bg-yellow-50' },
+  { value: 3, label: 'Khó', color: 'text-red-600', bgColor: 'bg-red-50' },
 ];
 
 const API_URL = 'https://localhost:7074';
@@ -72,18 +97,27 @@ export default function CreateFinalExamPaperPage() {
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [selectedSemester, setSelectedSemester] = useState<Semester | null>(null);
 
+  // Loading state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Lấy danh sách môn học, kỳ, chapter
   useEffect(() => {
     const teacherId = getUserIdFromToken();
     fetch(`${API_URL}/api/FinalExamPaper/GetAllMajorByTeacherId?teacherId=${teacherId}`)
       .then(res => res.json())
-      .then(data => setSubjects(data || []));
+      .then(data => {
+        setSubjects(data || []);
+        if (data && data.length > 0) setSelectedSubject(data[0]);
+      });
     fetch(`${API_URL}/api/Semesters`)
       .then(res => res.json())
-      .then(data => setSemesters(data || []));
+      .then(data => {
+        setSemesters(data || []);
+        if (data && data.length > 0) setSelectedSemester(data[0]);
+      });
   }, []);
 
-   useEffect(() => {
+  useEffect(() => {
     if (selectedSubject) {
       fetch(`${API_URL}/api/FinalExam/GetAllChapterBySubjectId?subjectId=${selectedSubject.subjectId}`)
         .then(res => res.json())
@@ -94,6 +128,7 @@ export default function CreateFinalExamPaperPage() {
     }
     setSelectedChapter(null);
   }, [selectedSubject]);
+
   // Lấy tất cả câu hỏi khi chọn đủ bộ lọc
   useEffect(() => {
     if (selectedSubject && selectedSemester) {
@@ -102,24 +137,51 @@ export default function CreateFinalExamPaperPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSubject, selectedSemester, searchContent, selectedLevel, selectedChapter, questionPage]);
 
-  const fetchQuestions = async (page: number) => {
-    setLoadingQuestions(true);
-    const params = new URLSearchParams({
-      subjectId: String(selectedSubject?.subjectId || ''),
-      semesterId: String(selectedSemester?.semesterId || ''),
-      page: String(page),
-      pageSize: '10',
-      ...(searchContent && { content: searchContent }),
-      ...(selectedLevel && { levelId: String(selectedLevel.value) }),
-      ...(selectedChapter && { chapterId: String(selectedChapter.chapterId) }),
-    });
-    const res = await fetch(`${API_URL}/api/PracticeQuestion/practice-questions?${params}`);
+ const fetchQuestions = async (page: number) => {
+  setLoadingQuestions(true);
+  const params = new URLSearchParams({
+    subjectId: String(selectedSubject?.subjectId || ''),
+    semesterId: String(selectedSemester?.semesterId || ''),
+    page: String(page),
+    pageSize: '10',
+    ...(searchContent && { content: searchContent }),
+    ...(selectedLevel && { levelId: String(selectedLevel.value) }),
+    ...(selectedChapter && { chapterId: String(selectedChapter.chapterId) }),
+  });
+  
+  try {
+    const res = await fetch(`${API_URL}/api/FinalExamPaper/GetFinalPracticeQuestion?${params}`);
     const data = await res.json();
-    setQuestions(data.data || []);
-    setQuestionTotalPages(data.totalPages || 1);
-    setQuestionPage(data.page || 1);
+    
+    // Debug: Log response để kiểm tra cấu trúc
+    console.log('API Response:', data);
+    
+    // Kiểm tra cấu trúc response và set questions phù hợp
+    if (Array.isArray(data)) {
+      // Nếu response trực tiếp là array
+      setQuestions(data);
+      setQuestionTotalPages(Math.ceil(data.length / 10) || 1);
+      setQuestionPage(page);
+    } else if (data.data && Array.isArray(data.data)) {
+      // Nếu response có cấu trúc {data: [], totalPages: x, page: y}
+      setQuestions(data.data);
+      setQuestionTotalPages(data.totalPages || 1);
+      setQuestionPage(data.page || page);
+    } else {
+      // Fallback
+      setQuestions([]);
+      setQuestionTotalPages(1);
+      setQuestionPage(1);
+    }
+  } catch (error) {
+    console.error('Error fetching questions:', error);
+    setQuestions([]);
+    setQuestionTotalPages(1);
+    setQuestionPage(1);
+  } finally {
     setLoadingQuestions(false);
-  };
+  }
+};
 
   // Lưu câu hỏi đã chọn
   const handleSaveQuestions = () => {
@@ -168,6 +230,8 @@ export default function CreateFinalExamPaperPage() {
       alert('Vui lòng nhập tên đề thi, chọn môn học, kỳ và chọn/thêm ít nhất 1 câu hỏi!');
       return;
     }
+    
+    setIsSubmitting(true);
     const teacherId = getUserIdFromToken();
     const payload = {
       examName: inputName,
@@ -205,6 +269,8 @@ export default function CreateFinalExamPaperPage() {
     } catch (error) {
       alert('Có lỗi xảy ra khi gọi API!');
       console.error(error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -274,272 +340,187 @@ export default function CreateFinalExamPaperPage() {
     setShowManualInput(false);
   };
 
+  // react-select options
+  const subjectOptions = subjects.map(s => ({ value: s.subjectId, label: s.subjectName }));
+  const semesterOptions = semesters.map(s => ({ value: s.semesterId, label: s.semesterName }));
+
+  const getLevelInfo = (level: string) => {
+    const levelMap: Record<string, { color: string; bgColor: string }> = {
+      'Dễ': { color: 'text-green-600', bgColor: 'bg-green-50' },
+      'Trung bình': { color: 'text-yellow-600', bgColor: 'bg-yellow-50' },
+      'Khó': { color: 'text-red-600', bgColor: 'bg-red-50' },
+    };
+    return levelMap[level] || { color: 'text-gray-600', bgColor: 'bg-gray-50' };
+  };
+
   return (
-    <div className="w-full min-h-screen bg-white font-sans p-0">
-      {(selectedQuestions.length > 0 || manualQuestions.length > 0) && (
-        <div
-          className="fixed"
-          style={{
-            top: 100,
-            left: 1300,
-            zIndex: 50,
-            background: '#2563eb',
-            color: 'white',
-            padding: '12px 20px',
-            borderRadius: 12,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-            minWidth: 0,
-            width: 'filter-content',
-            height: 'fit-content',
-            display: 'inline-block',
-            fontSize: 15,
-            lineHeight: 1.4,
-          }}
-        >
-          <div className="font-semibold">
-            Số câu hỏi: <span className="font-bold">{selectedQuestions.length + manualQuestions.length}</span>
-          </div>
-          <div className="font-semibold mt-1">
-            Tổng điểm: <span className="font-bold">{totalScore}</span>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Floating Stats */}
+      {/* {(selectedQuestions.length > 0 || manualQuestions.length > 0) && (
+        <div className="fixed top-6 right-6 z-50 bg-white rounded-xl shadow-2xl p-4 min-w-[200px]">
+          <div className="text-center">
+            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Target className="w-6 h-6 text-blue-600" />
+            </div>
+            <div className="space-y-2">
+              <div className="text-sm text-gray-600">Số câu hỏi</div>
+              <div className="text-2xl font-bold text-blue-600">{selectedQuestions.length + manualQuestions.length}</div>
+              <div className="text-sm text-gray-600">Tổng điểm</div>
+              <div className="text-xl font-bold text-green-600">{totalScore}</div>
+            </div>
           </div>
         </div>
-      )}
-      <div className="w-full py-8 px-4">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-left">Tạo đề thi cuối kỳ</h2>
-        <form onSubmit={handleSave} className="space-y-6">
-          {/* Dropdown chọn môn học */}
-          <div className="mb-4 w-64">
-            <label className="block font-semibold mb-1">Chọn môn học</label>
-            <select
-              value={selectedSubject?.subjectId || ''}
-              onChange={e => {
-                const val = Number(e.target.value);
-                setSelectedSubject(val ? subjects.find(s => s.subjectId === val) || null : null);
-              }}
-              className="border rounded px-3 py-2 w-full"
-              required
-            >
-              <option value="">Chọn môn học</option>
-              {subjects.map(s => (
-                <option key={s.subjectId} value={s.subjectId}>{s.subjectName}</option>
-              ))}
-            </select>
-          </div>
-          {/* Dropdown chọn kỳ */}
-          <div className="mb-4 w-64">
-            <label className="block font-semibold mb-1">Chọn kỳ</label>
-            <select
-              value={selectedSemester?.semesterId || ''}
-              onChange={e => {
-                const val = Number(e.target.value);
-                setSelectedSemester(val ? semesters.find(s => s.semesterId === val) || null : null);
-              }}
-              className="border rounded px-3 py-2 w-full"
-              required
-            >
-              <option value="">Chọn kỳ</option>
-              {semesters.map(s => (
-                <option key={s.semesterId} value={s.semesterId}>{s.semesterName}</option>
-              ))}
-            </select>
-          </div>
-          {/* Nhập tên đề thi */}
-          <div>
-            <label className="block font-semibold mb-1">Tên đề thi</label>
-            <input
-              type="text"
-              placeholder="Nhập tên đề thi"
-              value={inputName}
-              onChange={e => setInputName(e.target.value)}
-              className="border rounded px-3 py-2 w-full"
-              required
-            />
-          </div>
-          {/* Nút chọn câu hỏi và thêm thủ công */}
-          <div className="mt-4 flex gap-4">
-            <button
-              type="button"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold"
-              onClick={() => setShowQuestionPopup(true)}
-              disabled={!selectedSubject || !selectedSemester}
-            >
-              Chọn câu hỏi
-            </button>
-            <button
-              type="button"
-              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition font-semibold"
-              onClick={() => {
-                setShowManualInput(true);
-                setEditingManualId(null);
-                setManualContent('');
-                setManualScore(1);
-                setManualCriteria('');
-                setManualLevel('');
-                setManualChapter(null);
-              }}
-            >
-              Thêm câu hỏi thủ công
-            </button>
-          </div>
+      )} */}
 
-          {/* Popup chọn câu hỏi */}
-          {showQuestionPopup && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30 animate-fadeIn">
-              <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-4xl relative animate-popup">
-                <button
-                  className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-2xl"
-                  onClick={() => setShowQuestionPopup(false)}
-                  aria-label="Đóng"
-                >
-                  ×
-                </button>
-                <h3 className="text-xl font-bold mb-4 text-gray-700">Chọn câu hỏi</h3>
-                <div className="flex gap-4 mb-4">
-                  <input
-                    type="text"
-                    placeholder="Tìm theo nội dung"
-                    value={searchContent}
-                    onChange={e => {
-                      setSearchContent(e.target.value);
-                      setQuestionPage(1);
-                    }}
-                    className="border rounded px-3 py-2 w-64"
-                  />
-                  <div className="w-44">
-                    <select
-                      value={selectedLevel?.value || ''}
-                      onChange={e => {
-                        const val = Number(e.target.value);
-                        setSelectedLevel(val ? levels.find(l => l.value === val) || null : null);
-                        setQuestionPage(1);
-                      }}
-                      className="border rounded px-3 py-2 w-full"
-                    >
-                      <option value="">Độ khó</option>
-                      {levels.map(l => (
-                        <option key={l.value} value={l.value}>{l.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="w-44">
-                    <select
-                      value={selectedChapter?.chapterId || ''}
-                      onChange={e => {
-                        const val = Number(e.target.value);
-                        setSelectedChapter(val ? chapters.find(c => c.chapterId === val) || null : null);
-                        setQuestionPage(1);
-                      }}
-                      className="border rounded px-3 py-2 w-full"
-                    >
-                      <option value="">Chương</option>
-                      {chapters.map(c => (
-                        <option key={c.chapterId} value={c.chapterId}>{c.chapterName}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="overflow-x-auto rounded shadow bg-white mb-4">
-                  <table className="min-w-[700px] w-full text-sm md:text-base border border-gray-200">
-                    <thead>
-                      <tr className="bg-gray-100 text-gray-700 font-semibold">
-                        <th className="py-2 px-2 border-b w-10 text-center">STT</th>
-                        <th className="py-2 px-2 border-b w-64 text-left">Nội dung câu hỏi</th>
-                        <th className="py-2 px-2 border-b w-20 text-center">Mức độ</th>
-                        <th className="py-2 px-2 border-b w-20 text-center">Chọn</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {loadingQuestions ? (
-                        <tr>
-                          <td colSpan={4} className="text-center py-4 text-gray-500">
-                            Đang tải...
-                          </td>
-                        </tr>
-                      ) : questions.length === 0 ? (
-                        <tr>
-                          <td colSpan={4} className="text-center py-4 text-gray-500">
-                            Không có câu hỏi nào.
-                          </td>
-                        </tr>
-                      ) : (
-                        questions.map((q, idx) => (
-                          <tr key={q.id} className="hover:bg-blue-50 transition">
-                            <td className="py-2 px-2 border-b text-center">{(questionPage - 1) * 10 + idx + 1}</td>
-                            <td className="py-2 px-2 border-b">{q.content}</td>
-                            <td className="py-2 px-2 border-b text-center">{q.level}</td>
-                            <td className="py-2 px-2 border-b text-center">
-                              <input
-                                type="checkbox"
-                                checked={!!questionChecks[q.id]}
-                                onChange={e =>
-                                  setQuestionChecks((prev) => ({
-                                    ...prev,
-                                    [q.id]: e.target.checked,
-                                  }))
-                                }
-                              />
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-                {/* Phân trang */}
-                <div className="flex justify-between items-center mt-4">
-                  <button
-                    type="button"
-                    disabled={questionPage <= 1}
-                    onClick={() => setQuestionPage(p => Math.max(1, p - 1))}
-                    className="px-3 py-1 rounded border mr-2"
-                  >
-                    Trang trước
-                  </button>
-                  <span>Trang {questionPage} / {questionTotalPages}</span>
-                  <button
-                    type="button"
-                    disabled={questionPage >= questionTotalPages}
-                    onClick={() => setQuestionPage(p => Math.min(questionTotalPages, p + 1))}
-                    className="px-3 py-1 rounded border ml-2"
-                  >
-                    Trang sau
-                  </button>
-                </div>
-                <div className="flex justify-end mt-4">
-                  <button
-                    type="button"
-                    onClick={handleSaveQuestions}
-                    className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition font-semibold"
-                  >
-                    Lưu
-                  </button>
-                </div>
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center">
+                <PenTool className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Tạo đề thi cuối kỳ</h1>
+                <p className="text-gray-600">Thiết lập và cấu hình đề thi thực hành cuối kỳ</p>
               </div>
             </div>
-          )}
+            
+            <button
+              onClick={() => router.back()}
+              className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 font-medium text-gray-700"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Quay lại</span>
+            </button>
+          </div>
+        </div>
 
-          {/* Form thêm/sửa câu hỏi thủ công */}
+        <form onSubmit={handleSave} className="space-y-8">
+          {/* Basic Information */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center">
+              <Settings className="w-5 h-5 mr-2 text-purple-600" />
+              Thông tin cơ bản
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tên đề thi <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={inputName}
+                  onChange={e => setInputName(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                  placeholder="Nhập tên đề thi"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Môn học <span className="text-red-500">*</span>
+                </label>
+                <Select
+                  options={subjectOptions}
+                  value={selectedSubject ? subjectOptions.find(s => s.value === selectedSubject.subjectId) : null}
+                  onChange={option => setSelectedSubject(option ? subjects.find(s => s.subjectId === option.value) || null : null)}
+                  placeholder="Chọn môn học"
+                  isSearchable
+                  styles={{
+                    control: (provided) => ({
+                      ...provided,
+                      minHeight: '48px',
+                      borderColor: '#d1d5db',
+                      '&:hover': { borderColor: '#9333ea' }
+                    }),
+                    menu: (provided) => ({ ...provided, zIndex: 20 }),
+                  }}
+                  noOptionsMessage={() => 'Không có dữ liệu'}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Học kỳ <span className="text-red-500">*</span>
+                </label>
+                <Select
+                  options={semesterOptions}
+                  value={selectedSemester ? semesterOptions.find(s => s.value === selectedSemester.semesterId) : null}
+                  onChange={option => setSelectedSemester(option ? semesters.find(s => s.semesterId === option.value) || null : null)}
+                  placeholder="Chọn học kỳ"
+                  isSearchable
+                  styles={{
+                    control: (provided) => ({
+                      ...provided,
+                      minHeight: '48px',
+                      borderColor: '#d1d5db',
+                      '&:hover': { borderColor: '#9333ea' }
+                    }),
+                    menu: (provided) => ({ ...provided, zIndex: 20 }),
+                  }}
+                  noOptionsMessage={() => 'Không có dữ liệu'}
+                />
+              </div>
+            </div>
+            
+            <div className="mt-6 flex gap-4">
+              <button
+                type="button"
+                className="flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+                onClick={() => setShowQuestionPopup(true)}
+                disabled={!selectedSubject || !selectedSemester}
+              >
+                <Search className="w-4 h-4" />
+                <span>Chọn câu hỏi có sẵn</span>
+              </button>
+              
+              <button
+                type="button"
+                className="flex items-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg"
+                onClick={() => {
+                  setShowManualInput(true);
+                  setEditingManualId(null);
+                  setManualContent('');
+                  setManualScore(1);
+                  setManualCriteria('');
+                  setManualLevel('');
+                  setManualChapter(null);
+                }}
+              >
+                <Plus className="w-4 h-4" />
+                <span>Thêm câu hỏi thủ công</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Manual Question Input Form */}
           {showManualInput && (
-            <div className="mt-8 border rounded-lg p-6 bg-gray-50">
-              <h4 className="font-semibold mb-4 text-gray-700">
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center">
+                <Edit3 className="w-5 h-5 mr-2 text-green-600" />
                 {editingManualId ? 'Sửa câu hỏi thủ công' : 'Thêm câu hỏi thủ công'}
-              </h4>
-              <div className="mb-3 flex gap-4 items-center">
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div>
-                  <label className="block mb-1 font-medium">Điểm</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Điểm</label>
                   <input
                     type="number"
                     min={1}
-                    className="border rounded px-3 py-2 w-32"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
                     value={manualScore}
                     onChange={e => setManualScore(Number(e.target.value))}
-                    placeholder="Điểm"
+                    placeholder="Nhập điểm"
                   />
                 </div>
+                
                 <div>
-                  <label className="block mb-1 font-medium">Độ khó</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Độ khó</label>
                   <select
-                    className="border rounded px-3 py-2 w-40"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
                     value={manualLevel}
                     onChange={e => setManualLevel(e.target.value)}
                   >
@@ -549,10 +530,11 @@ export default function CreateFinalExamPaperPage() {
                     ))}
                   </select>
                 </div>
+                
                 <div>
-                  <label className="block mb-1 font-medium">Chương</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Chương</label>
                   <select
-                    className="border rounded px-3 py-2 w-44"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
                     value={manualChapter || ''}
                     onChange={e => setManualChapter(Number(e.target.value) || null)}
                   >
@@ -563,155 +545,406 @@ export default function CreateFinalExamPaperPage() {
                   </select>
                 </div>
               </div>
-              <div className="mb-3">
-                <label className="block mb-1 font-medium">Nội dung câu hỏi</label>
-                <textarea
-                  className="border rounded px-3 py-2 w-full"
-                  rows={3}
-                  value={manualContent}
-                  onChange={e => setManualContent(e.target.value)}
-                  placeholder="Nhập nội dung câu hỏi"
-                />
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Nội dung câu hỏi</label>
+                  <textarea
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
+                    rows={4}
+                    value={manualContent}
+                    onChange={e => setManualContent(e.target.value)}
+                    placeholder="Nhập nội dung câu hỏi"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tiêu chí chấm</label>
+                  <textarea
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
+                    rows={3}
+                    value={manualCriteria}
+                    onChange={e => setManualCriteria(e.target.value)}
+                    placeholder="Nhập tiêu chí chấm (tùy chọn)"
+                  />
+                </div>
               </div>
-              <div className="mb-3">
-                <label className="block mb-1 font-medium">Tiêu chí chấm</label>
-                <textarea
-                  className="border rounded px-3 py-2 w-full"
-                  rows={2}
-                  value={manualCriteria}
-                  onChange={e => setManualCriteria(e.target.value)}
-                  placeholder="Nhập tiêu chí chấm (nếu có)"
-                />
-              </div>
-              <div className="flex gap-3">
+              
+              <div className="flex gap-4 mt-6">
                 <button
                   type="button"
-                  className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition font-semibold"
+                  className="flex items-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200"
                   onClick={handleAddManualQuestion}
                 >
-                  {editingManualId ? 'Cập nhật' : 'Thêm vào đề thi'}
+                  <Save className="w-4 h-4" />
+                  <span>{editingManualId ? 'Cập nhật' : 'Thêm vào đề thi'}</span>
                 </button>
                 <button
                   type="button"
-                  className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition font-semibold"
+                  className="flex items-center space-x-2 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200"
                   onClick={handleCancelManualInput}
                 >
-                  Hủy
+                  <X className="w-4 h-4" />
+                  <span>Hủy</span>
                 </button>
               </div>
             </div>
           )}
 
-          {/* Hiển thị các câu hỏi đã chọn và thủ công */}
+          {/* Selected Questions */}
           {(selectedQuestions.length > 0 || manualQuestions.length > 0) && (
-            <div className="mt-8 space-y-8">
-              {selectedQuestions.map((q, idx) => (
-                <div key={q.id} className="border-b pb-6">
-                  <div className="flex items-center gap-4 mb-2">
-                    <div className="font-semibold text-base">
-                      Câu {idx + 1} ({q.level})
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                  <FileText className="w-5 h-5 mr-2 text-purple-600" />
+                  Danh sách câu hỏi ({selectedQuestions.length + manualQuestions.length} câu)
+                </h3>
+              </div>
+              
+              <div className="p-6 space-y-6">
+                {selectedQuestions.map((q, idx) => {
+                  const levelInfo = getLevelInfo(q.level);
+                  return (
+                    <div key={q.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-3">
+                          <span className="w-8 h-8 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-sm font-bold">
+                            {idx + 1}
+                          </span>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${levelInfo.bgColor} ${levelInfo.color}`}>
+                            <Star className="w-3 h-3 mr-1" />
+                            {q.level}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-2">
+                            <Hash className="w-4 h-4 text-gray-500" />
+                            <span className="text-sm text-gray-600">Điểm:</span>
+                            <input
+                              type="number"
+                              min={0}
+                              value={questionScores[q.id] ?? 1}
+                              onChange={e =>
+                                setQuestionScores((prev) => ({
+                                  ...prev,
+                                  [q.id]: Number(e.target.value),
+                                }))
+                              }
+                              className="w-20 px-2 py-1 border border-gray-300 rounded text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveQuestion(q.id)}
+                            className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                            title="Xóa câu hỏi"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="text-gray-800 whitespace-pre-line">{q.content}</div>
                     </div>
-                    <div>
-                      <span className="mr-2">Điểm:</span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={questionScores[q.id] ?? 1}
-                        onChange={e =>
-                          setQuestionScores((prev) => ({
-                            ...prev,
-                            [q.id]: Number(e.target.value),
-                          }))
-                        }
-                        className="border rounded px-2 py-1 w-20 text-center"
-                      />
+                  );
+                })}
+                
+                {manualQuestions.map((q, idx) => {
+                  const levelInfo = getLevelInfo(q.level);
+                  return (
+                    <div key={q.manualId} className="border border-gray-200 rounded-lg p-4 bg-green-50">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-3">
+                          <span className="w-8 h-8 bg-green-100 text-green-800 rounded-full flex items-center justify-center text-sm font-bold">
+                            {selectedQuestions.length + idx + 1}
+                          </span>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${levelInfo.bgColor} ${levelInfo.color}`}>
+                            <PenTool className="w-3 h-3 mr-1" />
+                            {q.level} (Thủ công)
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-2">
+                            <Hash className="w-4 h-4 text-gray-500" />
+                            <span className="text-sm text-gray-600">Điểm:</span>
+                            <input
+                              type="number"
+                              min={0}
+                              value={q.score}
+                              onChange={e => {
+                                const val = Number(e.target.value);
+                                setManualQuestions(manualQuestions.map(mq =>
+                                  mq.manualId === q.manualId ? { ...mq, score: val } : mq
+                                ));
+                              }}
+                              className="w-20 px-2 py-1 border border-gray-300 rounded text-center focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleEditManualQuestion(q.manualId)}
+                            className="p-2 text-yellow-500 hover:text-yellow-700 hover:bg-yellow-50 rounded-lg transition-colors duration-200"
+                            title="Sửa câu hỏi"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveQuestion(q.manualId, true)}
+                            className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                            title="Xóa câu hỏi"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="text-gray-800 whitespace-pre-line mb-3">{q.content}</div>
+                      
+                      {q.criteria && (
+                        <div className="bg-white rounded-lg p-3 mb-3">
+                          <span className="text-sm font-medium text-gray-600">Tiêu chí chấm:</span>
+                          <p className="text-gray-800 mt-1">{q.criteria}</p>
+                        </div>
+                      )}
+                      
+                      <div className="text-sm text-gray-600">
+                        <BookOpen className="w-4 h-4 inline mr-1" />
+                        <span className="font-medium">Chương:</span> {chapters.find(c => c.chapterId === q.chapterId)?.chapterName || 'Không xác định'}
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveQuestion(q.id)}
-                      className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition"
-                    >
-                      Xóa
-                    </button>
+                  );
+                })}
+              </div>
+              
+              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-6">
+                    <div className="text-sm font-medium text-gray-900">
+                      Tổng câu hỏi: <span className="text-purple-600 font-bold">{selectedQuestions.length + manualQuestions.length}</span>
+                    </div>
+                    <div className="text-sm font-medium text-gray-900">
+                      Tổng điểm: <span className="text-green-600 font-bold">{totalScore}</span>
+                    </div>
                   </div>
-                  <div className="whitespace-pre-line text-gray-800">{q.content}</div>
+                  
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !inputName || !selectedSubject || !selectedSemester || (selectedQuestions.length + manualQuestions.length) === 0}
+                    className="flex items-center space-x-2 px-8 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Đang tạo...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        <span>Tạo đề thi</span>
+                      </>
+                    )}
+                  </button>
                 </div>
-              ))}
-              {manualQuestions.map((q, idx) => (
-                <div key={q.manualId} className="border-b pb-6">
-                  <div className="flex items-center gap-4 mb-2">
-                    <div className="font-semibold text-base">
-                      Câu {selectedQuestions.length + idx + 1} (Thủ công - {q.level})
-                    </div>
-                    <div>
-                      <span className="mr-2">Điểm:</span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={q.score}
-                        onChange={e => {
-                          const val = Number(e.target.value);
-                          setManualQuestions(manualQuestions.map(mq =>
-                            mq.manualId === q.manualId ? { ...mq, score: val } : mq
-                          ));
-                        }}
-                        className="border rounded px-2 py-1 w-20 text-center"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleEditManualQuestion(q.manualId)}
-                      className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 transition"
-                    >
-                      Sửa
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveQuestion(q.manualId, true)}
-                      className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition"
-                    >
-                      Xóa
-                    </button>
-                  </div>
-                  <div className="whitespace-pre-line text-gray-800">{q.content}</div>
-                  {q.criteria && (
-                    <div className="text-gray-600 mt-2">
-                      <span className="font-medium">Tiêu chí chấm:</span> {q.criteria}
-                    </div>
-                  )}
-                  <div className="text-gray-600 mt-2">
-                    <span className="font-medium">Chương:</span> {chapters.find(c => c.chapterId === q.chapterId)?.chapterName || ''}
-                  </div>
-                </div>
-              ))}
-              <div className="flex justify-between items-center mt-6">
-                <div className="font-semibold text-base">
-                  Số câu hỏi đã chọn: <span className="text-blue-700">{selectedQuestions.length + manualQuestions.length}</span>
-                  <span className="ml-6">Tổng điểm: <span className="text-blue-700">{totalScore}</span></span>
-                </div>
-                <button
-                  type="submit"
-                  className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition font-semibold"
-                >
-                  Lưu
-                </button>
               </div>
             </div>
           )}
         </form>
+
+        {/* Question Selection Modal */}
+        {showQuestionPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[80vh] overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                    <Search className="w-5 h-5 mr-2 text-blue-600" />
+                    Chọn câu hỏi từ ngân hàng đề thi
+                  </h3>
+                  <button
+                    onClick={() => setShowQuestionPopup(false)}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                  >
+                    <X className="w-5 h-5 text-gray-500" />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="p-6">
+                {/* Filters */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Search className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Tìm theo nội dung"
+                      value={searchContent}
+                      onChange={e => {
+                        setSearchContent(e.target.value);
+                        setQuestionPage(1);
+                      }}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    />
+                  </div>
+                  
+                  <div>
+                    <select
+                      value={selectedLevel?.value || ''}
+                      onChange={e => {
+                        const val = Number(e.target.value);
+                        setSelectedLevel(val ? levels.find(l => l.value === val) || null : null);
+                        setQuestionPage(1);
+                      }}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    >
+                      <option value="">Tất cả độ khó</option>
+                      {levels.map(l => (
+                        <option key={l.value} value={l.value}>{l.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <select
+                      value={selectedChapter?.chapterId || ''}
+                      onChange={e => {
+                        const val = Number(e.target.value);
+                        setSelectedChapter(val ? chapters.find(c => c.chapterId === val) || null : null);
+                        setQuestionPage(1);
+                      }}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    >
+                      <option value="">Tất cả chương</option>
+                      {chapters.map(c => (
+                        <option key={c.chapterId} value={c.chapterId}>{c.chapterName}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                
+                {/* Questions Table */}
+                <div className="overflow-x-auto max-h-[50vh] rounded-lg border border-gray-200">
+                  <table className="w-full min-w-[700px]">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nội dung câu hỏi</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Mức độ</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Chọn</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {loadingQuestions ? (
+                        <tr>
+                          <td colSpan={4} className="px-6 py-8 text-center">
+                            <div className="flex items-center justify-center space-x-2">
+                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                              <span className="text-gray-500 font-medium">Đang tải...</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : questions.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="px-6 py-12 text-center">
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                              <AlertCircle className="w-8 h-8 text-gray-400" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-2">Không có câu hỏi nào</h3>
+                            <p className="text-gray-600">Thử thay đổi bộ lọc để tìm câu hỏi phù hợp</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        questions.map((q, idx) => {
+                          const levelInfo = getLevelInfo(q.level);
+                          return (
+                            <tr key={q.id} className="hover:bg-blue-50 transition-colors duration-200">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {(questionPage - 1) * 10 + idx + 1}
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="text-sm text-gray-900 line-clamp-3">{q.content}</div>
+                              </td>
+                              <td className="px-6 py-4 text-center">
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${levelInfo.bgColor} ${levelInfo.color}`}>
+                                  {q.level}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={!!questionChecks[q.id]}
+                                  onChange={e =>
+                                    setQuestionChecks((prev) => ({
+                                      ...prev,
+                                      [q.id]: e.target.checked,
+                                    }))
+                                  }
+                                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                />
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Pagination */}
+                <div className="flex justify-between items-center mt-6">
+                  <button
+                    type="button"
+                    disabled={questionPage <= 1}
+                    onClick={() => setQuestionPage(p => Math.max(1, p - 1))}
+                    className="flex items-center space-x-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span>Trang trước</span>
+                  </button>
+                  
+                  <span className="text-sm text-gray-600">
+                    Trang {questionPage} / {questionTotalPages}
+                  </span>
+                  
+                  <button
+                    type="button"
+                    disabled={questionPage >= questionTotalPages}
+                    onClick={() => setQuestionPage(p => Math.min(questionTotalPages, p + 1))}
+                    className="flex items-center space-x-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    <span>Trang sau</span>
+                    <ChevronLeft className="w-4 h-4 rotate-180" />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div className="flex justify-end space-x-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowQuestionPopup(false)}
+                    className="flex items-center space-x-2 px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Hủy</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveQuestions}
+                    className="flex items-center space-x-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Lưu câu hỏi đã chọn</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-     <style jsx global>{`
-        @keyframes fadeIn {
-          from { opacity: 0 }
-          to { opacity: 1 }
-        }
-        .animate-fadeIn { animation: fadeIn 0.2s }
-        @keyframes popup {
-          from { transform: scale(0.95); opacity: 0 }
-          to { transform: scale(1); opacity: 1 }
-        }
-       .animate-popup { animation: popup 0.2s }
-      `}</style>
     </div>
   );
 }

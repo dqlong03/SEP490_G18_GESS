@@ -175,21 +175,32 @@ namespace GESS.Repository.Implement
 
         public async Task<IEnumerable<SubjectDTO>> GetAllSubjectsByTeacherId(Guid teacherId, string? textSearch = null)
         {
-            var majorId = await _context.Teachers
+            // Kiểm tra teacher có tồn tại không
+            var teacher = await _context.Teachers
                 .Where(t => t.TeacherId == teacherId)
-                .Select(t => t.MajorId)
-                .FirstAsync();
+                .Select(t => new { t.MajorId })
+                .FirstOrDefaultAsync();
+
+            if (teacher == null)
+            {
+                return Enumerable.Empty<SubjectDTO>();
+            }
 
             // Lấy chương trình đào tạo theo ngành
-            var trainingProgramId = await _context.TrainingPrograms
-                .Where(tp => tp.MajorId == majorId)
+            var trainingProgram = await _context.TrainingPrograms
+                .Where(tp => tp.MajorId == teacher.MajorId)
                 .OrderBy(tp => tp.StartDate)
-                .Select(tp => tp.TrainProId)
-                .FirstAsync();
+                .Select(tp => new { tp.TrainProId })
+                .FirstOrDefaultAsync();
+
+            if (trainingProgram == null)
+            {
+                return Enumerable.Empty<SubjectDTO>();
+            }
 
             // Lấy danh sách môn học
             var query = _context.SubjectTrainingPrograms
-                .Where(s => s.TrainProId == trainingProgramId)
+                .Where(s => s.TrainProId == trainingProgram.TrainProId)
                 .Select(s => new SubjectDTO
                 {
                     SubjectId = s.SubjectId,

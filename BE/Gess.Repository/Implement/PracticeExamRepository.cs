@@ -130,6 +130,128 @@ namespace GESS.Repository.Implement
 
         public async Task<PracticeExam> CreatePracticeExamAsync(PracticeExamCreateDTO practiceExamCreateDto)
         {
+            // 1. Validate PracExamName - không được để trống
+            if (string.IsNullOrWhiteSpace(practiceExamCreateDto.PracExamName))
+            {
+                throw new Exception("Tên kỳ thi không được để trống!");
+            }
+
+            // 2. Validate PracExamName - không được trùng tên trong cùng học kỳ và năm
+            var existingExamWithSameName = await _context.PracticeExams
+                .Where(e => e.PracExamName == practiceExamCreateDto.PracExamName 
+                           && e.SemesterId == practiceExamCreateDto.SemesterId 
+                           && e.CreateAt.Year == practiceExamCreateDto.CreateAt.Year)
+                .FirstOrDefaultAsync();
+
+            if (existingExamWithSameName != null)
+            {
+                throw new Exception($"Đã tồn tại kỳ thi với tên '{practiceExamCreateDto.PracExamName}' trong học kỳ này!");
+            }
+
+            // 3. Validate Duration - phải lớn hơn 0
+            if (practiceExamCreateDto.Duration <= 0)
+            {
+                throw new Exception("Thời gian làm bài phải lớn hơn 0 phút!");
+            }
+
+            // 4. Validate StartDay - không được null và phải lớn hơn hoặc bằng ngày hiện tại
+            if (practiceExamCreateDto.StartDay == default(DateTime))
+            {
+                throw new Exception("Ngày bắt đầu thi không được để trống!");
+            }
+
+            if (practiceExamCreateDto.StartDay < DateTime.Now.Date)
+            {
+                throw new Exception("Ngày bắt đầu thi không được nhỏ hơn ngày hiện tại!");
+            }
+
+            // 5. Validate EndDay - không được null và phải lớn hơn StartDay
+            if (practiceExamCreateDto.EndDay == default(DateTime))
+            {
+                throw new Exception("Ngày kết thúc thi không được để trống!");
+            }
+
+            if (practiceExamCreateDto.EndDay < DateTime.Now.Date)
+            {
+                throw new Exception("Ngày kết thúc thi không được nhỏ hơn ngày hiện tại!");
+            }
+
+            if (practiceExamCreateDto.EndDay <= practiceExamCreateDto.StartDay)
+            {
+                throw new Exception("Ngày kết thúc thi phải lớn hơn ngày bắt đầu thi!");
+            }
+
+            // 6. Validate CreateAt - không được null
+            if (practiceExamCreateDto.CreateAt == default(DateTime))
+            {
+                throw new Exception("Ngày tạo kỳ thi không được để trống!");
+            }
+
+            // 7. Validate TeacherId - phải tồn tại
+            var teacher = await _context.Teachers.FindAsync(practiceExamCreateDto.TeacherId);
+            if (teacher == null)
+            {
+                throw new Exception("Giáo viên không tồn tại!");
+            }
+
+            // 8. Validate CategoryExamId - phải tồn tại
+            var categoryExam = await _context.CategoryExams.FindAsync(practiceExamCreateDto.CategoryExamId);
+            if (categoryExam == null)
+            {
+                throw new Exception("Danh mục kỳ thi không tồn tại!");
+            }
+
+            // 9. Validate SubjectId - phải tồn tại
+            var subject = await _context.Subjects.FindAsync(practiceExamCreateDto.SubjectId);
+            if (subject == null)
+            {
+                throw new Exception("Môn học không tồn tại!");
+            }
+
+            // 10. Validate ClassId - phải tồn tại
+            var classEntity = await _context.Classes.FindAsync(practiceExamCreateDto.ClassId);
+            if (classEntity == null)
+            {
+                throw new Exception("Lớp học không tồn tại!");
+            }
+
+            // 11. Validate SemesterId - phải tồn tại
+            var semester = await _context.Semesters.FindAsync(practiceExamCreateDto.SemesterId);
+            if (semester == null)
+            {
+                throw new Exception("Học kỳ không tồn tại!");
+            }
+
+            // 12. Validate PracticeExamPaperDTO - không được null và các PracExamPaperId phải tồn tại
+            if (practiceExamCreateDto.PracticeExamPaperDTO == null || !practiceExamCreateDto.PracticeExamPaperDTO.Any())
+            {
+                throw new Exception("Danh sách đề thi không được để trống!");
+            }
+
+            foreach (var paper in practiceExamCreateDto.PracticeExamPaperDTO)
+            {
+                var examPaper = await _context.PracticeExamPapers.FindAsync(paper.PracExamPaperId);
+                if (examPaper == null)
+                {
+                    throw new Exception($"Đề thi với ID {paper.PracExamPaperId} không tồn tại!");
+                }
+            }
+
+            // 13. Validate StudentIds - không được null và các StudentId phải tồn tại
+            if (practiceExamCreateDto.StudentIds == null || !practiceExamCreateDto.StudentIds.Any())
+            {
+                throw new Exception("Danh sách sinh viên không được để trống!");
+            }
+
+            foreach (var studentId in practiceExamCreateDto.StudentIds)
+            {
+                var student = await _context.Students.FindAsync(studentId);
+                if (student == null)
+                {
+                    throw new Exception($"Sinh viên với ID {studentId} không tồn tại!");
+                }
+            }
+
             var practiceExam = new PracticeExam
             {
                 PracExamName = practiceExamCreateDto.PracExamName,
@@ -142,7 +264,7 @@ namespace GESS.Repository.Implement
                 CategoryExamId = practiceExamCreateDto.CategoryExamId,
                 SemesterId = practiceExamCreateDto.SemesterId,
                 ClassId = practiceExamCreateDto.ClassId,
-                Status = practiceExamCreateDto.Status == null ? "Chưa thi" : practiceExamCreateDto.Status,
+                Status = "Chưa mở ca", // Luôn đặt status mặc định
                 CodeStart = Guid.NewGuid().ToString().Substring(0, 6), // Tạo mã thi ngẫu nhiên 6 ký tự
                 IsGraded = 0 // Chưa chấm điểm
             };

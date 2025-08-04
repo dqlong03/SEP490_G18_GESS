@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Clock, Users, BookOpen, Timer, CheckCircle2, AlertCircle } from "lucide-react";
 import { getUserIdFromToken } from "@utils/tokenUtils";
 
 interface Student {
@@ -36,10 +36,16 @@ export default function MidtermAttendancePage() {
   const [attendance, setAttendance] = useState<{ [id: string]: boolean }>({});
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Timer state
+  const [timer, setTimer] = useState(300); // 5 phút = 300 giây
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch exam info
   useEffect(() => {
     if (!examId || !teacherId) return;
+    setLoading(true);
     fetch(
       `https://localhost:7074/api/ExamineTheMidTermExam/slots/${teacherId}/${examId}?examType=${examType}`
     )
@@ -53,8 +59,48 @@ export default function MidtermAttendancePage() {
         });
         setAttendance(att);
       })
-      .catch(() => setExamInfo(null));
+      .catch(() => setExamInfo(null))
+      .finally(() => setLoading(false));
   }, [examId, teacherId, examType]);
+
+  // Timer countdown and refresh code
+  useEffect(() => {
+    if (timer <= 0) {
+      // Gọi API tạo mã code mới
+      if (examId && teacherId) {
+        fetch(`https://localhost:7074/api/ExamineTheMidTermExam/refresh-code?examId=${examId}&teacherId=${teacherId}&examType=${examType}`, {
+          method: "POST",
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.code) {
+              setExamInfo(prev => prev ? { ...prev, code: data.code } : prev);
+            }
+            setTimer(300); // Reset lại 5 phút
+          })
+          .catch(() => setTimer(300));
+      } else {
+        setTimer(300);
+      }
+      return;
+    }
+    timerRef.current = setTimeout(() => setTimer(t => t - 1), 1000);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [timer, examId, teacherId, examType]);
+
+  // Khi examId đổi thì reset timer
+  useEffect(() => {
+    setTimer(300);
+  }, [examId]);
+
+  // Format mm:ss
+  const formatTime = (sec: number) => {
+    const m = Math.floor(sec / 60).toString().padStart(2, "0");
+    const s = (sec % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
 
   // Điểm danh từng sinh viên
   const handleCheck = async (studentId: string) => {
@@ -73,122 +119,315 @@ export default function MidtermAttendancePage() {
     }
   };
 
+  // Xác nhận điểm danh
+  const handleConfirmAttendance = () => {
+    setCollapsed(true);
+    // Có thể gọi API xác nhận điểm danh nếu cần
+  };
+
   // Hoàn thành coi thi
   const handleFinishExam = async () => {
     if (!examInfo) return;
-    await fetch(
-      `https://localhost:7074/api/ExamineTheMidTermExam/changestatus?examId=${examId}&status=Đã%20thi&examType=${examType}`,
-      { method: "POST" }
-    );
-    router.push(`/teacher/myclass/classdetail/${classId}`);
+    try {
+      await fetch(
+        `https://localhost:7074/api/ExamineTheMidTermExam/changestatus?examId=${examId}&status=Đã%20thi&examType=${examType}`,
+        { method: "POST" }
+      );
+      router.push(`/teacher/myclass/classdetail/${classId}`);
+    } catch {
+      // Handle error
+    }
   };
 
+  // Tính toán thống kê
+  const getAttendanceStats = () => {
+    const totalStudents = examInfo?.students?.length || 0;
+    const checkedInCount = Object.values(attendance).filter(Boolean).length;
+    return { totalStudents, checkedInCount };
+  };
+
+  const stats = getAttendanceStats();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="flex items-center space-x-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="text-gray-600 font-medium">Đang tải dữ liệu...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-8 font-sans text-gray-800 bg-white">
-      <div className="mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
+                <Users className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Coi thi và điểm danh</h1>
+                <p className="text-gray-600">Quản lý điểm danh sinh viên tham gia thi</p>
+              </div>
+            </div>
+            
+            <button
+              onClick={() => router.back()}
+              className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 font-medium text-gray-700"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span>Quay lại</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Exam Info Card */}
         {examInfo ? (
-          <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-base">
-            <div>
-              <span className="font-semibold">Môn thi:</span> {examInfo.subjectName}
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <BookOpen className="w-5 h-5 mr-2 text-blue-600" />
+              Thông tin bài thi
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <BookOpen className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Môn thi</p>
+                  <p className="font-semibold text-gray-900">{examInfo.subjectName}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Thời lượng</p>
+                  <p className="font-semibold text-gray-900">{examInfo.duration} phút</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <AlertCircle className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Đầu điểm</p>
+                  <p className="font-semibold text-gray-900">{examInfo.category}</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <span className="font-semibold">Thời lượng:</span> {examInfo.duration} phút
-            </div>
-            <div>
-              <span className="font-semibold">Tên bài thi:</span> {examInfo.examName}
-            </div>
-            <div>
-              <span className="font-semibold">Đầu điểm:</span> {examInfo.category}
-            </div>
-            <div>
-              <span className="font-semibold">Mã code vào thi:</span>{" "}
-              <span className="text-blue-700 font-mono">{examInfo.code}</span>
-            </div>
-            <div>
-              <span className="font-semibold">Trạng thái:</span> {examInfo.status}
+
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Tên bài thi</p>
+                  <p className="font-semibold text-gray-900">{examInfo.examName}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-600 mb-1">Trạng thái</p>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                    examInfo.status === "Đang thi" 
+                      ? "bg-green-100 text-green-800" 
+                      : "bg-yellow-100 text-yellow-800"
+                  }`}>
+                    {examInfo.status}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         ) : (
-          <div className="text-red-500">Không tìm thấy thông tin ca thi.</div>
-        )}
-      </div>
-      <div>
-        <div className="text-lg font-semibold text-blue-700 mb-3 flex items-center gap-2">
-          Danh sách sinh viên
-          {collapsed ? (
-            <button
-              className="ml-1 p-1 rounded hover:bg-blue-100"
-              onClick={() => setCollapsed(false)}
-              aria-label="Mở rộng danh sách"
-              type="button"
-            >
-              <ChevronDown size={20} className="text-blue-700" />
-            </button>
-          ) : (
-            <button
-              className="ml-1 p-1 rounded hover:bg-blue-100"
-              onClick={() => setCollapsed(true)}
-              aria-label="Thu gọn danh sách"
-              type="button"
-            >
-              <ChevronUp size={20} className="text-blue-700" /> 
-            </button>   
-          )}    
-        </div>  
-        {!collapsed && (    
-          <div className="overflow-x-auto"> 
-            <table className="min-w-full border border-blue-200 rounde  d-lg bg-blue-50">
-              <thead>
-                <tr className="bg-blue-100 text-blue-900 text-base">
-                  <th className="py-2 px-3 border-b border-blue-200 text-center w-16">STT</th>
-                  <th className="py-2 px-3 border-b border-blue-200 text-center w-40">Mã sinh viên</th>
-                  <th className="py-2 px-3 border-b border-blue-200 text-center">Tên sinh viên</th>
-                  <th className="py-2 px-3 border-b border-blue-200 text-center w-32">Điểm danh</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(examInfo?.students || []).map((sv, idx) => (
-                  <tr key={sv.id} className="text-gray-800 text-base bg-white">
-                    <td className="py-2 px-3 border-b border-blue-100 text-center align-middle">{idx + 1}</td>
-                    <td className="py-2 px-3 border-b border-blue-100 text-center align-middle">{sv.code}</td>
-                    <td className="py-2 px-3 border-b border-blue-100 text-center align-middle">{sv.fullName}</td>
-                    <td className="py-2 px-3 border-b border-blue-100 text-center align-middle">
-                      <input
-                        type="checkbox"
-                        checked={!!attendance[sv.id]}
-                        onChange={() => handleCheck(sv.id)}
-                        className="w-5 h-5 accent-blue-600"
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <div className="text-center text-red-500">
+              <AlertCircle className="w-12 h-12 mx-auto mb-4" />
+              <p className="text-lg font-medium">Không tìm thấy thông tin ca thi</p>
+            </div>
           </div>
         )}
-        <div className="mt-6 flex flex-col items-start gap-4">
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="confirm-finish"
-              checked={isConfirmed}
-              onChange={() => setIsConfirmed((v) => !v)}
-              className="w-5 h-5 accent-blue-600"
-            />
-            <label htmlFor="confirm-finish" className="text-base select-none">
-              Tôi xác nhận đã coi thi xong
-            </label>
-            <button
-              className={`ml-4 px-6 py-2 rounded text-base font-semibold transition ${
-                isConfirmed
-                  ? "bg-green-600 hover:bg-green-700 text-white cursor-pointer"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
-              disabled={!isConfirmed}
-              onClick={handleFinishExam}
-            >
-              Hoàn thành coi thi
-            </button>
+
+        {/* Code & Timer Card */}
+        {examInfo && (
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg p-6 mb-8 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold mb-2 flex items-center">
+                  <Timer className="w-5 h-5 mr-2" />
+                  Mã code vào thi
+                </h3>
+                <div className="font-mono text-3xl font-bold tracking-wider">
+                  {examInfo.code}
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-blue-100 mb-2">Tự động đổi mã sau</p>
+                <div className="text-4xl font-bold font-mono">
+                  {formatTime(timer)}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Tổng sinh viên</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalStudents}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <CheckCircle2 className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Đã điểm danh</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.checkedInCount}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                <AlertCircle className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Chưa điểm danh</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalStudents - stats.checkedInCount}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Student List */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                <Users className="w-5 h-5 mr-2 text-blue-600" />
+                Danh sách sinh viên
+              </h3>
+              <button
+                onClick={() => setCollapsed(!collapsed)}
+                className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 text-gray-700"
+              >
+                {collapsed ? (
+                  <>
+                    <ChevronDown size={20} />
+                    <span>Mở rộng</span>
+                  </>
+                ) : (
+                  <>
+                    <ChevronUp size={20} />
+                    <span>Thu gọn</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {!collapsed && (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã sinh viên</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên sinh viên</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Điểm danh</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {(examInfo?.students || []).map((sv, idx) => (
+                    <tr key={sv.id} className="hover:bg-blue-50 transition-colors duration-200">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{idx + 1}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{sv.code}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+                            {sv.fullName.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="text-sm font-medium text-gray-900">{sv.fullName}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <label className="inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={!!attendance[sv.id]}
+                            onChange={() => handleCheck(sv.id)}
+                            className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                          />
+                          <span className="ml-2 text-sm text-gray-700">
+                            {attendance[sv.id] ? "Có mặt" : "Vắng"}
+                          </span>
+                        </label>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div className="flex flex-col space-y-4">
+              {!collapsed && (
+                <button
+                  onClick={handleConfirmAttendance}
+                  className="self-start flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors duration-200 shadow-lg"
+                >
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span>Xác nhận điểm danh</span>
+                </button>
+              )}
+              
+              <div className="flex items-center space-x-4">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isConfirmed}
+                    onChange={() => setIsConfirmed(!isConfirmed)}
+                    className="w-5 h-5 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
+                  />
+                  <span className="text-gray-700 font-medium">Tôi xác nhận đã coi thi xong</span>
+                </label>
+                
+                <button
+                  onClick={handleFinishExam}
+                  disabled={!isConfirmed}
+                  className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg ${
+                    isConfirmed
+                      ? "bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
+                >
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span>Hoàn thành coi thi</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
