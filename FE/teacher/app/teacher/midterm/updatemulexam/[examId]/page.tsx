@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Select from "react-select";
 import { getUserIdFromToken } from "@/utils/tokenUtils";
 import { useParams, useRouter } from 'next/navigation';
+import { BookOpen, Users, Clock, Settings, ChevronLeft, Save, Plus, Trash2, X, Check } from "lucide-react";
 
 const API_URL = "https://localhost:7074";
 
@@ -38,58 +39,62 @@ export default function UpdateMCQExamPage() {
   const [isPublic, setIsPublic] = useState(true);
   const [questionBankType, setQuestionBankType] = useState<"all" | "common" | "private">("all");
   const [classId, setClassId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // Lấy dữ liệu ban đầu
   useEffect(() => {
-  setTeacherId(getUserIdFromToken() || "");
-  if (!examId) return;
-  fetch(`${API_URL}/api/MultipleExam/get-for-update/${examId}`)
-    .then(res => res.json())
-    .then(async data => {
-      setExamName(data.multiExamName || "");
-      setDuration(data.duration || 60);
-      setStartDate(data.startDay ? data.startDay.slice(0, 16) : "");
-      setEndDate(data.endDay ? data.endDay.slice(0, 16) : "");
-      setSelectedGradeComponent({
-        value: data.categoryExamId,
-        label: "", // sẽ set lại sau khi fetch gradeComponents
-      });
-      setSemesterId(data.semesterId);
-      setIsPublic(data.isPublish);
-      setQuestionBankType(data.questionBankType || "all");
-      setClassId(data.classId);
-      setSubjectId(data.subjectId);
-      setSelectedStudents((data.studentExamDTO || []).map((s: any) => ({
-        studentId: s.studentId
-      })));
-      // Chương và số câu hỏi từng chương
-      setSelectedChapters((data.noQuestionInChapterDTO || []).reduce((arr: any[], item: any) => {
-        if (!arr.some((c: any) => c.chapterId === item.chapterId)) {
-          arr.push({ chapterId: item.chapterId, chapterName: item.chapterName });
+    setTeacherId(getUserIdFromToken() || "");
+    if (!examId) return;
+    setLoading(true);
+    fetch(`${API_URL}/api/MultipleExam/get-for-update/${examId}`)
+      .then(res => res.json())
+      .then(async data => {
+        setExamName(data.multiExamName || "");
+        setDuration(data.duration || 60);
+        setStartDate(data.startDay ? data.startDay.slice(0, 16) : "");
+        setEndDate(data.endDay ? data.endDay.slice(0, 16) : "");
+        setSelectedGradeComponent({
+          value: data.categoryExamId,
+          label: "",
+        });
+        setSemesterId(data.semesterId);
+        setIsPublic(data.isPublish);
+        setQuestionBankType(data.questionBankType || "all");
+        setClassId(data.classId);
+        setSubjectId(data.subjectId);
+        setSelectedStudents((data.studentExamDTO || []).map((s: any) => ({
+          studentId: s.studentId
+        })));
+        
+        // Process chapters and questions
+        setSelectedChapters((data.noQuestionInChapterDTO || []).reduce((arr: any[], item: any) => {
+          if (!arr.some((c: any) => c.chapterId === item.chapterId)) {
+            arr.push({ chapterId: item.chapterId, chapterName: item.chapterName });
+          }
+          return arr;
+        }, []));
+        
+        const chapterQ: Record<number, any> = {};
+        for (const item of (data.noQuestionInChapterDTO || [])) {
+          if (!chapterQ[item.chapterId]) {
+            chapterQ[item.chapterId] = { easy: 0, medium: 0, hard: 0, max: { easy: 0, medium: 0, hard: 0 } };
+          }
+          if (item.levelQuestionId === 1) chapterQ[item.chapterId].easy = item.numberQuestion;
+          if (item.levelQuestionId === 2) chapterQ[item.chapterId].medium = item.numberQuestion;
+          if (item.levelQuestionId === 3) chapterQ[item.chapterId].hard = item.numberQuestion;
         }
-        return arr;
-      }, []));
-      // Gán số câu hỏi từng chương và fetch max cho từng chương
-      const chapterQ: Record<number, any> = {};
-      for (const item of (data.noQuestionInChapterDTO || [])) {
-        if (!chapterQ[item.chapterId]) {
-          chapterQ[item.chapterId] = { easy: 0, medium: 0, hard: 0, max: { easy: 0, medium: 0, hard: 0 } };
+        
+        for (const chapId of Object.keys(chapterQ)) {
+          const easy = await fetchQuestionCount(Number(chapId), "easy");
+          const medium = await fetchQuestionCount(Number(chapId), "medium");
+          const hard = await fetchQuestionCount(Number(chapId), "hard");
+          chapterQ[chapId].max = { easy, medium, hard };
         }
-        if (item.levelQuestionId === 1) chapterQ[item.chapterId].easy = item.numberQuestion;
-        if (item.levelQuestionId === 2) chapterQ[item.chapterId].medium = item.numberQuestion;
-        if (item.levelQuestionId === 3) chapterQ[item.chapterId].hard = item.numberQuestion;
-      }
-      // Fetch max cho từng chương
-      for (const chapId of Object.keys(chapterQ)) {
-        const easy = await fetchQuestionCount(Number(chapId), "easy");
-        const medium = await fetchQuestionCount(Number(chapId), "medium");
-        const hard = await fetchQuestionCount(Number(chapId), "hard");
-        chapterQ[chapId].max = { easy, medium, hard };
-      }
-      setChapterQuestions(chapterQ);
-      setQuestionInput(data.numberQuestion || 0);
-    });
-}, [examId]);
+        setChapterQuestions(chapterQ);
+        setQuestionInput(data.numberQuestion || 0);
+      })
+      .finally(() => setLoading(false));
+  }, [examId]);
 
   // Lấy dữ liệu phụ thuộc classId
   useEffect(() => {
@@ -103,7 +108,6 @@ export default function UpdateMCQExamPage() {
         }));
         setGradeComponents(mapped);
 
-        // Đồng bộ lại selectedGradeComponent nếu đã có categoryExamId từ API
         setSelectedGradeComponent((prev: any) => {
           if (prev && prev.value) {
             const found = mapped.find((g: any) => g.value === prev.value);
@@ -112,12 +116,11 @@ export default function UpdateMCQExamPage() {
           return null;
         });
       });
+    
     fetch(`${API_URL}/api/Class/${classId}/chapters`)
       .then(res => res.json())
       .then(data => {
         setChapters(data);
-
-        // Map lại selectedChapters để có chapterName
         setSelectedChapters((prev: any[]) => {
           if (!prev.length) return prev;
           return prev.map((item) => {
@@ -132,6 +135,7 @@ export default function UpdateMCQExamPage() {
     fetch(`${API_URL}/api/Class/${classId}/students`)
       .then(res => res.json())
       .then(data => setStudents(data));
+    
     fetch(`${API_URL}/api/Class/${classId}/subject-id`)
       .then(res => res.json())
       .then(data => setSubjectId(data));
@@ -238,7 +242,6 @@ export default function UpdateMCQExamPage() {
     setShowStudentPopup(false);
   };
 
-  // Chọn tất cả chương
   const handleCheckAllChapters = () => {
     const allChecked: Record<number, boolean> = {};
     chapters
@@ -258,7 +261,6 @@ export default function UpdateMCQExamPage() {
     setChapterChecks({});
   };
 
-  // Tạo mảng noQuestionInChapterDTO
   const buildNoQuestionInChapterDTO = () => {
     const arr: { numberQuestion: number; chapterId: number; levelQuestionId: number }[] = [];
     selectedChapters.forEach((chap: any) => {
@@ -287,7 +289,6 @@ export default function UpdateMCQExamPage() {
     return arr;
   };
 
-  // Submit
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!examName || !selectedGradeComponent || !startDate || !endDate || !duration || !semesterId || !teacherId) {
@@ -318,192 +319,427 @@ export default function UpdateMCQExamPage() {
         studentId: sv.studentId
       })),
     };
-    const res = await fetch(`${API_URL}/api/MultipleExam/update`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (res.ok) {
-      alert("Cập nhật bài kiểm tra thành công!");
-      router.push(`/teacher/myclass/classdetail/${classId?.toString()}`);
-    } else {
-      alert("Cập nhật bài kiểm tra thất bại!");
+    
+    try {
+      const res = await fetch(`${API_URL}/api/MultipleExam/update`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        alert("Cập nhật bài kiểm tra thành công!");
+        router.push(`/teacher/myclass/classdetail/${classId?.toString()}`);
+      } else {
+        alert("Cập nhật bài kiểm tra thất bại!");
+      }
+    } catch {
+      alert("Có lỗi xảy ra khi cập nhật!");
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="flex items-center space-x-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="text-gray-600 font-medium">Đang tải dữ liệu...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full min-h-screen bg-white font-sans p-0">
-      <div className="w-full py-8 px-4">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-left">
-          Cập nhật bài kiểm tra trắc nghiệm
-        </h2>
-        <form onSubmit={handleUpdate} className="space-y-6">
-          {/* Filter & Info */}
-          <div className="flex flex-wrap gap-4 items-center mb-4">
-            <div className="flex flex-col">
-              <label className="mb-1 font-semibold text-gray-700">Tên bài kiểm tra</label>
-              <input
-                type="text"
-                value={examName}
-                onChange={e => setExamName(e.target.value)}
-                className="border rounded px-3 py-2 w-64"
-                placeholder="Tên bài kiểm tra"
-                required
-              />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
+                <BookOpen className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Cập nhật bài kiểm tra trắc nghiệm</h1>
+                <p className="text-gray-600">Chỉnh sửa thông tin và cấu hình bài kiểm tra</p>
+              </div>
             </div>
-            <div className="flex flex-col w-44">
-              <label className="mb-1 font-semibold text-gray-700">Chọn đầu điểm</label>
-              <Select
-                options={gradeComponents}
-                value={selectedGradeComponent}
-                onChange={setSelectedGradeComponent}
-                isClearable={false}
-                isSearchable={false}
-              />
-            </div>
-            <div className="flex flex-col w-44">
-              <label className="mb-1 font-semibold text-gray-700">Thời gian bắt đầu</label>
-              <input
-                type="datetime-local"
-                value={startDate}
-                onChange={e => setStartDate(e.target.value)}
-                className="border rounded px-3 py-2 w-full"
-                required
-              />
-            </div>
-            <div className="flex flex-col w-44">
-              <label className="mb-1 font-semibold text-gray-700">Thời gian kết thúc</label>
-              <input
-                type="datetime-local"
-                value={endDate}
-                onChange={e => setEndDate(e.target.value)}
-                className="border rounded px-3 py-2 w-full"
-                required
-              />
-            </div>
-            <div className="flex flex-col w-32">
-              <label className="mb-1 font-semibold text-gray-700">Thời lượng</label>
-              <input
-                type="number"
-                min={1}
-                value={duration}
-                onChange={(e) => setDuration(Number(e.target.value))}
-                className="border rounded px-3 py-2 w-full"
-                placeholder="Nhập thời lượng (phút)"
-              />
-            </div>
-            <div className="flex flex-col justify-end">
-              <label className="mb-1 font-semibold text-gray-700">Lưu public</label>
-              <input
-                type="checkbox"
-                checked={isPublic}
-                onChange={e => setIsPublic(e.target.checked)}
-                className="w-5 h-5"
-                style={{ marginTop: "7px" }}
-              />
-            </div>
+            
             <button
-              type="button"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold self-end"
-              onClick={handleOpenStudentPopup}
+              onClick={() => router.back()}
+              className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 font-medium text-gray-700"
             >
-              Chọn sinh viên
+              <ChevronLeft className="w-4 h-4" />
+              <span>Quay lại</span>
             </button>
-            {selectedStudents.length > 0 && (
-              <span className="text-base text-blue-700 self-end">
-                Đã chọn {selectedStudents.length} sinh viên
-              </span>
+          </div>
+        </div>
+
+        <form onSubmit={handleUpdate} className="space-y-8">
+          {/* Basic Information */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center">
+              <Settings className="w-5 h-5 mr-2 text-blue-600" />
+              Thông tin cơ bản
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="col-span-1 md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tên bài kiểm tra <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={examName}
+                  onChange={e => setExamName(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  placeholder="Nhập tên bài kiểm tra"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Đầu điểm <span className="text-red-500">*</span>
+                </label>
+                <Select
+                  options={gradeComponents}
+                  value={selectedGradeComponent}
+                  onChange={setSelectedGradeComponent}
+                  isClearable={false}
+                  isSearchable={false}
+                  className="react-select-container"
+                  classNamePrefix="react-select"
+                  placeholder="Chọn đầu điểm"
+                  styles={{
+                    control: (provided) => ({
+                      ...provided,
+                      minHeight: '48px',
+                      borderColor: '#d1d5db',
+                      '&:hover': { borderColor: '#3b82f6' }
+                    })
+                  }}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Thời gian bắt đầu <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Thời gian kết thúc <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={endDate}
+                  onChange={e => setEndDate(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Thời lượng (phút) <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                  <input
+                    type="number"
+                    min={1}
+                    value={duration}
+                    onChange={(e) => setDuration(Number(e.target.value))}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    placeholder="60"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nguồn câu hỏi
+                </label>
+                <select
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  value={questionBankType}
+                  onChange={e => setQuestionBankType(e.target.value as "all" | "common" | "private")}
+                >
+                  <option value="all">Cả hai (chung & riêng)</option>
+                  <option value="common">Chỉ bank chung</option>
+                  <option value="private">Chỉ bank riêng</option>
+                </select>
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isPublic}
+                    onChange={e => setIsPublic(e.target.checked)}
+                    className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Lưu public</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Students Selection */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                <Users className="w-5 h-5 mr-2 text-blue-600" />
+                Sinh viên tham gia
+              </h3>
+              <button
+                type="button"
+                onClick={handleOpenStudentPopup}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Chọn sinh viên</span>
+              </button>
+            </div>
+            
+            {selectedStudents.length > 0 ? (
+              <div className="bg-blue-50 rounded-lg p-4">
+                <p className="text-blue-800 font-medium">
+                  Đã chọn {selectedStudents.length} sinh viên
+                </p>
+              </div>
+            ) : (
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-gray-600">Chưa chọn sinh viên nào</p>
+              </div>
             )}
           </div>
 
-          {/* Dropdown chọn loại bank câu hỏi */}
-          <div className="flex flex-col w-64 mb-2">
-            <label className="mb-1 font-semibold text-gray-700">Nguồn câu hỏi</label>
-            <select
-              className="border rounded px-3 py-2"
-              value={questionBankType}
-              onChange={e => setQuestionBankType(e.target.value as "all" | "common" | "private")}
-            >
-              <option value="all">Cả hai (chung & riêng)</option>
-              <option value="common">Chỉ bank chung</option>
-              <option value="private">Chỉ bank riêng</option>
-            </select>
-          </div>
+          {/* Question Configuration */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                <BookOpen className="w-5 h-5 mr-2 text-blue-600" />
+                Cấu hình câu hỏi
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowChapterPopup(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Chọn chương</span>
+              </button>
+            </div>
 
-          {/* Chọn chương và nhập số câu hỏi */}
-          <div className="mt-6 flex gap-4 items-center">
-            <button
-              type="button"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold"
-              onClick={() => setShowChapterPopup(true)}
-            >
-              Chọn chương
-            </button>
-            <span>Nhập số câu hỏi</span>
-            <input
-              type="number"
-              min={1}
-              value={questionInput}
-              onChange={(e) => setQuestionInput(Number(e.target.value))}
-              className="border rounded px-3 py-2 w-44"
-              placeholder="Nhập số câu hỏi"
-              required
-            />
-          </div>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tổng số câu hỏi <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={questionInput}
+                onChange={(e) => setQuestionInput(Number(e.target.value))}
+                className="w-full max-w-xs px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                placeholder="Nhập số câu hỏi"
+                required
+              />
+            </div>
 
-          {/* Popup chọn sinh viên */}
-          {showStudentPopup && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30 animate-fadeIn">
-              <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-2xl relative animate-popup">
-                <button
-                  className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-2xl"
-                  onClick={() => setShowStudentPopup(false)}
-                  aria-label="Đóng"
-                >
-                  ×
-                </button>
-                <h3 className="text-xl font-bold mb-4 text-gray-700">
-                  Danh sách sinh viên trong lớp
-                </h3>
-                <div className="flex gap-4 mb-4">
+            {/* Selected Chapters Table */}
+            {selectedChapters.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên chương</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Câu dễ</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Câu trung bình</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Câu khó</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {selectedChapters.map((chap: any) => (
+                      <tr key={chap.chapterId} className="hover:bg-blue-50 transition-colors duration-200">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{chap.chapterName}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <div className="flex items-center justify-center space-x-2">
+                            <input
+                              type="number"
+                              min={0}
+                              max={chapterQuestions[chap.chapterId]?.max?.easy ?? 0}
+                              value={chapterQuestions[chap.chapterId]?.easy ?? 0}
+                              onChange={(e) =>
+                                handleChangeQuestionCount(
+                                  chap.chapterId,
+                                  "easy",
+                                  Number(e.target.value)
+                                )
+                              }
+                              className="w-16 px-2 py-1 border border-gray-300 rounded text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              disabled={chapterQuestions[chap.chapterId]?.max?.easy === 0}
+                            />
+                            <span className="text-xs text-gray-500">
+                              / {chapterQuestions[chap.chapterId]?.max?.easy ?? 0}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <div className="flex items-center justify-center space-x-2">
+                            <input
+                              type="number"
+                              min={0}
+                              max={chapterQuestions[chap.chapterId]?.max?.medium ?? 0}
+                              value={chapterQuestions[chap.chapterId]?.medium ?? 0}
+                              onChange={(e) =>
+                                handleChangeQuestionCount(
+                                  chap.chapterId,
+                                  "medium",
+                                  Number(e.target.value)
+                                )
+                              }
+                              className="w-16 px-2 py-1 border border-gray-300 rounded text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              disabled={chapterQuestions[chap.chapterId]?.max?.medium === 0}
+                            />
+                            <span className="text-xs text-gray-500">
+                              / {chapterQuestions[chap.chapterId]?.max?.medium ?? 0}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <div className="flex items-center justify-center space-x-2">
+                            <input
+                              type="number"
+                              min={0}
+                              max={chapterQuestions[chap.chapterId]?.max?.hard ?? 0}
+                              value={chapterQuestions[chap.chapterId]?.hard ?? 0}
+                              onChange={(e) =>
+                                handleChangeQuestionCount(
+                                  chap.chapterId,
+                                  "hard",
+                                  Number(e.target.value)
+                                )
+                              }
+                              className="w-16 px-2 py-1 border border-gray-300 rounded text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              disabled={chapterQuestions[chap.chapterId]?.max?.hard === 0}
+                            />
+                            <span className="text-xs text-gray-500">
+                              / {chapterQuestions[chap.chapterId]?.max?.hard ?? 0}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveChapter(chap.chapterId)}
+                            className="inline-flex items-center px-3 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium transition-colors duration-200"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                
+                <div className="mt-6 flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="text-lg font-semibold">
+                    Tổng số câu đã chọn:{" "}
+                    <span className="text-blue-600">{totalQuestions}</span>
+                    {questionInput > 0 && (
+                      <span className="text-gray-600 ml-2">/ {questionInput}</span>
+                    )}
+                  </div>
                   <button
-                    type="button"
-                    className="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600 transition font-semibold"
-                    onClick={handleCheckAllStudents}
+                    type="submit"
+                    className="flex items-center space-x-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors duration-200 shadow-lg"
                   >
-                    Chọn tất cả
-                  </button>
-                  <button
-                    type="button"
-                    className="bg-gray-300 text-gray-800 px-4 py-1 rounded hover:bg-gray-400 transition font-semibold"
-                    onClick={handleUncheckAllStudents}
-                  >
-                    Bỏ chọn tất cả
+                    <Save className="w-5 h-5" />
+                    <span>Cập nhật bài kiểm tra</span>
                   </button>
                 </div>
-                <div className="overflow-x-auto rounded shadow bg-white mb-4">
-                  <table className="min-w-[500px] w-full text-sm md:text-base border border-gray-200">
-                    <thead>
-                      <tr className="bg-gray-100 text-gray-700 font-semibold">
-                        <th className="py-2 px-2 border-b w-10 text-center">STT</th>
-                        <th className="py-2 px-2 border-b w-32 text-left">Mã sinh viên</th>
-                        <th className="py-2 px-2 border-b w-40 text-left">Họ và tên</th>
-                        <th className="py-2 px-2 border-b w-20 text-center">Chọn</th>
+              </div>
+            )}
+          </div>
+        </form>
+
+        {/* Student Selection Modal */}
+        {showStudentPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[80vh] overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h3 className="text-xl font-semibold text-gray-800">Chọn sinh viên tham gia</h3>
+                <button
+                  onClick={() => setShowStudentPopup(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+              
+              <div className="p-6">
+                <div className="flex gap-4 mb-6">
+                  <button
+                    type="button"
+                    onClick={handleCheckAllStudents}
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Chọn tất cả</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleUncheckAllStudents}
+                    className="flex items-center space-x-2 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg font-medium transition-colors duration-200"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Bỏ chọn tất cả</span>
+                  </button>
+                </div>
+                
+                <div className="overflow-y-auto max-h-96">
+                  <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã sinh viên</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Họ và tên</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Chọn</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="bg-white divide-y divide-gray-200">
                       {students.map((sv: any, idx: number) => (
-                        <tr key={sv.studentId} className="hover:bg-blue-50 transition">
-                          <td className="py-2 px-2 border-b text-center">{idx + 1}</td>
-                          <td className="py-2 px-2 border-b">{sv.code}</td>
-                          <td className="py-2 px-2 border-b">{sv.fullName}</td>
-                          <td className="py-2 px-2 border-b text-center">
+                        <tr key={sv.studentId} className="hover:bg-blue-50 transition-colors duration-200">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{idx + 1}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{sv.code}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{sv.fullName}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
                             <input
                               type="checkbox"
                               checked={!!studentChecks[sv.studentId]}
                               onChange={(e) =>
                                 handleCheckStudent(sv.studentId, e.target.checked)
                               }
+                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                             />
                           </td>
                         </tr>
@@ -511,66 +747,73 @@ export default function UpdateMCQExamPage() {
                     </tbody>
                   </table>
                 </div>
-                <div className="flex justify-end gap-4">
-                  <button
-                    type="button"
-                    onClick={handleConfirmStudents}
-                    className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition font-semibold"
-                  >
-                    Xác nhận
-                  </button>
+                
+                <div className="flex justify-end gap-4 mt-6">
                   <button
                     type="button"
                     onClick={() => setShowStudentPopup(false)}
-                    className="bg-gray-300 text-gray-800 px-6 py-2 rounded hover:bg-gray-400 transition font-semibold"
+                    className="px-6 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg font-medium transition-colors duration-200"
                   >
-                    Đóng
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmStudents}
+                    className="flex items-center space-x-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Xác nhận</span>
                   </button>
                 </div>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Popup chọn chương */}
-          {showChapterPopup && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30 animate-fadeIn">
-              <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-2xl relative animate-popup">
+        {/* Chapter Selection Modal */}
+        {showChapterPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 max-h-[80vh] overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h3 className="text-xl font-semibold text-gray-800">Chọn chương</h3>
                 <button
-                  className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-2xl"
                   onClick={() => setShowChapterPopup(false)}
-                  aria-label="Đóng"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                 >
-                  ×
+                  <X className="w-5 h-5 text-gray-500" />
                 </button>
-                <h3 className="text-xl font-bold mb-4 text-gray-700">
-                  Chọn chương
-                </h3>
-                <div className="flex gap-4 mb-4">
+              </div>
+              
+              <div className="p-6">
+                <div className="flex gap-4 mb-6">
                   <button
                     type="button"
-                    className="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600 transition font-semibold"
                     onClick={handleCheckAllChapters}
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
                   >
-                    Chọn tất cả
+                    <Check className="w-4 h-4" />
+                    <span>Chọn tất cả</span>
                   </button>
                   <button
                     type="button"
-                    className="bg-gray-300 text-gray-800 px-4 py-1 rounded hover:bg-gray-400 transition font-semibold"
                     onClick={handleUncheckAllChapters}
+                    className="flex items-center space-x-2 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg font-medium transition-colors duration-200"
                   >
-                    Bỏ chọn tất cả
+                    <X className="w-4 h-4" />
+                    <span>Bỏ chọn tất cả</span>
                   </button>
                 </div>
-                <div className="overflow-x-auto rounded shadow bg-white mb-4">
-                  <table className="min-w-[500px] w-full text-sm md:text-base border border-gray-200">
-                    <thead>
-                      <tr className="bg-gray-100 text-gray-700 font-semibold">
-                        <th className="py-2 px-2 border-b w-20 text-center">Chương</th>
-                        <th className="py-2 px-2 border-b w-56 text-left">Tên chương</th>
-                        <th className="py-2 px-2 border-b w-20 text-center">Chọn</th>
+                
+                <div className="overflow-y-auto max-h-96">
+                  <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chương</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên chương</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Chọn</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="bg-white divide-y divide-gray-200">
                       {chapters
                         .filter(
                           (chap) =>
@@ -579,12 +822,14 @@ export default function UpdateMCQExamPage() {
                             )
                         )
                         .map((chap: any, idx: number) => (
-                          <tr key={chap.chapterId} className="hover:bg-blue-50 transition">
-                            <td className="py-2 px-2 border-b text-center">
+                          <tr key={chap.chapterId} className="hover:bg-blue-50 transition-colors duration-200">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               Chương {idx + 1}
                             </td>
-                            <td className="py-2 px-2 border-b">{chap.chapterName}</td>
-                            <td className="py-2 px-2 border-b text-center">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">{chap.chapterName}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-center">
                               <input
                                 type="checkbox"
                                 checked={!!chapterChecks[chap.chapterId]}
@@ -594,6 +839,7 @@ export default function UpdateMCQExamPage() {
                                     [chap.chapterId]: e.target.checked,
                                   }))
                                 }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                               />
                             </td>
                           </tr>
@@ -601,145 +847,29 @@ export default function UpdateMCQExamPage() {
                     </tbody>
                   </table>
                 </div>
-                <div className="flex justify-end">
+                
+                <div className="flex justify-end gap-4 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setShowChapterPopup(false)}
+                    className="px-6 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg font-medium transition-colors duration-200"
+                  >
+                    Hủy
+                  </button>
                   <button
                     type="button"
                     onClick={handleSaveChapters}
-                    className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition font-semibold"
+                    className="flex items-center space-x-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
                   >
-                    Lưu
+                    <Check className="w-4 h-4" />
+                    <span>Lưu</span>
                   </button>
                 </div>
               </div>
             </div>
-          )}
-
-          {/* Bảng chương đã chọn */}
-          {selectedChapters.length > 0 && (
-            <div className="overflow-x-auto rounded shadow bg-white mt-6 w-full">
-              <table className="min-w-[700px] w-full text-sm md:text-base border border-gray-200">
-                <thead>
-                  <tr className="bg-gray-100 text-gray-700 font-semibold">
-                    <th className="py-2 px-2 border-b w-56 text-left">Tên chương</th>
-                    <th className="py-2 px-2 border-b w-32 text-center">Số câu dễ</th>
-                    <th className="py-2 px-2 border-b w-32 text-center">Số câu trung bình</th>
-                    <th className="py-2 px-2 border-b w-32 text-center">Số câu khó</th>
-                    <th className="py-2 px-2 border-b w-20 text-center">Xóa</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedChapters.map((chap: any) => (
-                    <tr key={chap.chapterId} className="hover:bg-blue-50 transition">
-                      <td className="py-2 px-2 border-b">{chap.chapterName}</td>
-                      <td className="py-2 px-2 border-b text-center">
-                        <input
-                          type="number"
-                          min={0}
-                          max={chapterQuestions[chap.chapterId]?.max?.easy ?? 0}
-                          value={chapterQuestions[chap.chapterId]?.easy ?? 0}
-                          onChange={(e) =>
-                            handleChangeQuestionCount(
-                              chap.chapterId,
-                              "easy",
-                              Number(e.target.value)
-                            )
-                          }
-                          className="border rounded px-2 py-1 w-20 text-center"
-                          disabled={chapterQuestions[chap.chapterId]?.max?.easy === 0}
-                          placeholder="Số câu dễ"
-                        />
-                        <span className="ml-2 text-gray-500 text-xs">
-                          / {chapterQuestions[chap.chapterId]?.max?.easy ?? 0}
-                        </span>
-                      </td>
-                      <td className="py-2 px-2 border-b text-center">
-                        <input
-                          type="number"
-                          min={0}
-                          max={chapterQuestions[chap.chapterId]?.max?.medium ?? 0}
-                          value={chapterQuestions[chap.chapterId]?.medium ?? 0}
-                          onChange={(e) =>
-                            handleChangeQuestionCount(
-                              chap.chapterId,
-                              "medium",
-                              Number(e.target.value)
-                            )
-                          }
-                          className="border rounded px-2 py-1 w-20 text-center"
-                          disabled={chapterQuestions[chap.chapterId]?.max?.medium === 0}
-                          placeholder="Số câu TB"
-                        />
-                        <span className="ml-2 text-gray-500 text-xs">
-                          / {chapterQuestions[chap.chapterId]?.max?.medium ?? 0}
-                        </span>
-                      </td>
-                      <td className="py-2 px-2 border-b text-center">
-                        <input
-                          type="number"
-                          min={0}
-                          max={chapterQuestions[chap.chapterId]?.max?.hard ?? 0}
-                          value={chapterQuestions[chap.chapterId]?.hard ?? 0}
-                          onChange={(e) =>
-                            handleChangeQuestionCount(
-                              chap.chapterId,
-                              "hard",
-                              Number(e.target.value)
-                            )
-                          }
-                          className="border rounded px-2 py-1 w-20 text-center"
-                          disabled={chapterQuestions[chap.chapterId]?.max?.hard === 0}
-                          placeholder="Số câu khó"
-                        />
-                        <span className="ml-2 text-gray-500 text-xs">
-                          / {chapterQuestions[chap.chapterId]?.max?.hard ?? 0}
-                        </span>
-                      </td>
-                      <td className="py-2 px-2 border-b text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveChapter(chap.chapterId)}
-                          className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition"
-                        >
-                          Xóa
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="mt-4 flex justify-between items-center">
-                <div className="font-semibold text-base">
-                  Tổng số câu đã chọn:{" "}
-                  <span className="text-blue-700">{totalQuestions}</span>
-                  {questionInput > 0 && (
-                    <span className="ml-2 text-gray-600">
-                      / {questionInput}
-                    </span>
-                  )}
-                </div>
-                <button
-                  type="submit"
-                  className="bg-blue-600 text-white px-20 py-2 rounded hover:bg-blue-700 transition font-semibold items-center mb-4"
-                >
-                  Cập nhật
-                </button>
-              </div>
-            </div>
-          )}
-        </form>
+          </div>
+        )}
       </div>
-      <style jsx global>{`
-        @keyframes fadeIn {
-          from { opacity: 0 }
-          to { opacity: 1 }
-        }
-        .animate-fadeIn { animation: fadeIn 0.2s }
-        @keyframes popup {
-          from { transform: scale(0.95); opacity: 0 }
-       to { transform: scale(1); opacity: 1 }
-        }
-      animate-popup { animation: popup 0.2s }
-      `}</style>
     </div>
   );
 }

@@ -3,54 +3,52 @@
 import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import * as XLSX from 'xlsx';
-// Import your token utility
 import { getUserIdFromToken } from '@/utils/tokenUtils';
+import {useRouter} from 'next/navigation';
 
 export default function AddClassPage() {
   const [className, setClassName] = useState('');
-  const [majors, setMajors] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
-  const [selectedMajor, setSelectedMajor] = useState<any>(null);
+  const [semesters, setSemesters] = useState<any[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<any>(null);
-  const [currentSemester, setCurrentSemester] = useState<any>(null);
+  const [selectedSemester, setSelectedSemester] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [fileName, setFileName] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const studentId = "FFD82D0C-E754-480F-FC1A-08DDB5DCA989"; 
 
-  // Fetch majors and current semester on mount
+  const router = useRouter();
+
+  // Fetch subjects and semesters on mount
   useEffect(() => {
-    fetch('https://localhost:7074/api/MultipleExam/major')
+    const teacherId = getUserIdFromToken();
+    fetch(`https://localhost:7074/api/Class/subjects-by-teacher/${teacherId}`)
       .then(res => res.json())
-      .then(data => setMajors(data || []));
-    fetch('https://localhost:7074/api/Semesters/CurrentSemester')
+      .then(data => setSubjects(data || []));
+    fetch('https://localhost:7074/api/Semesters')
       .then(res => res.json())
-      .then(data => setCurrentSemester(data && data[0] ? data[0] : null));
+      .then(data => setSemesters(data || []));
   }, []);
 
-  // Fetch subjects when major changes
-  useEffect(() => {
-    if (selectedMajor?.value) {
-      fetch(`https://localhost:7074/api/MultipleExam/subject/${selectedMajor.value}`)
-        .then(res => res.json())
-        .then(data => setSubjects(data || []));
-      setSelectedSubject(null);
-    } else {
-      setSubjects([]);
-      setSelectedSubject(null);
-    }
-  }, [selectedMajor]);
-
   // Dropdown options
-  const majorOptions = majors.map((m: any) => ({ value: m.majorId || m.id, label: m.majorName || m.name }));
-  const subjectOptions = subjects.map((s: any) => ({ value: s.subjectId || s.id, label: s.subjectName || s.name }));
+  const subjectOptions = subjects.map((s: any) => ({
+    value: s.subjectId,
+    label: s.subjectName,
+    ...s,
+  }));
+  const semesterOptions = semesters.map((s: any) => ({
+    value: s.semesterId,
+    label: s.semesterName,
+    ...s,
+  }));
 
   // Download template
   const handleDownloadTemplate = () => {
-    const header = ['STT', 'Mã sinh viên', 'Code', 'Email', 'Giới tính', 'Ngày sinh', 'Họ và tên'];
+    const header = ['Avatar', 'Code', 'Email', 'Giới tính', 'Ngày sinh', 'Họ và tên'];
     const rows = [
-      [1, 'SV001', 'C001', 'sv001@example.com', 'Nam', '2002-01-01', 'Nguyễn Văn A'],
-      [2, 'SV002', 'C002', 'sv002@example.com', 'Nữ', '2002-02-02', 'Trần Thị B'],
+      ['https://randomuser.me/api/portraits/men/1.jpg', 'C001', 'sv001@example.com', 'Nam', '2002-01-01', 'Nguyễn Văn A'],
+      ['https://randomuser.me/api/portraits/women/2.jpg', 'C002', 'sv002@example.com', 'Nữ', '2002-02-02', 'Trần Thị B'],
     ];
     const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
     const wb = XLSX.utils.book_new();
@@ -83,7 +81,7 @@ export default function AddClassPage() {
         return;
       }
       const header = json[0];
-      const requiredHeader = ['STT', 'Mã sinh viên', 'Code', 'Email', 'Giới tính', 'Ngày sinh', 'Họ và tên'];
+      const requiredHeader = ['Avatar', 'Code', 'Email', 'Giới tính', 'Ngày sinh', 'Họ và tên'];
       const isHeaderValid = requiredHeader.every((h, idx) => header[idx] === h);
       if (!isHeaderValid) {
         setErrorMsg('File mẫu không đúng định dạng hoặc thiếu trường thông tin!');
@@ -94,13 +92,13 @@ export default function AddClassPage() {
       const dataArr = [];
       for (let i = 1; i < json.length; i++) {
         const row = json[i];
-        if (row.length < 7 || row.some((cell: string, idx: number) => idx > 0 && cell === '')) {
+        if (row.length < 6 || row.some((cell: string, idx: number) => cell === '')) {
           setErrorMsg(`Dòng ${i + 1} thiếu thông tin. Vui lòng điền đầy đủ tất cả trường!`);
           setFileName('');
           resetInput();
           return;
         }
-        const [, studentId, code, email, gender, dob, fullName] = row;
+        const [avatar, code, email, gender, dob, fullName] = row;
         if (!isValidEmail(email)) {
           setErrorMsg(`Email không hợp lệ ở dòng ${i + 1}: ${email}`);
           setFileName('');
@@ -114,8 +112,9 @@ export default function AddClassPage() {
           return;
         }
         dataArr.push({
-          studentId, // Mã sinh viên
-          code,      // Code
+          studentId: studentId, // Tạo GUID bất kỳ
+          avatar,
+          code,
           email,
           gender,
           dob,
@@ -135,7 +134,8 @@ export default function AddClassPage() {
     setStudents([
       ...students,
       {
-        studentId: '',
+        studentId: studentId,
+        avatar: '',
         code: '',
         email: '',
         gender: '',
@@ -167,19 +167,19 @@ export default function AddClassPage() {
 
   // Save class (call API)
   const handleSave = async () => {
-    if (!className.trim() || !selectedMajor || !selectedSubject || !currentSemester) {
+    if (!className.trim() || !selectedSubject || !selectedSemester) {
       setErrorMsg('Vui lòng nhập đầy đủ thông tin lớp học!');
       return;
     }
     for (let i = 0; i < students.length; i++) {
       const sv = students[i];
       if (
-        !sv.studentId?.trim() ||
         !sv.code?.trim() ||
         !sv.email.trim() ||
         !sv.gender.trim() ||
         !sv.dob.trim() ||
-        !sv.fullName.trim()
+        !sv.fullName.trim() ||
+        !sv.avatar.trim()
       ) {
         setErrorMsg(`Sinh viên dòng ${i + 1} thiếu thông tin. Vui lòng điền đầy đủ!`);
         return;
@@ -201,15 +201,16 @@ export default function AddClassPage() {
       const payload = {
         teacherId,
         subjectId: selectedSubject.value,
-        semesterId: currentSemester.semesterId,
+        semesterId: selectedSemester.value,
         className: className.trim(),
         students: students.map(sv => ({
-          studentId: sv.studentId, // Mã sinh viên
-          code: sv.code,           // Code
+          studentId: sv.studentId || studentId,
+          code: sv.code,
           fullName: sv.fullName,
           email: sv.email,
           gender: sv.gender === 'Nam' ? true : false,
           dateOfBirth: sv.dob,
+          avartar: sv.avatar,
           cohortId: sv.cohortId || 0
         })),
       };
@@ -229,6 +230,7 @@ export default function AddClassPage() {
 
       setErrorMsg('');
       alert('Tạo lớp học thành công!');
+      router.push('/teacher/myclass'); // Redirect to class list
       // Optionally reset form here
     } catch (err: any) {
       setErrorMsg('Lỗi khi tạo lớp học');
@@ -258,12 +260,12 @@ export default function AddClassPage() {
               />
             </div>
             <div className="flex-1 min-w-[220px]">
-              <label className="block font-semibold mb-1">Ngành</label>
+              <label className="block font-semibold mb-1">Kỳ học</label>
               <Select
-                options={majorOptions}
-                value={selectedMajor}
-                onChange={setSelectedMajor}
-                placeholder="Chọn ngành"
+                options={semesterOptions}
+                value={selectedSemester}
+                onChange={setSelectedSemester}
+                placeholder="Chọn kỳ học"
                 isClearable
                 styles={{
                   control: (provided) => ({
@@ -273,17 +275,6 @@ export default function AddClassPage() {
                     boxShadow: 'none',
                   }),
                 }}
-              />
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[220px]">
-              <label className="block font-semibold mb-1">Kỳ học</label>
-              <input
-                type="text"
-                value={currentSemester?.semesterName || ''}
-                disabled
-                className="border rounded px-3 py-2 w-full bg-gray-100 text-gray-700"
               />
             </div>
             <div className="flex-1 min-w-[220px]">
@@ -302,7 +293,6 @@ export default function AddClassPage() {
                     boxShadow: 'none',
                   }),
                 }}
-                isDisabled={!selectedMajor}
               />
             </div>
           </div>
@@ -338,11 +328,11 @@ export default function AddClassPage() {
           {/* Bảng sinh viên */}
           {students.length > 0 && (
             <div className="overflow-x-auto rounded shadow bg-white mt-6 w-full">
-              <table className="min-w-[1100px] w-full text-sm md:text-base border border-gray-200">
+              <table className="min-w-[900px] w-full text-sm md:text-base border border-gray-200">
                 <thead>
                   <tr className="bg-gray-100 text-gray-700 font-semibold">
                     <th className="py-2 px-2 border-b min-w-[60px] text-center">STT</th>
-                    <th className="py-2 px-2 border-b min-w-[140px] text-left">Mã sinh viên</th>
+                    <th className="py-2 px-2 border-b min-w-[120px] text-center">Avatar</th>
                     <th className="py-2 px-2 border-b min-w-[100px] text-left">Code</th>
                     <th className="py-2 px-2 border-b min-w-[220px] text-left">Email</th>
                     <th className="py-2 px-2 border-b min-w-[100px] text-center">Giới tính</th>
@@ -355,12 +345,14 @@ export default function AddClassPage() {
                   {students.map((sv, idx) => (
                     <tr key={idx} className="hover:bg-blue-50 transition">
                       <td className="py-2 px-2 border-b text-center">{idx + 1}</td>
-                      <td className="py-2 px-2 border-b">
+                      <td className="py-2 px-2 border-b text-center">
+                       
                         <input
                           type="text"
-                          value={sv.studentId}
-                          onChange={e => handleEditStudent(idx, 'studentId', e.target.value)}
+                          value={sv.avatar}
+                          onChange={e => handleEditStudent(idx, 'avatar', e.target.value)}
                           className="border rounded px-2 py-1 w-full"
+                          placeholder="URL ảnh"
                         />
                       </td>
                       <td className="py-2 px-2 border-b">
@@ -442,18 +434,6 @@ export default function AddClassPage() {
           </div>
         </form>
       </div>
-      <style jsx global>{`
-        @keyframes fadeIn {
-          from { opacity: 0 }
-          to { opacity: 1 }
-        }
-        .animate-fadeIn { animation: fadeIn 0.2s }
-        @keyframes popup {
-          from { transform: scale(0.95); opacity: 0 }
-          to { transform: scale(1); opacity: 1 }
-        }
-        .animate-popup { animation: popup 0.2s }
-      `}</style>
     </div>
   );
 }

@@ -35,14 +35,35 @@ namespace GESS.Api.Controllers
             promptBuilder.AppendLine($"\n---\nNội dung tài liệu tham khảo:\n{materialContent}");
             promptBuilder.AppendLine($"\n---\nCâu hỏi:\n{request.QuestionContent}");
             promptBuilder.AppendLine($"\n---\nCâu trả lời của học sinh:\n{request.AnswerContent}");
-            promptBuilder.AppendLine($"\n---\nHướng dẫn chấm điểm (band score):\n{request.BandScoreGuide}");
+            promptBuilder.AppendLine($"\n---\nHướng dẫn chấm điểm theo tiêu chí. Mỗi tiêu chí có trọng số (%) trên tổng điểm của câu:");
+            foreach (var crit in request.BandScoreGuide)
+            {
+                promptBuilder.AppendLine($"- {crit.CriterionName} (trọng số {crit.WeightPercent}%): {crit.Description?.Trim() ?? "[Không có mô tả]"}");
+            }
             promptBuilder.AppendLine($"\n---\nYêu cầu:");
-            promptBuilder.AppendLine($"- Chấm điểm tối đa là {request.MaxScore} điểm.");
-            promptBuilder.AppendLine("- Trả về kết quả theo đúng định dạng JSON:");
+            promptBuilder.AppendLine("1. Với mỗi tiêu chí, cho biết mức độ đạt được dưới dạng phần trăm (0–100) và giải thích ngắn gọn (tối đa 10 từ).");
+            promptBuilder.AppendLine("2. Tính điểm đóng góp của từng tiêu chí bằng: (AchievementPercent * WeightPercent) / 100, rồi cộng lại để ra tổng % đạt được.");
+            promptBuilder.AppendLine($"3. Quy đổi tổng % đó sang điểm thực tế trên thang {request.MaxScore} (ví dụ nếu tổng đạt 80% thì điểm là 0.8 * {request.MaxScore}).");
+            promptBuilder.AppendLine("4. Trả về kết quả đúng định dạng JSON như mẫu sau:");
             promptBuilder.AppendLine(@"{
-              ""Score"": (số điểm, dạng số),
-              ""Explanation"": ""giải thích vì sao học sinh được điểm đó (có thể phân tích theo tiêu chí hoặc đánh giá tổng quan)""
-            }");
+                          ""CriterionScores"": [
+                            {
+                              ""CriterionName"": ""Độ rõ ràng"",
+                              ""AchievementPercent"": 90.0,
+                              ""WeightedScore"": 36.0, // ví dụ: 90% * 40% = 36%
+                              ""Explanation"": ""Trình bày rõ ràng, dễ hiểu.""
+                            },
+                            {
+                              ""CriterionName"": ""Nội dung"",
+                              ""AchievementPercent"": 70.0,
+                              ""WeightedScore"": 21.0, // 70% * 30% = 21%
+                              ""Explanation"": ""Thiếu dẫn chứng cụ thể.""
+                            }
+                          ],
+                          ""TotalScore"": 57.0, // (36 + 21)=57% của tổng, scale theo MaxScore nếu MaxScore != 100
+                          ""OverallExplanation"": ""Câu trả lời khá tốt ở phần rõ ràng nhưng nội dung còn thiếu.""
+                        }");
+            promptBuilder.AppendLine("Nếu trả về trong code block (ví dụ ```json ... ```), chỉ lấy phần JSON bên trong, không thêm văn bản thừa ngoài cấu trúc.");
 
             var prompt = promptBuilder.ToString();
 
@@ -93,7 +114,34 @@ namespace GESS.Api.Controllers
                 }
 
                 var gradeResult = JsonConvert.DeserializeObject<EssayGradingResult>(cleanedOutput);
+
+                // Tính lại WeightedScore và TotalScore dựa trên AchievementPercent và WeightPercent để đảm bảo nhất quán
+                double totalWeightContribution = 0;
+                foreach (var critScore in gradeResult.CriterionScores)
+                {
+                    // Tìm trọng số tương ứng từ request
+                    var critDef = request.BandScoreGuide.FirstOrDefault(c => c.CriterionName == critScore.CriterionName);
+                    if (critDef != null)
+                    {
+                        double expectedWeightedPercent = critScore.AchievementPercent * critDef.WeightPercent / 100.0;
+                        critScore.WeightedScore = expectedWeightedPercent; // đây là phần trăm của tổng (chưa scale)
+                        totalWeightContribution += expectedWeightedPercent;
+                    }
+                }
+
+                // totalWeightContribution là tổng % đạt được trên thang 100.
+                // Quy đổi sang điểm thực tế:
+                gradeResult.TotalScore = Math.Round(totalWeightContribution * request.MaxScore / 100.0, 2);
+
+                // Nếu AI đã trả TotalScore khác và bạn muốn lưu ý:
+                if (Math.Abs(gradeResult.TotalScore - (double)gradeResult.TotalScore) > 0.001)
+                {
+                    // có thể thêm ghi chú vào OverallExplanation nếu cần
+                }
+
+                // Trả về
                 return Ok(gradeResult);
+
             }
             catch (Exception ex)
             {

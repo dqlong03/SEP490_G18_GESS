@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, X, ChevronDown } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 
 type Student = {
@@ -66,7 +65,7 @@ export default function ClassDetailPage() {
     fetchData();
   }, [CLASS_ID]);
 
-  // Chỉ lấy đúng dữ liệu sinh viên (không lấy nhầm dữ liệu exam)
+  // Chỉ lấy đúng dữ liệu sinh viên
   const filteredStudents = students.filter(
     (sv) =>
       typeof sv === "object" &&
@@ -76,7 +75,7 @@ export default function ClassDetailPage() {
       !("examName" in sv)
   );
 
-  // Chỉ lấy đúng dữ liệu bài thi (loại bỏ các bản ghi trùng hoặc không hợp lệ)
+  // Chỉ lấy đúng dữ liệu bài thi
   const filteredExams = exams.filter(
     (ex) =>
       typeof ex === "object" &&
@@ -85,7 +84,7 @@ export default function ClassDetailPage() {
       ex.examType
   );
 
-  // Thêm sinh viên (chỉ cập nhật local, muốn lưu thực tế cần gọi API)
+  // Thêm sinh viên
   const handleAddStudent = () => {
     if (!newStudent.code.trim() || !newStudent.name.trim()) return;
     setStudents([
@@ -100,7 +99,7 @@ export default function ClassDetailPage() {
     setNewStudent({ code: "", name: "", avatarURL: "" });
   };
 
-  // Lưu danh sách sinh viên (nếu muốn gọi API thực tế)
+  // Lưu danh sách sinh viên
   const handleSaveStudents = () => {
     alert("Đã lưu danh sách sinh viên (chức năng demo, cần gọi API để lưu thực tế)!");
     setShowStudentList(false);
@@ -118,15 +117,18 @@ export default function ClassDetailPage() {
         `/teacher/myclass/classdetail/${CLASS_ID}/examstudentscore?classId=${CLASS_ID}&examId=${exam.examId}&examType=${exam.examType === "Multiple" ? 1 : 2}`
       );    
     } else if (action === "edit") {
-      router.push(`/teacher/myexam/edit/${exam.examId}`);
+       // Sửa logic cho nút edit
+      if (exam.examType === "Multiple") {
+        router.push(`/teacher/midterm/updatemulexam/${exam.examId}`);
+      } else {
+        router.push(`/teacher/midterm/updatepracexam/${exam.examId}`);
+      }
     } else if (action === "grade") {
-      // Sửa tại đây: Nếu là trắc nghiệm thì examType=1, tự luận thì examType=2
       const examType = exam.examType === "Multiple" ? 1 : 2;
       router.push(
         `/teacher/midterm/givegrade?examId=${exam.examId}&examType=${examType}&classId=${CLASS_ID}`
       );
     } else if (action === "watch") {
-      // Sửa tại đây: Nếu là trắc nghiệm thì examType=1, tự luận thì examType=2
       const examType = exam.examType === "Multiple" ? 1 : 2;
       router.push(
         `/teacher/midterm/attendancechecking?examId=${exam.examId}&examType=${examType}&classId=${CLASS_ID}`
@@ -134,269 +136,421 @@ export default function ClassDetailPage() {
     }
   };
 
-  return (
-    <div className="w-full max-w-5xl mx-auto px-2 py-8 font-sans text-gray-800 bg-white">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-black">
-          Chi tiết lớp học - {className || params.classId}
-        </h2>
-        <button
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded transition min-w-[120px] text-sm"
-          onClick={() => setShowStudentList(true)}
-        >
-          Danh sách học sinh sinh viên
-        </button>
-      </div>
+  // Get status badge
+  const getStatusBadge = (status: string | null) => {
+    if (status === "Chưa thi" || !status) {
+      return (
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+          <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
+          Chưa thi
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+        <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+        {status}
+      </span>
+    );
+  };
 
-      {/* Danh sách sinh viên */}
-      {showStudentList ? (
-        <div className="bg-blue-50 rounded-lg p-4 shadow animate-fadeIn">
-          <div className="flex justify-between items-center mb-4">
-            <div className="text-lg font-semibold text-black">Danh sách sinh viên</div>
+  // Get grading badge
+  const getGradingBadge = (isGraded: string) => {
+    if (isGraded === "Chưa chấm") {
+      return (
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+          <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
+          Chưa chấm
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+        <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+        {isGraded}
+      </span>
+    );
+  };
+
+  const truncateText = (text: string, maxLength: number = 15) => {
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + "...";
+};
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Chi tiết lớp học</h1>
+                <p className="text-gray-600">{className || `Lớp ${params.classId}`}</p>
+              </div>
+            </div>
+            
             <button
-              className="flex items-center gap-1 px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold min-w-[100px] text-sm"
-              onClick={handleBack}
+              onClick={() => setShowStudentList(true)}
+              className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
-              <X size={18} /> Quay lại
-            </button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full border border-blue-200 rounded-lg bg-white text-sm">
-              <thead>
-                <tr className="bg-gray-100 text-black">
-                  <th className="py-2 px-2 border-b border-blue-200 text-center w-10">STT</th>
-                  <th className="py-2 px-2 border-b border-blue-200 text-center w-28">Mã sinh viên</th>
-                  <th className="py-2 px-2 border-b border-blue-200 text-center">Tên sinh viên</th>
-                  <th className="py-2 px-2 border-b border-blue-200 text-center w-32">AvatarURL</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredStudents.map((sv, idx) => (
-                  <tr
-                    key={`${sv.studentId}-${sv.code}`}
-                    className="text-gray-800 bg-white"
-                  >
-                    <td className="py-2 px-2 border-b border-blue-100 text-center align-middle">{idx + 1}</td>
-                    <td className="py-2 px-2 border-b border-blue-100 text-center align-middle">
-                      {sv.code}
-                    </td>
-                    <td className="py-2 px-2 border-b border-blue-100 text-center align-middle">
-                      {sv.fullName}
-                    </td>
-                    <td className="py-2 px-2 border-b border-blue-100 text-center align-middle">
-                      {sv.avatarURL}
-                    </td>
-                  </tr>
-                ))}
-                {/* Thêm sinh viên mới */}
-                <tr>
-                  <td className="py-2 px-2 border-b border-blue-100 text-center align-middle font-semibold">
-                    <Plus size={16} />
-                  </td>
-                  <td className="py-2 px-2 border-b border-blue-100 text-center align-middle">
-                    <input
-                      className="border rounded px-2 py-1 w-24 text-sm"
-                      placeholder="Mã sinh viên"
-                      value={newStudent.code}
-                      onChange={e =>
-                        setNewStudent(s => ({ ...s, code: e.target.value }))
-                      }
-                    />
-                  </td>
-                  <td className="py-2 px-2 border-b border-blue-100 text-center align-middle">
-                    <input
-                      className="border rounded px-2 py-1 w-32 text-sm"
-                      placeholder="Tên sinh viên"
-                      value={newStudent.name}
-                      onChange={e =>
-                        setNewStudent(s => ({ ...s, name: e.target.value }))
-                      }
-                    />
-                  </td>
-                  <td className="py-2 px-2 border-b border-blue-100 text-center align-middle">
-                    <input
-                      className="border rounded px-2 py-1 w-28 text-sm"
-                      placeholder="AvatarURL"
-                      value={newStudent.avatarURL}
-                      onChange={e =>
-                        setNewStudent(s => ({ ...s, avatarURL: e.target.value }))
-                      }
-                    />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div className="flex gap-3 mt-4">
-            <button
-              className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded min-w-[90px] text-sm"
-              onClick={handleSaveStudents}
-            >
-              Lưu
-            </button>
-            <button
-              className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold px-4 py-2 rounded min-w-[90px] text-sm"
-              onClick={handleBack}
-            >
-              Quay lại
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <span>Quản lý sinh viên</span>
             </button>
           </div>
         </div>
-      ) : (
-        // Màn hình chính: Đầu điểm
-        <div>
-          <div className="flex items-center justify-between mb-4 relative">
-            <div className="text-lg font-semibold text-black">Các bài thi trong môn học</div>
-            <div className="relative">
-              <button
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded min-w-[120px] flex items-center gap-2 text-sm"
-                onClick={() => setShowExamOptions((v) => !v)}
-                type="button"
-              >
-                Tạo bài kiểm tra
-                <ChevronDown size={16} />
-              </button>
-              {showExamOptions && (
-                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded shadow-lg z-10 animate-fadeIn">
+
+        {/* Main Content */}
+        {showStudentList ? (
+          /* Student List Section */
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  Danh sách sinh viên
+                </h3>
+                <div className="flex items-center space-x-3">
+                  <span className="text-sm text-gray-500">Tổng: {filteredStudents.length} sinh viên</span>
                   <button
-                    className="block w-full text-left px-4 py-2 hover:bg-blue-50 text-gray-800 font-semibold text-sm"
-                    onClick={() => {
-                      setShowExamOptions(false);
-                      router.push(`/teacher/myexam/createmulexam/${CLASS_ID}`);
-                    }}
+                    onClick={handleBack}
+                    className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 font-medium text-gray-700"
                   >
-                    Tạo bài trắc nghiệm
-                  </button>
-                  <button
-                    className="block w-full text-left px-4 py-2 hover:bg-blue-50 text-gray-800 font-semibold text-sm"
-                    onClick={() => {
-                      setShowExamOptions(false);
-                      router.push(`/teacher/myexam/createpracexam/${CLASS_ID}`);
-                    }}
-                  >
-                    Tạo bài tự luận
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    <span>Quay lại</span>
                   </button>
                 </div>
-              )}
+              </div>
             </div>
-          </div>
-          {loading ? (
-            <div className="text-center py-8 text-gray-500">Đang tải dữ liệu...</div>
-          ) : (
+
             <div className="overflow-x-auto">
-              <table className="min-w-[700px] w-full text-xs md:text-sm border border-blue-200 rounded-lg bg-white table-fixed">
-                <thead>
-                  <tr className="bg-gray-100 text-black">
-                    <th className="py-2 px-2 border-b border-blue-200 text-center w-8">STT</th>
-                    <th className="py-2 px-2 border-b border-blue-200 text-center w-32">Bài thi</th>
-                    <th className="py-2 px-2 border-b border-blue-200 text-center w-20">Đầu điểm</th>
-                    <th className="py-2 px-2 border-b border-blue-200 text-center w-16">Thời lượng</th>
-                    <th className="py-2 px-2 border-b border-blue-200 text-center w-16">Số câu/Số đề</th>
-                    <th className="py-2 px-2 border-b border-blue-200 text-center w-20">Loại bài</th>
-                    <th className="py-2 px-2 border-b border-blue-200 text-center w-16">Chấm bài</th>
-                    <th className="py-2 px-2 border-b border-blue-200 text-center w-20">Trạng thái</th>
-                    <th className="py-2 px-2 border-b border-blue-200 text-center w-16">Số HS</th>
-                    <th className="py-2 px-2 border-b border-blue-200 text-center w-36">Hành động</th>
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã sinh viên</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên sinh viên</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avatar URL</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {filteredExams.map((item, idx) => (
-                    <tr
-                      key={`${item.examId}-${item.examName}`}
-                      className="text-gray-800 bg-white"
-                    >
-                      <td className="py-2 px-2 border-b border-blue-100 text-center align-middle">{idx + 1}</td>
-                      <td className="py-2 px-2 border-b border-blue-100 text-center align-middle truncate">{item.examName}</td>
-                      <td className="py-2 px-2 border-b border-blue-100 text-center align-middle truncate">{item.gradeComponent}</td>
-                      <td className="py-2 px-2 border-b border-blue-100 text-center align-middle">{item.duration}p</td>
-                      <td className="py-2 px-2 border-b border-blue-100 text-center align-middle">{item.questionCount}</td>
-                      <td className="py-2 px-2 border-b border-blue-100 text-center align-middle">{item.examType === "Multiple" ? "Trắc nghiệm" : "Tự luận"}</td>
-                      <td className="py-2 px-2 border-b border-blue-100 text-center align-middle">{item.isGraded}</td>
-                      <td className="py-2 px-2 border-b border-blue-100 text-center align-middle">{item.status || "Chưa thi"}</td>
-                      <td className="py-2 px-2 border-b border-blue-100 text-center align-middle">{item.studentCount}</td>
-                      <td className="py-2 px-2 border-b border-blue-100 text-center align-middle">
-                        <div className="flex flex-row flex-nowrap gap-1 justify-center">
-                          {item.examType === "Multiple" ? (
-                            item.status === "Chưa thi" ? (
-                              <>
-                                <button
-                                  className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded font-semibold text-xs"
-                                  onClick={() => handleExamAction(item, "watch")}
-                                >
-                                  Coi thi
-                                </button>
-                                <button
-                                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded font-semibold text-xs"
-                                  onClick={() => handleExamAction(item, "edit")}
-                                >
-                                  Sửa bài
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded font-semibold text-xs"
-                                onClick={() => handleExamAction(item, "view")}
-                              >
-                                Xem điểm
-                              </button>
-                            )
-                          ) : (
-                            item.status === "Chưa thi" ? (
-                              <>
-                                <button
-                                  className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded font-semibold text-xs"
-                                  onClick={() => handleExamAction(item, "watch")}
-                                >
-                                  Coi thi
-                                </button>
-                                <button
-                                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded font-semibold text-xs"
-                                  onClick={() => handleExamAction(item, "edit")}
-                                >
-                                  Sửa bài
-                                </button>
-                              </>
-                            ) : item.isGraded === "Chưa chấm" ? (
-                              <button
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded font-semibold text-xs"
-                                onClick={() => handleExamAction(item, "grade")}
-                              >
-                                Chấm bài
-                              </button>
-                            ) : (
-                              <button
-                                className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded font-semibold text-xs"
-                                onClick={() => handleExamAction(item, "view")}
-                              >
-                                Xem điểm
-                              </button>
-                            )
-                          )}
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredStudents.map((sv, idx) => (
+                    <tr key={`${sv.studentId}-${sv.code}`} className="hover:bg-blue-50 transition-colors duration-200">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{idx + 1}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{sv.code}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+                            {sv.fullName.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="text-sm font-medium text-gray-900">{sv.fullName}</div>
                         </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {sv.avatarURL || "-"}
                       </td>
                     </tr>
                   ))}
-                  {filteredExams.length === 0 && (
-                    <tr>
-                      <td colSpan={10} className="text-center py-4 text-gray-500">
-                        Không có bài thi nào.
-                      </td>
-                    </tr>
-                  )}
+                  {/* Add new student row */}
+                  <tr className="bg-blue-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <svg className="w-5 h-5 text-blue-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Mã sinh viên"
+                        value={newStudent.code}
+                        onChange={e => setNewStudent(s => ({ ...s, code: e.target.value }))}
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Tên sinh viên"
+                        value={newStudent.name}
+                        onChange={e => setNewStudent(s => ({ ...s, name: e.target.value }))}
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Avatar URL"
+                        value={newStudent.avatarURL}
+                        onChange={e => setNewStudent(s => ({ ...s, avatarURL: e.target.value }))}
+                      />
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
-      )}
-      <style jsx global>{`
-        @keyframes fadeIn {
-          from { opacity: 0 }
-          to { opacity: 1 }
-        }
-        .animate-fadeIn { animation: fadeIn 0.2s }
-        .table-fixed { table-layout: fixed; }
-      `}</style>
+
+            <div className="px-6 py-4 border-t border-gray-200">
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={handleAddStudent}
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  <span>Thêm sinh viên</span>
+                </button>
+                <button
+                  onClick={handleSaveStudents}
+                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Lưu danh sách</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Exams List Section */
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Các bài thi trong lớp học
+                </h3>
+                
+                <div className="relative">
+                  <button
+                    onClick={() => setShowExamOptions(!showExamOptions)}
+                    className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    <span>Tạo bài kiểm tra</span>
+                    <svg className={`w-4 h-4 transition-transform duration-200 ${showExamOptions ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  
+                  {showExamOptions && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-xl z-10 overflow-hidden">
+                      <button
+                        onClick={() => {
+                          setShowExamOptions(false);
+                          router.push(`/teacher/myexam/createmulexam/${CLASS_ID}`);
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-blue-50 text-gray-700 font-medium transition-colors duration-200"
+                      >
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <span>Tạo bài trắc nghiệm</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowExamOptions(false);
+                          router.push(`/teacher/myexam/createpracexam/${CLASS_ID}`);
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-blue-50 text-gray-700 font-medium transition-colors duration-200"
+                      >
+                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </div>
+                        <span>Tạo bài tự luận</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-3 text-gray-600">Đang tải dữ liệu...</span>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên bài thi</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Đầu điểm</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Thời gian</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Câu/đề</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Loại bài</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Chấm bài</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">SV</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredExams.map((item, idx) => (
+                      <tr key={`${item.examId}-${item.examName}`} className="hover:bg-blue-50 transition-colors duration-200">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{idx + 1}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{truncateText(item.examName)}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <span className="text-sm text-gray-900">{item.gradeComponent || "-"}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <span className="text-sm text-gray-900">{item.duration} phút</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <span className="text-sm text-gray-900">{item.questionCount}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                            item.examType === "Multiple" 
+                              ? "bg-blue-100 text-blue-800" 
+                              : "bg-purple-100 text-purple-800"
+                          }`}>
+                            {item.examType === "Multiple" ? "Trắc nghiệm" : "Tự luận"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          {getGradingBadge(item.isGraded)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          {getStatusBadge(item.status)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <div className="flex items-center justify-center space-x-1">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            <span className="text-sm font-medium text-gray-900">{item.studentCount}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <div className="flex items-center justify-center space-x-2">
+                            {item.examType === "Multiple" ? (
+                              item.status === "Chưa thi" ? (
+                                <>
+                                  <button
+                                    onClick={() => handleExamAction(item, "watch")}
+                                    className="inline-flex items-center px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors duration-200"
+                                  >
+                                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    Coi thi
+                                  </button>
+                                  <button
+                                    onClick={() => handleExamAction(item, "edit")}
+                                    className="inline-flex items-center px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-medium rounded-lg transition-colors duration-200"
+                                  >
+                                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    Sửa
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => handleExamAction(item, "view")}
+                                  className="inline-flex items-center px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors duration-200"
+                                >
+                                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                  </svg>
+                                  Xem điểm
+                                </button>
+                              )
+                            ) : (
+                              item.status === "Chưa thi" ? (
+                                <>
+                                  <button
+                                    onClick={() => handleExamAction(item, "watch")}
+                                    className="inline-flex items-center px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors duration-200"
+                                  >
+                                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    Coi thi
+                                  </button>
+                                  <button
+                                    onClick={() => handleExamAction(item, "edit")}
+                                    className="inline-flex items-center px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-medium rounded-lg transition-colors duration-200"
+                                  >
+                                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    Sửa
+                                  </button>
+                                </>
+                              ) : item.isGraded === "Chưa chấm" ? (
+                                <button
+                                  onClick={() => handleExamAction(item, "grade")}
+                                  className="inline-flex items-center px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white text-xs font-medium rounded-lg transition-colors duration-200"
+                                >
+                                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
+                                  Chấm bài
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleExamAction(item, "view")}
+                                  className="inline-flex items-center px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors duration-200"
+                                >
+                                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                  </svg>
+                                  Xem điểm
+                                </button>
+                              )
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredExams.length === 0 && (
+                      <tr>
+                        <td colSpan={10} className="px-6 py-12 text-center">
+                          <div className="flex flex-col items-center">
+                            <svg className="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <p className="text-gray-500 text-lg font-medium">Chưa có bài thi nào</p>
+                            <p className="text-gray-400 text-sm">Tạo bài kiểm tra đầu tiên cho lớp học này</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

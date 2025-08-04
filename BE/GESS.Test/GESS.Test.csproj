@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Gess.Api\GESS.Api.csproj" />
     <ProjectReference Include="..\GESS.Auth\GESS.Auth.csproj" />
     <ProjectReference Include="..\GESS.Entity\GESS.Entity.csproj" />
     <ProjectReference Include="..\GESS.Model\GESS.Model.csproj" />

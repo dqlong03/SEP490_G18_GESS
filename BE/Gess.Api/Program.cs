@@ -63,17 +63,33 @@ builder.Services.AddAuthentication()
     });
 
 // Thêm cấu hình CORS
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy("AllowFrontend",
+//        policy =>
+//        {
+//            policy.WithOrigins("http://localhost:3000") // Thay bằng domain của frontend Next.js
+//                  .AllowAnyHeader()
+//                  .AllowAnyMethod()
+//                  .AllowCredentials(); // Nếu cần gửi cookie hoặc token
+//        });
+//});
+
+
+// Thêm cấu hình CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins("http://localhost:3000") // Thay bằng domain của frontend Next.js
+            policy.AllowAnyOrigin()      // Cho phép tất cả các domain
                   .AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials(); // Nếu cần gửi cookie hoặc token
+                  .AllowAnyMethod();
+                  
+            // Không dùng .AllowCredentials() với AllowAnyOrigin()
         });
 });
+
 
 
 builder.WebHost.ConfigureKestrel(options =>

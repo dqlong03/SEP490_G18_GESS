@@ -4,7 +4,23 @@ import React, { useEffect, useState } from 'react';
 import Select from 'react-select';
 import { getUserIdFromToken } from '@/utils/tokenUtils';
 import Link from 'next/link';
-
+import { 
+  BookOpen, 
+  Plus, 
+  Eye, 
+  FileText,
+  Calendar,
+  GraduationCap,
+  Settings,
+  X,
+  Target,
+  Clock,
+  Filter,
+  AlertCircle,
+  PenTool,
+  Users,
+  Search
+} from 'lucide-react';
 
 const API_URL = "https://localhost:7074";
 
@@ -50,6 +66,7 @@ export default function ExamPaperListPage() {
 
   const [examPapers, setExamPapers] = useState<PracExamPaperDTO[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchText, setSearchText] = useState('');
 
   // Chi tiết đề thi
   const [showDetail, setShowDetail] = useState(false);
@@ -61,10 +78,20 @@ export default function ExamPaperListPage() {
     const teacherId = getUserIdFromToken();
     fetch(`${API_URL}/api/FinalExamPaper/GetAllMajorByTeacherId?teacherId=${teacherId}`)
       .then(res => res.json())
-      .then(data => setSubjects(data || []));
+      .then(data => {
+        setSubjects(data || []);
+        if (data && data.length > 0) {
+          setSelectedSubject({ value: data[0].subjectId, label: data[0].subjectName });
+        }
+      });
     fetch(`${API_URL}/api/Semesters`)
       .then(res => res.json())
-      .then(data => setSemesters(data || []));
+      .then(data => {
+        setSemesters(data || []);
+        if (data && data.length > 0) {
+          setSelectedSemester({ value: data[0].semesterId, label: data[0].semesterName });
+        }
+      });
     // Năm: 10 năm về trước kể từ năm hiện tại
     const currentYear = new Date().getFullYear();
     const yearArr = [];
@@ -72,6 +99,9 @@ export default function ExamPaperListPage() {
       yearArr.push({ value: y.toString(), label: y.toString() });
     }
     setYears(yearArr);
+    if (yearArr.length > 0) {
+      setSelectedYear(yearArr[0]);
+    }
   }, []);
 
   // Lấy danh sách đề thi khi chọn đủ bộ lọc
@@ -109,144 +139,404 @@ export default function ExamPaperListPage() {
     setDetailData(null);
   };
 
+  // Filter exam papers based on search text
+  const filteredExamPapers = examPapers.filter(exam =>
+    exam.pracExamPaperName.toLowerCase().includes(searchText.toLowerCase())
+  );
+
+  // Calculate total score from detail data
+  const totalScore = detailData?.questions.reduce((sum, q) => sum + q.score, 0) || 0;
+
   return (
-    <div className="w-full min-h-screen bg-white font-sans p-0">
-      <div className="w-full py-8 px-4">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-left">Danh sách đề thi cuối kỳ</h2>
-        
-        
-        <div className="flex flex-wrap gap-4 items-center mb-6">
-          <div className="flex flex-col w-64">
-            <label className="mb-1 font-semibold text-gray-700">Chọn môn học</label>
-            <Select
-              options={subjects.map(s => ({ value: s.subjectId, label: s.subjectName }))}
-              value={selectedSubject}
-              onChange={setSelectedSubject}
-              placeholder="Chọn môn học"
-              isSearchable
-            />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Danh sách đề thi cuối kỳ</h1>
+                <p className="text-gray-600">Quản lý và theo dõi các đề thi thực hành cuối kỳ</p>
+              </div>
+            </div>
+            
+            <Link 
+              href="/teacher/finalexampaper/createfinalpaper"
+              className="flex items-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tạo đề thi cuối kỳ</span>
+            </Link>
           </div>
-          <div className="flex flex-col w-44">
-            <label className="mb-1 font-semibold text-gray-700">Chọn kỳ</label>
-            <Select
-              options={semesters.map(s => ({ value: s.semesterId, label: s.semesterName }))}
-              value={selectedSemester}
-              onChange={setSelectedSemester}
-              placeholder="Chọn kỳ"
-              isSearchable
-            />
-          </div>
-          <div className="flex flex-col w-32">
-            <label className="mb-1 font-semibold text-gray-700">Chọn năm</label>
-            <Select
-              options={years}
-              value={selectedYear}
-              onChange={setSelectedYear}
-             
-              isSearchable={false}
-            />
-          </div>
-
-            <Link href="/teacher/finalexampaper/createfinalpaper" className="bg-blue-600 text-white px-4 py-2 mt-5 rounded hover:bg-blue-700 transition font-semibold shadow">
-                Tạo bài thi cuối kỳ </Link>
-
         </div>
-        <div className="overflow-x-auto rounded shadow bg-white">
-          <table className="min-w-[500px] w-full text-sm md:text-base border border-gray-200">
-            <thead>
-              <tr className="bg-gray-100 text-gray-700 font-semibold">
-                <th className="py-2 px-2 border-b w-10 text-center">STT</th>
-                <th className="py-2 px-2 border-b w-64 text-left">Tên đề thi</th>
-                <th className="py-2 px-2 border-b w-24 text-center">Kỳ</th>
-                <th className="py-2 px-2 border-b w-20 text-center">Xem</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
+
+        {/* Statistics */}
+        {examPapers.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Tổng đề thi</p>
+                  <p className="text-2xl font-bold text-blue-600">{examPapers.length}</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Môn học</p>
+                  <p className="text-2xl font-bold text-green-600">{selectedSubject?.label || '--'}</p>
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <BookOpen className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Học kỳ</p>
+                  <p className="text-2xl font-bold text-purple-600">{selectedSemester?.label || '--'}</p>
+                </div>
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Calendar className="w-6 h-6 text-purple-600" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Filters */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center">
+            <Filter className="w-5 h-5 mr-2 text-blue-600" />
+            Bộ lọc tìm kiếm
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Môn học</label>
+              <Select
+                options={subjects.map(s => ({ value: s.subjectId, label: s.subjectName }))}
+                value={selectedSubject}
+                onChange={setSelectedSubject}
+                placeholder="Chọn môn học"
+                isSearchable
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    minHeight: '44px',
+                    borderColor: '#d1d5db',
+                    '&:hover': { borderColor: '#3b82f6' }
+                  }),
+                  menu: (provided) => ({ ...provided, zIndex: 20 }),
+                }}
+                noOptionsMessage={() => 'Không có dữ liệu'}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Học kỳ</label>
+              <Select
+                options={semesters.map(s => ({ value: s.semesterId, label: s.semesterName }))}
+                value={selectedSemester}
+                onChange={setSelectedSemester}
+                placeholder="Chọn học kỳ"
+                isSearchable
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    minHeight: '44px',
+                    borderColor: '#d1d5db',
+                    '&:hover': { borderColor: '#3b82f6' }
+                  }),
+                  menu: (provided) => ({ ...provided, zIndex: 20 }),
+                }}
+                noOptionsMessage={() => 'Không có dữ liệu'}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Năm học</label>
+              <Select
+                options={years}
+                value={selectedYear}
+                onChange={setSelectedYear}
+                placeholder="Chọn năm"
+                isSearchable={false}
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    minHeight: '44px',
+                    borderColor: '#d1d5db',
+                    '&:hover': { borderColor: '#3b82f6' }
+                  }),
+                  menu: (provided) => ({ ...provided, zIndex: 20 }),
+                }}
+                noOptionsMessage={() => 'Không có dữ liệu'}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tìm kiếm</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  placeholder="Tìm kiếm đề thi..."
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Exam Papers Table */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+              <FileText className="w-5 h-5 mr-2 text-blue-600" />
+              Danh sách đề thi ({filteredExamPapers.length})
+            </h3>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[600px]">
+              <thead className="bg-gray-50">
                 <tr>
-                  <td colSpan={4} className="py-4 text-center">Đang tải...</td>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên đề thi</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Học kỳ</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
                 </tr>
-              ) : examPapers.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="py-4 text-center">Không có dữ liệu</td>
-                </tr>
-              ) : (
-                examPapers.map((exam, idx) => (
-                  <tr key={exam.pracExamPaperId} className="hover:bg-blue-50 transition">
-                    <td className="py-2 px-2 border-b text-center">{idx + 1}</td>
-                    <td className="py-2 px-2 border-b">{exam.pracExamPaperName}</td>
-                    <td className="py-2 px-2 border-b text-center">{exam.semesterName}</td>
-                    <td className="py-2 px-2 border-b text-center">
-                      <button
-                        type="button"
-                        className="text-blue-600 hover:text-blue-800"
-                        title="Xem chi tiết"
-                        onClick={() => handleShowDetail(exam.pracExamPaperId)}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="inline w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0zm-9 0a9 9 0 1118 0 9 9 0 01-18 0z" />
-                        </svg>
-                      </button>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {loading ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-8 text-center">
+                      <div className="flex items-center justify-center space-x-2">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                        <span className="text-gray-500 font-medium">Đang tải...</span>
+                      </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : filteredExamPapers.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-12 text-center">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <FileText className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-800 mb-2">Chưa có đề thi nào</h3>
+                      <p className="text-gray-600">Tạo đề thi đầu tiên để bắt đầu</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredExamPapers.map((exam, idx) => (
+                    <tr key={exam.pracExamPaperId} className="hover:bg-gray-50 transition-colors duration-200">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {idx + 1}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                            <PenTool className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <div className="text-sm font-medium text-gray-900">{exam.pracExamPaperName}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          <Calendar className="w-3 h-3 mr-1" />
+                          {exam.semesterName}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <button
+                          type="button"
+                          className="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors duration-200"
+                          onClick={() => handleShowDetail(exam.pracExamPaperId)}
+                          title="Xem chi tiết"
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          <span>Xem</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-        {/* Popup chi tiết đề thi */}
+
+        {/* Chi tiết đề thi modal */}
         {showDetail && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black bg-opacity-40 animate-fadeIn">
-            <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-2xl relative animate-popup">
-              <button
-                className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-2xl"
-                onClick={handleCloseDetail}
-                aria-label="Đóng"
-              >
-                ×
-              </button>
-              <h3 className="text-xl font-bold mb-4 text-gray-700">
-                Chi tiết đề thi
-              </h3>
-              {loadingDetail ? (
-                <div>Đang tải chi tiết...</div>
-              ) : detailData ? (
-                <div>
-                  <div className="mb-2"><b>Tên đề thi:</b> {detailData.pracExamPaperName}</div>
-                  <div className="mb-2"><b>Môn học:</b> {detailData.subjectName}</div>
-                  <div className="mb-2"><b>Học kỳ:</b> {detailData.semesterName}</div>
-                  <div className="mb-2"><b>Trạng thái:</b> {detailData.status}</div>
-                  <div className="mb-2"><b>Ngày tạo:</b> {new Date(detailData.createAt).toLocaleString()}</div>
-                  <div className="mb-2"><b>Câu hỏi:</b></div>
-                  <ul className="list-decimal pl-6">
-                    {detailData.questions.map(q => (
-                      <li key={q.questionOrder} className="mb-2">
-                        <div><b>Câu {q.questionOrder}:</b> {q.content}</div>
-                        <div><b>Đáp án:</b> {q.answerContent}</div>
-                        <div><b>Điểm:</b> {q.score}</div>
-                      </li>
-                    ))}
-                  </ul>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                    <Eye className="w-5 h-5 mr-2 text-blue-600" />
+                    Chi tiết đề thi
+                  </h3>
+                  <button
+                    onClick={handleCloseDetail}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                  >
+                    <X className="w-5 h-5 text-gray-500" />
+                  </button>
                 </div>
-              ) : (
-                <div>Không có dữ liệu chi tiết.</div>
-              )}
+              </div>
+              
+              <div className="p-6 overflow-y-auto max-h-[70vh]">
+                {loadingDetail ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-3 text-gray-500 font-medium">Đang tải chi tiết...</span>
+                  </div>
+                ) : detailData ? (
+                  <div className="space-y-6">
+                    {/* Exam info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <PenTool className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Tên đề thi</p>
+                            <p className="font-semibold text-gray-900">{detailData.pracExamPaperName}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                            <BookOpen className="w-4 h-4 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Môn học</p>
+                            <p className="font-semibold text-gray-900">{detailData.subjectName}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <Calendar className="w-4 h-4 text-purple-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Học kỳ</p>
+                            <p className="font-semibold text-gray-900">{detailData.semesterName}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                            <Clock className="w-4 h-4 text-orange-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Ngày tạo</p>
+                            <p className="font-semibold text-gray-900">{new Date(detailData.createAt).toLocaleDateString('vi-VN')}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                            <Target className="w-4 h-4 text-red-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Trạng thái</p>
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              {detailData.status || 'Hoạt động'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                            <FileText className="w-4 h-4 text-indigo-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Tổng điểm</p>
+                            <p className="font-semibold text-gray-900">{totalScore} điểm</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Questions */}
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-4 flex items-center">
+                        <Target className="w-4 h-4 mr-2" />
+                        Danh sách câu hỏi ({detailData.questions.length} câu)
+                      </h4>
+                      <div className="space-y-4 max-h-96 overflow-y-auto">
+                        {detailData.questions.map(q => (
+                          <div key={q.questionOrder} className="bg-gray-50 rounded-lg p-4">
+                            <div className="flex items-start space-x-3">
+                              <span className="w-6 h-6 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-1">
+                                {q.questionOrder}
+                              </span>
+                              <div className="flex-1">
+                                <div className="mb-3">
+                                  <span className="text-sm font-medium text-gray-600">Câu hỏi:</span>
+                                  <p className="text-gray-900 mt-1">{q.content}</p>
+                                </div>
+                                <div className="mb-3">
+                                  <span className="text-sm font-medium text-gray-600">Đáp án:</span>
+                                  <p className="text-gray-900 mt-1">{q.answerContent}</p>
+                                </div>
+                                <div className="flex items-center">
+                                  <span className="text-sm font-medium text-gray-600 mr-2">Điểm:</span>
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    {q.score} điểm
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <AlertCircle className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <div className="text-gray-500">Không có dữ liệu chi tiết</div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div className="flex justify-end">
+                  <button
+                    className="flex items-center space-x-2 px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200"
+                    onClick={handleCloseDetail}
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Đóng</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
       </div>
-      <style jsx global>{`
-        @keyframes fadeIn {
-          from { opacity: 0 }
-          to { opacity: 1 }
-        }
-        .animate-fadeIn { animation: fadeIn 0.2s }
-        @keyframes popup {
-          from { transform: scale(0.95); opacity: 0 }
-          to { transform: scale(1); opacity: 1 }
-        }
-       .animate-popup { animation: popup 0.2s }
-      `}</style>
     </div>
   );
 }
