@@ -10,6 +10,11 @@ namespace GESS.Model.ExamSlotCreateDTO
 {
     public class GeneratedExamSlot
     {
+        public int SubjectId { get; set; }
+        public string Status { get; set; }
+        public string MultiOrPractice { get; set; }
+        public string SlotName { get; set; }
+        public int SemesterId { get; set; }
         public DateTime Date { get; set; }             
         public DateTime StartTime { get; set; }        
         public DateTime EndTime { get; set; }         

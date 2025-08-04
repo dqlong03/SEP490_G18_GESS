@@ -194,28 +194,29 @@ namespace GESS.Api.Controllers
             // Build prompt
             var prompt = new StringBuilder();
             prompt.AppendLine("Bạn là một bộ phân tích câu hỏi.");
-            prompt.AppendLine("Đầu vào là một mảng JSON các câu hỏi, mỗi câu có QuestionID và Content.");
-            prompt.AppendLine("Nhiệm vụ: nhóm các câu giống nhau hoặc rất giống nhau về nội dung (không phân biệt hoa thường, bỏ dấu câu, bỏ khoảng trắng thừa, và chịu đựng khác biệt nhỏ về diễn đạt).");
-            prompt.AppendLine($"Chỉ tạo nhóm nếu trong nhóm có ít nhất 2 câu và mức độ tương đồng giữa các câu trong nhóm >= {request.SimilarityThreshold:0.00}.");
-            prompt.AppendLine("Tính điểm tương đồng chung của nhóm (SimilarityScore) là điểm trung bình của các cặp trong nhóm, từ 0 đến 1.");
-            prompt.AppendLine("Trả về kết quả theo định dạng JSON duy nhất, không thêm lời bình. Nếu có code block như ```json ...```, chỉ lấy phần JSON bên trong.");
-            prompt.AppendLine("\nInput:");
-            prompt.AppendLine("```json");
+            prompt.AppendLine("Đầu vào là một mảng JSON các câu hỏi, mỗi câu gồm QuestionID (số) và Content (chuỗi).");
+            prompt.AppendLine("Nhiệm vụ của bạn:");
+            prompt.AppendLine("- Nhóm các câu hỏi có nội dung giống hoặc gần giống nhau về nghĩa.");
+            prompt.AppendLine("- Không phân biệt chữ hoa/chữ thường, bỏ dấu tiếng Việt, bỏ dấu câu, bỏ khoảng trắng thừa.");
+            prompt.AppendLine("- Chấp nhận khác biệt nhỏ về diễn đạt, từ đồng nghĩa, hoặc sắp xếp câu từ.");
+            prompt.AppendLine($"- Chỉ nhóm nếu tất cả câu trong nhóm có mức độ tương đồng >= {request.SimilarityThreshold:0.00} (0..1).");
+            prompt.AppendLine("- Tính SimilarityScore của nhóm = trung bình điểm tương đồng của các cặp câu trong nhóm.");
+            prompt.AppendLine("- Chỉ output JSON hợp lệ, KHÔNG viết giải thích, KHÔNG sử dụng ```json``` trong output.");
+            prompt.AppendLine();
+            prompt.AppendLine("Input JSON:");
             prompt.AppendLine(questionsJson);
-            prompt.AppendLine("```");
-            prompt.AppendLine("\nOutput format example:");
-            prompt.AppendLine(@"```json
-                [
-                  {
-                    ""SimilarityScore"": 0.92,
-                    ""Questions"": [
-                      { ""QuestionID"": 1, ""Content"": ""Chọn các đáp án đúng nói về hướng đối tượng trong JAVA."" },
-                      { ""QuestionID"": 2, ""Content"": ""Chọn các đáp án đúng nói về hướng đối tượng trong Java."" }
-                    ]
-                  }
+            prompt.AppendLine();
+            prompt.AppendLine("Output JSON format:");
+            prompt.AppendLine(@"[
+            {
+                ""SimilarityScore"": 0.92,
+                ""Questions"": [
+                    { ""QuestionID"": 1, ""Content"": ""Câu hỏi A..."" },
+                    { ""QuestionID"": 2, ""Content"": ""Câu hỏi B..."" }
                 ]
-                ```");
-            prompt.AppendLine("Nếu không có nhóm nào thỏa điều kiện, trả về mảng rỗng: []");
+             }
+            ]");
+            prompt.AppendLine("Nếu không có nhóm nào đạt ngưỡng, trả về []");
 
             using var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);

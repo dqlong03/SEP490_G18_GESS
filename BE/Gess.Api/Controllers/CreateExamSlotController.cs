@@ -70,6 +70,22 @@ namespace GESS.Api.Controllers
             }
             return Ok(result);
         }
+        //API to check exist list teacher in system and create new teacher if not exist
+        [HttpGet("CheckTeacherExist")]
+        public async Task<IActionResult> CheckTeacherExist([FromQuery] List<ExistTeacherDTO> teachers)
+        {
+            if (teachers == null || !teachers.Any())
+            {
+                return BadRequest("No teachers provided.");
+            }
+            var existingTeachers = await _examSlotService.CheckTeacherExist(teachers);
+            if (existingTeachers.Any())
+            {
+                return NotFound("No existing teachers found.");
+            }
+
+            return Ok(existingTeachers);
+        }
 
         [HttpPost("CalculateExamSlot")]
         public async Task<IActionResult> CalculateExamSlot([FromBody] ExamSlotCreateDTO examSlotCreateDTO)
@@ -111,6 +127,24 @@ namespace GESS.Api.Controllers
                 return NotFound("No exam slots generated.");
             }
             return Ok(examSlots);
+        }
+        //API to save exam slot
+        [HttpPost("SaveExamSlot")]
+        public async Task<IActionResult> SaveExamSlot([FromBody] List<GeneratedExamSlot> examSlots)
+        {
+            if (examSlots == null || !examSlots.Any())
+            {
+                return BadRequest("No exam slots provided.");
+            }
+            var result = await _examSlotService.SaveExamSlotsAsync(examSlots);
+            if (result)
+            {
+                return Ok("Exam slots saved successfully.");
+            }
+            else
+            {
+                return StatusCode(500, "An error occurred while saving exam slots.");
+            }
         }
         private List<GeneratedExamSlot> OptimizeBySlot(ExamSlotCreateDTO dto)
         {

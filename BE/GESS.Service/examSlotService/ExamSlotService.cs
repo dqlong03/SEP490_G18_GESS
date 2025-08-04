@@ -1,6 +1,7 @@
 ﻿using Gess.Repository.Infrastructures;
 using GESS.Entity.Entities;
 using GESS.Model.ExamSlot;
+using GESS.Model.ExamSlotCreateDTO;
 using GESS.Model.Major;
 using GESS.Model.RoomDTO;
 using GESS.Model.Subject;
@@ -21,6 +22,16 @@ namespace GESS.Service.examSlotService
         public ExamSlotService(IUnitOfWork unitOfWork) : base(unitOfWork)
         {
             _unitOfWork = unitOfWork;
+        }
+
+        public async Task<IEnumerable<TeacherCreationFinalRequest>> CheckTeacherExist(List<ExistTeacherDTO> teachers)
+        {
+            var teacherIds = await _unitOfWork.ExamSlotRepository.CheckTeacherExistAsync(teachers);
+            if (teacherIds == null || !teacherIds.Any())
+            {
+                return new List<TeacherCreationFinalRequest>();
+            }
+            return teacherIds;
         }
 
         public async Task<IEnumerable<ExamSlotDTO>> GetAllExamSlotsAsync()
@@ -88,6 +99,11 @@ namespace GESS.Service.examSlotService
         public bool IsRoomAvailable(int roomId, DateTime slotStart, DateTime slotEnd)
         {
             return _unitOfWork.ExamSlotRepository.IsRoomAvailable(roomId, slotStart, slotEnd);
+        }
+
+        public async Task<bool> SaveExamSlotsAsync(List<GeneratedExamSlot> examSlots)
+        {
+            return await _unitOfWork.ExamSlotRepository.SaveExamSlotsAsync(examSlots);
         }
     }
 }
