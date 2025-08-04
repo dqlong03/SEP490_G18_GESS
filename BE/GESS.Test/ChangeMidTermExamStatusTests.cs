@@ -22,6 +22,9 @@ using GESS.Model.PracticeExam;
 using GESS.Model.ExamSlotRoomDTO;
 using GESS.Model.MultiExamHistories;
 using GESS.Model.Student;
+using GESS.Model.Teacher;
+using GESS.Model.Major;
+using GESS.Model.RoomDTO;
 
 
 namespace GESS.Test
@@ -745,12 +748,27 @@ namespace GESS.Test
             throw new NotImplementedException();
         }
 
+        public Task<bool> AddExamToExamSlot(int examSlotId, int examId, string examType)
+        {
+            throw new NotImplementedException();
+        }
+
         public int AddRange(IEnumerable<ExamSlot> entities)
         {
             throw new NotImplementedException();
         }
 
         public Task<int> AddRangeAsync(IEnumerable<ExamSlot> entities)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<TeacherCreationFinalRequest>> CheckTeacherExist(List<ExistTeacherDTO> teachers)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<int> CountPageExamSlots(ExamSlotFilterRequest filterRequest, int pageSize)
         {
             throw new NotImplementedException();
         }
@@ -780,6 +798,31 @@ namespace GESS.Test
             throw new NotImplementedException();
         }
 
+        public Task<IEnumerable<ExamSlotResponse>> GetAllExamSlotsPagination(ExamSlotFilterRequest filterRequest, int pageSize, int pageIndex)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<GradeTeacherResponse>> GetAllGradeTeacher(int majorId, int subjectId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<MajorDTODDL>> GetAllMajor()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<RoomListDTO>> GetAllRoomsAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<SubjectDTODDL>> GetAllSubjectsByMajorId(int majorId)
+        {
+            throw new NotImplementedException();
+        }
+
         public ExamSlot GetById(Guid id)
         {
             throw new NotImplementedException();
@@ -791,6 +834,21 @@ namespace GESS.Test
         }
 
         public Task<ExamSlot> GetByIdAsync(int id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<ExamSlotDetail> GetExamSlotById(int examSlotId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool IsRoomAvailable(int roomId, DateTime slotStart, DateTime slotEnd)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> SaveExamSlotsAsync(List<Model.ExamSlotCreateDTO.GeneratedExamSlot> examSlots)
         {
             throw new NotImplementedException();
         }

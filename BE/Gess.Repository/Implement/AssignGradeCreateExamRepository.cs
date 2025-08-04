@@ -18,12 +18,25 @@ namespace GESS.Repository.Implement
 
         public bool AddTeacherToSubject(Guid teacherId, int subjectId)
         {
+            // Validate input parameters
+            if (teacherId == Guid.Empty)
+            {
+                return false;
+            }
+            
+            if (subjectId <= 0)
+            {
+                return false;
+            }
+            
+            // Check if assignment already exists
             var checkExist = _context.SubjectTeachers
                 .Any(st => st.TeacherId == teacherId && st.SubjectId == subjectId);
             if (checkExist)
             {
                 return false;
             }
+            
             var subjectTeacher = new SubjectTeacher
             {
                 TeacherId = teacherId,
@@ -46,12 +59,30 @@ namespace GESS.Repository.Implement
 
         public bool AssignRoleCreateExam(Guid teacherId, int subjectId)
         {
+            // Validate input parameters
+            if (teacherId == Guid.Empty)
+            {
+                return false;
+            }
+            
+            if (subjectId <= 0)
+            {
+                return false;
+            }
+            
             var subjectTeacher = _context.SubjectTeachers
                 .FirstOrDefault(st => st.TeacherId == teacherId && st.SubjectId == subjectId);
             if (subjectTeacher == null)
             {
                 return false;
             }
+            
+            // Check if assignment is active
+            if (!subjectTeacher.IsActiveSubjectTeacher)
+            {
+                return false;
+            }
+            
             if (subjectTeacher.IsCreateExamTeacher)
             {
                 subjectTeacher.IsCreateExamTeacher = false;
