@@ -50,7 +50,7 @@ namespace GESS.Api.Controllers
             }
 
             promptBuilder.AppendLine(@"
-                Định dạng đầu ra: một mảng JSON. Mỗi phần tử là một câu hỏi có cấu trúc sau:
+                Định dạng đầu ra: một mảng JSON. Với loại 1 thì tạo SelectOne, loại 2 thì tạo MultipleChoice còn loại 3 thì tạo TrueFalse. Mỗi phần tử là một câu hỏi có cấu trúc sau:
 
                 1. **SelectOne** (chỉ có đúng 1 đáp án):
                 {

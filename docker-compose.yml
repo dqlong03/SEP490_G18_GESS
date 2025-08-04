@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  backend:
+    build: ./BE
+    container_name: BE
+    ports:
+      - "3000:3000"
+    restart: always
+
+  frontend:
+    build: ./FE
+    container_name: FE
+    ports:
+      - "80:80"
+    restart: always
