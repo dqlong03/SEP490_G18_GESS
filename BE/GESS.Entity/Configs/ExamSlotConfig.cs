@@ -11,15 +11,14 @@ namespace GESS.Entity.Configurations
             // Khóa chính
             builder.HasKey(es => es.ExamSlotId);
 
-            // Tên bảng nếu muốn custom
             builder.ToTable("ExamSlot");
 
-            // Cấu hình SlotName
+            // SlotName
             builder.Property(es => es.SlotName)
                 .IsRequired()
                 .HasMaxLength(50);
 
-            // StartTime, EndTime kiểu time
+            // StartTime / EndTime
             builder.Property(es => es.StartTime)
                 .IsRequired()
                 .HasColumnType("time");
@@ -28,32 +27,51 @@ namespace GESS.Entity.Configurations
                 .IsRequired()
                 .HasColumnType("time");
 
-            // Status - default "Chưa gán bài thi"
+            // Status
             builder.Property(es => es.Status)
                 .IsRequired()
-                .HasDefaultValue("Chưa gán bài thi")
-                .HasMaxLength(100);
+                .HasMaxLength(100)
+                .HasDefaultValue("Chưa gán bài thi");
 
-            // MultiOrPractice có thể null nhưng set max length
+            // MultiOrPractice optional
             builder.Property(es => es.MultiOrPractice)
-                .HasMaxLength(50);
+                .HasMaxLength(50)
+                .IsRequired(false);
 
-            // ExamDate kiểu date/datetime
+            // ExamDate
             builder.Property(es => es.ExamDate)
-                .HasColumnType("date");
+                .HasColumnType("date")
+                .IsRequired();
+
+            // Quan hệ với Subject (bắt buộc) - không cascade xóa
+            builder.HasOne(es => es.Subject)
+                .WithMany() // giả sử Subject không cần biết về ExamSlot ngược lại, nếu có navigation thì thay bằng .WithMany(s => s.ExamSlots)
+                .HasForeignKey(es => es.SubjectId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Quan hệ với Semester (bắt buộc)
+            builder.HasOne(es => es.Semester)
+                .WithMany()
+                .HasForeignKey(es => es.SemesterId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Quan hệ với PracticeExam (nếu có)
+            builder.HasOne(es => es.PracticeExam)
+                .WithMany()
+                .HasForeignKey(es => es.PracticeExamId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Quan hệ với MultiExam (nếu có)
+            builder.HasOne(es => es.MultiExam)
+                .WithMany()
+                .HasForeignKey(es => es.MultiExamId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             // Quan hệ với ExamSlotRoom (1-n)
             builder.HasMany(es => es.ExamSlotRooms)
                 .WithOne(esr => esr.ExamSlot)
                 .HasForeignKey(esr => esr.ExamSlotId)
                 .OnDelete(DeleteBehavior.Cascade);
-
-            // Các khóa ngoại khác nếu có bảng tương ứng
-            // Ví dụ:
-            // builder.HasOne<Subject>()
-            //     .WithMany()
-            //     .HasForeignKey(es => es.SubjectId)
-            //     .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

@@ -28,7 +28,21 @@ namespace GESS.Model.ExamSlotCreateDTO
         public int RoomId { get; set; }
         public List<StudentAddDto> Students { get; set; }
     }
-
+    public class ExamSlotRoomDetail
+    {
+        public int ExamSlotRoomId { get; set; }
+        public int RoomId { get; set; }
+        public string RoomName { get; set; }
+        public string GradeTeacherName { get; set; }
+        public string ProctorName { get; set; }
+        public int Status { get; set; }
+        public string ExamType { get; set; }
+        public DateTime ExamDate { get; set; }
+        public string? ExamName { get; set; }
+        public string SubjectName { get; set; }
+        public string SemesterName { get; set; }
+        public List<StudentAddDto> Students { get; set; }
+    }
     public class TeacherAssignment
     {
         public Guid ?TeacherId { get; set; }

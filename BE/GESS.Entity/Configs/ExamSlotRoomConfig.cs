@@ -1,4 +1,4 @@
-using GESS.Entity.Entities;
+﻿using GESS.Entity.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

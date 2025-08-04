@@ -12,6 +12,8 @@ using Microsoft.EntityFrameworkCore;
 using GESS.Model.RoomDTO;
 using GESS.Model.Teacher;
 using GESS.Model.ExamSlotCreateDTO;
+using GESS.Model.ExamSlot;
+using GESS.Model.Student;
 namespace GESS.Repository.Implement
 {
     public class ExamSlotRepository : IExamSlotRepository
@@ -20,6 +22,114 @@ namespace GESS.Repository.Implement
         public ExamSlotRepository(GessDbContext context)
         {
             _context = context;
+        }
+
+        public async Task<bool> AddExamToExamSlotAsync(int examSlotId, int examId, string examType)
+        {
+            var examSlot = await _context.ExamSlots
+                .Include(es => es.ExamSlotRooms)
+                .FirstOrDefaultAsync(es => es.ExamSlotId == examSlotId);
+            if (examSlot == null)
+                {
+                return false; // Không tìm thấy ExamSlot
+            }
+            // Kiểm tra xem ExamSlot đã có bài thi nào chưa
+            if (examType == "Multiple")
+            {
+                if (examSlot.MultiExamId.HasValue)
+                {
+                    return false; // ExamSlot đã có bài thi nhiều lựa chọn
+                }
+                examSlot.Status = "Chưa mở ca";
+                examSlot.MultiExamId = examId;
+            }
+            else if (examType == "Practice")
+            {
+                if (examSlot.PracticeExamId.HasValue)
+                {
+                    return false; // ExamSlot đã có bài thi thực hành
+                }
+                examSlot.Status = "Chưa mở ca";
+                examSlot.PracticeExamId = examId;
+            }
+            else
+            {
+                return false; // Loại bài thi không hợp lệ
+            }
+            var examSlotRooms = await _context.ExamSlotRooms
+                .Where(esr => esr.ExamSlotId == examSlotId&&esr.MultiOrPractice==examType)
+                .ToListAsync();
+            // Cập nhật các phòng thi
+            foreach (var room in examSlotRooms)
+            {
+                if(examType== "Multiple")
+                {
+                    room.MultiExamId = examId;
+                }
+                else if(examType == "Practice")
+                {
+                    room.PracticeExamId = examId;
+                }
+            }
+            //Them bai lam cho sinh vien
+            if (examType == "Multiple")
+            {
+                //lay danh sach sinh vien trong examSlotRoom
+                var studentExamSlotRooms = await _context.StudentExamSlotRoom
+                    .Where(ser => ser.ExamSlotRoom.ExamSlotId == examSlotId)
+                    .ToListAsync();
+                foreach (var studentExamSlotRoom in studentExamSlotRooms)
+                {
+                    //check xem sinh vien da ton tai trong MultiExamHistory chua
+                    var existingMultiExamHistory = await _context.MultiExamHistories
+                        .FirstOrDefaultAsync(meh => meh.StudentId == studentExamSlotRoom.StudentId && meh.MultiExamId == examId);
+                    if (existingMultiExamHistory == null)
+                    {
+                        // Nếu chưa tồn tại, thêm mới
+                        var newMultiExamHistory = new MultiExamHistory
+                        {
+                            StudentId = studentExamSlotRoom.StudentId,
+                            MultiExamId = examId,
+                            ExamSlotRoomId = studentExamSlotRoom.ExamSlotRoomId,
+                            IsGrade = false,
+                            Score = 0,
+                            CheckIn = false,
+                            StatusExam = "Chưa thi",
+                        };
+                        _context.MultiExamHistories.Add(newMultiExamHistory);
+                    }
+                }
+            }
+            else if (examType == "Practice")
+            {
+                //lay danh sach sinh vien trong examSlotRoom
+                var studentExamSlotRooms = await _context.StudentExamSlotRoom
+                    .Where(ser => ser.ExamSlotRoom.ExamSlotId == examSlotId)
+                    .ToListAsync();
+                foreach (var studentExamSlotRoom in studentExamSlotRooms)
+                {
+                    //check xem sinh vien da ton tai trong MultiExamHistory chua
+                    var existingPracExamHistory = await _context.PracticeExamHistories
+                        .FirstOrDefaultAsync(meh => meh.StudentId == studentExamSlotRoom.StudentId && meh.PracExamId == examId);
+                    if (existingPracExamHistory == null)
+                    {
+                        // Nếu chưa tồn tại, thêm mới
+                        var newPracticeExamHistory = new PracticeExamHistory
+                        {
+                            StudentId = studentExamSlotRoom.StudentId,
+                            PracExamId = examId,
+                            ExamSlotRoomId = studentExamSlotRoom.ExamSlotRoomId,
+                            IsGraded = false,
+                            Score = 0,
+                            CheckIn = false,
+                            StatusExam = "Chưa thi",
+                        };
+                        _context.PracticeExamHistories.Add(newPracticeExamHistory);
+                    }
+                }
+            }
+            await _context.SaveChangesAsync();
+            return true;
         }
 
         public async Task<IEnumerable<TeacherCreationFinalRequest>> CheckTeacherExistAsync(List<ExistTeacherDTO> teachers)
@@ -70,6 +180,101 @@ namespace GESS.Repository.Implement
             return result;
         }
 
+        public async Task<int> CountPageExamSlotsAsync(ExamSlotFilterRequest filterRequest, int pageSize)
+        {
+            var examSlots = _context.ExamSlots.AsQueryable();
+            // Lọc theo SemesterId, SubjectId, Year, Status, SlotName, ExamType, FromDate, ToDate
+            if (filterRequest.SemesterId.HasValue)
+            {
+                examSlots = examSlots.Where(es => es.SemesterId == filterRequest.SemesterId.Value);
+            }
+            if (filterRequest.SubjectId.HasValue)
+            {
+                examSlots = examSlots.Where(es => es.SubjectId == filterRequest.SubjectId.Value);
+            }
+            if (filterRequest.Year.HasValue)
+            {
+                examSlots = examSlots.Where(es => es.ExamDate.Year == filterRequest.Year.Value);
+            }
+            if (!string.IsNullOrEmpty(filterRequest.Status))
+            {
+                examSlots = examSlots.Where(es => es.Status == filterRequest.Status);
+            }
+            if (!string.IsNullOrEmpty(filterRequest.ExamType))
+            {
+                examSlots = examSlots.Where(es => es.MultiOrPractice == filterRequest.ExamType);
+            }
+            if (filterRequest.FromDate.HasValue)
+            {
+                examSlots = examSlots.Where(es => es.ExamDate >= filterRequest.FromDate.Value);
+            }
+            if (filterRequest.ToDate.HasValue)
+            {
+                examSlots = examSlots.Where(es => es.ExamDate <= filterRequest.ToDate.Value);
+            }
+            var totalCount = await examSlots.CountAsync();
+            if (totalCount == 0)
+            {
+                return 0; // Không có exam slots nào
+            }
+            return (int)Math.Ceiling((double)totalCount / pageSize); // Trả về tổng số trang
+
+        }
+
+        public async Task<IEnumerable<ExamSlotResponse>> GetAllExamSlotsPaginationAsync(ExamSlotFilterRequest filterRequest, int pageSize, int pageIndex)
+        {
+            var examSlots = _context.ExamSlots.AsQueryable();
+            // Lọc theo SemesterId, SubjectId, Year, Status, SlotName, ExamType, FromDate, ToDate
+            if (filterRequest.SemesterId.HasValue)
+            {
+                examSlots = examSlots.Where(es => es.SemesterId == filterRequest.SemesterId.Value);
+            }
+            if (filterRequest.SubjectId.HasValue)
+            {
+                examSlots = examSlots.Where(es => es.SubjectId == filterRequest.SubjectId.Value);
+            }
+            if (filterRequest.Year.HasValue)
+            {
+                examSlots = examSlots.Where(es => es.ExamDate.Year == filterRequest.Year.Value);
+            }
+            if (!string.IsNullOrEmpty(filterRequest.Status))
+            {
+                examSlots = examSlots.Where(es => es.Status == filterRequest.Status);
+            }
+            if (!string.IsNullOrEmpty(filterRequest.ExamType))
+            {
+                examSlots = examSlots.Where(es => es.MultiOrPractice == filterRequest.ExamType);
+            }
+            if (filterRequest.FromDate.HasValue)
+            {
+                examSlots = examSlots.Where(es => es.ExamDate >= filterRequest.FromDate.Value);
+            }
+            if (filterRequest.ToDate.HasValue)
+            {
+                examSlots = examSlots.Where(es => es.ExamDate <= filterRequest.ToDate.Value);
+            }
+            examSlots.OrderBy(examSlots => examSlots.SubjectId)
+                .ThenBy(examSlots => examSlots.ExamDate);
+            var examSlotList = await examSlots
+                .Include(es => es.Subject)
+                .Select(es => new ExamSlotResponse
+                {
+                    ExamSlotId = es.ExamSlotId,
+                    SlotName = es.SlotName,
+                    Status = es.Status,
+                    ExamType = es.MultiOrPractice,
+                    SubjectName = es.Subject.SubjectName,
+                    ExamDate = es.ExamDate
+                })
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+            if (examSlotList == null || !examSlotList.Any())
+            {
+                return new List<ExamSlotResponse>();
+            }
+            return examSlotList;
+        }
 
         public async Task<IEnumerable<GradeTeacherResponse>> GetAllGradeTeacherAsync(int majorId, int subjectId)
         {
@@ -132,6 +337,73 @@ namespace GESS.Repository.Implement
                 .ToListAsync();
 
             return subjects;
+        }
+
+        public async Task<ExamSlotDetail> GetExamSlotByIdAsync(int examSlotId)
+        {
+            var examSlot = await _context.ExamSlots
+                .Include(es => es.Subject)
+                .Include(es => es.Semester)
+                .FirstOrDefaultAsync(es => es.ExamSlotId == examSlotId);
+            if (examSlot == null)
+            {
+                return null;
+            }
+            var examSlotDetail = new ExamSlotDetail
+            {
+                ExamSlotId = examSlot.ExamSlotId,
+                SlotName = examSlot.SlotName,
+                StartTime = examSlot.StartTime,
+                EndTime = examSlot.EndTime,
+                Status = examSlot.Status,
+                ExamType = examSlot.MultiOrPractice,
+                ExamDate = examSlot.ExamDate,
+                SubjectName = examSlot.Subject.SubjectName,
+                SemesterName = examSlot.Semester.SemesterName
+            };
+            
+            // Lấy danh sách phòng thi cho ca thi này
+            var examSlotRooms = await _context.ExamSlotRooms
+                .Where(esr => esr.ExamSlotId == examSlotId)
+                .Include(esr => esr.Room)
+                .Include(esr => esr.Supervisor)
+                .Include(esr => esr.ExamGrader)
+                .Select(esr => new ExamSlotRoomDetail
+                {
+                    ExamSlotRoomId = esr.ExamSlotRoomId,
+                    RoomId = esr.RoomId,
+                    RoomName = esr.Room.RoomName,
+                    GradeTeacherName = esr.Supervisor.User.Fullname,
+                    ProctorName = esr.ExamGrader.User.Fullname,
+                    Status = esr.Status,
+                    ExamType = esr.MultiOrPractice,
+                    ExamDate = esr.ExamDate,
+                    SubjectName = examSlot.Subject.SubjectName,
+                    SemesterName = examSlot.Semester.SemesterName,
+                    ExamName = esr.MultiOrPractice == "Multiple"
+                    ? (esr.MultiExam != null ? esr.MultiExam.MultiExamName : null)
+                    : (esr.PracticeExam != null ? esr.PracticeExam.PracExamName : null),
+                })
+                .ToListAsync();
+            //Lay danh sách sinh viên trong từng phòng thi
+            foreach (var room in examSlotRooms)
+            {
+                room.Students = await _context.StudentExamSlotRoom
+                    .Where(ser => ser.ExamSlotRoomId == room.ExamSlotRoomId)
+                    .Include(ser => ser.Student)
+                    .Select(ser => new StudentAddDto
+                    {
+                        Code = ser.Student.User.Code,
+                        FullName = ser.Student.User.Fullname,
+                        Email = ser.Student.User.Email,
+                        DateOfBirth = ser.Student.User.DateOfBirth,
+                        Gender = ser.Student.User.Gender
+                    })
+                .ToListAsync();
+                room.Students = room.Students.OrderBy(s => s.FullName).ToList();
+            }
+            examSlotDetail.ExamSlotRoomDetails = examSlotRooms;
+            return examSlotDetail;
         }
 
         public bool IsRoomAvailable(int roomId, DateTime slotStart, DateTime slotEnd)

@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GESS.Entity.Entities
 {
@@ -20,26 +17,40 @@ namespace GESS.Entity.Entities
         [Required(ErrorMessage = "Tên ca thi không được để trống!")]
         [StringLength(50, ErrorMessage = "Tên ca thi không được vượt quá 50 ký tự!")]
         public string SlotName { get; set; }
+
         [Column(TypeName = "time")]
         public TimeSpan StartTime { get; set; }
 
         [Column(TypeName = "time")]
         public TimeSpan EndTime { get; set; }
+
+        [StringLength(100)]
         public string Status { get; set; } = "Chưa gán bài thi"; // Trạng thái ca thi, mặc định là "Chưa gán bài thi"
-        public string MultiOrPractice { get; set; } 
-        public int SubjectId { get; set; } // Khóa ngoại đến Subject
-        public int SemesterId { get; set; } // Khóa ngoại đến Semester
-        public DateTime ExamDate { get; set; } // Ngày thi
-        public int PracticeExamId { get; set; } // Khóa ngoại đến PracticeExam (nếu có)
-        public int MultiExamId { get; set; } // Khóa ngoại đến MultiExam (nếu có)
+
+        [StringLength(50)]
+        public string? MultiOrPractice { get; set; }
+
+        // Khóa ngoại đến Subject (bắt buộc)
+        public int SubjectId { get; set; }
+        public Subject Subject { get; set; } = null!;
+
+        // Khóa ngoại đến Semester (bắt buộc)
+        public int SemesterId { get; set; }
+        public Semester Semester { get; set; } = null!;
+
+        // Ngày thi
+        [Column(TypeName = "date")]
+        public DateTime ExamDate { get; set; }
+
+        // Khóa ngoại đến PracticeExam (nếu có)
+        public int? PracticeExamId { get; set; }
+        public PracticeExam? PracticeExam { get; set; }
+
+        // Khóa ngoại đến MultiExam (nếu có)
+        public int? MultiExamId { get; set; }
+        public MultiExam? MultiExam { get; set; }
 
         // Danh sách phòng thi cho ca thi này (qua bảng trung gian ExamSlotRoom)
-        public ICollection<ExamSlotRoom> ExamSlotRooms { get; set; }
-
-        // Constructor khởi tạo danh sách
-        public ExamSlot()
-        {
-            ExamSlotRooms = new List<ExamSlotRoom>();
-        }
+        public ICollection<ExamSlotRoom> ExamSlotRooms { get; set; } = new List<ExamSlotRoom>();
     }
 }
