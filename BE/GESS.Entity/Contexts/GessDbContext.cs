@@ -1,5 +1,6 @@
 ﻿using GESS.Common;
 using GESS.Entity.Configs;
+using GESS.Entity.Configurations;
 using GESS.Entity.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
