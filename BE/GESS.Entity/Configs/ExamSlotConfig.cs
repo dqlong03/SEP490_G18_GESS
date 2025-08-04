@@ -2,8 +2,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace GESS.Entity.Configurations
-{
+namespace GESS.Entity.Configs
+{ 
     public class ExamSlotConfig : IEntityTypeConfiguration<ExamSlot>
     {
         public void Configure(EntityTypeBuilder<ExamSlot> builder)
