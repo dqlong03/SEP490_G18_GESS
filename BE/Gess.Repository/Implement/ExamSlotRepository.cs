@@ -94,7 +94,7 @@ namespace GESS.Repository.Implement
                             IsGrade = false,
                             Score = 0,
                             CheckIn = false,
-                            StatusExam = "Chưa mở ca"
+                            StatusExam = "Chưa thi"
                         };
                         _context.MultiExamHistories.Add(newMultiExamHistory);
                     }
@@ -122,7 +122,7 @@ namespace GESS.Repository.Implement
                             IsGraded = false,
                             Score = 0,
                             CheckIn = false,
-                            StatusExam = "Chưa mở ca"
+                            StatusExam = "Chưa thi"
                         };
                         _context.PracticeExamHistories.Add(newPracticeExamHistory);
                     }
@@ -132,7 +132,7 @@ namespace GESS.Repository.Implement
             return true;
         }
 
-        public async Task<bool> ChangeStatusExamSlot(int examSlotId)
+        public async Task<bool> ChangeStatusExamSlot(int examSlotId, string examType)
         {
             var examSlot = await _context.ExamSlots
                 .FirstOrDefaultAsync(es => es.ExamSlotId == examSlotId);
@@ -149,7 +149,14 @@ namespace GESS.Repository.Implement
             }
             else if (examSlot.Status == "Đang mở ca")
             {
-                examSlot.Status = "Đang chấm thi";
+                if(examType=="Multiple")
+                {
+                    examSlot.Status = "Đã kết thúc";
+                }
+                else if (examType == "Practice")
+                {
+                    examSlot.Status = "Đang chấm thi";
+                }
             }
             else if (examSlot.Status == "Đang chấm thi")
             {
@@ -159,6 +166,8 @@ namespace GESS.Repository.Implement
             {
                 return false;
             }
+            _context.ExamSlots.Update(examSlot);
+            await _context.SaveChangesAsync();
             return true;
         }
 

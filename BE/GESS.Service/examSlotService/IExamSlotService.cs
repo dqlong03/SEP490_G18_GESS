@@ -17,7 +17,7 @@ namespace GESS.Service.examSlotService
     public interface IExamSlotService : IBaseService<ExamSlot>
     {
         Task<bool> AddExamToExamSlot(int examSlotId, int examId, string examType);
-        Task<bool> ChangeStatusExamSlot(int examSlotId);
+        Task<bool> ChangeStatusExamSlot(int examSlotId, string examType);
         Task <IEnumerable<TeacherCreationFinalRequest>>CheckTeacherExist(List<ExistTeacherDTO> teachers);
         Task <int> CountPageExamSlots(ExamSlotFilterRequest filterRequest, int pageSize);
         Task<IEnumerable<ExamSlotDTO>> GetAllExamSlotsAsync();

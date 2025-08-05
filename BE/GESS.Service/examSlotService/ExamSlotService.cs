@@ -29,9 +29,9 @@ namespace GESS.Service.examSlotService
             return await _unitOfWork.ExamSlotRepository.AddExamToExamSlotAsync(examSlotId, examId, examType);
         }
 
-        public async Task<bool> ChangeStatusExamSlot(int examSlotId)
+        public async Task<bool> ChangeStatusExamSlot(int examSlotId, string examType)
         {
-            var examSlot = await _unitOfWork.ExamSlotRepository.ChangeStatusExamSlot(examSlotId);
+            var examSlot = await _unitOfWork.ExamSlotRepository.ChangeStatusExamSlot(examSlotId, examType);
             return examSlot;
         }
 
