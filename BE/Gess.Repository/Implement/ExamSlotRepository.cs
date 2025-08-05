@@ -132,6 +132,36 @@ namespace GESS.Repository.Implement
             return true;
         }
 
+        public async Task<bool> ChangeStatusExamSlot(int examSlotId)
+        {
+            var examSlot = await _context.ExamSlots
+                .FirstOrDefaultAsync(es => es.ExamSlotId == examSlotId);
+            if (examSlot == null)
+                { return false; }
+            // Chuyển trạng thái của ExamSlot
+            if (examSlot.Status == "Chưa gán bài thi")
+            {
+                examSlot.Status = "Chưa mở ca";
+            }
+            else if (examSlot.Status == "Chưa mở ca")
+            {
+                examSlot.Status = "Đang mở ca";
+            }
+            else if (examSlot.Status == "Đang mở ca")
+            {
+                examSlot.Status = "Đang chấm thi";
+            }
+            else if (examSlot.Status == "Đang chấm thi")
+            {
+                examSlot.Status = "Đã kết thúc";
+            }
+            else
+            {
+                return false;
+            }
+            return true;
+        }
+
         public async Task<IEnumerable<TeacherCreationFinalRequest>> CheckTeacherExistAsync(List<ExistTeacherDTO> teachers)
         {
             var result = new List<TeacherCreationFinalRequest>();
