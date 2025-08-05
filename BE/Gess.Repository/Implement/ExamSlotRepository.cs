@@ -94,7 +94,7 @@ namespace GESS.Repository.Implement
                             IsGrade = false,
                             Score = 0,
                             CheckIn = false,
-                            StatusExam = "Chưa thi",
+                            StatusExam = "Chưa mở ca"
                         };
                         _context.MultiExamHistories.Add(newMultiExamHistory);
                     }
@@ -122,7 +122,7 @@ namespace GESS.Repository.Implement
                             IsGraded = false,
                             Score = 0,
                             CheckIn = false,
-                            StatusExam = "Chưa thi",
+                            StatusExam = "Chưa mở ca"
                         };
                         _context.PracticeExamHistories.Add(newPracticeExamHistory);
                     }
