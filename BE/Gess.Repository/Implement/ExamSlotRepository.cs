@@ -94,7 +94,7 @@ namespace GESS.Repository.Implement
                             IsGrade = false,
                             Score = 0,
                             CheckIn = false,
-                            StatusExam = "Chưa thi",
+                            StatusExam = "Chưa thi"
                         };
                         _context.MultiExamHistories.Add(newMultiExamHistory);
                     }
@@ -122,12 +122,51 @@ namespace GESS.Repository.Implement
                             IsGraded = false,
                             Score = 0,
                             CheckIn = false,
-                            StatusExam = "Chưa thi",
+                            StatusExam = "Chưa thi"
                         };
                         _context.PracticeExamHistories.Add(newPracticeExamHistory);
                     }
                 }
             }
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ChangeStatusExamSlot(int examSlotId, string examType)
+        {
+            var examSlot = await _context.ExamSlots
+                .FirstOrDefaultAsync(es => es.ExamSlotId == examSlotId);
+            if (examSlot == null)
+                { return false; }
+            // Chuyển trạng thái của ExamSlot
+            if (examSlot.Status == "Chưa gán bài thi")
+            {
+                examSlot.Status = "Chưa mở ca";
+            }
+            else if (examSlot.Status == "Chưa mở ca")
+            {
+                examSlot.Status = "Đang mở ca";
+            }
+            else if (examSlot.Status == "Đang mở ca")
+            {
+                if(examType=="Multiple")
+                {
+                    examSlot.Status = "Đã kết thúc";
+                }
+                else if (examType == "Practice")
+                {
+                    examSlot.Status = "Đang chấm thi";
+                }
+            }
+            else if (examSlot.Status == "Đang chấm thi")
+            {
+                examSlot.Status = "Đã kết thúc";
+            }
+            else
+            {
+                return false;
+            }
+            _context.ExamSlots.Update(examSlot);
             await _context.SaveChangesAsync();
             return true;
         }

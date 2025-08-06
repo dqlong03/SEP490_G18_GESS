@@ -93,5 +93,16 @@ namespace GESS.Api.Controllers
             }
             return Ok("Exam slots saved successfully.");
         }
+        //Change status of exam slot => "Mở ca"
+        [HttpPost("ChangeStatusExamSlot")]
+        public async Task<IActionResult> ChangeStatusExamSlot(int examSlotId, string examType)
+        {
+            var examSlot = await _examSlotService.ChangeStatusExamSlot(examSlotId, examType);
+            if (!examSlot)
+            {
+                return BadRequest("Failed to change status of exam slot.");
+            }
+            return Ok("Status changed successfully.");
+        }
     }
 }

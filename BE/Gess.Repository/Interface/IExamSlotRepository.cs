@@ -16,6 +16,7 @@ namespace GESS.Repository.Interface
     public interface IExamSlotRepository
     {
         Task<bool> AddExamToExamSlotAsync(int examSlotId, int examId, string examType);
+        Task<bool> ChangeStatusExamSlot(int examSlotId, string examType);
         Task<IEnumerable<TeacherCreationFinalRequest>> CheckTeacherExistAsync(List<ExistTeacherDTO> teachers);
         Task<int> CountPageExamSlotsAsync(ExamSlotFilterRequest filterRequest, int pageSize);
         Task<IEnumerable<ExamSlotResponse>> GetAllExamSlotsPaginationAsync(ExamSlotFilterRequest filterRequest, int pageSize, int pageIndex);
