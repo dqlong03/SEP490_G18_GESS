@@ -25,7 +25,7 @@ namespace GESS.Entity.Contexts
         public DbSet<Subject> Subjects { get; set; }
         public DbSet<Teacher> Teachers { get; set; }
         public DbSet<Room> Rooms { get; set; }
-        public DbSet<ExamSlot> ExamSlot { get; set; }
+        public DbSet<ExamSlot> ExamSlots { get; set; }
         public DbSet<ExamSlotRoom> ExamSlotRooms { get; set; }
         public DbSet<Class> Classes { get; set; }
         public DbSet<Student> Students { get; set; }
