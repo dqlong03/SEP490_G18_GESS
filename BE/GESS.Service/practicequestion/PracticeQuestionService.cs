@@ -73,7 +73,8 @@ namespace GESS.Service.practicequestion
                     var answer = new PracticeAnswer
                     {
                         AnswerContent = dto.AnswerContent,
-                        PracticeQuestionId = practiceQuestion.PracticeQuestionId
+                        PracticeQuestionId = practiceQuestion.PracticeQuestionId,
+                        GradingCriteria = dto.Criteria,
                     };
 
                     await _unitOfWork.PracticeAnswersRepository.CreateAsync(answer);

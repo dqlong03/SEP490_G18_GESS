@@ -49,6 +49,7 @@ namespace GESS.Model.PracticeQuestionDTO
         public int LevelQuestionId { get; set; }
         public int SemesterId { get; set; }
         public string AnswerContent { get; set; }
+        public string Criteria { get; set; }
     }
 
 }
