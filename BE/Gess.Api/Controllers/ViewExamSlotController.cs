@@ -39,9 +39,9 @@ namespace GESS.Api.Controllers
         }
         //API to get all subjects by major id
         [HttpGet("GetAllSubjectsByMajorId/{majorId}")]
-        public IActionResult GetAllSubjectsByMajorId(int majorId)
+        public async Task<IActionResult> GetAllSubjectsByMajorId(int majorId)
         {
-            var subjects = _examSlotService.GetAllSubjectsByMajorId(majorId);
+            var subjects = await _examSlotService.GetAllSubjectsByMajorId(majorId);
             if (subjects == null)
             {
                 return NotFound("No majors found.");
