@@ -145,6 +145,10 @@ namespace GESS.Repository.Implement
             }
             else if (examSlot.Status == "Chưa mở ca")
             {
+                if(examSlot.ExamDate != DateTime.Now.Date)
+                {
+                    return false;
+                }
                 examSlot.Status = "Đang mở ca";
             }
             else if (examSlot.Status == "Đang mở ca")
