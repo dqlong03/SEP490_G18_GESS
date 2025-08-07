@@ -260,7 +260,7 @@ namespace GESS.Repository.Implement
 
         }
 
-        public async Task<IEnumerable<ExamSlotResponse>> GetAllExamSlotsPaginationAsync(ExamSlotFilterRequest filterRequest, int pageSize, int pageIndex)
+        public async Task<IEnumerable<ExamSlotResponse>> GetAllExamSlotsPaginationAsync(ExamSlotFilterRequest filterRequest, int pageIndex, int pageSize)
         {
             var examSlots = _context.ExamSlots.AsQueryable();
             // Lọc theo SemesterId, SubjectId, Year, Status, SlotName, ExamType, FromDate, ToDate
