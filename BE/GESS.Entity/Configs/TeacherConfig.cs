@@ -26,13 +26,6 @@ namespace GESS.Entity.Configs
                    .WithOne(c => c.Teacher)
                    .HasForeignKey(c => c.TeacherId);
 
-            builder.HasOne(t => t.ExamSlotRoomSupervisor)
-                   .WithOne(esr => esr.Supervisor)
-                   .HasForeignKey<ExamSlotRoom>(esr => esr.SupervisorId);
-
-            builder.HasOne(t => t.ExamSlotRoomGrader)
-                   .WithOne(esr => esr.ExamGrader)
-                   .HasForeignKey<ExamSlotRoom>(esr => esr.ExamGradedId);
         }
     }
 } 

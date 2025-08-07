@@ -33,12 +33,6 @@ namespace GESS.Entity.Entities
         // Danh sách lớp học mà giáo viên dạy (qua bảng trung gian Class)
         public ICollection<Class> Classes { get; set; }
 
-        // Phòng thi và ca thi mà giáo viên này trông thi (1 giáo viên trông 1 phòng/ca)
-        public ExamSlotRoom ExamSlotRoomSupervisor { get; set; }
-
-        // Phòng thi và ca thi mà giáo viên này chấm điểm (1 giáo viên chấm 1 phòng/ca)
-        public ExamSlotRoom ExamSlotRoomGrader { get; set; }
-
         public Major Major { get; set; }
         public int MajorId { get; set; }
 
@@ -48,11 +42,15 @@ namespace GESS.Entity.Entities
         // Xác định xem giáo viên có phải là khảo thí không
         public bool IsExamManager { get; set; }
 
+        public ICollection<ExamSlotRoom> ExamSlotRoomSupervisors { get; set; }
+        public ICollection<ExamSlotRoom> ExamSlotRoomGraders { get; set; }
         // Constructor khởi tạo các danh sách
         public Teacher()
         {
             //MajorTeachers = new List<MajorTeacher>();
             Classes = new List<Class>();
+            ExamSlotRoomSupervisors = new List<ExamSlotRoom>();
+            ExamSlotRoomGraders = new List<ExamSlotRoom>();
         }
     }
 }
