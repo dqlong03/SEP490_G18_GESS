@@ -59,13 +59,14 @@ namespace GESS.Entity.Configs
             builder.HasOne(es => es.PracticeExam)
                 .WithMany()
                 .HasForeignKey(es => es.PracticeExamId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Restrict); 
 
             // Quan hệ với MultiExam (nếu có)
             builder.HasOne(es => es.MultiExam)
                 .WithMany()
                 .HasForeignKey(es => es.MultiExamId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Restrict);
+
 
             // Quan hệ với ExamSlotRoom (1-n)
             builder.HasMany(es => es.ExamSlotRooms)

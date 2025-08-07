@@ -1,5 +1,5 @@
 # build stage
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /src
 
 COPY *.sln ./
@@ -10,9 +10,9 @@ COPY GESS.Model/*.csproj GESS.Model/
 COPY GESS.Service/*.csproj GESS.Service/
 COPY Gess.Repository/*.csproj Gess.Repository/
 COPY GessCommon/*.csproj GessCommon/
-RUN dotnet restore
 
-COPY . .
+COPY . .         
+RUN dotnet restore
 WORKDIR /src/Gess.Api
 RUN dotnet publish -c Release -o /app/publish
 
