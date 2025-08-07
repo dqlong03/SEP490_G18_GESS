@@ -23,6 +23,48 @@ namespace GESS.Repository.Implement
 
 
 
+        //Xóa câu hỏi theo loại (Trắc nghiệm hoặc Tự luận)
+        public async Task<bool> DeleteQuestionByTypeAsync(int questionId, int type)
+        {
+            try
+            {
+                if (type == 1) // Trắc nghiệm - MultiQuestion
+                {
+                    var multiQuestion = await _context.MultiQuestions
+                        .FirstOrDefaultAsync(q => q.MultiQuestionId == questionId);
+
+                    if (multiQuestion == null)
+                        return false;
+
+                    multiQuestion.IsActive = false;
+                }
+                else if (type == 2) // Tự luận - PracticeQuestion
+                {
+                    var practiceQuestion = await _context.PracticeQuestions
+                        .FirstOrDefaultAsync(q => q.PracticeQuestionId == questionId);
+
+                    if (practiceQuestion == null)
+                        return false;
+
+                    practiceQuestion.IsActive = false;
+                }
+                else
+                {
+                    return false; // Type không hợp lệ
+                }
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+
+
+
 
         // API lấy danh sách môn học theo CategoryExamId
         public async Task<IEnumerable<SubjectDTO>> GetSubjectsByCategoryExamIdAsync(int categoryExamId)

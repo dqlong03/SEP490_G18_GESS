@@ -22,6 +22,16 @@ namespace GESS.Service.practicequestion
         }
 
 
+
+        // 
+        public async Task<bool> DeleteQuestionByTypeAsync(int questionId, int type)
+        {
+            return await _unitOfWork.PracticeQuestionsRepository.DeleteQuestionByTypeAsync(questionId, type);
+        }
+
+
+
+
         // API lấy danh sách môn học theo CategoryExamId
         // GESS.Service.subject/SubjectService.cs
         public async Task<IEnumerable<SubjectDTO>> GetSubjectsByCategoryExamIdAsync(int categoryExamId)

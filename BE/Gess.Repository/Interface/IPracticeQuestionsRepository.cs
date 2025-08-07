@@ -24,5 +24,7 @@ namespace GESS.Repository.Interface
 
         Task<IEnumerable<SubjectDTO>> GetSubjectsByCategoryExamIdAsync(int categoryExamId);
 
+
+        Task<bool> DeleteQuestionByTypeAsync(int questionId, int type);
     }
 }

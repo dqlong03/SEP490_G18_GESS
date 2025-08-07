@@ -23,5 +23,7 @@ namespace GESS.Service.practicequestion
         Task<IEnumerable< PracticeQuestionReadExcel>> PracticeQuestionReadExcel(IFormFile file);
 
         Task<IEnumerable<SubjectDTO>> GetSubjectsByCategoryExamIdAsync(int categoryExamId);
+
+        Task<bool> DeleteQuestionByTypeAsync(int questionId, int type);
     }
 }

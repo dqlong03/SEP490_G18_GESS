@@ -27,6 +27,32 @@ namespace GESS.Api.Controllers
             _levelQuestionService = levelQuestionService;
         }
 
+
+        // API xóa câu hỏi (chuyển IsActive thành false)
+        [HttpPut("DeleteQuestion/{questionId}/{type}")]
+        public async Task<IActionResult> DeleteQuestion(int questionId, int type)
+        {
+            try
+            {
+                if (type != 1 && type != 2)
+                    return BadRequest("Type chỉ được phép là 1 (trắc nghiệm) hoặc 2 (tự luận).");
+
+                var result = await _practiceQuestionService.DeleteQuestionByTypeAsync(questionId, type);
+
+                if (result)
+                    return Ok(new { success = true, message = "Xóa câu hỏi thành công." });
+                else
+                    return NotFound(new { success = false, message = "Không tìm thấy câu hỏi." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { success = false, message = "Lỗi khi xóa câu hỏi: " + ex.Message });
+            }
+        }
+
+
+
         // API lấy tất cả danh mục kỳ thi (CategoryExam)
         [HttpGet("GetAllCategoryExam")]
         public async Task<IActionResult> GetAllCategoryExam()
