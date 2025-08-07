@@ -356,27 +356,28 @@ namespace GESS.Repository.Implement
             // Lấy chương trình đào tạo mới nhất theo MajorId
             var latestTrainingProgram = await _context.TrainingPrograms
                 .Where(tp => tp.MajorId == majorId)
-                .OrderByDescending(tp => tp.StartDate) 
+                .OrderByDescending(tp => tp.StartDate)
                 .FirstOrDefaultAsync();
 
-            // Nếu không có chương trình nào thì trả về danh sách rỗng
             if (latestTrainingProgram == null)
-            {
                 return new List<SubjectDTODDL>();
-            }
 
-            // Lấy các môn học theo chương trình đào tạo mới nhất
+            // Lấy SubjectId và SubjectName thông qua liên kết
             var subjects = await _context.SubjectTrainingPrograms
-                .Where(s => s.TrainProId == latestTrainingProgram.TrainProId)
-                .Select(s => new SubjectDTODDL
+                .Where(stp => stp.TrainProId == latestTrainingProgram.TrainProId)
+                .Include(stp => stp.Subject)
+                .Select(stp => new SubjectDTODDL
                 {
-                    SubjectId = s.SubjectId,
-                    SubjectName = s.Subject.SubjectName
+                    SubjectId = stp.Subject.SubjectId,
+                    SubjectName = stp.Subject.SubjectName
                 })
+                .Distinct()
                 .ToListAsync();
 
             return subjects;
         }
+
+
 
         public async Task<ExamSlotDetail> GetExamSlotByIdAsync(int examSlotId)
         {

@@ -763,6 +763,11 @@ namespace GESS.Test
             throw new NotImplementedException();
         }
 
+        public Task<bool> ChangeStatusExamSlot(int examSlotId, string examType)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<IEnumerable<TeacherCreationFinalRequest>> CheckTeacherExist(List<ExistTeacherDTO> teachers)
         {
             throw new NotImplementedException();

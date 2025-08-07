@@ -1,16 +1,48 @@
-version: '3'
+version: "3.8"
 
 services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: sqlserver
+    environment:
+      SA_PASSWORD: "Chicken@2025"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sql_data:/var/opt/mssql
+
   backend:
     build: ./BE
-    container_name: BE
+    container_name: backend
+    depends_on:
+      - sqlserver
+    ports:
+      - "7074:443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    volumes:
+      - ./BE/certs:/app/certs:ro
+
+  frontend-manage:
+    build: ./FE/manage
+    container_name: fe_manage
+    depends_on:
+      - backend
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=https://localhost:7074
+
+  frontend-teacher:
+    build: ./FE/teacher
+    container_name: fe_teacher
+    depends_on:
+      - backend
     ports:
       - "3000:3000"
-    restart: always
+    environment:
+      - NEXT_PUBLIC_API_URL=https://localhost:7074
 
-  frontend:
-    build: ./FE
-    container_name: FE
-    ports:
-      - "80:80"
-    restart: always
+volumes:
+  sql_data:

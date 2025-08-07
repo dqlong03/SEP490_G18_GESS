@@ -32,13 +32,8 @@ namespace GESS.Model.Subject
     }
     public class SubjectDTODDL
     {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int SubjectId { get; set; }
 
-        // Tên môn học, không được để trống, tối đa 100 ký tự
-        [Required(ErrorMessage = "Tên môn học không được để trống!")]
-        [StringLength(100, ErrorMessage = "Tên môn học không được vượt quá 100 ký tự!")]
         public string SubjectName { get; set; }
     }
 }

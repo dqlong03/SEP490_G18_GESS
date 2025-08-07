@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "D:\\Term9\\SEP490_G18_GESS\\",
+  "WorkspaceRootPath": "D:\\Term9\\SEP490_G18_GESS\\SEP490_G18_GESS\\",
   "Documents": [],
   "DocumentGroupContainers": [
     {
@@ -34,10 +34,6 @@
             {
               "$type": "Bookmark",
               "Name": "ST:323948898:0:{81164725-9a96-4ece-a4cb-440d8fd285e5}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
             }
           ]
         }
