@@ -104,5 +104,16 @@ namespace GESS.Api.Controllers
             }
             return Ok("Status changed successfully.");
         }
+        //API to get all exam  by semester id, subject id, exam type
+        [HttpGet("GetAllExams")]
+        public async Task<IActionResult> GetAllExams(int semesterId, int subjectId, string examType, int year)
+        {
+            var exams = await _examSlotService.GetAllExams(semesterId, subjectId, examType, year);
+            if (exams == null || !exams.Any())
+            {
+                return NotFound("No exams found.");
+            }
+            return Ok(exams);
+        }
     }
 }
