@@ -798,6 +798,11 @@ namespace GESS.Test
             throw new NotImplementedException();
         }
 
+        public Task<IEnumerable<ExamDTO>> GetAllExams(int semesterId, int subjectId, string examType, int year)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<IEnumerable<ExamSlotDTO>> GetAllExamSlotsAsync()
         {
             throw new NotImplementedException();
