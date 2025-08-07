@@ -48,7 +48,7 @@ export function useTeachers() {
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    const { name, value, type, checked } = e.target;
+const { name, value, type, checked } = e.target as HTMLInputElement;
     setForm((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
