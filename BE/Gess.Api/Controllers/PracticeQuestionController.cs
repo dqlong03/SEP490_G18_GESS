@@ -27,6 +27,42 @@ namespace GESS.Api.Controllers
             _levelQuestionService = levelQuestionService;
         }
 
+        // API lấy tất cả danh mục kỳ thi (CategoryExam)
+        [HttpGet("GetAllCategoryExam")]
+        public async Task<IActionResult> GetAllCategoryExam()
+        {
+            try
+            {
+                var categoryExams = await _categoryExamService.GetAllCategoryExamsAsync();
+                if (categoryExams == null)
+                    return NotFound("Không tìm thấy danh mục kỳ thi.");
+                return Ok(categoryExams);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Lỗi khi lấy danh mục kỳ thi: " + ex.Message);
+            }
+        }
+
+        // API lấy danh sách môn học theo CategoryExamId
+        [HttpGet("GetSubjectsByCategoryExam/{categoryExamId}")]
+        public async Task<IActionResult> GetSubjectsByCategoryExam(int categoryExamId)
+        {
+            try
+            {
+                var subjects = await _practiceQuestionService.GetSubjectsByCategoryExamIdAsync(categoryExamId);
+                if (subjects == null || !subjects.Any())
+                    return NotFound("Không tìm thấy môn học nào cho danh mục kỳ thi này.");
+                return Ok(subjects);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Lỗi khi lấy danh sách môn học: " + ex.Message);
+            }
+        }
+
+
+
 
         // API lấy danh sách câu hỏi trắc nghiệm và tự luận với phân trang và filter
         [HttpGet("all-questions")]
@@ -38,12 +74,13 @@ namespace GESS.Api.Controllers
             int? levelId = null,
             string? questionType = null, // "multiple" hoặc "essay" hoặc null
             int pageNumber = 1,
-            int pageSize = 10)
+            int pageSize = 10,
+            Guid? teacherId=null)
         {
             try
             {
                 var (data, totalCount) = await _practiceQuestionService.GetAllQuestionsAsync(
-                    majorId, subjectId, chapterId, isPublic, levelId, questionType, pageNumber, pageSize);
+                    majorId, subjectId, chapterId, isPublic, levelId, questionType, pageNumber, pageSize,teacherId);
 
                 int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
 
@@ -211,6 +248,8 @@ namespace GESS.Api.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "Lỗi khi đọc file Excel: " + ex.Message);
             }
         }
+
+
     } 
 }
 
