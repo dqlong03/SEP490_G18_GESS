@@ -145,6 +145,10 @@ namespace GESS.Repository.Implement
             }
             else if (examSlot.Status == "Chưa mở ca")
             {
+                if(examSlot.ExamDate != DateTime.Now.Date)
+                {
+                    return false;
+                }
                 examSlot.Status = "Đang mở ca";
             }
             else if (examSlot.Status == "Đang mở ca")
@@ -260,6 +264,38 @@ namespace GESS.Repository.Implement
 
         }
 
+        public async Task<IEnumerable<ExamDTO>> GetAllExamsAsync(int semesterId, int subjectId, string examType, int year)
+        {
+            if(examType == "Multiple")
+            {
+                return await _context.MultiExams
+                    .Where(e => e.SemesterId == semesterId && e.SubjectId == subjectId&&e.CreateAt.Year==year)
+                    .Select(e => new ExamDTO
+                    {
+                        ExamId = e.MultiExamId,
+                        ExamName = e.MultiExamName,
+                        ExamType = "Multiple",
+                    })
+                    .ToListAsync();
+            }
+            else if (examType == "Practice")
+            {
+                return await _context.PracticeExams
+                    .Where(e => e.SemesterId == semesterId && e.SubjectId == subjectId && e.CreateAt.Year == year)
+                    .Select(e => new ExamDTO
+                    {
+                        ExamId = e.PracExamId,
+                        ExamName = e.PracExamName,
+                        ExamType = "Practice"
+                    })
+                    .ToListAsync();
+            }
+            else
+            {
+                return new List<ExamDTO>(); 
+            }
+        }
+
         public async Task<IEnumerable<ExamSlotResponse>> GetAllExamSlotsPaginationAsync(ExamSlotFilterRequest filterRequest, int pageIndex, int pageSize)
         {
             var examSlots = _context.ExamSlots.AsQueryable();
@@ -300,9 +336,12 @@ namespace GESS.Repository.Implement
                 {
                     ExamSlotId = es.ExamSlotId,
                     SlotName = es.SlotName,
+                    SubjectId= es.SubjectId,
                     Status = es.Status,
                     ExamType = es.MultiOrPractice,
                     SubjectName = es.Subject.SubjectName,
+                    SemesterId = es.SemesterId,
+                    SemesterName = es.Semester.SemesterName,
                     ExamDate = es.ExamDate
                 })
                 .Skip((pageIndex - 1) * pageSize)

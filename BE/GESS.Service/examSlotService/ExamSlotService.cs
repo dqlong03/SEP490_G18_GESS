@@ -51,6 +51,16 @@ namespace GESS.Service.examSlotService
             return pageCount;
         }
 
+        public async Task<IEnumerable<ExamDTO>> GetAllExams(int semesterId, int subjectId, string examType, int year)
+        {
+            var exams = await _unitOfWork.ExamSlotRepository.GetAllExamsAsync(semesterId, subjectId, examType, year);
+            if (exams == null || !exams.Any())
+            {
+                return new List<ExamDTO>();
+            }
+            return exams;
+        }
+
         public async Task<IEnumerable<ExamSlotDTO>> GetAllExamSlotsAsync()
         {
             var examSlots = await _unitOfWork.BaseRepository<ExamSlot>().GetAllAsync();

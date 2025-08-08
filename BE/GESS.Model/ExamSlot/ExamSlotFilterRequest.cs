@@ -24,7 +24,11 @@ namespace GESS.Model.ExamSlot
         public string SlotName { get; set; }
         public string Status { get; set; }
         public string ExamType { get; set; }
+        public int SubjectId { get; set; }
         public string SubjectName { get; set; }
+        public int SemesterId { get; set; }
+        public string SemesterName { get; set; }
+
         public DateTime ExamDate { get; set; }
     }
     public class ExamSlotDetail
