@@ -22,8 +22,10 @@ namespace GESS.Entity.Configs
                    .HasForeignKey(esr => esr.SemesterId);
 
             builder.HasOne(esr => esr.Subject)
-                   .WithOne(s => s.ExamSlotRoom)
-                   .HasForeignKey<ExamSlotRoom>(esr => esr.SubjectId);
+                   .WithMany(s => s.ExamSlotRooms) 
+                   .HasForeignKey(esr => esr.SubjectId)
+                   .IsRequired(true);
+
 
             builder.HasOne(esr => esr.Supervisor)
                    .WithMany(t => t.ExamSlotRoomSupervisors)

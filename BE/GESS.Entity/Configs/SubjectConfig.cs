@@ -40,10 +40,6 @@ namespace GESS.Entity.Configs
             builder.HasMany(s => s.PreconditionSubjects)
                    .WithOne(ps => ps.PreSubject)
                    .HasForeignKey(ps => ps.PreconditionSubjectId);
-
-            builder.HasOne(s => s.ExamSlotRoom)
-                   .WithOne(esr => esr.Subject)
-                   .HasForeignKey<ExamSlotRoom>(esr => esr.SubjectId);
         }
     }
 } 

@@ -33,9 +33,6 @@ namespace GESS.Entity.Entities
         [Required(ErrorMessage = "Tổng số tín chỉ không được để trống!")]
         public int NoCredits { get; set; }
 
-        // Phòng thi và ca thi mà môn học này được tổ chức (1 môn học có 1 phòng/ca thi)
-        public ExamSlotRoom ExamSlotRoom { get; set; }
-
         // Danh sách chương trình đào tạo có môn học này (qua bảng trung gian SubjectTrainingProgram)
         public ICollection<SubjectTrainingProgram> SubjectTrainingPrograms { get; set; }
 
@@ -61,8 +58,11 @@ namespace GESS.Entity.Entities
         public ICollection<Class> Classes { get; set; }
 
         // Constructor khởi tạo các danh sách
+        public ICollection<ExamSlotRoom> ExamSlotRooms { get; set; }
+
         public Subject()
         {
+            ExamSlotRooms = new List<ExamSlotRoom>();
             SubjectTrainingPrograms = new List<SubjectTrainingProgram>();
             PreconditionSubjects = new List<PreconditionSubject>();
             CategoryExamSubjects = new List<CategoryExamSubject>();

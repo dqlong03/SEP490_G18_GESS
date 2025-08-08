@@ -506,7 +506,7 @@ namespace GESS.Repository.Implement
         {
             foreach (var item in examSlots)
             {
-                // Tạo ExamSlot mới
+                // 1. Tạo ExamSlot
                 var examSlot = new ExamSlot
                 {
                     StartTime = item.StartTime.TimeOfDay,
@@ -514,14 +514,14 @@ namespace GESS.Repository.Implement
                     SlotName = item.SlotName,
                     ExamDate = item.Date,
                     MultiOrPractice = item.MultiOrPractice,
-                    Status = item.Status==""? "Chưa gán bài thi": item.Status,
+                    Status = string.IsNullOrEmpty(item.Status) ? "Chưa gán bài thi" : item.Status,
                     SubjectId = item.SubjectId,
                     SemesterId = item.SemesterId
                 };
                 _context.ExamSlots.Add(examSlot);
                 await _context.SaveChangesAsync();
-                
-                // Tao ExamSlotRoom cho từng phòng
+
+                // 2. Tạo ExamSlotRoom
                 var examSlotRooms = item.Rooms.Select(room => new ExamSlotRoom
                 {
                     RoomId = room.RoomId,
@@ -529,7 +529,7 @@ namespace GESS.Repository.Implement
                     SemesterId = item.SemesterId,
                     SupervisorId = item.Proctors.FirstOrDefault()?.TeacherId,
                     ExamGradedId = item.Graders.FirstOrDefault(g => g.RoomId == room.RoomId)?.TeacherId,
-                    SubjectId= item.SubjectId,
+                    SubjectId = item.SubjectId,
                     MultiOrPractice = item.MultiOrPractice,
                     ExamDate = item.Date,
                     IsGraded = 0,
@@ -538,16 +538,16 @@ namespace GESS.Repository.Implement
                 _context.ExamSlotRooms.AddRange(examSlotRooms);
                 await _context.SaveChangesAsync();
 
-                //Luu sinh vien vao StudentExamSlotRom
-                foreach (var students in item.Rooms)
+                // 3. Lưu sinh viên
+                foreach (var room in item.Rooms)
                 {
-                    students.Students.ForEach(student => {
-                       //check xem sinh vien da ton tai trong he thong chua
-                       var existingStudent = _context.Students
-                           .FirstOrDefault(s => s.User.Code == student.Code);
-                        if (existingStudent==null)
+                    foreach (var student in room.Students)
+                    {
+                        var existingStudent = await _context.Students
+                            .FirstOrDefaultAsync(s => s.User.Code == student.Code);
+
+                        if (existingStudent == null)
                         {
-                            // Nếu sinh viên chưa tồn tại, thêm mới
                             var newStudent = new Student
                             {
                                 User = new User
@@ -557,28 +557,36 @@ namespace GESS.Repository.Implement
                                     Email = student.Email,
                                     Gender = student.Gender == null,
                                     DateOfBirth = student.DateOfBirth,
-                                }
-                                
+                                    
+                                },
+                                AvatarURL = student.URLAvatar,
+                                EnrollDate = DateTime.Now
 
                             };
                             _context.Students.Add(newStudent);
-                            _context.SaveChangesAsync();
-                        }
-                        // Lấy lại sinh viên sau khi đã thêm mới
-                        existingStudent = _context.Students
-                            .FirstOrDefault(s => s.User.Code == student.Code);
-                        if (existingStudent != null)
+                            try
                             {
-                            // Thêm sinh viên vào ExamSlotRoom
-                            var studentExamSlotRoom = new StudentExamSlotRoom
+                                await _context.SaveChangesAsync();
+                            }
+                            catch (DbUpdateException ex)
                             {
-                                StudentId = existingStudent.StudentId,
-                                ExamSlotRoomId = examSlotRooms.FirstOrDefault(r => r.RoomId == students.RoomId).ExamSlotRoomId
-                            };
-                            _context.StudentExamSlotRoom.Add(studentExamSlotRoom);
-                            _context.SaveChangesAsync();
+                                Console.WriteLine(ex.InnerException?.Message);
+                                throw;
+                            }
+                            existingStudent = newStudent; 
                         }
-                    });
+
+                        var examSlotRoomId = examSlotRooms
+                            .First(r => r.RoomId == room.RoomId).ExamSlotRoomId;
+
+                        var studentExamSlotRoom = new StudentExamSlotRoom
+                        {
+                            StudentId = existingStudent.StudentId,
+                            ExamSlotRoomId = examSlotRoomId
+                        };
+                        _context.StudentExamSlotRoom.Add(studentExamSlotRoom);
+                        await _context.SaveChangesAsync();
+                    }
                 }
             }
             return true;
