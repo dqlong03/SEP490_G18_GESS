@@ -51,6 +51,13 @@ type Semester = {
   semesterName: string;
 };
 
+// Thêm type cho tiêu chí chấm
+type Criterion = {
+  criterionName: string;
+  weightPercent: number;
+  description: string;
+};
+
 const levels = [
   { value: 1, label: 'Dễ', color: 'text-green-600', bgColor: 'bg-green-50' },
   { value: 2, label: 'Trung bình', color: 'text-yellow-600', bgColor: 'bg-yellow-50' },
@@ -81,10 +88,12 @@ export default function CreateFinalExamPaperPage() {
   const [questionTotalPages, setQuestionTotalPages] = useState(1);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
 
-  // State cho nhập thủ công
+  // State cho nhập thủ công - cập nhật để có tiêu chí chấm
   const [manualContent, setManualContent] = useState('');
   const [manualScore, setManualScore] = useState(1);
-  const [manualCriteria, setManualCriteria] = useState('');
+  const [manualCriteria, setManualCriteria] = useState<Criterion[]>([
+    { criterionName: '', weightPercent: 25, description: '' }
+  ]);
   const [manualLevel, setManualLevel] = useState('');
   const [manualChapter, setManualChapter] = useState<number | null>(null);
 
@@ -137,51 +146,51 @@ export default function CreateFinalExamPaperPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSubject, selectedSemester, searchContent, selectedLevel, selectedChapter, questionPage]);
 
- const fetchQuestions = async (page: number) => {
-  setLoadingQuestions(true);
-  const params = new URLSearchParams({
-    subjectId: String(selectedSubject?.subjectId || ''),
-    semesterId: String(selectedSemester?.semesterId || ''),
-    page: String(page),
-    pageSize: '10',
-    ...(searchContent && { content: searchContent }),
-    ...(selectedLevel && { levelId: String(selectedLevel.value) }),
-    ...(selectedChapter && { chapterId: String(selectedChapter.chapterId) }),
-  });
-  
-  try {
-    const res = await fetch(`${API_URL}/api/FinalExamPaper/GetFinalPracticeQuestion?${params}`);
-    const data = await res.json();
+  const fetchQuestions = async (page: number) => {
+    setLoadingQuestions(true);
+    const params = new URLSearchParams({
+      subjectId: String(selectedSubject?.subjectId || ''),
+      semesterId: String(selectedSemester?.semesterId || ''),
+      page: String(page),
+      pageSize: '10',
+      ...(searchContent && { content: searchContent }),
+      ...(selectedLevel && { levelId: String(selectedLevel.value) }),
+      ...(selectedChapter && { chapterId: String(selectedChapter.chapterId) }),
+    });
     
-    // Debug: Log response để kiểm tra cấu trúc
-    console.log('API Response:', data);
-    
-    // Kiểm tra cấu trúc response và set questions phù hợp
-    if (Array.isArray(data)) {
-      // Nếu response trực tiếp là array
-      setQuestions(data);
-      setQuestionTotalPages(Math.ceil(data.length / 10) || 1);
-      setQuestionPage(page);
-    } else if (data.data && Array.isArray(data.data)) {
-      // Nếu response có cấu trúc {data: [], totalPages: x, page: y}
-      setQuestions(data.data);
-      setQuestionTotalPages(data.totalPages || 1);
-      setQuestionPage(data.page || page);
-    } else {
-      // Fallback
+    try {
+      const res = await fetch(`${API_URL}/api/FinalExamPaper/GetFinalPracticeQuestion?${params}`);
+      const data = await res.json();
+      
+      // Debug: Log response để kiểm tra cấu trúc
+      console.log('API Response:', data);
+      
+      // Kiểm tra cấu trúc response và set questions phù hợp
+      if (Array.isArray(data)) {
+        // Nếu response trực tiếp là array
+        setQuestions(data);
+        setQuestionTotalPages(Math.ceil(data.length / 10) || 1);
+        setQuestionPage(page);
+      } else if (data.data && Array.isArray(data.data)) {
+        // Nếu response có cấu trúc {data: [], totalPages: x, page: y}
+        setQuestions(data.data);
+        setQuestionTotalPages(data.totalPages || 1);
+        setQuestionPage(data.page || page);
+      } else {
+        // Fallback
+        setQuestions([]);
+        setQuestionTotalPages(1);
+        setQuestionPage(1);
+      }
+    } catch (error) {
+      console.error('Error fetching questions:', error);
       setQuestions([]);
       setQuestionTotalPages(1);
       setQuestionPage(1);
+    } finally {
+      setLoadingQuestions(false);
     }
-  } catch (error) {
-    console.error('Error fetching questions:', error);
-    setQuestions([]);
-    setQuestionTotalPages(1);
-    setQuestionPage(1);
-  } finally {
-    setLoadingQuestions(false);
-  }
-};
+  };
 
   // Lưu câu hỏi đã chọn
   const handleSaveQuestions = () => {
@@ -230,7 +239,14 @@ export default function CreateFinalExamPaperPage() {
       alert('Vui lòng nhập tên đề thi, chọn môn học, kỳ và chọn/thêm ít nhất 1 câu hỏi!');
       return;
     }
-    
+
+      
+    // Thêm validation tổng điểm phải bằng 10
+    if (totalScore !== 10) {
+      alert(`Tổng điểm của đề thi phải bằng 10! Hiện tại: ${totalScore} điểm`);
+      return;
+    }
+      
     setIsSubmitting(true);
     const teacherId = getUserIdFromToken();
     const payload = {
@@ -241,7 +257,7 @@ export default function CreateFinalExamPaperPage() {
       subjectId: selectedSubject.subjectId,
       manualQuestions: manualQuestions.map(q => ({
         content: q.content,
-        criteria: q.criteria,
+        criteria: JSON.stringify(q.criteria), // Serialize criteria array to JSON string
         score: q.score,
         level: q.level,
         chapterId: q.chapterId,
@@ -274,12 +290,49 @@ export default function CreateFinalExamPaperPage() {
     }
   };
 
-  // Thêm hoặc cập nhật câu hỏi thủ công
+  // Thêm các hàm xử lý tiêu chí chấm
+  const addCriterion = () => {
+    if (manualCriteria.length >= 3) {
+      alert('Chỉ được phép tối đa 3 tiêu chí chấm điểm!');
+      return;
+    }
+    setManualCriteria([
+      ...manualCriteria,
+      { criterionName: '', weightPercent: 0, description: '' }
+    ]);
+  };
+
+  const removeCriterion = (index: number) => {
+    const newCriteria = manualCriteria.filter((_, i) => i !== index);
+    setManualCriteria(newCriteria);
+  };
+
+  const updateCriterion = (index: number, field: keyof Criterion, value: string | number) => {
+    const newCriteria = [...manualCriteria];
+    newCriteria[index] = { ...newCriteria[index], [field]: value };
+    setManualCriteria(newCriteria);
+  };
+
+  // Cập nhật hàm thêm câu hỏi thủ công
   const handleAddManualQuestion = () => {
     if (!manualContent.trim() || manualScore <= 0 || !manualLevel || !manualChapter) {
       alert('Vui lòng nhập nội dung, điểm hợp lệ, chọn độ khó và chương!');
       return;
     }
+
+    // Validate tiêu chí chấm
+    const validCriteria = manualCriteria.filter(c => c.criterionName.trim());
+    if (validCriteria.length === 0) {
+      alert('Vui lòng thêm ít nhất một tiêu chí chấm!');
+      return;
+    }
+
+    const totalWeight = validCriteria.reduce((sum, c) => sum + c.weightPercent, 0);
+    if (totalWeight !== 100) {
+      alert('Tổng phần trăm điểm của các tiêu chí phải bằng 100%!');
+      return;
+    }
+
     if (editingManualId) {
       setManualQuestions(manualQuestions.map(q =>
         q.manualId === editingManualId
@@ -287,7 +340,7 @@ export default function CreateFinalExamPaperPage() {
               ...q,
               content: manualContent,
               score: manualScore,
-              criteria: manualCriteria,
+              criteria: validCriteria,
               level: manualLevel,
               chapterId: manualChapter,
             }
@@ -301,7 +354,7 @@ export default function CreateFinalExamPaperPage() {
           manualId: Date.now(),
           content: manualContent,
           score: manualScore,
-          criteria: manualCriteria,
+          criteria: validCriteria,
           level: manualLevel,
           chapterId: manualChapter,
         },
@@ -309,19 +362,19 @@ export default function CreateFinalExamPaperPage() {
     }
     setManualContent('');
     setManualScore(1);
-    setManualCriteria('');
+    setManualCriteria([{ criterionName: '', weightPercent: 25, description: '' }]);
     setManualLevel('');
     setManualChapter(null);
     setShowManualInput(false);
   };
 
-  // Bắt đầu sửa câu hỏi thủ công
+  // Cập nhật hàm bắt đầu sửa câu hỏi thủ công
   const handleEditManualQuestion = (manualId: number) => {
     const q = manualQuestions.find(q => q.manualId === manualId);
     if (q) {
       setManualContent(q.content);
       setManualScore(q.score);
-      setManualCriteria(q.criteria);
+      setManualCriteria(q.criteria || [{ criterionName: '', weightPercent: 25, description: '' }]);
       setManualLevel(q.level);
       setManualChapter(q.chapterId);
       setEditingManualId(manualId);
@@ -329,11 +382,11 @@ export default function CreateFinalExamPaperPage() {
     }
   };
 
-  // Hủy sửa/thêm
+  // Cập nhật hàm hủy sửa/thêm
   const handleCancelManualInput = () => {
     setManualContent('');
     setManualScore(1);
-    setManualCriteria('');
+    setManualCriteria([{ criterionName: '', weightPercent: 25, description: '' }]);
     setManualLevel('');
     setManualChapter(null);
     setEditingManualId(null);
@@ -355,23 +408,6 @@ export default function CreateFinalExamPaperPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Floating Stats */}
-      {/* {(selectedQuestions.length > 0 || manualQuestions.length > 0) && (
-        <div className="fixed top-6 right-6 z-50 bg-white rounded-xl shadow-2xl p-4 min-w-[200px]">
-          <div className="text-center">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Target className="w-6 h-6 text-blue-600" />
-            </div>
-            <div className="space-y-2">
-              <div className="text-sm text-gray-600">Số câu hỏi</div>
-              <div className="text-2xl font-bold text-blue-600">{selectedQuestions.length + manualQuestions.length}</div>
-              <div className="text-sm text-gray-600">Tổng điểm</div>
-              <div className="text-xl font-bold text-green-600">{totalScore}</div>
-            </div>
-          </div>
-        </div>
-      )} */}
-
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
@@ -485,7 +521,7 @@ export default function CreateFinalExamPaperPage() {
                   setEditingManualId(null);
                   setManualContent('');
                   setManualScore(1);
-                  setManualCriteria('');
+                  setManualCriteria([{ criterionName: '', weightPercent: 25, description: '' }]);
                   setManualLevel('');
                   setManualChapter(null);
                 }}
@@ -496,7 +532,7 @@ export default function CreateFinalExamPaperPage() {
             </div>
           </div>
 
-          {/* Manual Question Input Form */}
+          {/* Manual Question Input Form - Updated */}
           {showManualInput && (
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center">
@@ -546,7 +582,7 @@ export default function CreateFinalExamPaperPage() {
                 </div>
               </div>
               
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Nội dung câu hỏi</label>
                   <textarea
@@ -558,15 +594,97 @@ export default function CreateFinalExamPaperPage() {
                   />
                 </div>
                 
+                {/* Tiêu chí chấm điểm */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Tiêu chí chấm</label>
-                  <textarea
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
-                    rows={3}
-                    value={manualCriteria}
-                    onChange={e => setManualCriteria(e.target.value)}
-                    placeholder="Nhập tiêu chí chấm (tùy chọn)"
-                  />
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="block text-sm font-medium text-gray-700">Tiêu chí chấm điểm</label>
+                    <button
+                      type="button"
+                      onClick={addCriterion}
+                      className="flex items-center space-x-1 px-3 py-1 bg-green-100 hover:bg-green-200 text-green-800 rounded-lg text-sm font-medium transition-colors"
+                      disabled={manualCriteria.length >= 3}
+                      title={manualCriteria.length >= 3 ? "Chỉ được phép tối đa 3 tiêu chí" : ""}
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Thêm tiêu chí</span>
+                    </button>
+                  </div>
+                  
+                  {/* Warning message when having more than 3 criteria */}
+                  {manualCriteria.length > 3 && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <AlertCircle className="w-5 h-5 text-red-600" />
+                        <span className="text-red-700 font-medium">
+                          Bạn có {manualCriteria.length} tiêu chí. Vui lòng xóa bớt để chỉ còn tối đa 3 tiêu chí!
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-4">
+                    {manualCriteria.map((criterion, index) => (
+                      <div key={index} className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-sm font-medium text-gray-600">Tiêu chí {index + 1}</span>
+                          {manualCriteria.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeCriterion(index)}
+                              className="text-red-500 hover:text-red-700 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Tên tiêu chí</label>
+                            <input
+                              type="text"
+                              value={criterion.criterionName}
+                              onChange={e => updateCriterion(index, 'criterionName', e.target.value)}
+                              placeholder="Ví dụ: Độ rõ ràng"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-green-500 focus:border-transparent text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Phần trăm (%)</label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={criterion.weightPercent}
+                              onChange={e => updateCriterion(index, 'weightPercent', Number(e.target.value))}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-green-500 focus:border-transparent text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Mô tả</label>
+                            <input
+                              type="text"
+                              value={criterion.description}
+                              onChange={e => updateCriterion(index, 'description', e.target.value)}
+                              placeholder="Mô tả tiêu chí"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-green-500 focus:border-transparent text-sm"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-3 text-sm">
+                    <span className="text-gray-600">Tổng phần trăm: </span>
+                    <span className={`font-medium ${
+                      manualCriteria.reduce((sum, c) => sum + c.weightPercent, 0) === 100 
+                        ? 'text-green-600' 
+                        : 'text-red-600'
+                    }`}>
+                      {manualCriteria.reduce((sum, c) => sum + c.weightPercent, 0)}%
+                    </span>
+                    <span className="text-gray-600"> (phải bằng 100%)</span>
+                  </div>
                 </div>
               </div>
               
@@ -702,10 +820,25 @@ export default function CreateFinalExamPaperPage() {
                       
                       <div className="text-gray-800 whitespace-pre-line mb-3">{q.content}</div>
                       
-                      {q.criteria && (
+                      {/* Hiển thị tiêu chí chấm */}
+                      {q.criteria && q.criteria.length > 0 && (
                         <div className="bg-white rounded-lg p-3 mb-3">
-                          <span className="text-sm font-medium text-gray-600">Tiêu chí chấm:</span>
-                          <p className="text-gray-800 mt-1">{q.criteria}</p>
+                          <span className="text-sm font-medium text-gray-600 mb-2 block">Tiêu chí chấm điểm:</span>
+                          <div className="space-y-2">
+                            {q.criteria.map((criterion: Criterion, critIdx: number) => (
+                              <div key={critIdx} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                <div className="flex-1">
+                                  <span className="font-medium text-sm text-gray-800">{criterion.criterionName}</span>
+                                  {criterion.description && (
+                                    <p className="text-xs text-gray-600 mt-1">{criterion.description}</p>
+                                  )}
+                                </div>
+                                <span className="text-sm font-bold text-green-600 ml-3">
+                                  {criterion.weightPercent}%
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                       
@@ -725,13 +858,18 @@ export default function CreateFinalExamPaperPage() {
                       Tổng câu hỏi: <span className="text-purple-600 font-bold">{selectedQuestions.length + manualQuestions.length}</span>
                     </div>
                     <div className="text-sm font-medium text-gray-900">
-                      Tổng điểm: <span className="text-green-600 font-bold">{totalScore}</span>
+                      Tổng điểm: <span className={`font-bold ${totalScore === 10 ? 'text-green-600' : 'text-red-600'}`}>
+                        {totalScore}/10
+                      </span>
+                      {totalScore !== 10 && (
+                        <span className="text-red-500 text-xs ml-2">(Phải bằng 10 điểm)</span>
+                      )}
                     </div>
                   </div>
                   
                   <button
                     type="submit"
-                    disabled={isSubmitting || !inputName || !selectedSubject || !selectedSemester || (selectedQuestions.length + manualQuestions.length) === 0}
+                    disabled={isSubmitting || !inputName || !selectedSubject || !selectedSemester || (selectedQuestions.length + manualQuestions.length) === 0 || totalScore !== 10}
                     className="flex items-center space-x-2 px-8 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? (

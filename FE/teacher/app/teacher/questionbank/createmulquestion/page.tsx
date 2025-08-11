@@ -23,7 +23,7 @@ import {
   Target,
   Hash,
   Sparkles,
-  FileSpreadsheet
+  FileSpreadsheet, Copy,
 } from 'lucide-react';
 
 type Answer = { text: string; isTrue: boolean };
@@ -32,6 +32,7 @@ type Question = {
   content: string;
   answers: Answer[];
   difficulty: number;
+  isPublic: boolean;
 };
 
 type Option = { value: number; label: string };
@@ -52,29 +53,96 @@ export default function CreateMCQQuestionPage() {
   const searchParams = useSearchParams();
   const chapterId = Number(searchParams.get('chapterId'));
   const categoryExamId = Number(searchParams.get('categoryExamId'));
+  const chapterName = searchParams.get('chapterName') || '';
+  const subjectName = searchParams.get('subjectName') || '';
+
+  const [duplicateIds, setDuplicateIds] = useState<number[]>([]);
+
+  const [duplicateMap, setDuplicateMap] = useState<{ [id: number]: { similarityScore: number, similarQuestions: { questionID: number, content: string }[] } }>({});
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
+  const [aiQuestionType, setAIQuestionType] = useState<1 | 2 | 3>(2); // 1: True/False, 2: 1 lựa chọn, 3: nhiều lựa chọn
 
   const router = useRouter();
 
   // Thêm thủ công: chỉ 2 đáp án ban đầu
   const [manualQ, setManualQ] = useState<Question>({
-    id: Date.now(),
+    id: Math.floor(10000 + Math.random() * 90000),
     content: '',
     answers: [
       { text: '', isTrue: false },
       { text: '', isTrue: false }
     ],
     difficulty: 1,
+    isPublic: true,
   });
   const [showManualForm, setShowManualForm] = useState(false);
   const manualFormRef = useRef<HTMLDivElement>(null);
+  const questionsListRef = useRef<HTMLDivElement>(null);
 
   // Tạo bằng AI
   const [showAIGen, setShowAIGen] = useState(false);
-  const [aiSubject, setAISubject] = useState('');
-  const [aiLink, setAILink] = useState('');
-  const [aiNum, setAINum] = useState(2);
-  const [aiLevel, setAILevel] = useState('dễ');
+  const [aiLink, setAILink] = useState("https://docs.google.com/document/d/1xD31S45CPW3Np_bEfJ_HkvzM7LDynu5WNpecLec5z8I/edit?tab=t.0");
+  const [aiLevels, setAILevels] = useState({
+    easy: 0,
+    medium: 0,
+    hard: 0
+  });
   const [aiLoading, setAILoading] = useState(false);
+  const aiFormRef = useRef<HTMLDivElement>(null);
+
+  // Kiểm tra trùng lặp
+  const handleCheckDuplicate = async () => {
+    setCheckingDuplicate(true);
+    setDuplicateMap({});
+    try {
+      // Lấy danh sách câu hỏi đã có (theo response mới)
+      const existedRes = await fetch(
+        `https://localhost:7074/api/PracticeQuestion/all-questions?chapterId=${chapterId}&levelId=&questionType=multiple&pageNumber=1&pageSize=1000`
+      );
+      const existedData = await existedRes.json();
+      const existedQuestions = (existedData?.questions || []).map((q: any) => ({
+        questionID: q.questionId,
+        content: q.content
+      }));
+
+      // Danh sách câu hỏi mới (tạo id ngẫu nhiên nếu cần)
+      const newQuestions = questions.map(q => ({
+        questionID: q.id,
+        content: q.content
+      }));
+
+      // Gộp lại để so sánh
+      const allQuestions = [...newQuestions, ...existedQuestions];
+
+      // Gọi API kiểm tra trùng
+      const res = await fetch('https://localhost:7074/api/AIGradePracExam/FindSimilar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questions: allQuestions,
+          similarityThreshold: 0.7
+        })
+      });
+      const result = await res.json();
+
+      // Lưu lại các câu hỏi trùng lặp (chỉ quan tâm đến câu hỏi mới)
+      const map: { [id: number]: { similarityScore: number, similarQuestions: { questionID: number, content: string }[] } } = {};
+      result.forEach((group: any) => {
+        // Nếu trong nhóm có câu hỏi mới (id thuộc questions), thì đánh dấu là trùng
+        const newQ = group.questions.find((q: any) => newQuestions.some(nq => nq.questionID === q.questionID));
+        if (newQ) {
+          map[newQ.questionID] = {
+            similarityScore: group.similarityScore,
+            similarQuestions: group.questions.filter((q: any) => !newQuestions.some(nq => nq.questionID === q.questionID))
+          };
+        }
+      });
+      setDuplicateMap(map);
+    } catch (err) {
+      alert('Lỗi kiểm tra trùng lặp!');
+    }
+    setCheckingDuplicate(false);
+  };
 
   // Lấy mức độ khó và học kỳ hiện tại
   useEffect(() => {
@@ -163,6 +231,7 @@ export default function CreateMCQQuestionPage() {
           content: row[0],
           answers,
           difficulty: Number(row[12]) || 1,
+          isPublic: true,
         });
       }
       setQuestions(prev => [...prev, ...dataArr]);
@@ -170,6 +239,22 @@ export default function CreateMCQQuestionPage() {
       setImportError('');
     };
     reader.readAsArrayBuffer(file);
+  };
+
+  // Show manual form with scroll
+  const handleShowManualForm = () => {
+    setShowManualForm(true);
+    setTimeout(() => {
+      manualFormRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  // Show AI form with scroll
+  const handleShowAIForm = () => {
+    setShowAIGen(true);
+    setTimeout(() => {
+      aiFormRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
 
   // Thêm thủ công
@@ -190,18 +275,24 @@ export default function CreateMCQQuestionPage() {
     }
     setQuestions([
       ...questions,
-      { ...manualQ, id: Date.now() }
+      { ...manualQ, id: Math.floor(10000 + Math.random() * 90000) }
     ]);
     setManualQ({
-      id: Date.now(),
+      id: Math.floor(10000 + Math.random() * 90000),
       content: '',
       answers: [
         { text: '', isTrue: false },
         { text: '', isTrue: false }
       ],
       difficulty: 1,
+      isPublic: true,
     });
     setShowManualForm(false);
+    
+    // Auto scroll to questions list after adding
+    setTimeout(() => {
+      questionsListRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
 
   // Thêm đáp án cho thủ công
@@ -226,23 +317,42 @@ export default function CreateMCQQuestionPage() {
 
   // Tạo câu hỏi bằng AI
   const handleGenerateAI = async () => {
-    if (!aiSubject || !aiLink || !aiNum || !aiLevel) {
-      alert('Vui lòng nhập đầy đủ thông tin!');
+    if (!aiLink) {
+      alert('Vui lòng nhập link tài liệu!');
       return;
     }
+    
+    const totalQuestions = aiLevels.easy + aiLevels.medium + aiLevels.hard;
+    if (totalQuestions === 0) {
+      alert('Vui lòng nhập số câu hỏi cho ít nhất một mức độ!');
+      return;
+    }
+    
     setAILoading(true);
     try {
+      const levels = [];
+      if (aiLevels.easy > 0) {
+        levels.push({ difficulty: 'dễ', numberOfQuestions: aiLevels.easy, type: aiQuestionType });
+      }
+      if (aiLevels.medium > 0) {
+        levels.push({ difficulty: 'trung bình', numberOfQuestions: aiLevels.medium , type: aiQuestionType });
+      }
+      if (aiLevels.hard > 0) {
+        levels.push({ difficulty: 'khó', numberOfQuestions: aiLevels.hard, type: aiQuestionType });
+      }
+
       const res = await fetch('https://localhost:7074/api/GenerateQuestions/GenerateMultipleQuestion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          subjectName: aiSubject,
+          subjectName: subjectName,
           materialLink: aiLink,
-          levels: [{ difficulty: aiLevel, numberOfQuestions: aiNum }]
+          specifications: levels
         })
       });
       const data = await res.json();
       if (!Array.isArray(data)) throw new Error('Kết quả trả về không hợp lệ!');
+      
       const newQuestions: Question[] = data.map((q: any, idx: number) => {
         let answers: Answer[] = Array.isArray(q.answers)
           ? q.answers.map((a: any) => ({
@@ -254,19 +364,36 @@ export default function CreateMCQQuestionPage() {
           answers.push({ text: '', isTrue: false });
         }
         answers = answers.slice(0, 6);
+        
+        // Xác định difficulty dựa trên thứ tự levels
+        let difficulty = 1;
+        if (idx < aiLevels.easy) {
+          difficulty = 1;
+        } else if (idx < aiLevels.easy + aiLevels.medium) {
+          difficulty = 2;
+        } else {
+          difficulty = 3;
+        }
+        
         return {
           id: Date.now() + idx,
           content: q.content || '',
           answers,
-          difficulty: 1
+          difficulty: difficulty,
+          isPublic: true
         };
       });
+      
       setQuestions(prev => [...prev, ...newQuestions]);
       setShowAIGen(false);
-      setAISubject('');
       setAILink('');
-      setAINum(2);
-      setAILevel('dễ');
+      setAILevels({ easy: 0, medium: 0, hard: 0 });
+      
+      // Auto scroll to questions list after AI generation
+      setTimeout(() => {
+        questionsListRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+      
       alert(`Đã tạo thành công ${newQuestions.length} câu hỏi bằng AI!`);
     } catch (err: any) {
       alert('Lỗi tạo câu hỏi bằng AI: ' + err.message);
@@ -368,7 +495,7 @@ export default function CreateMCQQuestionPage() {
           urlImg: null,
           isActive: true,
           createdBy: teacherId,
-          isPublic: true,
+          isPublic: q.isPublic,
           chapterId: chapterId,
           categoryExamId: categoryExamId,
           levelQuestionId: q.difficulty,
@@ -412,6 +539,23 @@ export default function CreateMCQQuestionPage() {
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Tạo câu hỏi trắc nghiệm</h1>
                 <p className="text-gray-600">Tạo và quản lý câu hỏi trắc nghiệm cho ngân hàng câu hỏi</p>
+                {/* Hiển thị thông tin môn học và chương */}
+                {(subjectName || chapterName) && (
+                  <div className="flex items-center space-x-2 mt-2">
+                    {subjectName && (
+                      <div className="flex items-center space-x-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-lg text-sm font-medium">
+                        <Target className="w-4 h-4" />
+                        <span>Môn: {subjectName}</span>
+                      </div>
+                    )}
+                    {chapterName && (
+                      <div className="flex items-center space-x-1 px-3 py-1 bg-green-100 text-green-800 rounded-lg text-sm font-medium">
+                        <FileText className="w-4 h-4" />
+                        <span>Chương: {chapterName}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             
@@ -477,7 +621,7 @@ export default function CreateMCQQuestionPage() {
             <button
               type="button"
               className="flex items-center justify-center space-x-2 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg"
-              onClick={() => setShowManualForm(true)}
+              onClick={handleShowManualForm}
             >
               <Edit3 className="w-5 h-5" />
               <span>Thêm thủ công</span>
@@ -486,7 +630,7 @@ export default function CreateMCQQuestionPage() {
             <button
               type="button"
               className="flex items-center justify-center space-x-2 px-6 py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg"
-              onClick={() => setShowAIGen(true)}
+              onClick={handleShowAIForm}
             >
               <Brain className="w-5 h-5" />
               <span>Tạo bằng AI</span>
@@ -542,7 +686,7 @@ export default function CreateMCQQuestionPage() {
 
         {/* AI Generation Form */}
         {showAIGen && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <div ref={aiFormRef} className="bg-white rounded-xl shadow-lg p-6 mb-8">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center">
                 <Sparkles className="w-5 h-5 mr-2 text-purple-600" />
@@ -556,18 +700,7 @@ export default function CreateMCQQuestionPage() {
               </button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Tên môn học</label>
-                <input
-                  type="text"
-                  value={aiSubject}
-                  onChange={e => setAISubject(e.target.value)}
-                  placeholder="Nhập tên môn học"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
-                />
-              </div>
-              
+            <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Link tài liệu</label>
                 <input
@@ -578,30 +711,103 @@ export default function CreateMCQQuestionPage() {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
                 />
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Số câu hỏi</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={aiNum}
-                  onChange={e => setAINum(Number(e.target.value))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
-                />
+
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Loại câu hỏi</label>
+                <div className="flex items-center space-x-6">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="aiQuestionType"
+                      value={2}
+                      checked={aiQuestionType === 2}
+                      onChange={() => setAIQuestionType(2)}
+                      className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Đúng/Sai</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="aiQuestionType"
+                      value={1}
+                      checked={aiQuestionType === 1}
+                      onChange={() => setAIQuestionType(1)}
+                      className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">1 lựa chọn</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="aiQuestionType"
+                      value={3}
+                      checked={aiQuestionType === 3}
+                      onChange={() => setAIQuestionType(3)}
+                      className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Nhiều lựa chọn</span>
+                  </label>
+                </div>
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Độ khó</label>
-                <select
-                  value={aiLevel}
-                  onChange={e => setAILevel(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
-                >
-                  <option value="dễ">Dễ</option>
-                  <option value="trung bình">Trung bình</option>
-                  <option value="khó">Khó</option>
-                </select>
+                <label className="block text-sm font-medium text-gray-700 mb-4">Số câu hỏi theo từng mức độ</label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <span className="text-sm font-medium text-green-800">Dễ</span>
+                    </div>
+                    <input
+                      type="number"
+                      min={0}
+                      max={20}
+                      value={aiLevels.easy}
+                      onChange={e => setAILevels({ ...aiLevels, easy: Math.max(0, Number(e.target.value)) })}
+                      placeholder="0"
+                      className="w-full px-3 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors bg-white"
+                    />
+                  </div>
+                  
+                  <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                      <span className="text-sm font-medium text-yellow-800">Trung bình</span>
+                    </div>
+                    <input
+                      type="number"
+                      min={0}
+                      max={20}
+                      value={aiLevels.medium}
+                      onChange={e => setAILevels({ ...aiLevels, medium: Math.max(0, Number(e.target.value)) })}
+                      placeholder="0"
+                      className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-colors bg-white"
+                    />
+                  </div>
+                  
+                  <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                      <span className="text-sm font-medium text-red-800">Khó</span>
+                    </div>
+                    <input
+                      type="number"
+                      min={0}
+                      max={20}
+                      value={aiLevels.hard}
+                      onChange={e => setAILevels({ ...aiLevels, hard: Math.max(0, Number(e.target.value)) })}
+                      placeholder="0"
+                      className="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors bg-white"
+                    />
+                  </div>
+                </div>
+                
+                <div className="mt-3 text-sm text-gray-600 text-center">
+                  Tổng số câu hỏi: <span className="font-medium text-purple-600">
+                    {aiLevels.easy + aiLevels.medium + aiLevels.hard}
+                  </span>
+                </div>
               </div>
             </div>
             
@@ -618,7 +824,7 @@ export default function CreateMCQQuestionPage() {
                 type="button"
                 className="flex items-center space-x-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200 disabled:bg-purple-400"
                 onClick={handleGenerateAI}
-                disabled={aiLoading}
+                disabled={aiLoading || (aiLevels.easy + aiLevels.medium + aiLevels.hard === 0)}
               >
                 {aiLoading ? (
                   <>
@@ -638,7 +844,7 @@ export default function CreateMCQQuestionPage() {
 
         {/* Manual Question Form */}
         {showManualForm && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <div ref={manualFormRef} className="bg-white rounded-xl shadow-lg p-6 mb-8">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center">
                 <Edit3 className="w-5 h-5 mr-2 text-blue-600" />
@@ -653,24 +859,51 @@ export default function CreateMCQQuestionPage() {
             </div>
             
             <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Độ khó</label>
-                <Select
-                  options={levels}
-                  value={levels.find(d => d.value === manualQ.difficulty)}
-                  onChange={opt => setManualQ({ ...manualQ, difficulty: opt?.value || 1 })}
-                  placeholder="Chọn độ khó"
-                  className="w-48"
-                  isSearchable={false}
-                  styles={{
-                    control: (provided) => ({
-                      ...provided,
-                      minHeight: '44px',
-                      borderColor: '#d1d5db',
-                      '&:hover': { borderColor: '#3b82f6' }
-                    })
-                  }}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Độ khó</label>
+                  <Select
+                    options={levels}
+                    value={levels.find(d => d.value === manualQ.difficulty)}
+                    onChange={opt => setManualQ({ ...manualQ, difficulty: opt?.value || 1 })}
+                    placeholder="Chọn độ khó"
+                    isSearchable={false}
+                    styles={{
+                      control: (provided) => ({
+                        ...provided,
+                        minHeight: '44px',
+                        borderColor: '#d1d5db',
+                        '&:hover': { borderColor: '#3b82f6' }
+                      })
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Quyền truy cập</label>
+                  <div className="flex items-center space-x-6 mt-3">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="isPublic"
+                        checked={manualQ.isPublic === true}
+                        onChange={() => setManualQ({ ...manualQ, isPublic: true })}
+                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">Public</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="isPublic"
+                        checked={manualQ.isPublic === false}
+                        onChange={() => setManualQ({ ...manualQ, isPublic: false })}
+                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">Private</span>
+                    </label>
+                  </div>
+                </div>
               </div>
               
               <div>
@@ -768,12 +1001,23 @@ export default function CreateMCQQuestionPage() {
 
         {/* Questions List */}
         {questions.length > 0 && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <div ref={questionsListRef} className="bg-white rounded-xl shadow-lg p-6 mb-8">
             <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center">
               <FileText className="w-5 h-5 mr-2 text-blue-600" />
               Danh sách câu hỏi ({questions.length})
             </h3>
             
+            <div className="mb-4 flex justify-end">
+              <button
+                className="flex items-center space-x-2 px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200"
+                onClick={handleCheckDuplicate}
+                disabled={checkingDuplicate}
+              >
+                <AlertCircle className="w-5 h-5" />
+                <span>{checkingDuplicate ? 'Đang kiểm tra...' : 'Kiểm tra trùng'}</span>
+              </button>
+            </div>
+
             <div className="space-y-6">
               {questions.map((q, idx) => (
                 <div key={q.id} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow duration-200">
@@ -785,6 +1029,9 @@ export default function CreateMCQQuestionPage() {
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${getLevelColor(q.difficulty)}`}>
                         {levels.find(d => d.value === q.difficulty)?.label || 'Không xác định'}
                       </span>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${q.isPublic ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
+                        {q.isPublic ? 'Public' : 'Private'}
+                      </span>
                     </div>
                     <button
                       className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors duration-200"
@@ -793,48 +1040,97 @@ export default function CreateMCQQuestionPage() {
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
-                  
-                  <div className="mb-4">
-                    <textarea
-                      value={q.content}
-                      onChange={e => handleEditQuestion(idx, 'content', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors font-medium"
-                      rows={2}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {q.answers.map((ans, aIdx) =>
-                      ans.text !== '' || ans.isTrue ? (
-                        <div key={aIdx} className={`flex items-center space-x-3 p-3 rounded-lg border ${ans.isTrue ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
-                          <span className="w-6 h-6 bg-white rounded-full flex items-center justify-center text-sm font-medium border">
-                            {String.fromCharCode(65 + aIdx)}
+
+                  {/* Cảnh báo trùng lặp */}
+                  {duplicateMap[q.id] && (
+                    <div className="mb-2 p-3 bg-red-50 border border-red-300 rounded-lg text-red-700 flex items-center space-x-2">
+                      <AlertCircle className="w-5 h-5" />
+                      <span>
+                        Câu hỏi này bị trùng với các câu hỏi trong ngân hàng:
+                        {duplicateMap[q.id].similarQuestions.map((sq, i) => (
+                          <span key={sq.questionID} className="ml-2 font-semibold">
+                            "{sq.content}"{i < duplicateMap[q.id].similarQuestions.length - 1 ? ',' : ''}
                           </span>
+                        ))}
+                        <button
+                          className="ml-4 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                          onClick={() => handleDeleteQuestion(idx)}
+                        >
+                          Xóa câu này
+                        </button>
+                      </span>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Quyền truy cập</label>
+                      <div className="flex items-center space-x-6">
+                        <label className="flex items-center">
                           <input
-                            type="text"
-                            value={ans.text}
-                            onChange={e => handleEditAnswer(idx, aIdx, 'text', e.target.value)}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-colors"
+                            type="radio"
+                            name={`isPublic-${idx}`}
+                            checked={q.isPublic === true}
+                            onChange={() => handleEditQuestion(idx, 'isPublic', true)}
+                            className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                           />
-                          <label className="flex items-center space-x-2 cursor-pointer">
+                          <span className="ml-2 text-sm text-gray-700">Public</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name={`isPublic-${idx}`}
+                            checked={q.isPublic === false}
+                            onChange={() => handleEditQuestion(idx, 'isPublic', false)}
+                            className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                          />
+                          <span className="ml-2 text-sm text-gray-700">Private</span>
+                        </label>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <textarea
+                        value={q.content}
+                        onChange={e => handleEditQuestion(idx, 'content', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors font-medium"
+                        rows={2}
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {q.answers.map((ans, aIdx) =>
+                        ans.text !== '' || ans.isTrue ? (
+                          <div key={aIdx} className={`flex items-center space-x-3 p-3 rounded-lg border ${ans.isTrue ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                            <span className="w-6 h-6 bg-white rounded-full flex items-center justify-center text-sm font-medium border">
+                              {String.fromCharCode(65 + aIdx)}
+                            </span>
                             <input
-                              type="checkbox"
-                              checked={ans.isTrue}
-                              onChange={e => handleEditAnswer(idx, aIdx, 'isTrue', e.target.checked)}
-                              className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                              type="text"
+                              value={ans.text}
+                              onChange={e => handleEditAnswer(idx, aIdx, 'text', e.target.value)}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-colors"
                             />
-                            {ans.isTrue && <CheckCircle className="w-4 h-4 text-green-600" />}
-                          </label>
-                          <button
-                            type="button"
-                            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors duration-200"
-                            onClick={() => handleDeleteAnswer(idx, aIdx)}
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : null
-                    )}
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={ans.isTrue}
+                                onChange={e => handleEditAnswer(idx, aIdx, 'isTrue', e.target.checked)}
+                                className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                              />
+                              {ans.isTrue && <CheckCircle className="w-4 h-4 text-green-600" />}
+                            </label>
+                            <button
+                              type="button"
+                              className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors duration-200"
+                              onClick={() => handleDeleteAnswer(idx, aIdx)}
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : null
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -865,14 +1161,14 @@ export default function CreateMCQQuestionPage() {
             <p className="text-gray-600 mb-6">Bắt đầu tạo câu hỏi bằng cách thêm thủ công, sử dụng AI, hoặc import từ file Excel</p>
             <div className="flex justify-center space-x-4">
               <button
-                onClick={() => setShowManualForm(true)}
+                onClick={handleShowManualForm}
                 className="flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
               >
                 <Edit3 className="w-4 h-4" />
                 <span>Thêm thủ công</span>
               </button>
               <button
-                onClick={() => setShowAIGen(true)}
+                onClick={handleShowAIForm}
                 className="flex items-center space-x-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200"
               >
                 <Brain className="w-4 h-4" />

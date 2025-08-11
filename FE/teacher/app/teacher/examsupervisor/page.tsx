@@ -11,7 +11,11 @@ import {
   BookOpen, 
   Users,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Eye,
+  CheckCircle,
+  Play,
+  UserCheck
 } from 'lucide-react';
 
 type YearOption = { value: number; label: string };
@@ -25,6 +29,7 @@ type ApiExamSchedule = {
   examDate: string;
   startDay: string;
   endDay: string;
+  status: number; // 0: chưa điểm danh, 1: đang thi, 2: đã thi
 };
 
 const weekdays = [
@@ -118,12 +123,63 @@ function findWeekOfToday(weekOptions: WeekOption[]): WeekOption | undefined {
   return weekOptions[0];
 }
 
+// Hàm lấy thông tin trạng thái từ status
+function getStatusInfo(status: number) {
+  switch (status) {
+    case 0:
+      return {
+        label: 'Chưa điểm danh',
+        color: 'blue',
+        bgColor: 'from-blue-50 to-indigo-50',
+        borderColor: 'border-blue-200',
+        textColor: 'text-blue-600',
+        buttonColor: 'bg-blue-600 hover:bg-blue-700',
+        icon: UserCheck,
+        buttonText: 'Điểm danh'
+      };
+    case 1:
+      return {
+        label: 'Đang thi',
+        color: 'orange',
+        bgColor: 'from-orange-50 to-yellow-50',
+        borderColor: 'border-orange-200',
+        textColor: 'text-orange-600',
+        buttonColor: 'bg-orange-600 hover:bg-orange-700',
+        icon: Play,
+        buttonText: 'Đang diễn ra'
+      };
+    case 2:
+      return {
+        label: 'Đã thi',
+        color: 'green',
+        bgColor: 'from-green-50 to-emerald-50',
+        borderColor: 'border-green-200',
+        textColor: 'text-green-600',
+        buttonColor: 'bg-green-600 hover:bg-green-700',
+        icon: Eye,
+        buttonText: 'Xem lịch sử'
+      };
+    default:
+      return {
+        label: 'Không xác định',
+        color: 'gray',
+        bgColor: 'from-gray-50 to-gray-50',
+        borderColor: 'border-gray-200',
+        textColor: 'text-gray-600',
+        buttonColor: 'bg-gray-600 hover:bg-gray-700',
+        icon: Clock,
+        buttonText: 'Không xác định'
+      };
+  }
+}
+
 export default function ExamSchedulePage() {
   const [yearOptions] = useState<YearOption[]>(getYearOptions());
   const [selectedYear, setSelectedYear] = useState<YearOption>(yearOptions[0]);
   const [weekOptions, setWeekOptions] = useState<WeekOption[]>(getWeekStartOptions(yearOptions[0].value));
   const [selectedWeek, setSelectedWeek] = useState<WeekOption | null>(null);
   const [examSchedules, setExamSchedules] = useState<ApiExamSchedule[]>([]);
+  const [updatingStatus, setUpdatingStatus] = useState<number | null>(null); // Track which exam is being updated
   const router = useRouter();
 
   // Khi đổi năm, cập nhật tuần và chọn tuần chứa ngày hiện tại
@@ -136,22 +192,30 @@ export default function ExamSchedulePage() {
 
   // Khi đổi tuần, fetch lịch thi
   useEffect(() => {
-    const teacherId = getUserIdFromToken();
-    if (!teacherId || !selectedWeek) {
-      setExamSchedules([]);
-      return;
-    }
-    const fromDate = selectedWeek.value;
-    const d = new Date(selectedWeek.value);
-    d.setDate(d.getDate() + 6);
-    const toDate = d.toISOString().slice(0, 10);
+    const fetchExamSchedules = async () => {
+      const teacherId = getUserIdFromToken();
+      if (!teacherId || !selectedWeek) {
+        setExamSchedules([]);
+        return;
+      }
+      const fromDate = selectedWeek.value;
+      const d = new Date(selectedWeek.value);
+      d.setDate(d.getDate() + 6);
+      const toDate = d.toISOString().slice(0, 10);
 
-    fetch(
-      `https://localhost:7074/api/ExamSchedule/teacher/${teacherId}?fromDate=${fromDate}&toDate=${toDate}`
-    )
-      .then((res) => res.json())
-      .then((data) => setExamSchedules(Array.isArray(data) ? data : []))
-      .catch(() => setExamSchedules([]));
+      try {
+        const response = await fetch(
+          `https://localhost:7074/api/ExamSchedule/teacher/${teacherId}?fromDate=${fromDate}&toDate=${toDate}`
+        );
+        const data = await response.json();
+        const schedules = Array.isArray(data) ? data : [];
+        setExamSchedules(schedules);
+      } catch (error) {
+        setExamSchedules([]);
+      }
+    };
+
+    fetchExamSchedules();
   }, [selectedWeek]);
 
   const weekDates = selectedWeek ? getWeekDatesFromStart(selectedWeek.value) : [];
@@ -176,6 +240,53 @@ export default function ExamSchedulePage() {
     const currentIndex = weekOptions.findIndex(w => w.value === selectedWeek?.value);
     if (currentIndex < weekOptions.length - 1) {
       setSelectedWeek(weekOptions[currentIndex + 1]);
+    }
+  };
+
+  // Xử lý click nút theo status
+  const handleExamAction = async (exam: ApiExamSchedule) => {
+    if (exam.status === 0) {
+      // Chưa điểm danh -> cập nhật status thành 1 trước khi chuyển trang
+      setUpdatingStatus(exam.examSlotRoomId);
+      
+      try {
+        const response = await fetch(
+          `https://localhost:7074/api/ExamSchedule/changestatus?examSlotRoomId=${exam.examSlotRoomId}&status=1`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (response.ok) {
+          // Cập nhật lại state local để UI reflect ngay lập tức
+          setExamSchedules(prev => 
+            prev.map(e => 
+              e.examSlotRoomId === exam.examSlotRoomId 
+                ? { ...e, status: 1 } 
+                : e
+            )
+          );
+          
+          // Chuyển đến trang điểm danh
+          router.push(`/teacher/examsupervisor/attendancechecking?examId=${exam.examSlotRoomId}`);
+        } else {
+          alert("Không thể cập nhật trạng thái ca thi. Vui lòng thử lại.");
+        }
+      } catch (error) {
+        console.error("Error updating exam status:", error);
+        alert("Có lỗi xảy ra khi cập nhật trạng thái ca thi. Vui lòng thử lại.");
+      } finally {
+        setUpdatingStatus(null);
+      }
+    } else if (exam.status === 1) {
+      // Đang thi -> vào trang điểm danh
+      router.push(`/teacher/examsupervisor/attendancechecking?examId=${exam.examSlotRoomId}`);
+    } else if (exam.status === 2) {
+      // Đã thi -> xem lịch sử
+      router.push(`/teacher/examsupervisor/attendancechecking?examId=${exam.examSlotRoomId}&view=true`);
     }
   };
 
@@ -304,51 +415,78 @@ export default function ExamSchedulePage() {
                         const exams = groupedSchedules[date] || [];
                         const exam = exams[rowIndex];
                         
+                        if (!exam) {
+                          return (
+                            <td
+                              key={dayIdx}
+                              className="px-6 py-4 align-top border-b border-gray-200"
+                            >
+                              <div className="h-32 flex items-center justify-center text-gray-400">
+                                <span className="text-sm">Không có ca thi</span>
+                              </div>
+                            </td>
+                          );
+                        }
+
+                        const statusInfo = getStatusInfo(exam.status);
+                        const StatusIcon = statusInfo.icon;
+                        const isUpdating = updatingStatus === exam.examSlotRoomId;
+                        
                         return (
                           <td
                             key={dayIdx}
                             className="px-6 py-4 align-top border-b border-gray-200"
                           >
-                            {exam ? (
-                              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
-                                <div className="flex items-center justify-between mb-3">
-                                  <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
+                            <div className={`border rounded-lg p-4 hover:shadow-md transition-shadow duration-200 bg-gradient-to-r ${statusInfo.bgColor} ${statusInfo.borderColor}`}>
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center space-x-2">
+                                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusInfo.textColor} bg-${statusInfo.color}-100`}>
                                     Ca {rowIndex + 1}
                                   </span>
-                                  <div className="flex items-center text-xs text-gray-600">
-                                    <Clock className="w-3 h-3 mr-1" />
-                                    {exam.timeLabel}
-                                  </div>
+                                  <span className={`flex items-center text-xs px-2 py-1 rounded-full ${statusInfo.textColor} bg-${statusInfo.color}-100`}>
+                                    <StatusIcon className="w-3 h-3 mr-1" />
+                                    {statusInfo.label}
+                                  </span>
                                 </div>
-                                
-                                <div className="space-y-2 mb-3">
-                                  <div className="flex items-center">
-                                    <BookOpen className="w-4 h-4 text-blue-600 mr-2" />
-                                    <span className="font-medium text-gray-900 text-sm">{exam.subjectName}</span>
-                                  </div>
-                                  <div className="flex items-center">
-                                    <MapPin className="w-4 h-4 text-gray-500 mr-2" />
-                                    <span className="text-sm text-gray-700">Phòng {exam.roomName}</span>
-                                  </div>
+                                <div className="flex items-center text-xs text-gray-600">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  {exam.timeLabel}
                                 </div>
-                                
-                                <button
-                                  className="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200"
-                                  onClick={() =>
-                                    router.push(
-                                      `/teacher/examsupervisor/attendancechecking?examId=${exam.examSlotRoomId}`
-                                    )
-                                  }
-                                >
-                                  <Users className="w-4 h-4" />
-                                  <span>Điểm danh</span>
-                                </button>
                               </div>
-                            ) : (
-                              <div className="h-32 flex items-center justify-center text-gray-400">
-                                <span className="text-sm">Không có ca thi</span>
+                              
+                              <div className="space-y-2 mb-3">
+                                <div className="flex items-center">
+                                  <BookOpen className="w-4 h-4 text-blue-600 mr-2" />
+                                  <span className="font-medium text-gray-900 text-sm">{exam.subjectName}</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <MapPin className="w-4 h-4 text-gray-500 mr-2" />
+                                  <span className="text-sm text-gray-700">Phòng {exam.roomName}</span>
+                                </div>
                               </div>
-                            )}
+                              
+                              <button
+                                className={`w-full flex items-center justify-center space-x-2 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 ${
+                                  isUpdating 
+                                    ? 'bg-gray-400 cursor-not-allowed' 
+                                    : statusInfo.buttonColor
+                                }`}
+                                onClick={() => handleExamAction(exam)}
+                                disabled={isUpdating}
+                              >
+                                {isUpdating ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    <span>Đang cập nhật...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <StatusIcon className="w-4 h-4" />
+                                    <span>{statusInfo.buttonText}</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
                           </td>
                         );
                       })}
@@ -370,7 +508,7 @@ export default function ExamSchedulePage() {
 
         {/* Statistics */}
         {examSchedules.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -386,13 +524,13 @@ export default function ExamSchedulePage() {
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Số phòng thi</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    {new Set(examSchedules.map(e => e.roomName)).size}
+                  <p className="text-sm font-medium text-gray-600">Chưa điểm danh</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {examSchedules.filter(e => e.status === 0).length}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <MapPin className="w-6 h-6 text-green-600" />
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <UserCheck className="w-6 h-6 text-blue-600" />
                 </div>
               </div>
             </div>
@@ -400,13 +538,27 @@ export default function ExamSchedulePage() {
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Số môn thi</p>
-                  <p className="text-2xl font-bold text-purple-600">
-                    {new Set(examSchedules.map(e => e.subjectName)).size}
+                  <p className="text-sm font-medium text-gray-600">Đang thi</p>
+                  <p className="text-2xl font-bold text-orange-600">
+                    {examSchedules.filter(e => e.status === 1).length}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Users className="w-6 h-6 text-purple-600" />
+                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <Play className="w-6 h-6 text-orange-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Đã hoàn thành</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {examSchedules.filter(e => e.status === 2).length}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
                 </div>
               </div>
             </div>

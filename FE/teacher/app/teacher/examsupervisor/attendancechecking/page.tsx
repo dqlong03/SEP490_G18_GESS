@@ -17,7 +17,8 @@ import {
   User,
   Hash,
   Timer,
-  Shield
+  Shield,
+  Eye
 } from "lucide-react";
 
 interface ExamInfo {
@@ -44,6 +45,7 @@ export default function AttendanceCheckingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const examId = searchParams.get("examId");
+  const isViewMode = searchParams.get("view") === "true"; // Kiểm tra chế độ view
 
   const [examInfo, setExamInfo] = useState<ExamInfo | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
@@ -51,73 +53,125 @@ export default function AttendanceCheckingPage() {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isFinishing, setIsFinishing] = useState(false); 
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Timer state
-  const [timer, setTimer] = useState(300); // 5 phút = 300 giây
+  // Timer state - chỉ hoạt động khi không phải view mode
+  const [timer, setTimer] = useState(300);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch exam info
-  useEffect(() => {
+  const fetchExamInfo = async () => {
     if (!examId) return;
-    setLoading(true);
-    fetch(`https://localhost:7074/api/ExamSchedule/slots/${examId}`)
-      .then((res) => res.json())
-      .then((data) => setExamInfo(data))
-      .catch(() => setExamInfo(null))
-      .finally(() => setLoading(false));
-  }, [examId]);
+    try {
+      const res = await fetch(`https://localhost:7074/api/ExamSchedule/slots/${examId}`);
+      const data = await res.json();
+      setExamInfo(data);
+    } catch (error) {
+      console.error("Error fetching exam info:", error);
+      setExamInfo(null);
+    }
+  };
 
   // Fetch students
-  useEffect(() => {
+  const fetchStudents = async () => {
     if (!examId) return;
-    fetch(`https://localhost:7074/api/ExamSchedule/students/${examId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setStudents(Array.isArray(data) ? data : []);
-        // Map trạng thái điểm danh
-        const att: { [id: string]: boolean } = {};
-        (Array.isArray(data) ? data : []).forEach((sv: Student) => {
-          att[sv.id] = sv.isCheckedIn === 1;
-        });
-        setAttendance(att);
-      })
-      .catch(() => {
-        setStudents([]);
-        setAttendance({});
+    try {
+      const res = await fetch(`https://localhost:7074/api/ExamSchedule/students/${examId}`);
+      const data = await res.json();
+      const studentsData = Array.isArray(data) ? data : [];
+      setStudents(studentsData);
+      
+      // Map trạng thái điểm danh
+      const att: { [id: string]: boolean } = {};
+      studentsData.forEach((sv: Student) => {
+        att[sv.id] = sv.isCheckedIn === 1;
       });
-  }, [examId]);
+      setAttendance(att);
+    } catch (error) {
+      console.error("Error fetching students:", error);
+      setStudents([]);
+      setAttendance({});
+    }
+  };
 
-  // Timer countdown and refresh code
-  useEffect(() => {
-    if (timer <= 0) {
-      // Gọi API tạo mã code mới
-      if (examId) {
-        fetch(`https://localhost:7074/api/ExamSchedule/refresh-code?examSlotId=${examId}`, {
+  // Load all data
+  const loadData = async () => {
+    setLoading(true);
+    await Promise.all([fetchExamInfo(), fetchStudents()]);
+    setLoading(false);
+  };
+
+  // Refresh data every 5 minutes
+  const refreshData = async () => {
+    if (isViewMode || !examId) return;
+    
+    setIsRefreshing(true);
+    try {
+      // Call refresh API
+      await fetch(`https://localhost:7074/api/ExamSchedule/refresh?examSlotId=${examId}`, {
+        method: "POST",
+      });
+      
+      // Reload all data
+      await loadData();
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Thêm function để gọi API refresh code
+    const refreshCode = async () => {
+      if (!examId) return;
+      try {
+        await fetch(`https://localhost:7074/api/ExamSchedule/refresh?examSlotId=${examId}`, {
           method: "POST",
-        })
-          .then(res => res.json())
-          .then(data => {
-            if (data && data.code) {
-              setExamInfo(prev => prev ? { ...prev, code: data.code } : prev);
-            }
-            setTimer(300); // Reset lại 5 phút
-          })
-          .catch(() => setTimer(300));
-      } else {
-        setTimer(300);
+        });
+      } catch (error) {
+        console.error("Error refreshing code:", error);
       }
+    };
+
+  // Initial data load
+      useEffect(() => {
+      const initializeData = async () => {
+        if (!isViewMode && examId) {
+          // Gọi API refresh code trước khi load data (chỉ khi không phải view mode)
+          await refreshCode();
+        }
+        // Sau đó mới load data
+        await loadData();
+      };
+      
+      initializeData();
+    }, [examId, isViewMode]);
+
+  // Timer countdown and refresh data - CHỈ hoạt động khi KHÔNG phải view mode
+  useEffect(() => {
+    if (isViewMode) return; // Không chạy timer khi ở chế độ view
+
+    if (timer <= 0) {
+      // Gọi API refresh và load lại dữ liệu
+      refreshData().then(() => {
+        setTimer(300); // Reset lại 5 phút
+      });
       return;
     }
+    
     timerRef.current = setTimeout(() => setTimer(t => t - 1), 1000);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [timer, examId]);
+  }, [timer, examId, isViewMode]);
 
-  // Khi examId đổi thì reset timer
+  // Khi examId đổi thì reset timer (chỉ khi không phải view mode)
   useEffect(() => {
-    setTimer(300);
-  }, [examId]);
+    if (!isViewMode) {
+      setTimer(300);
+    }
+  }, [examId, isViewMode]);
 
   // Format mm:ss
   const formatTime = (sec: number) => {
@@ -126,8 +180,10 @@ export default function AttendanceCheckingPage() {
     return `${m}:${s}`;
   };
 
-  // Điểm danh từng sinh viên
+  // Điểm danh từng sinh viên - VÔ HIỆU HÓA trong view mode
   const handleCheck = async (studentId: string) => {
+    if (isViewMode) return; // Không cho phép thao tác trong view mode
+    
     if (!examId) return;
     try {
       await fetch(
@@ -144,12 +200,55 @@ export default function AttendanceCheckingPage() {
   };
 
   const handleConfirmAttendance = () => {
+    if (isViewMode) return; // Không cho phép thao tác trong view mode
     setCollapsed(true);
     // Có thể gọi API xác nhận điểm danh nếu cần
   };
 
-  const handleFinishExam = () => {
-    router.push("/teacher/examsupervisor");
+  const handleFinishExam = async () => {
+    if (isViewMode) return; // Không cho phép thao tác trong view mode
+    
+    if (!examInfo?.examSlotRoomId) {
+      alert("Không tìm thấy thông tin ca thi");
+      return;
+    }
+
+    setIsFinishing(true);
+    
+    try {
+      const response = await fetch(
+        `https://localhost:7074/api/ExamSchedule/changestatus?examSlotRoomId=${examInfo.examSlotRoomId}&status=2`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        // Hiển thị thông báo thành công
+        alert("Đã hoàn thành ca thi thành công!");
+        
+        // Đợi một chút để người dùng thấy thông báo rồi chuyển trang
+        setTimeout(() => {
+          router.push("/teacher/examsupervisor");
+        }, 1000);
+      } else {
+        throw new Error("Không thể hoàn thành ca thi");
+      }
+    } catch (error) {
+      console.error("Error finishing exam:", error);
+      alert("Có lỗi xảy ra khi hoàn thành ca thi. Vui lòng thử lại.");
+    } finally {
+      setIsFinishing(false);
+    }
+  };
+
+  // Manual refresh function
+  const handleManualRefresh = () => {
+    refreshData();
+    setTimer(300); // Reset timer
   };
 
   const attendedCount = Object.values(attendance).filter(Boolean).length;
@@ -174,22 +273,63 @@ export default function AttendanceCheckingPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-                <Shield className="w-6 h-6 text-white" />
+              <div className={`w-10 h-10 bg-gradient-to-r rounded-xl flex items-center justify-center ${
+                isViewMode 
+                  ? 'from-gray-600 to-gray-700' 
+                  : 'from-blue-600 to-indigo-600'
+              }`}>
+                {isViewMode ? (
+                  <Eye className="w-6 h-6 text-white" />
+                ) : (
+                  <Shield className="w-6 h-6 text-white" />
+                )}
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Điểm danh coi thi</h1>
-                <p className="text-gray-600">Quản lý điểm danh và giám sát ca thi</p>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {isViewMode ? 'Xem lịch sử điểm danh' : 'Điểm danh coi thi'}
+                </h1>
+                <p className="text-gray-600">
+                  {isViewMode 
+                    ? 'Xem thông tin và lịch sử điểm danh ca thi' 
+                    : 'Quản lý điểm danh và giám sát ca thi'
+                  }
+                </p>
               </div>
             </div>
             
-            <button
-              onClick={() => router.back()}
-              className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 font-medium text-gray-700"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span>Quay lại</span>
-            </button>
+            <div className="flex items-center space-x-3">
+              {/* Manual Refresh Button - only show when not in view mode */}
+              {!isViewMode && (
+                <button
+                  onClick={handleManualRefresh}
+                  disabled={isRefreshing}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors duration-200 ${
+                    isRefreshing
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
+                  }`}
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <span>{isRefreshing ? 'Đang tải...' : 'Làm mới'}</span>
+                </button>
+              )}
+
+              {/* View Mode Badge */}
+              {isViewMode && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                  <Eye className="w-4 h-4 mr-2" />
+                  Chế độ xem
+                </span>
+              )}
+              
+              <button
+                onClick={() => router.back()}
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 font-medium text-gray-700"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span>Quay lại</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -199,6 +339,12 @@ export default function AttendanceCheckingPage() {
             <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
               <BookOpen className="w-5 h-5 mr-2 text-blue-600" />
               Thông tin ca thi
+              {isRefreshing && (
+                <div className="ml-3 flex items-center text-sm text-blue-600">
+                  <RefreshCw className="w-4 h-4 animate-spin mr-1" />
+                  Đang cập nhật...
+                </div>
+              )}
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -258,25 +404,48 @@ export default function AttendanceCheckingPage() {
             </div>
             
             {/* Code Section */}
-            <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+            <div className={`mt-6 p-4 border rounded-xl ${
+              isViewMode 
+                ? 'bg-gray-50 border-gray-200' 
+                : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'
+            }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    isViewMode ? 'bg-gray-600' : 'bg-blue-600'
+                  }`}>
                     <Shield className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Mã code vào thi</p>
-                    <p className="text-2xl font-bold text-blue-700 font-mono tracking-wider">{examInfo.code}</p>
+                    <p className="text-sm text-gray-600 mb-1">
+                      {isViewMode ? 'Mã code đã sử dụng' : 'Mã code vào thi'}
+                    </p>
+                    <p className={`text-2xl font-bold font-mono tracking-wider ${
+                      isViewMode ? 'text-gray-700' : 'text-blue-700'
+                    }`}>
+                      {examInfo.code}
+                    </p>
                   </div>
                 </div>
                 
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">Tự động đổi mã sau</p>
-                  <div className="flex items-center space-x-2">
-                    <RefreshCw className="w-4 h-4 text-red-600" />
-                    <span className="text-xl font-bold text-red-600 font-mono">{formatTime(timer)}</span>
+                {!isViewMode && (
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600">Tự động làm mới sau</p>
+                    <div className="flex items-center space-x-2">
+                      <RefreshCw className={`w-4 h-4 text-red-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+                      <span className="text-xl font-bold text-red-600 font-mono">{formatTime(timer)}</span>
+                    </div>
                   </div>
-                </div>
+                )}
+                
+                {isViewMode && (
+                  <div className="text-right">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-200 text-gray-700">
+                      <Eye className="w-4 h-4 mr-1" />
+                      Chỉ xem
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -336,6 +505,15 @@ export default function AttendanceCheckingPage() {
               <h3 className="text-lg font-semibold text-gray-800 flex items-center">
                 <Users className="w-5 h-5 mr-2 text-blue-600" />
                 Danh sách sinh viên ({totalStudents})
+                {isViewMode && (
+                  <span className="ml-2 text-sm text-gray-500">(Chỉ xem)</span>
+                )}
+                {isRefreshing && (
+                  <div className="ml-3 flex items-center text-sm text-blue-600">
+                    <RefreshCw className="w-4 h-4 animate-spin mr-1" />
+                    Đang cập nhật...
+                  </div>
+                )}
               </h3>
               
               <button
@@ -367,15 +545,19 @@ export default function AttendanceCheckingPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã sinh viên</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên sinh viên</th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Điểm danh</th>
+                    {!isViewMode && (
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Điểm danh</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {students.map((sv, idx) => (
                     <tr
                       key={sv.id}
-                      className={`hover:bg-gray-50 transition-colors duration-200 ${
-                        attendance[sv.id] ? 'bg-green-50' : ''
+                      className={`transition-colors duration-200 ${
+                        isViewMode 
+                          ? (attendance[sv.id] ? 'bg-green-50' : 'bg-red-50')
+                          : `hover:bg-gray-50 ${attendance[sv.id] ? 'bg-green-50' : ''}`
                       }`}
                     >
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{idx + 1}</td>
@@ -401,17 +583,19 @@ export default function AttendanceCheckingPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <label className="inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={!!attendance[sv.id]}
-                            onChange={() => handleCheck(sv.id)}
-                            className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                          />
-                          <span className="sr-only">Điểm danh {sv.fullName}</span>
-                        </label>
-                      </td>
+                      {!isViewMode && (
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <label className="inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={!!attendance[sv.id]}
+                              onChange={() => handleCheck(sv.id)}
+                              className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                            />
+                            <span className="sr-only">Điểm danh {sv.fullName}</span>
+                          </label>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -420,48 +604,75 @@ export default function AttendanceCheckingPage() {
           )}
         </div>
 
-        {/* Action Buttons */}
-        <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
-            {!collapsed && (
-              <button
-                className="flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg"
-                onClick={handleConfirmAttendance}
-              >
-                <CheckCircle className="w-4 h-4" />
-                <span>Xác nhận điểm danh</span>
-              </button>
-            )}
-            
-            <div className="flex items-center space-x-4">
-              <label className="flex items-center space-x-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  id="confirm-finish"
-                  checked={isConfirmed}
-                  onChange={() => setIsConfirmed((v) => !v)}
-                  className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
-                />
-                <span className="text-sm font-medium text-gray-700">
-                  Tôi xác nhận đã coi thi xong
-                </span>
-              </label>
+        {/* Action Buttons - CHỈ hiển thị khi KHÔNG phải view mode */}
+        {!isViewMode && (
+          <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
+              {!collapsed && (
+                <button
+                  className="flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg"
+                  onClick={handleConfirmAttendance}
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Xác nhận điểm danh</span>
+                </button>
+              )}
               
-              <button
-                className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors duration-200 shadow-lg ${
-                  isConfirmed
-                    ? "bg-green-600 hover:bg-green-700 text-white"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
-                disabled={!isConfirmed}
-                onClick={handleFinishExam}
-              >
-                <Shield className="w-4 h-4" />
-                <span>Hoàn thành coi thi</span>
-              </button>
+              <div className="flex items-center space-x-4">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="confirm-finish"
+                    checked={isConfirmed}
+                    onChange={() => setIsConfirmed((v) => !v)}
+                    className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    Tôi xác nhận đã coi thi xong
+                  </span>
+                </label>
+                
+                <button
+                  className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors duration-200 shadow-lg ${
+                    isConfirmed && !isFinishing
+                      ? "bg-green-600 hover:bg-green-700 text-white"
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
+                  disabled={!isConfirmed || isFinishing}
+                  onClick={handleFinishExam}  
+                >
+                  {isFinishing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Đang xử lý...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="w-4 h-4" />
+                      <span>Hoàn thành coi thi</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* View Mode Summary */}
+        {isViewMode && (
+          <div className="mt-8 bg-gray-50 rounded-xl shadow-lg p-6 border-2 border-gray-200">
+            <div className="flex items-center justify-center space-x-3">
+              <Eye className="w-6 h-6 text-gray-600" />
+              <div className="text-center">
+                <p className="text-lg font-semibold text-gray-800">Lịch sử điểm danh</p>
+                <p className="text-sm text-gray-600">
+                  Ca thi này đã hoàn thành với tỷ lệ tham dự <span className="font-semibold text-purple-600">{attendanceRate}%</span> 
+                  ({attendedCount}/{totalStudents} sinh viên)
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

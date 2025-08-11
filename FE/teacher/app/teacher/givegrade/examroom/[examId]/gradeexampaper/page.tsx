@@ -14,6 +14,7 @@ type QuestionDTO = {
   score: number;
   practiceExamHistoryId: string;
   practiceQuestionId: number;
+  maxScore: number; // Thêm maxScore
 };
 
 type StudentExamDetail = {
@@ -25,8 +26,14 @@ type StudentExamDetail = {
 };
 
 type SuggestResult = {
-  Score: number;
-  Explanation: string;
+  totalScore: number;
+  overallExplanation: string;
+  criterionScores?: Array<{
+    criterionName: string;
+    achievementPercent: number;
+    weightedScore: number;
+    explanation: string;
+  }>;
 };
 
 const API_BASE = 'https://localhost:7074/api/GradeSchedule';
@@ -43,6 +50,7 @@ export default function GradeStudentPage() {
 
   const [examDetail, setExamDetail] = useState<StudentExamDetail | null>(null);
   const [scores, setScores] = useState<{ [qid: number]: number | '' }>({});
+  const [totalScore, setTotalScore] = useState<number>(0); // Thêm state tổng điểm
   const [showCriteria, setShowCriteria] = useState<{ [qid: number]: boolean }>({});
   const [loading, setLoading] = useState(true);
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
@@ -60,10 +68,15 @@ export default function GradeStudentPage() {
         const data: StudentExamDetail = await res.json();
         setExamDetail(data);
         const initialScores: { [qid: number]: number | '' } = {};
+        let calculatedTotal = 0;
         data.questions.forEach(q => {
           initialScores[q.questionId] = q.score ?? '';
+          if (typeof q.score === 'number') {
+            calculatedTotal += q.score;
+          }
         });
         setScores(initialScores);
+        setTotalScore(calculatedTotal);
       } catch (err) {
         showToast("error", "Lỗi khi lấy dữ liệu bài thi");
       }
@@ -71,6 +84,25 @@ export default function GradeStudentPage() {
     }
     fetchExamDetail();
   }, [examSlotRoomId, studentId]);
+
+  // Tính toán tổng điểm từ các câu hỏi
+  const calculateTotalFromQuestions = () => {
+    return Object.values(scores).reduce((total, score) => {
+      return total + (typeof score === 'number' ? score : 0);
+    }, 0);
+  };
+
+  // Cập nhật tổng điểm khi scores thay đổi
+  useEffect(() => {
+    const calculated = calculateTotalFromQuestions();
+    setTotalScore(calculated);
+  }, [scores]);
+
+  // Tính tổng maxScore của tất cả câu hỏi
+  const getTotalMaxScore = () => {
+    if (!examDetail) return 0;
+    return examDetail.questions.reduce((total, q) => total + (q.maxScore || 10), 0);
+  };
 
   const handleScoreChange = async (qid: number, value: number | '') => {
     setScores(prev => ({ ...prev, [qid]: value }));
@@ -103,31 +135,45 @@ export default function GradeStudentPage() {
     }
   };
 
-  const handleSuggestScore = async (q: QuestionDTO) => {
-    setSuggesting(prev => ({ ...prev, [q.questionId]: true }));
-    setSuggestResult(prev => ({ ...prev, [q.questionId]: null }));
-    try {
-      const body = {
-        questionContent: q.content,
-        answerContent: q.studentAnswer,
-        bandScoreGuide: q.gradingCriteria,
-        materialLink: MATERIAL_LINK,
-        maxScore: 10
-      };
-      const res = await fetch(SUGGEST_API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error('Không lấy được gợi ý chấm điểm');
-      const result = await res.json();
-      setSuggestResult(prev => ({ ...prev, [q.questionId]: result }));
-    } catch (err) {
-      setSuggestResult(prev => ({ ...prev, [q.questionId]: null }));
-      showToast("error", "Lỗi khi lấy gợi ý chấm điểm!");
+const handleSuggestScore = async (q: QuestionDTO) => {
+  setSuggesting(prev => ({ ...prev, [q.questionId]: true }));
+  setSuggestResult(prev => ({ ...prev, [q.questionId]: null }));
+  try {
+    // Đảm bảo bandScoreGuide là array
+    let bandScoreGuide: any[] = [];
+    if (Array.isArray(q.gradingCriteria)) {
+      bandScoreGuide = q.gradingCriteria;
+    } else if (typeof q.gradingCriteria === "string") {
+      try {
+        const parsed = JSON.parse(q.gradingCriteria);
+        if (Array.isArray(parsed)) bandScoreGuide = parsed;
+      } catch {
+        // Nếu không parse được thì để mảng rỗng
+        bandScoreGuide = [];
+      }
     }
-    setSuggesting(prev => ({ ...prev, [q.questionId]: false }));
-  };
+
+    const body = {
+      questionContent: q.content,
+      answerContent: q.studentAnswer,
+      bandScoreGuide: bandScoreGuide,
+      materialLink: MATERIAL_LINK,
+      maxScore: q.maxScore || 10 // Sử dụng maxScore từ câu hỏi
+    };
+    const res = await fetch(SUGGEST_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error('Không lấy được gợi ý chấm điểm');
+    const result = await res.json();
+    setSuggestResult(prev => ({ ...prev, [q.questionId]: result }));
+  } catch (err) {
+    setSuggestResult(prev => ({ ...prev, [q.questionId]: null }));
+    showToast("error", "Lỗi khi lấy gợi ý chấm điểm!");
+  }
+  setSuggesting(prev => ({ ...prev, [q.questionId]: false }));
+};
 
   const handleApplySuggestScore = async (q: QuestionDTO, score: number) => {
     await handleScoreChange(q.questionId, score);
@@ -137,20 +183,12 @@ export default function GradeStudentPage() {
 
   const handleConfirm = async () => {
     try {
-      let totalScore = 0;
-      if (examDetail && examDetail.questions) {
-        examDetail.questions.forEach(q => {
-          const score = scores[q.questionId];
-          if (typeof score === 'number') totalScore += score;
-        });
-      }
-
       const res = await fetch(
         `${API_BASE}/examslotroom/${examSlotRoomId}/student/${studentId}/mark-graded`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ totalScore }),
+          body: JSON.stringify({ totalScore }), // Sử dụng totalScore từ state
         }
       );
       if (!res.ok) throw new Error('Không thể cập nhật trạng thái chấm bài!');
@@ -163,12 +201,6 @@ export default function GradeStudentPage() {
 
   const getGradedQuestionsCount = () => {
     return Object.values(scores).filter(score => score !== '').length;
-  };
-
-  const getTotalScore = () => {
-    return Object.values(scores).reduce((total, score) => {
-      return total + (typeof score === 'number' ? score : 0);
-    }, 0);
   };
 
   if (loading) {
@@ -245,9 +277,40 @@ export default function GradeStudentPage() {
               <h2 className="text-xl font-bold text-gray-800 mb-1">{examDetail.fullName}</h2>
               <p className="text-gray-600">Mã sinh viên: <span className="font-semibold">{examDetail.studentCode}</span></p>
             </div>
-            <div className="text-right">
-              <div className="text-sm text-gray-500 mb-1">Tổng điểm hiện tại</div>
-              <div className="text-3xl font-bold text-blue-600">{getTotalScore()}</div>
+          </div>
+        </div>
+
+        {/* Total Score Card */}
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl shadow-lg p-6 mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-green-800 mb-2">Tổng điểm bài thi</h3>
+              <p className="text-sm text-green-600">
+                Điểm từ các câu hỏi: <span className="font-semibold">{calculateTotalFromQuestions()}</span>
+              </p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="text-right mr-4">
+                <label className="block text-sm font-medium text-green-700 mb-2">
+                  Tổng điểm cuối cùng:
+                </label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={getTotalMaxScore()}
+                    step={0.1}
+                    value={totalScore}
+                    onChange={e => setTotalScore(Number(e.target.value) || 0)}
+                    className="border border-green-300 rounded-lg px-4 py-2 w-24 text-center font-bold text-lg bg-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                  <span className="text-green-700 font-medium">/ {getTotalMaxScore()}</span>
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-green-600">{Math.round((totalScore / getTotalMaxScore()) * 100)}%</div>
+                <div className="text-sm text-green-600">Tỷ lệ đạt</div>
+              </div>
             </div>
           </div>
         </div>
@@ -260,7 +323,7 @@ export default function GradeStudentPage() {
               <div className="bg-gradient-to-r from-slate-50 to-blue-50 px-6 py-4 border-b border-gray-100">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-gray-800">
-                    Câu hỏi {index + 1}
+                    Câu hỏi {index + 1} <span className="text-sm font-normal text-gray-600">(Tối đa: {q.maxScore || 10} điểm)</span>
                   </h3>
                   <div className="flex items-center space-x-2">
                     {scores[q.questionId] !== '' && (
@@ -294,7 +357,45 @@ export default function GradeStudentPage() {
                   {showCriteria[q.questionId] && (
                     <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
                       <h4 className="font-semibold text-blue-800 mb-2">Tiêu chí chấm điểm:</h4>
-                      <div className="text-gray-700 leading-relaxed">{q.gradingCriteria}</div>
+<div className="text-gray-700 leading-relaxed">
+  {(() => {
+    let criteria: { criterionName: string; weightPercent: number; description: string }[] = [];
+
+    // Nếu là mảng object (trường hợp của bạn)
+    if (Array.isArray(q.gradingCriteria)) {
+      criteria = q.gradingCriteria;
+    }
+    // Nếu là string (trường hợp backend trả về string JSON)
+    else if (typeof q.gradingCriteria === "string") {
+      try {
+        const parsed = JSON.parse(q.gradingCriteria);
+        if (Array.isArray(parsed)) criteria = parsed;
+      } catch {
+        // Không phải JSON, trả về nguyên văn
+        return <span>{q.gradingCriteria}</span>;
+      }
+    }
+    // Nếu không có tiêu chí hợp lệ
+    if (!criteria.length) return <span>{q.gradingCriteria}</span>;
+
+    // Hiển thị danh sách tiêu chí
+    return (
+      <ul className="list-disc pl-6 space-y-2">
+        {criteria.map((c, idx) => (
+          <li key={idx}>
+            <span className="font-semibold text-blue-800">{c.criterionName}</span>
+            {typeof c.weightPercent === "number" && (
+              <span className="ml-2 text-sm text-gray-500">({c.weightPercent}%)</span>
+            )}
+            {c.description && (
+              <div className="text-gray-700">{c.description}</div>
+            )}
+          </li>
+        ))}
+      </ul>
+    );
+  })()}
+</div>
                     </div>
                   )}
                 </div>
@@ -314,7 +415,7 @@ export default function GradeStudentPage() {
                     <div className="flex items-center space-x-3">
                       {/* Quick Score Buttons */}
                       <div className="flex space-x-2">
-                        {[0, 5, 8, 10].map(score => (
+                        {[0, Math.round((q.maxScore || 10) * 0.5), Math.round((q.maxScore || 10) * 0.8), q.maxScore || 10].map(score => (
                           <button
                             key={score}
                             onClick={() => handleScoreChange(q.questionId, score)}
@@ -338,13 +439,14 @@ export default function GradeStudentPage() {
                       <input
                         type="number"
                         min={0}
-                        max={10}
+                        max={q.maxScore || 10}
+                        step={0.1}
                         value={scores[q.questionId] ?? ''}
                         onChange={e => handleScoreChange(q.questionId, e.target.value === '' ? '' : Number(e.target.value))}
                         className="border border-gray-300 rounded-lg px-3 py-2 w-24 text-center font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="0-10"
+                        placeholder={`0-${q.maxScore || 10}`}
                       />
-                      <span className="text-gray-500">/ 10</span>
+                      <span className="text-gray-500">/ {q.maxScore || 10}</span>
                     </div>
 
                     <button
@@ -375,41 +477,66 @@ export default function GradeStudentPage() {
 
                   {/* AI Suggestion Result */}
                   {suggestResult[q.questionId] && (
-                    <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
-                      <div className="flex items-center space-x-2 mb-3">
-                        <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
-                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                          </svg>
-                        </div>
-                        <h5 className="font-semibold text-green-800">Gợi ý từ AI</h5>
-                      </div>
-                      
-                      <div className="mb-3">
-                        <p className="text-sm font-medium text-green-700 mb-2">Giải thích:</p>
-                        <p className="text-gray-700 leading-relaxed">
-                          {suggestResult[q.questionId]?.Explanation || suggestResult[q.questionId]?.explanation}
-                        </p>
-                      </div>
+  <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+    <div className="flex items-center space-x-2 mb-3">
+      <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
+        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+        </svg>
+      </div>
+      <h5 className="font-semibold text-green-800">Gợi ý từ AI</h5>
+    </div>
 
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm font-medium text-green-700">Điểm đề xuất:</span>
-                          <span className="px-3 py-1 bg-green-600 text-white rounded-lg font-bold">
-                            {suggestResult[q.questionId]?.Score ?? suggestResult[q.questionId]?.score}/10
-                          </span>
-                        </div>
-                        
-                        <button
-                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors duration-200 shadow-md hover:shadow-lg"
-                          type="button"
-                          onClick={() => handleApplySuggestScore(q, suggestResult[q.questionId]?.Score ?? suggestResult[q.questionId]?.score)}
-                        >
-                          Áp dụng điểm này
-                        </button>
-                      </div>
-                    </div>
-                  )}
+    {/* Hiển thị từng tiêu chí */}
+    {Array.isArray(suggestResult[q.questionId]?.criterionScores) && (
+      <div className="mb-3">
+        <p className="text-sm font-medium text-green-700 mb-2">Chi tiết từng tiêu chí:</p>
+        <ul className="list-disc pl-6 space-y-2">
+          {suggestResult[q.questionId].criterionScores.map(
+            (c: { criterionName: string; achievementPercent: number; weightedScore: number; explanation: string }, idx: number) => (
+              <li key={idx}>
+                <span className="font-semibold text-blue-800">{c.criterionName}</span>
+                <span className="ml-2 text-sm text-gray-500">
+                  - Đạt: {c.achievementPercent}% | Điểm: {c.weightedScore}
+                </span>
+                {c.explanation && (
+                  <div className="text-gray-700">Giải thích: {c.explanation}</div>
+                )}
+              </li>
+            )
+          )}
+        </ul>
+      </div>
+    )}
+
+    {/* Tổng điểm và giải thích tổng */}
+    <div className="flex items-center justify-between mt-3">
+      <div className="flex items-center space-x-2">
+        <span className="text-sm font-medium text-green-700">Điểm đề xuất:</span>
+        <span className="px-3 py-1 bg-green-600 text-white rounded-lg font-bold">
+          {suggestResult[q.questionId].totalScore}/{q.maxScore || 10}
+        </span>
+      </div>
+    </div>
+    {suggestResult[q.questionId].overallExplanation && (
+      <div className="mt-2 text-gray-700">
+        <span className="font-medium text-green-700">Nhận xét tổng quan: </span>
+        {suggestResult[q.questionId].overallExplanation}
+      </div>
+    )}
+
+    <div className="mt-4 text-right">
+      <button
+        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors duration-200 shadow-md hover:shadow-lg"
+        type="button"
+        onClick={() => handleApplySuggestScore(q, suggestResult[q.questionId].totalScore)}
+      >
+        Áp dụng điểm này
+      </button>
+    </div>
+  </div>
+)}
+
                 </div>
               </div>
             </div>
@@ -443,7 +570,7 @@ export default function GradeStudentPage() {
                 </p>
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                   <p className="text-sm text-blue-800">
-                    Tổng điểm: <span className="font-bold text-xl">{getTotalScore()}</span> điểm
+                    Tổng điểm: <span className="font-bold text-xl">{totalScore}</span> / {getTotalMaxScore()} điểm
                   </p>
                 </div>
               </div>

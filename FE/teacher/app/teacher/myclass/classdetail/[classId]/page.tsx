@@ -449,7 +449,7 @@ export default function ClassDetailPage() {
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                           <div className="flex items-center justify-center space-x-2">
                             {item.examType === "Multiple" ? (
-                              item.status === "Chưa thi" ? (
+                              item.status === "Chưa thi" || item.status === "Chưa mở ca" ? (
                                 <>
                                   <button
                                     onClick={() => handleExamAction(item, "watch")}
@@ -483,7 +483,7 @@ export default function ClassDetailPage() {
                                 </button>
                               )
                             ) : (
-                              item.status === "Chưa thi" ? (
+                              item.status === "Chưa thi" || item.status === "Chưa mở ca" ? (
                                 <>
                                   <button
                                     onClick={() => handleExamAction(item, "watch")}
