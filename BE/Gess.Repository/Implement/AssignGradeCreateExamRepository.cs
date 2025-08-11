@@ -31,14 +31,29 @@ namespace GESS.Repository.Implement
             
             // Check if assignment already exists
             var checkExist = _context.SubjectTeachers
-                .Any(st => st.TeacherId == teacherId && st.SubjectId == subjectId);
-            if (checkExist)
+                .FirstOrDefault(st => st.TeacherId == teacherId && st.SubjectId == subjectId);
+            
+            if (checkExist!=null)
             {
+                if(!checkExist.IsActiveSubjectTeacher)
+                {
+                   checkExist.IsActiveSubjectTeacher = true;
+                    try
+                    {
+                        _context.SubjectTeachers.Update(checkExist);
+                        _context.SaveChanges();
+                        return true;
+                    }
+                    catch (Exception)
+                    {
+                        return false;
+                    }
+                }
                 return false;
             }
             
             var subjectTeacher = new SubjectTeacher
-            {
+            {   
                 TeacherId = teacherId,
                 SubjectId = subjectId,
                 IsGradeTeacher = false,

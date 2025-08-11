@@ -58,6 +58,7 @@ namespace GESS.Service.examSchedule
                 EndDay = schedule.MultiOrPractice.Equals("Multiple")
                     ? (schedule.MultiExam?.EndDay ?? DateTime.MinValue)
                     : (schedule.PracticeExam?.EndDay ?? DateTime.MinValue),
+                Status = schedule.Status
             });
             return examScheduleDtos;
         }

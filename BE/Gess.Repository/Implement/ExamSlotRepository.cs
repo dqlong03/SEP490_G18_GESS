@@ -145,10 +145,10 @@ namespace GESS.Repository.Implement
             }
             else if (examSlot.Status == "Chưa mở ca")
             {
-                if(examSlot.ExamDate != DateTime.Now.Date)
-                {
-                    return false;
-                }
+                //if(examSlot.ExamDate != DateTime.Now.Date)
+                //{
+                //    return false;
+                //}
                 examSlot.Status = "Đang mở ca";
             }
             else if (examSlot.Status == "Đang mở ca")
@@ -269,7 +269,7 @@ namespace GESS.Repository.Implement
             if(examType == "Multiple")
             {
                 return await _context.MultiExams
-                    .Where(e => e.SemesterId == semesterId && e.SubjectId == subjectId&&e.CreateAt.Year==year)
+                    .Where(e => e.SemesterId == semesterId && e.SubjectId == subjectId&&e.CreateAt.Year==year&&e.CategoryExam.CategoryExamName.ToLower().Equals("thi cuối kỳ"))
                     .Select(e => new ExamDTO
                     {
                         ExamId = e.MultiExamId,
@@ -281,7 +281,7 @@ namespace GESS.Repository.Implement
             else if (examType == "Practice")
             {
                 return await _context.PracticeExams
-                    .Where(e => e.SemesterId == semesterId && e.SubjectId == subjectId && e.CreateAt.Year == year)
+                    .Where(e => e.SemesterId == semesterId && e.SubjectId == subjectId && e.CreateAt.Year == year && e.CategoryExam.CategoryExamName.ToLower().Equals("thi cuối kỳ"))
                     .Select(e => new ExamDTO
                     {
                         ExamId = e.PracExamId,

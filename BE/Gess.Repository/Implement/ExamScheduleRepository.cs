@@ -38,6 +38,11 @@ namespace GESS.Repository.Implement
                             .FirstOrDefaultAsync(m => m.MultiExamId == examSlotRoom.Result.MultiExamId && m.StudentId == studentId);
                         if (multiExamHistory.Result != null)
                         {
+                            if(multiExamHistory.Result.CheckIn)
+                            {
+                                multiExamHistory.Result.CheckIn = false;
+                            }
+                            else
                             multiExamHistory.Result.CheckIn = true;
                             _context.MultiExamHistories.Update(multiExamHistory.Result);
                             return await _context.SaveChangesAsync().ContinueWith(t => true);
@@ -49,7 +54,12 @@ namespace GESS.Repository.Implement
                             .FirstOrDefaultAsync(p => p.PracExamId == examSlotRoom.Result.PracticeExamId && p.StudentId == studentId);
                         if (practiceExamHistory.Result != null)
                             {
-                            practiceExamHistory.Result.CheckIn = true;
+                            if (practiceExamHistory.Result.CheckIn)
+                            {
+                                practiceExamHistory.Result.CheckIn = false;
+                            }
+                            else
+                                practiceExamHistory.Result.CheckIn = true;
                             _context.PracticeExamHistories.Update(practiceExamHistory.Result);
                             return await _context.SaveChangesAsync().ContinueWith(t => true);
                         }
@@ -114,7 +124,7 @@ namespace GESS.Repository.Implement
                     )
                 )
                 .Include(e => e.Subject)
-                .Include(e => e.Room)
+                .Include(e => e.Room)   
                 .Include(e => e.MultiExam)
                 .Include(e => e.PracticeExam)
                 .ToListAsync();

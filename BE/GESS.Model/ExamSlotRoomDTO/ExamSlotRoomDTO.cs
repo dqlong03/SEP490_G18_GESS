@@ -17,5 +17,6 @@ namespace GESS.Model.ExamSlotRoomDTO
 
         public DateTime? StartDay { get; set; }   // Thêm dòng này
         public DateTime? EndDay { get; set; }
+        public int? Status { get; set; } 
     }
 }

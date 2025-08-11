@@ -94,11 +94,6 @@ namespace GESS.Repository.Implement
                 throw new Exception("Ngày tạo không được để trống!");
             }
 
-            if (multipleExamCreateDto.CreateAt < DateTime.Now)
-            {
-                throw new Exception("Ngày tạo không được nhỏ hơn ngày hiện tại!");
-            }
-
             // 4. Validate TeacherId
             var teacher = await _context.Teachers.FirstOrDefaultAsync(t => t.TeacherId == multipleExamCreateDto.TeacherId);
             if (teacher == null)
@@ -529,6 +524,7 @@ namespace GESS.Repository.Implement
                 PracExamPaperName = examPaper.PracExamPaperName,
                 SemesterName = examPaper.Semester.SemesterName,
                 SubjectName = examPaper.Subject.SubjectName,
+                CreateAt = examPaper.CreateAt,
                 Questions = examPaper.PracticeTestQuestions.Select(q => new LPracticeExamQuestionDetailDTO
                 {
                     QuestionOrder = q.QuestionOrder,
