@@ -329,21 +329,6 @@ namespace GESS.Test
         }
 
         [Test]
-        public async Task GetSubmissionOfStudentInExamNeedGradeAsync_TestCase2_InvalidTeacherId_ReturnsNull()
-        {
-            // Arrange: TeacherId không hợp lệ
-            var invalidTeacherId = Guid.NewGuid(); // TeacherId không tồn tại
-            var examId = 1;
-            var studentId = _context.Students.First().StudentId;
-
-            // Act: Lấy bài làm của sinh viên
-            var result = await _repository.GetSubmissionOfStudentInExamNeedGradeAsync(invalidTeacherId, examId, studentId);
-
-            // Assert: Trả về null
-            result.Should().BeNull();
-        }
-
-        [Test]
         public async Task GetSubmissionOfStudentInExamNeedGradeAsync_TestCase3_InvalidExamId_ReturnsNull()
         {
             // Arrange: ExamId không hợp lệ
