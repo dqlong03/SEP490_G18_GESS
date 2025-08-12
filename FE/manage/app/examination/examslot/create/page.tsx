@@ -1,4 +1,5 @@
 "use client";
+import { url } from "inspector";
 import React, { useState, useEffect } from "react";
 import Select from "react-select";
 import * as XLSX from 'xlsx';
@@ -139,7 +140,8 @@ const ExamSlotCreatePage = () => {
         code: student.mssv || "string",
         fullName: student.name || "string",
         gender: student.gender === 'Nam',
-        dateOfBirth: student.dob ? new Date(student.dob).toISOString() : new Date().toISOString()
+        dateOfBirth: student.dob ? new Date(student.dob).toISOString() : new Date().toISOString(),
+        urlAvatar: student.avatar || "https://randomuser.me/api/portraits/men/1.jpg"
       }));// Prepare teachers data  
       const teachersData = teacherList.map(teacher => ({
         teacherId: "2a96a929-c6a1-4501-fc19-08ddb5dca989", // Fixed teacher ID as requested

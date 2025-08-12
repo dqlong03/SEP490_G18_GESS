@@ -200,6 +200,24 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProp
                       <span className="ml-auto bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded-full">New</span>
                     </Link>
                   </li>
+
+                   <li>
+                    <Link
+                      href="/examination/examslot/list"
+                      className={`flex items-center gap-3 px-3 py-3 rounded-xl font-medium transition-all duration-200 group
+                        ${pathname === '/examination/examslot/list'
+                          ? 'bg-blue-100 text-blue-700 shadow-sm'
+                          : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'}
+                      `}
+                      onClick={handleClose}
+                    >
+                      <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                      </svg>
+                      <span>Danh sách ca thi</span>
+                      <span className="ml-auto bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded-full">New</span>
+                    </Link>
+                  </li>
                 </ul>
               </div>
             </>
