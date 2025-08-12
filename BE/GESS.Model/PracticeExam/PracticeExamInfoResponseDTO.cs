@@ -21,6 +21,7 @@ namespace GESS.Model.PracticeExam
 
     public class PracticeExamQuestionDetailDTO
     {
+        public int PracticeQuestionId { get; set; } // QUAN TRỌNG: Thêm để frontend submit đúng
         public int QuestionOrder { get; set; }
         public string Content { get; set; }
         public string? AnswerContent { get; set; }

@@ -509,8 +509,11 @@ namespace GESS.Repository.Implement
                 .OrderBy(q => q.QuestionOrder)
                 .ToListAsync();
 
+            Console.WriteLine($"[DEBUG GENERATE] Paper ID: {assignedPaperId}, Total questions: {questions.Count}");
             foreach (var q in questions)
             {
+                Console.WriteLine($"[DEBUG GENERATE] Adding QuestionOrder: {q.QuestionOrder}, PracticeQuestionId: {q.PracticeQuestionId}");
+                
                 await _context.QuestionPracExams.AddAsync(new QuestionPracExam
                 {
                     PracExamHistoryId = pracExamHistoryId,
@@ -538,6 +541,7 @@ namespace GESS.Repository.Implement
                                          orderby ptq.QuestionOrder
                                          select new Model.PracticeExam.PracticeExamQuestionDetailDTO
                                          {
+                                             PracticeQuestionId = q.PracticeQuestionId, // QUAN TRỌNG: Thêm để frontend submit đúng
                                              QuestionOrder = ptq.QuestionOrder,
                                              Content = pq.Content,
                                              AnswerContent = q.Answer,
@@ -659,8 +663,11 @@ namespace GESS.Repository.Implement
             }
 
             // Thêm câu trả lời mới
+            Console.WriteLine($"[DEBUG SUBMIT] Total answers to save: {dto.Answers.Count}");
             foreach (var answer in dto.Answers)
             {
+                Console.WriteLine($"[DEBUG SUBMIT] Saving PracticeQuestionId: {answer.PracticeQuestionId}, Answer: {answer.Answer?.Substring(0, Math.Min(50, answer.Answer?.Length ?? 0))}...");
+                
                 var newQuestionPracExam = new QuestionPracExam
                 {
                     PracExamHistoryId = dto.PracExamHistoryId,
@@ -775,6 +782,58 @@ namespace GESS.Repository.Implement
                 $"HistoryId: {history.PracExamHistoryId}, " +
                 $"StartTime: {history.StartTime:yyyy-MM-dd HH:mm:ss}, " +
                 $"EndTime: {history.EndTime:yyyy-MM-dd HH:mm:ss}");
+        }
+
+        // Debug method: Kiểm tra dữ liệu trong QuestionPracExam
+        public async Task<string> DebugQuestionPracExamData(Guid pracExamHistoryId)
+        {
+            var result = new StringBuilder();
+            result.AppendLine($"=== DEBUG QuestionPracExam for HistoryId: {pracExamHistoryId} ===");
+            
+            var questionPracExams = await _context.QuestionPracExams
+                .Where(q => q.PracExamHistoryId == pracExamHistoryId)
+                .Join(_context.PracticeTestQuestions,
+                      qpe => qpe.PracticeQuestionId,
+                      ptq => ptq.PracticeQuestionId,
+                      (qpe, ptq) => new { qpe, ptq })
+                .OrderBy(x => x.ptq.QuestionOrder)
+                .ToListAsync();
+                
+            result.AppendLine($"Total QuestionPracExam records: {questionPracExams.Count}");
+            result.AppendLine();
+            
+            foreach (var item in questionPracExams)
+            {
+                result.AppendLine($"QuestionOrder: {item.ptq.QuestionOrder}");
+                result.AppendLine($"PracticeQuestionId: {item.qpe.PracticeQuestionId}");
+                result.AppendLine($"Answer: {item.qpe.Answer?.Substring(0, Math.Min(100, item.qpe.Answer?.Length ?? 0))}...");
+                result.AppendLine($"Score: {item.qpe.Score}");
+                result.AppendLine("---");
+            }
+            
+            return result.ToString();
+        }
+
+        // Debug method: Kiểm tra cấu trúc PracticeTestQuestion cho paper
+        public async Task<string> DebugPracticeTestQuestions(int pracExamPaperId)
+        {
+            var result = new StringBuilder();
+            result.AppendLine($"=== DEBUG PracticeTestQuestions for PaperId: {pracExamPaperId} ===");
+            
+            var questions = await _context.PracticeTestQuestions
+                .Where(q => q.PracExamPaperId == pracExamPaperId)
+                .OrderBy(q => q.QuestionOrder)
+                .ToListAsync();
+                
+            result.AppendLine($"Total questions: {questions.Count}");
+            result.AppendLine();
+            
+            foreach (var q in questions)
+            {
+                result.AppendLine($"QuestionOrder: {q.QuestionOrder}, PracticeQuestionId: {q.PracticeQuestionId}, Score: {q.Score}");
+            }
+            
+            return result.ToString();
         }
     }
     
