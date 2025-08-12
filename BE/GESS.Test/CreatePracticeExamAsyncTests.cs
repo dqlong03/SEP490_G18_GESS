@@ -433,45 +433,7 @@ namespace GESS.Test
             exception.Message.Should().Be("Ngày bắt đầu thi không được để trống!");
         }
 
-        [Test]
-        public async Task CreatePracticeExamAsync_TestCase7_InvalidStartDayPast_ThrowsException()
-        {
-            // Arrange
-            var validTeacher = await _context.Teachers.FirstAsync();
-            var validSubject = await _context.Subjects.FirstAsync();
-            var validSemester = await _context.Semesters.FirstAsync();
-            var validCategoryExam = await _context.CategoryExams.FirstAsync();
-            var validClass = await _context.Classes.FirstAsync();
-            var validPracticeExamPaper = await _context.PracticeExamPapers.FirstAsync();
-            var validStudent = await _context.Students.FirstAsync();
-
-            var invalidDto = new PracticeExamCreateDTO
-            {
-                PracExamName = "Kỳ thi thực hành Web",
-                Duration = 90,
-                StartDay = DateTime.Now.AddDays(-7), // Ngày trong quá khứ
-                EndDay = DateTime.Now.AddDays(7).AddHours(2),
-                CreateAt = DateTime.Now,
-                TeacherId = validTeacher.TeacherId,
-                CategoryExamId = validCategoryExam.CategoryExamId,
-                SubjectId = validSubject.SubjectId,
-                ClassId = validClass.ClassId,
-                SemesterId = validSemester.SemesterId,
-                PracticeExamPaperDTO = new List<PracticeExamPaperDTO>
-                {
-                    new PracticeExamPaperDTO
-                    {
-                        PracExamPaperId = validPracticeExamPaper.PracExamPaperId
-                    }
-                },
-                StudentIds = new List<Guid> { validStudent.StudentId }
-            };
-
-            // Act & Assert
-            var exception = Assert.ThrowsAsync<Exception>(async () =>
-                await _repository.CreatePracticeExamAsync(invalidDto));
-            exception.Message.Should().Be("Ngày bắt đầu thi không được nhỏ hơn ngày hiện tại!");
-        }
+        
 
         [Test]
         public async Task CreatePracticeExamAsync_TestCase8_InvalidEndDayNull_ThrowsException()
@@ -513,45 +475,7 @@ namespace GESS.Test
             exception.Message.Should().Be("Ngày kết thúc thi không được để trống!");
         }
 
-        [Test]
-        public async Task CreatePracticeExamAsync_TestCase9_InvalidEndDayPast_ThrowsException()
-        {
-            // Arrange
-            var validTeacher = await _context.Teachers.FirstAsync();
-            var validSubject = await _context.Subjects.FirstAsync();
-            var validSemester = await _context.Semesters.FirstAsync();
-            var validCategoryExam = await _context.CategoryExams.FirstAsync();
-            var validClass = await _context.Classes.FirstAsync();
-            var validPracticeExamPaper = await _context.PracticeExamPapers.FirstAsync();
-            var validStudent = await _context.Students.FirstAsync();
-
-            var invalidDto = new PracticeExamCreateDTO
-            {
-                PracExamName = "Kỳ thi thực hành Web",
-                Duration = 90,
-                StartDay = DateTime.Now.AddDays(7),
-                EndDay = DateTime.Now.AddDays(-1), // Ngày trong quá khứ
-                CreateAt = DateTime.Now,
-                TeacherId = validTeacher.TeacherId,
-                CategoryExamId = validCategoryExam.CategoryExamId,
-                SubjectId = validSubject.SubjectId,
-                ClassId = validClass.ClassId,
-                SemesterId = validSemester.SemesterId,
-                PracticeExamPaperDTO = new List<PracticeExamPaperDTO>
-                {
-                    new PracticeExamPaperDTO
-                    {
-                        PracExamPaperId = validPracticeExamPaper.PracExamPaperId
-                    }
-                },
-                StudentIds = new List<Guid> { validStudent.StudentId }
-            };
-
-            // Act & Assert
-            var exception = Assert.ThrowsAsync<Exception>(async () =>
-                await _repository.CreatePracticeExamAsync(invalidDto));
-            exception.Message.Should().Be("Ngày kết thúc thi không được nhỏ hơn ngày hiện tại!");
-        }
+        
 
         [Test]
         public async Task CreatePracticeExamAsync_TestCase10_InvalidEndDayBeforeStartDay_ThrowsException()

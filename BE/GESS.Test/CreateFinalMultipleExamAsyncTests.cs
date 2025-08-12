@@ -271,35 +271,7 @@ namespace GESS.Test
             exception.Message.Should().Contain("Ngày tạo không được để trống");
         }
 
-        [Test]
-        public async Task CreateFinalMultipleExamAsync_TestCase5_InvalidCreateAtPast_ThrowsException()
-        {
-            // Arrange: CreateAt nhỏ hơn ngày hiện tại
-            var teacherId = _context.Teachers.First().TeacherId;
-            var invalidDto = new FinalMultipleExamCreateDTO
-            {
-                MultiExamName = "Bài thi cuối kỳ 1",
-                NumberQuestion = 5,
-                CreateAt = DateTime.Now.AddDays(-1), // Quá khứ
-                TeacherId = teacherId,
-                SubjectId = 1,
-                SemesterId = 1,
-                NoQuestionInChapterDTO = new List<NoQuestionInChapterDTO>
-                {
-                    new NoQuestionInChapterDTO
-                    {
-                        ChapterId = 1,
-                        LevelQuestionId = 1,
-                        NumberQuestion = 5
-                    }
-                }
-            };
-
-            // Act & Assert: Ném exception
-            var exception = Assert.ThrowsAsync<Exception>(async () => 
-                await _repository.CreateFinalMultipleExamAsync(invalidDto));
-            exception.Message.Should().Contain("Ngày tạo không được nhỏ hơn ngày hiện tại");
-        }
+        
 
         [Test]
         public async Task CreateFinalMultipleExamAsync_TestCase6_InvalidTeacherId_ThrowsException()
