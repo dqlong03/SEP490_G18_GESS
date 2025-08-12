@@ -30,4 +30,5 @@ COPY --from=build /app .
 EXPOSE 3000
 
 # Chạy ứng dụng (production)
+
 CMD ["npm", "start"]

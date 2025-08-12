@@ -21,12 +21,30 @@ namespace GESS.Service.practicequestion
             _unitOfWork = unitOfWork;
         }
 
-        //<tuan>------------------------------------------
+
+
+        // 
+        public async Task<bool> DeleteQuestionByTypeAsync(int questionId, int type)
+        {
+            return await _unitOfWork.PracticeQuestionsRepository.DeleteQuestionByTypeAsync(questionId, type);
+        }
+
+
+
+
+        // API lấy danh sách môn học theo CategoryExamId
+        // GESS.Service.subject/SubjectService.cs
+        public async Task<IEnumerable<SubjectDTO>> GetSubjectsByCategoryExamIdAsync(int categoryExamId)
+        {
+            return await _unitOfWork.PracticeQuestionsRepository.GetSubjectsByCategoryExamIdAsync(categoryExamId);
+        }
+
+
         // API lấy danh sách câu hỏi trắc nghiệm và tự luận
         public async Task<(IEnumerable<QuestionBankListDTO> Data, int TotalCount)> GetAllQuestionsAsync(
-        int? majorId, int? subjectId, int? chapterId, bool? isPublic, int? levelId, string? questionType, int pageNumber, int pageSize)
+        int? majorId, int? subjectId, int? chapterId, bool? isPublic, int? levelId, string? questionType, int pageNumber, int pageSize, Guid? teacherId)
         {
-            return await _unitOfWork.PracticeQuestionsRepository.GetAllQuestionsAsync(majorId, subjectId, chapterId, isPublic, levelId, questionType, pageNumber, pageSize);
+            return await _unitOfWork.PracticeQuestionsRepository.GetAllQuestionsAsync(majorId, subjectId, chapterId, isPublic, levelId, questionType, pageNumber, pageSize,teacherId);
         }
 
         public async Task<(IEnumerable<PracticeQuestionExamPaperDTO> Data, int TotalCount)> GetPracticeQuestionsAsync(
@@ -73,7 +91,8 @@ namespace GESS.Service.practicequestion
                     var answer = new PracticeAnswer
                     {
                         AnswerContent = dto.AnswerContent,
-                        PracticeQuestionId = practiceQuestion.PracticeQuestionId
+                        PracticeQuestionId = practiceQuestion.PracticeQuestionId,
+                        GradingCriteria = dto.Criteria,
                     };
 
                     await _unitOfWork.PracticeAnswersRepository.CreateAsync(answer);

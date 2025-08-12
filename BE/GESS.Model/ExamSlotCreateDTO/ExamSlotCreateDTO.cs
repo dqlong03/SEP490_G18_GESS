@@ -18,7 +18,7 @@ namespace GESS.Model.ExamSlotCreateDTO
         public DateTime StartDate { get; set; }
         public int Duration { get; set; }
         public int ExamType { get; set; } 
-        public DateTime SrartTimeInday { get; set; }
+        public DateTime StartTimeInday { get; set; }
         public DateTime EndTimeInDay { get; set; }
         public int RelaxationTime { get; set; } 
         public bool OptimizedByRoom { get; set; } = false;

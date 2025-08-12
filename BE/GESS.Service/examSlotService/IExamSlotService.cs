@@ -1,5 +1,6 @@
 ﻿using GESS.Entity.Entities;
 using GESS.Model.ExamSlot;
+using GESS.Model.ExamSlotCreateDTO;
 using GESS.Model.ExamSlotRoomDTO;
 using GESS.Model.Major;
 using GESS.Model.RoomDTO;
@@ -15,11 +16,19 @@ namespace GESS.Service.examSlotService
 {
     public interface IExamSlotService : IBaseService<ExamSlot>
     {
+        Task<bool> AddExamToExamSlot(int examSlotId, int examId, string examType);
+        Task<bool> ChangeStatusExamSlot(int examSlotId, string examType);
+        Task <IEnumerable<TeacherCreationFinalRequest>>CheckTeacherExist(List<ExistTeacherDTO> teachers);
+        Task <int> CountPageExamSlots(ExamSlotFilterRequest filterRequest, int pageSize);
+        Task<IEnumerable<ExamDTO>> GetAllExams(int semesterId, int subjectId, string examType, int year);
         Task<IEnumerable<ExamSlotDTO>> GetAllExamSlotsAsync();
+        Task <IEnumerable<ExamSlotResponse>>GetAllExamSlotsPagination(ExamSlotFilterRequest filterRequest, int pageSize, int pageIndex);
         Task <IEnumerable<GradeTeacherResponse>>GetAllGradeTeacher(int majorId, int subjectId);
         Task<IEnumerable<MajorDTODDL>> GetAllMajor();
         Task<IEnumerable<RoomListDTO>> GetAllRoomsAsync();
         Task<IEnumerable<SubjectDTODDL>> GetAllSubjectsByMajorId(int majorId);
+        Task <ExamSlotDetail> GetExamSlotById(int examSlotId);
         bool IsRoomAvailable(int roomId, DateTime slotStart, DateTime slotEnd);
+        Task<bool> SaveExamSlotsAsync(List<GeneratedExamSlot> examSlots);
     }
 }

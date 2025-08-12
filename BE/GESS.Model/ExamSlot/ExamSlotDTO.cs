@@ -26,4 +26,11 @@ namespace GESS.Model.ExamSlot
 
         // Danh sách phòng thi cho ca thi này (qua bảng trung gian ExamSlotRoom)
     }
+    public class ExamDTO
+    {
+        public int ExamId { get; set; }       
+        public string ExamName { get; set; }
+        public string ExamType { get; set; }
+    }
+    
 }

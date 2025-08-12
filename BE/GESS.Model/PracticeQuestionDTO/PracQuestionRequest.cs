@@ -7,17 +7,25 @@ using System.Threading.Tasks;
 
 namespace GESS.Model.PracticeQuestionDTO
 {
-    public class PracQuestionRequest
-    {
-        public string SubjectName { get; set; }
-        public string MaterialLink { get; set; }
-        public List<QuestionLevel> Levels { get; set; }
-    }
 
     public class EssayQuestionResult
     {
-        public string Content { get; set; }
-        public string BandScoreGuide { get; set; }
+        public string Content { get; set; } = default!;
+        public List<BandScoreCriterion> BandScoreGuide { get; set; } = new();
     }
+
+    public class LevelRequest
+    {
+        public string Difficulty { get; set; } = default!;
+        public int NumberOfQuestions { get; set; }
+    }
+
+    public class PracQuestionRequest
+    {
+        public string SubjectName { get; set; } = default!;
+        public string MaterialLink { get; set; } = default!;
+        public List<LevelRequest> Levels { get; set; } = new();
+    }
+
 
 }

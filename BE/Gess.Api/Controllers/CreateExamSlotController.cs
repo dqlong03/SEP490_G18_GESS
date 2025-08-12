@@ -38,9 +38,9 @@ namespace GESS.Api.Controllers
         }
         //API to get all subjects by major id
         [HttpGet("GetAllSubjectsByMajorId/{majorId}")]
-        public IActionResult GetAllSubjectsByMajorId(int majorId)
+        public async Task<IActionResult> GetAllSubjectsByMajorId(int majorId)
         {
-            var subjects = _examSlotService.GetAllSubjectsByMajorId(majorId);
+            var subjects = await _examSlotService.GetAllSubjectsByMajorId(majorId);
             if (subjects == null)
             {
                 return NotFound("No majors found.");
@@ -69,6 +69,22 @@ namespace GESS.Api.Controllers
                 return NotFound("No grade teachers found.");
             }
             return Ok(result);
+        }
+        //API to check exist list teacher in system and create new teacher if not exist
+        [HttpGet("CheckTeacherExist")]
+        public async Task<IActionResult> CheckTeacherExist([FromQuery] List<ExistTeacherDTO> teachers)
+        {
+            if (teachers == null || !teachers.Any())
+            {
+                return BadRequest("No teachers provided.");
+            }
+            var existingTeachers = await _examSlotService.CheckTeacherExist(teachers);
+            if (existingTeachers.Any())
+            {
+                return NotFound("No existing teachers found.");
+            }
+
+            return Ok(existingTeachers);
         }
 
         [HttpPost("CalculateExamSlot")]
@@ -112,6 +128,24 @@ namespace GESS.Api.Controllers
             }
             return Ok(examSlots);
         }
+        //API to save exam slot
+        [HttpPost("SaveExamSlot")]
+        public async Task<IActionResult> SaveExamSlot([FromBody] List<GeneratedExamSlot> examSlots)
+        {
+            if (examSlots == null || !examSlots.Any())
+            {
+                return BadRequest("No exam slots provided.");
+            }
+            var result = await _examSlotService.SaveExamSlotsAsync(examSlots);
+            if (result)
+            {
+                return Ok("Exam slots saved successfully.");
+            }
+            else
+            {
+                return StatusCode(500, "An error occurred while saving exam slots.");
+            }
+        }
         private List<GeneratedExamSlot> OptimizeBySlot(ExamSlotCreateDTO dto)
         {
             var result = new List<GeneratedExamSlot>();
@@ -119,7 +153,7 @@ namespace GESS.Api.Controllers
 
             int slotDuration = dto.Duration + dto.RelaxationTime;
             var currentDay = dto.StartDate;
-            var currentTime = dto.SrartTimeInday;
+            var currentTime = dto.StartTimeInday;
 
             var usedTeacherSlotMap = new Dictionary<Guid, List<(DateTime Start, DateTime End)>>();
             var teacherLoadMap = new Dictionary<Guid, int>();
@@ -130,7 +164,7 @@ namespace GESS.Api.Controllers
                 if (currentTime.AddMinutes(dto.Duration) > dto.EndTimeInDay)
                 {
                     currentDay = currentDay.AddDays(1);
-                    currentTime = dto.SrartTimeInday;
+                    currentTime = dto.StartTimeInday;
                     continue;
                 }
 
@@ -259,7 +293,7 @@ namespace GESS.Api.Controllers
 
             // Tạo các slot mẫu trong ngày (dựa trên StartTime/EndTime trong dto)
             var dailySlotTemplates = new List<TimeSpan>(); // chỉ lưu offset từ đầu ngày (TimeOfDay)
-            var cursorTime = dto.SrartTimeInday;
+            var cursorTime = dto.StartTimeInday;
             while (cursorTime.AddMinutes(dto.Duration) <= dto.EndTimeInDay)
             {
                 dailySlotTemplates.Add(cursorTime.TimeOfDay);
@@ -297,7 +331,7 @@ namespace GESS.Api.Controllers
             var graderQueue = new Queue<GradeTeacherResponse>(dto.gradeTeachers);
 
             var currentDay = dto.StartDate;
-            DateTime currentTime = dto.SrartTimeInday;
+            DateTime currentTime = dto.StartTimeInday;
 
             while (remainingStudents.Any())
             {
@@ -305,7 +339,7 @@ namespace GESS.Api.Controllers
                 if (currentTime.AddMinutes(dto.Duration) > dto.EndTimeInDay)
                 {
                     currentDay = currentDay.AddDays(1);
-                    currentTime = dto.SrartTimeInday;
+                    currentTime = dto.StartTimeInday;
                     continue;
                 }
 
@@ -401,7 +435,7 @@ namespace GESS.Api.Controllers
 
             int slotDuration = dto.Duration + dto.RelaxationTime;
             var currentDay = dto.StartDate;
-            var currentTime = dto.SrartTimeInday;
+            var currentTime = dto.StartTimeInday;
 
             // Duy trì map thời gian đã dùng của proctor để tránh trùng ca
             var usedTeacherSlotMap = new Dictionary<Guid, List<(DateTime Start, DateTime End)>>();
@@ -417,7 +451,7 @@ namespace GESS.Api.Controllers
                 if (currentTime.AddMinutes(dto.Duration) > dto.EndTimeInDay)
                 {
                     currentDay = currentDay.AddDays(1);
-                    currentTime = dto.SrartTimeInday;
+                    currentTime = dto.StartTimeInday;
                     continue;
                 }
 
@@ -537,7 +571,7 @@ namespace GESS.Api.Controllers
 
             // Tính các slot trong ngày (dưới dạng offset TimeOfDay)
             var dailySlotTemplates = new List<TimeSpan>();
-            var cursorTime = dto.SrartTimeInday;
+            var cursorTime = dto.StartTimeInday;
             while (cursorTime.AddMinutes(dto.Duration) <= dto.EndTimeInDay)
             {
                 dailySlotTemplates.Add(cursorTime.TimeOfDay);
@@ -578,14 +612,14 @@ namespace GESS.Api.Controllers
             var graderQueue = new Queue<GradeTeacherResponse>(dto.gradeTeachers);
 
             var currentDay = dto.StartDate;
-            DateTime currentTime = dto.SrartTimeInday;
+            DateTime currentTime = dto.StartTimeInday;
 
             while (remainingStudents.Any())
             {
                 if (currentTime.AddMinutes(dto.Duration) > dto.EndTimeInDay)
                 {
                     currentDay = currentDay.AddDays(1);
-                    currentTime = dto.SrartTimeInday;
+                    currentTime = dto.StartTimeInday;
                     continue;
                 }
 

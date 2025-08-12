@@ -104,7 +104,8 @@ namespace GESS.Repository.Implement
                     {
                         StudentId = cs.Student.StudentId,
                         FullName = cs.Student.User.Fullname,
-                        AvatarURL = cs.Student.AvatarURL
+                        AvatarURL = cs.Student.AvatarURL,
+                        Code = cs.Student.User.Code
                     })
                     .ToListAsync();
 

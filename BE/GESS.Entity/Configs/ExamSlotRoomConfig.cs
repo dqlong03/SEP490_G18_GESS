@@ -1,4 +1,4 @@
-using GESS.Entity.Entities;
+﻿using GESS.Entity.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -22,24 +22,34 @@ namespace GESS.Entity.Configs
                    .HasForeignKey(esr => esr.SemesterId);
 
             builder.HasOne(esr => esr.Subject)
-                   .WithOne(s => s.ExamSlotRoom)
-                   .HasForeignKey<ExamSlotRoom>(esr => esr.SubjectId);
+                   .WithMany(s => s.ExamSlotRooms) 
+                   .HasForeignKey(esr => esr.SubjectId)
+                   .IsRequired(true);
+
 
             builder.HasOne(esr => esr.Supervisor)
-                   .WithOne(t => t.ExamSlotRoomSupervisor)
-                   .HasForeignKey<ExamSlotRoom>(esr => esr.SupervisorId);
+                   .WithMany(t => t.ExamSlotRoomSupervisors)
+                   .HasForeignKey(esr => esr.SupervisorId)
+                   .OnDelete(DeleteBehavior.Restrict)
+                   .IsRequired(false); 
 
             builder.HasOne(esr => esr.ExamGrader)
-                   .WithOne(t => t.ExamSlotRoomGrader)
-                   .HasForeignKey<ExamSlotRoom>(esr => esr.ExamGradedId);
+                   .WithMany(t => t.ExamSlotRoomGraders)
+                   .HasForeignKey(esr => esr.ExamGradedId)
+                   .OnDelete(DeleteBehavior.Restrict)
+                   .IsRequired(false); 
 
             builder.HasOne(esr => esr.PracticeExam)
                    .WithOne(pe => pe.ExamSlotRoom)
-                   .HasForeignKey<ExamSlotRoom>(esr => esr.PracticeExamId);
+                   .HasForeignKey<ExamSlotRoom>(esr => esr.PracticeExamId)
+                   .OnDelete(DeleteBehavior.Restrict)
+                   .IsRequired(false); 
 
             builder.HasOne(esr => esr.MultiExam)
                    .WithOne(me => me.ExamSlotRoom)
-                   .HasForeignKey<ExamSlotRoom>(esr => esr.MultiExamId);
+                   .HasForeignKey<ExamSlotRoom>(esr => esr.MultiExamId)
+                   .OnDelete(DeleteBehavior.Restrict)
+                   .IsRequired(false); 
         }
     }
-} 
+}

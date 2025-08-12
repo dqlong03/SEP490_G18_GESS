@@ -160,7 +160,7 @@ namespace GESS.Api.Controllers
         }
         //API lớp của tôi
         [HttpGet("teacherId")]
-        public async Task<IActionResult> GetAllClassByTeacherIdAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageNumber = 1, int pageSize = 10, int? year= null)
+        public async Task<IActionResult> GetAllClassByTeacherIdAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageNumber = 1, int pageSize = 5, int? year= null)
         {
             try
             {
@@ -174,7 +174,7 @@ namespace GESS.Api.Controllers
         }
         //API đếm số trang lớp của tôi
         [HttpGet("CountPagesByTeacher/{teacherId}")]
-        public async Task<IActionResult> CountPagesByTeacher(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageSize = 10,int? year= null)
+        public async Task<IActionResult> CountPagesByTeacher(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageSize = 5,int? year= null)
         {
             try
             {
