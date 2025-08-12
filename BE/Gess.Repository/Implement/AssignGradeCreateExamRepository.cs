@@ -323,7 +323,7 @@ namespace GESS.Repository.Implement
                 .Select(t => t.MajorId)
                 .FirstOrDefaultAsync();
             var teachers = await _context.Teachers
-                .Where(t => t.MajorId == majorId && t.TeacherId != teacherId)
+                .Where(t => t.MajorId == majorId)
                 .Select(t => new TeacherResponse
                 {
                     TeacherId = t.TeacherId,
