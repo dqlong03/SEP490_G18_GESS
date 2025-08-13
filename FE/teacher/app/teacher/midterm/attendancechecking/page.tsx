@@ -66,6 +66,33 @@ export default function MidtermAttendancePage() {
     }
   };
 
+
+  useEffect(() => {
+    const openExamSlot = async () => {
+      if (!examId) return;
+      try {
+        await fetch(
+          `https://localhost:7074/api/ExamineTheMidTermExam/changestatus?examId=${examId}&status=%C4%90ang%20m%E1%BB%9F%20ca&examType=${examType}`,
+          { method: "POST" }
+        );
+      } catch (error) {
+        // Có thể xử lý lỗi nếu cần
+      }
+    };
+
+    const initializeData = async () => {
+      setLoading(true);
+      await openExamSlot(); // Mở ca thi
+      if (examId) {
+        await refreshCode();
+      }
+      await fetchExamInfo();
+      setLoading(false);
+    };
+
+    initializeData();
+  }, [examId, teacherId, examType]);
+
   // Initial load
   useEffect(() => {
     const initializeData = async () => {
@@ -179,8 +206,9 @@ export default function MidtermAttendancePage() {
   const handleFinishExam = async () => {
     if (!examInfo) return;
     try {
+      // Đóng ca thi trước khi chuyển trang
       await fetch(
-        `https://localhost:7074/api/ExamineTheMidTermExam/changestatus?examId=${examId}&status=Đã%20thi&examType=${examType}`,
+        `https://localhost:7074/api/ExamineTheMidTermExam/changestatus?examId=${examId}&status=%C4%90%C3%A3%20%C4%91%C3%B3ng%20ca&examType=${examType}`,
         { method: "POST" }
       );
       router.push(`/teacher/myclass/classdetail/${classId}`);
@@ -188,6 +216,7 @@ export default function MidtermAttendancePage() {
       // Handle error
     }
   };
+
 
   // Tính toán thống kê
   const getAttendanceStats = () => {

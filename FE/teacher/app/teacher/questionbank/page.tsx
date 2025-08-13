@@ -293,7 +293,7 @@ export default function QuestionBankPage() {
     setDeletingQuestionId(questionId);
     
     try {
-      const type = questionType === 'Trắc nghiệm' ? '1' : '2';
+      const type = selectedType === 'multiple' ? '1' : '2';
       const response = await fetch(`https://localhost:7074/api/PracticeQuestion/DeleteQuestion/${questionId}/${type}`, {
         method: 'PUT'
       });
@@ -863,10 +863,7 @@ export default function QuestionBankPage() {
                           </div>
                           <button
                             onClick={() => {
-                              const questionData = questions.find(q => q.questionId === question.questionID);
-                              if (questionData) {
-                                handleDeleteQuestion(question.questionID, questionData.questionType);
-                              }
+                              handleDeleteQuestion(question.questionID, "");
                             }}
                             disabled={deletingQuestionId === question.questionID}
                             className="ml-4 flex items-center space-x-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"

@@ -234,7 +234,7 @@ namespace GESS.Repository.Implement
                         ExamId = e.PracExamId,
                         ExamName = e.PracExamName,
                         GradeComponent = e.CategoryExam?.CategoryExamName ?? "",
-                        IsGraded = isCompleted ? "Đã chấm" : "Chưa chấm",
+                        IsGraded = e.IsGraded == 1 ? "Đã chấm" : "Chưa chấm",
                         StudentCount = histories.Count,
                         Duration = e.Duration,
                         ExamType = "Practice", // Loại bài thi

@@ -92,9 +92,10 @@ namespace GESS.Api.Controllers
                 {
                     return NotFound($"No multiple exam found with ID {examId}.");
                 }
-                multiExam.Status = Common.PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM;
+                multiExam.Status = status;
                 //Trắc nghiệm sau khi coi thi chuyển trạng thái bài là đã chấm luôn
-                multiExam.IsGraded = 1;
+                if(status.Equals("Đã đóng ca", StringComparison.OrdinalIgnoreCase))
+                    multiExam.IsGraded = 1;
 
                 var isUpdated = await _multipleExamService.UpdateAsync(multiExam);
                 if (!isUpdated)
@@ -109,8 +110,7 @@ namespace GESS.Api.Controllers
                 {
                     return NotFound($"No practice exam found with ID {examId}.");
                 }
-                // pracExam.Status = status;
-                pracExam.Status = Common.PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM;
+                pracExam.Status = status;
 
                 var isUpdated = await _practiceExamService.UpdateAsync(pracExam);
                 if (!isUpdated)

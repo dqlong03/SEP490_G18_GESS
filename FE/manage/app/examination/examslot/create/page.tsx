@@ -3,6 +3,7 @@ import { url } from "inspector";
 import React, { useState, useEffect } from "react";
 import Select from "react-select";
 import * as XLSX from 'xlsx';
+import { useRouter } from 'next/navigation';
 
 function Popup({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
   if (!open) return null;
@@ -22,6 +23,10 @@ function Popup({ open, onClose, children }: { open: boolean; onClose: () => void
     </div>
   );
 }
+const examTypeOptions = [
+  { value: "Multiple", label: "Trắc nghiệm" },
+  { value: "Practice", label: "Tự luận" },
+];
 
 const ExamSlotCreatePage = () => {
   const [major, setMajor] = useState<any>(null);
@@ -37,7 +42,8 @@ const ExamSlotCreatePage = () => {
   const [duration, setDuration] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
-  const [breakTime, setBreakTime] = useState("");  const [createdSlots, setCreatedSlots] = useState<any[]>([]);
+  const [breakTime, setBreakTime] = useState("");
+  const [createdSlots, setCreatedSlots] = useState<any[]>([]);
   const [teacherFileName, setTeacherFileName] = useState<string>('');
   const [teacherErrorMsg, setTeacherErrorMsg] = useState<string>('');
   const [studentFileName, setStudentFileName] = useState<string>('');
@@ -45,12 +51,18 @@ const ExamSlotCreatePage = () => {
   const [studentListPopup, setStudentListPopup] = useState(false);
   const [selectedSlotStudents, setSelectedSlotStudents] = useState<any[]>([]);
   
+  // Thêm các state mới
+  const [examType, setExamType] = useState<'Multiple' | 'Practice'>('Multiple');
+  const [optimizationType, setOptimizationType] = useState<'room' | 'teacher' | 'slot'>('slot');
+  const [slotName, setSlotName] = useState('');
+  
   // API data states
   const [majors, setMajors] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [semesters, setSemesters] = useState<any[]>([]);
   const [rooms, setRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   // Fetch initial data
   useEffect(() => {
@@ -120,8 +132,41 @@ const ExamSlotCreatePage = () => {
       console.error('Error fetching rooms:', error);
     }
   };
+
+  const validateForm = () => {
+    if (!major || !subject || !semester || !date || !duration || !startTime || !endTime || !slotName) {
+      alert('Vui lòng điền đầy đủ thông tin!');
+      return false;
+    }
+    // Validate ngày thi >= hôm nay
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const examDate = new Date(date);
+    if (examDate < today) {
+      alert('Ngày thi phải lớn hơn hoặc bằng ngày hiện tại!');
+      return false;
+    }
+    // Validate giờ bắt đầu + thời lượng <= giờ kết thúc
+    const [startHour, startMinute] = startTime.split(":").map(Number);
+    const [endHour, endMinute] = endTime.split(":").map(Number);
+    const start = new Date(`${date}T${startTime}`);
+    const end = new Date(`${date}T${endTime}`);
+    const durationMinutes = parseInt(duration) || 0;
+    const startPlusDuration = new Date(start.getTime() + durationMinutes * 60000);
+    if (startPlusDuration > end) {
+      alert('Giờ bắt đầu cộng thời lượng phải nhỏ hơn hoặc bằng giờ kết thúc!');
+      return false;
+    }
+    if (selectedRooms.length === 0 || studentList.length === 0 || teacherList.length === 0) {
+      alert('Vui lòng chọn phòng thi, danh sách sinh viên và giáo viên!');
+      return false;
+    }
+    return true;
+  };
+
+
   const handleCreateSlots = async () => {
-    if (!major || !subject || !semester || !date || !duration || !startTime || !endTime || !breakTime) {
+    if (!major || !subject || !semester || !date || !duration || !startTime || !endTime || !breakTime || !slotName) {
       alert('Vui lòng điền đầy đủ thông tin!');
       return;
     }
@@ -131,10 +176,14 @@ const ExamSlotCreatePage = () => {
       return;
     }
 
+   if (!validateForm()) return;
+
+
     setLoading(true);
     try {
       const selectedRoomData = rooms.filter(room => selectedRooms.includes(room.roomId));
-        // Prepare students data
+      
+      // Prepare students data
       const studentsData = studentList.map(student => ({
         email: student.email || "string",
         code: student.mssv || "string",
@@ -142,7 +191,9 @@ const ExamSlotCreatePage = () => {
         gender: student.gender === 'Nam',
         dateOfBirth: student.dob ? new Date(student.dob).toISOString() : new Date().toISOString(),
         urlAvatar: student.avatar || "https://randomuser.me/api/portraits/men/1.jpg"
-      }));// Prepare teachers data  
+      }));
+
+      // Prepare teachers data  
       const teachersData = teacherList.map(teacher => ({
         teacherId: "2a96a929-c6a1-4501-fc19-08ddb5dca989", // Fixed teacher ID as requested
         userName: teacher.msgv || "string",
@@ -157,14 +208,18 @@ const ExamSlotCreatePage = () => {
         majorId: major?.value || 1,
         majorName: major?.label || "string",
         hireDate: new Date().toISOString()
-      }));      // Prepare rooms data
+      }));
+
+      // Prepare rooms data
       const roomsData = selectedRoomData.map(room => ({
         roomId: room.roomId,
         roomName: room.roomName || "string",
         description: room.description || "string",
         status: room.status || "string",
         capacity: room.capacity || 1
-      }));      // Prepare grade teachers data
+      }));
+
+      // Prepare grade teachers data
       const gradeTeachersData = teacherList.map(teacher => ({
         teacherId: "2a96a929-c6a1-4501-fc19-08ddb5dca989", // Fixed teacher ID
         fullName: teacher.name || "string"
@@ -172,7 +227,9 @@ const ExamSlotCreatePage = () => {
 
       // Combine date and time
       const startDateTime = new Date(`${date}T${startTime}`);
-      const endDateTime = new Date(`${date}T${endTime}`);      const requestBody = {
+      const endDateTime = new Date(`${date}T${endTime}`);
+
+      const requestBody = {
         students: studentsData,
         teachers: teachersData,
         rooms: roomsData,
@@ -182,9 +239,9 @@ const ExamSlotCreatePage = () => {
         startTimeInday: startDateTime.toISOString(),
         endTimeInDay: endDateTime.toISOString(),
         relaxationTime: parseInt(breakTime) || 1,
-        optimizedByRoom: false,
-        optimizedByTeacher: false,
-        optimizedBySlotExam: true
+        optimizedByRoom: optimizationType === 'room',
+        optimizedByTeacher: optimizationType === 'teacher',
+        optimizedBySlotExam: optimizationType === 'slot'
       };
 
       const response = await fetch('https://localhost:7074/api/CreateExamSlot/CalculateExamSlot', {
@@ -200,7 +257,8 @@ const ExamSlotCreatePage = () => {
       }
 
       const result = await response.json();
-        // Process the result and update created slots
+      
+      // Process the result and update created slots
       const processedSlots = result.map((slot: any, index: number) => ({
         stt: index + 1,
         date: new Date(slot.date).toLocaleDateString('vi-VN'),
@@ -210,7 +268,8 @@ const ExamSlotCreatePage = () => {
         teachers: slot.proctors.map((p: any) => p.fullName).join(", "),
         graders: slot.graders.map((g: any) => g.fullName).join(", "),
         students: slot.rooms.flatMap((r: any) => r.students),
-        studentsDisplay: slot.rooms.flatMap((r: any) => r.students.map((s: any) => s.fullName)).join(", ")
+        studentsDisplay: slot.rooms.flatMap((r: any) => r.students.map((s: any) => s.fullName)).join(", "),
+        originalData: slot // Store original data for saving
       }));
 
       setCreatedSlots(processedSlots); // Replace instead of append
@@ -223,6 +282,71 @@ const ExamSlotCreatePage = () => {
       setLoading(false);
     }
   };
+
+ const handleSaveSlots = async () => {
+    if (createdSlots.length === 0) {
+      alert('Không có ca thi nào để lưu!');
+      return;
+    }
+
+    try {
+      // Gửi từng slot một, lấy đúng dữ liệu từng slot đã tạo
+      const saveData = createdSlots.map((slot, index) => {
+        // Lấy rooms từ slot.originalData thay vì selectedRooms
+        const slotRooms = slot.originalData?.rooms || [];
+        return {
+          subjectId: subject?.value || 1,
+          status: "Chưa gán bài thi",
+          multiOrPractice: examType,
+          slotName: slotName || `Slot ${index + 1}`,
+          semesterId: semester?.value || 1,
+          date: slot.originalData?.date || new Date(`${date}T${slot.originalData?.startTime || slot.startTime}`).toISOString(),
+          startTime: slot.originalData?.startTime || new Date(`${date}T${slot.originalData?.startTime || slot.startTime}`).toISOString(),
+          endTime: slot.originalData?.endTime || new Date(`${date}T${slot.originalData?.endTime || slot.endTime}`).toISOString(),
+          rooms: slotRooms.map((room: any) => ({
+            roomId: room.roomId,
+            students: (room.students || []).map((student: any) => ({
+              email: student.email || "string",
+              code: student.code || student.mssv || "string",
+              fullName: student.fullName || student.name || "string",
+              gender: student.gender === 'Nam' || student.gender === true,
+              dateOfBirth: student.dateOfBirth || student.dob || new Date().toISOString(),
+              urlAvatar: student.urlAvatar || student.avatar || "default.png"
+            }))
+          })),
+          proctors: (slot.originalData?.proctors || []).map((teacher: any) => ({
+            teacherId: teacher.teacherId || "2a96a929-c6a1-4501-fc19-08ddb5dca989",
+            fullName: teacher.fullName || teacher.name || "string"
+          })),
+          graders: (slot.originalData?.graders || []).map((teacher: any) => ({
+            teacherId: teacher.teacherId || "2a96a929-c6a1-4501-fc19-08ddb5dca989",
+            fullName: teacher.fullName || teacher.name || "string"
+          }))
+        };
+      });
+
+      const response = await fetch('https://localhost:7074/api/CreateExamSlot/SaveExamSlot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(saveData)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error('Failed to save exam slots: ' + errorText);
+      }
+
+      alert('Lưu ca thi thành công!');
+      router.back(); 
+      
+    } catch (error) {
+      console.error('Error saving exam slots:', error);
+      alert('Có lỗi xảy ra khi lưu ca thi!');
+    }
+  };
+
   const handleStudentEdit = (idx: number, field: string, value: string) => {
     const newList = [...studentList];
     // @ts-ignore
@@ -315,6 +439,7 @@ const ExamSlotCreatePage = () => {
     };
     reader.readAsArrayBuffer(file);
   };
+
   const handleTeacherEdit = (idx: number, field: string, value: string) => {
     const newList = [...teacherList];
     // @ts-ignore
@@ -326,8 +451,8 @@ const ExamSlotCreatePage = () => {
   const handleDownloadTeacherTemplate = () => {
     const header = ['Avatar', 'MSGV', 'Email', 'Giới tính', 'Ngày sinh', 'Họ và tên'];
     const rows = [
-      ['https://randomuser.me/api/portraits/men/1.jpg', 'GV001', 'gv001@example.com', 'Nam', '1980-01-01', 'Thầy Nguyễn Văn A'],
-      ['https://randomuser.me/api/portraits/women/2.jpg', 'GV002', 'gv002@example.com', 'Nữ', '1985-02-02', 'Cô Trần Thị B'],
+      ['https://randomuser.me/api/portraits/men/1.jpg', 'GV001', 'gv001@example.com', 'Nam', '1980-01-01', 'Nguyễn Văn A'],
+      ['https://randomuser.me/api/portraits/women/2.jpg', 'GV002', 'gv002@example.com', 'Nữ', '1985-02-02', 'Trần Thị B'],
     ];
     const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
     const wb = XLSX.utils.book_new();
@@ -411,6 +536,7 @@ const ExamSlotCreatePage = () => {
   function isValidEmail(email: string) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
+  
   function isValidDate(date: string) {
     return /^\d{4}-\d{2}-\d{2}$/.test(date) && !isNaN(Date.parse(date));
   }
@@ -420,9 +546,6 @@ const ExamSlotCreatePage = () => {
     setStudentListPopup(true);
   };
 
-  const handleSaveSlots = () => {
-    alert('Lưu ca thi thành công!');
-  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <div className="container mx-auto px-6 py-8">
@@ -441,125 +564,158 @@ const ExamSlotCreatePage = () => {
           </div>
 
           {/* Form Section */}
-          <div className="space-y-6">
-            {/* Row 1: 5 fields */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Ngành</label>
-                <Select 
-                  options={majors} 
-                  value={major} 
-                  onChange={setMajor} 
-                  placeholder="Chọn ngành..." 
-                  className="react-select-container"
-                  classNamePrefix="react-select"
-                  styles={{
-                    control: (base) => ({
-                      ...base,
-                      minHeight: 48,
-                      borderRadius: 12,
-                      borderColor: '#e5e7eb',
-                      boxShadow: 'none',
-                      '&:hover': { borderColor: '#3b82f6' }
-                    })
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Môn học</label>
-                <Select 
-                  options={subjects} 
-                  value={subject} 
-                  onChange={setSubject} 
-                  placeholder="Chọn môn học..." 
-                  className="react-select-container"
-                  classNamePrefix="react-select"
-                  isDisabled={!major}
-                  styles={{
-                    control: (base) => ({
-                      ...base,
-                      minHeight: 48,
-                      borderRadius: 12,
-                      borderColor: '#e5e7eb',
-                      boxShadow: 'none',
-                      '&:hover': { borderColor: '#3b82f6' }
-                    })
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Học kỳ</label>
-                <Select 
-                  options={semesters} 
-                  value={semester} 
-                  onChange={setSemester} 
-                  placeholder="Chọn học kỳ..." 
-                  className="react-select-container"
-                  classNamePrefix="react-select"
-                  styles={{
-                    control: (base) => ({
-                      ...base,
-                      minHeight: 48,
-                      borderRadius: 12,
-                      borderColor: '#e5e7eb',
-                      boxShadow: 'none',
-                      '&:hover': { borderColor: '#3b82f6' }
-                    })
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Ngày thi</label>
-                <input 
-                  type="date" 
-                  value={date} 
-                  onChange={e => setDate(e.target.value)} 
-                  className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" 
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Thời lượng (phút)</label>
-                <input 
-                  type="number" 
-                  value={duration} 
-                  onChange={e => setDuration(e.target.value)} 
-                  className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" 
-                  placeholder="Nhập thời lượng..."
-                />
-              </div>
+           <div className="space-y-6">
+          {/* Row 1: 3 fields */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">Ngành</label>
+              <Select 
+                options={majors} 
+                value={major} 
+                onChange={setMajor} 
+                placeholder="Chọn ngành..." 
+                className="react-select-container"
+                classNamePrefix="react-select"
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    minHeight: 48,
+                    borderRadius: 12,
+                    borderColor: '#e5e7eb',
+                    boxShadow: 'none',
+                    '&:hover': { borderColor: '#3b82f6' }
+                  })
+                }}
+              />
             </div>
-
-            {/* Row 2: 3 fields */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Giờ bắt đầu</label>
-                <input 
-                  type="time" 
-                  value={startTime} 
-                  onChange={e => setStartTime(e.target.value)} 
-                  className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" 
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Giờ kết thúc</label>
-                <input 
-                  type="time" 
-                  value={endTime} 
-                  onChange={e => setEndTime(e.target.value)} 
-                  className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" 
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Thời gian nghỉ (phút)</label>
-                <input 
-                  type="number" 
-                  value={breakTime} 
-                  onChange={e => setBreakTime(e.target.value)} 
-                  className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" 
-                  placeholder="Nhập thời gian nghỉ..."
-                />
-              </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">Môn học</label>
+              <Select 
+                options={subjects} 
+                value={subject} 
+                onChange={setSubject} 
+                placeholder="Chọn môn học..." 
+                className="react-select-container"
+                classNamePrefix="react-select"
+                isDisabled={!major}
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    minHeight: 48,
+                    borderRadius: 12,
+                    borderColor: '#e5e7eb',
+                    boxShadow: 'none',
+                    '&:hover': { borderColor: '#3b82f6' }
+                  })
+                }}
+              />
             </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">Học kỳ</label>
+              <Select 
+                options={semesters} 
+                value={semester} 
+                onChange={setSemester} 
+                placeholder="Chọn học kỳ..." 
+                className="react-select-container"
+                classNamePrefix="react-select"
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    minHeight: 48,
+                    borderRadius: 12,
+                    borderColor: '#e5e7eb',
+                    boxShadow: 'none',
+                    '&:hover': { borderColor: '#3b82f6' }
+                  })
+                }}
+              />
+            </div>
+          </div>
+          {/* Row 2: 3 fields */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">Ngày thi</label>
+              <input 
+                type="date" 
+                value={date} 
+                onChange={e => setDate(e.target.value)} 
+                className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" 
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">Tên ca thi</label>
+              <input 
+                type="text" 
+                value={slotName} 
+                onChange={e => setSlotName(e.target.value)} 
+                className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" 
+                placeholder="Nhập tên ca thi..."
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">Loại bài thi</label>
+              <Select
+                options={examTypeOptions}
+                value={examTypeOptions.find(opt => opt.value === examType)}
+                onChange={opt => setExamType(opt?.value as 'Multiple' | 'Practice')}
+                placeholder="Chọn loại bài thi..."
+                className="react-select-container"
+                classNamePrefix="react-select"
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    minHeight: 48,
+                    borderRadius: 12,
+                    borderColor: '#e5e7eb',
+                    boxShadow: 'none',
+                    '&:hover': { borderColor: '#3b82f6' }
+                  })
+                }}
+              />
+            </div>
+          </div>
+          {/* Row 3: 4 fields */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">Giờ bắt đầu</label>
+              <input 
+                type="time" 
+                value={startTime} 
+                onChange={e => setStartTime(e.target.value)} 
+                className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" 
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">Giờ kết thúc</label>
+              <input 
+                type="time" 
+                value={endTime} 
+                onChange={e => setEndTime(e.target.value)} 
+                className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" 
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">Thời lượng (phút)</label>
+              <input 
+                type="number" 
+                value={duration} 
+                onChange={e => setDuration(e.target.value)} 
+                className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" 
+                placeholder="Nhập thời lượng..."
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">Thời gian nghỉ (phút)</label>
+              <input 
+                type="number" 
+                value={breakTime} 
+                onChange={e => setBreakTime(e.target.value)} 
+                className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" 
+                placeholder="Nhập thời gian nghỉ..."
+              />
+            </div>
+          </div>
 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-4 pt-4">
@@ -592,8 +748,48 @@ const ExamSlotCreatePage = () => {
               </button>
             </div>
 
-            {/* Create Button */}
+            {/* Optimization Options */}
             <div className="pt-6 border-t border-gray-200">
+              <label className="block text-sm font-semibold text-gray-700 mb-4">Tùy chọn tối ưu hóa:</label>
+              <div className="flex flex-wrap gap-6">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input 
+                    type="radio" 
+                    name="optimization" 
+                    value="room" 
+                    checked={optimizationType === 'room'} 
+                    onChange={(e) => setOptimizationType(e.target.value as 'room' | 'teacher' | 'slot')}
+                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                  />
+                  <span className="text-gray-700 font-medium">Tối ưu theo phòng</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input 
+                    type="radio" 
+                    name="optimization" 
+                    value="teacher" 
+                    checked={optimizationType === 'teacher'} 
+                    onChange={(e) => setOptimizationType(e.target.value as 'room' | 'teacher' | 'slot')}
+                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                  />
+                  <span className="text-gray-700 font-medium">Tối ưu theo giáo viên</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input 
+                    type="radio" 
+                    name="optimization" 
+                    value="slot" 
+                    checked={optimizationType === 'slot'} 
+                    onChange={(e) => setOptimizationType(e.target.value as 'room' | 'teacher' | 'slot')}
+                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                  />
+                  <span className="text-gray-700 font-medium">Tối ưu theo ca thi</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Create Button */}
+            <div className="pt-6">
               <button 
                 onClick={handleCreateSlots}
                 disabled={loading}
@@ -618,7 +814,9 @@ const ExamSlotCreatePage = () => {
               </button>
             </div>
           </div>
-        </div>        {/* Popup phòng thi */}
+        </div>
+
+        {/* Popup phòng thi */}
         <Popup open={roomPopup} onClose={() => setRoomPopup(false)}>
           <div className="space-y-6">
             <div className="flex items-center gap-3">
@@ -669,7 +867,9 @@ const ExamSlotCreatePage = () => {
               )}
             </div>
           </div>
-        </Popup>{/* Popup sinh viên */}
+        </Popup>
+
+        {/* Popup sinh viên */}
         <Popup open={studentPopup} onClose={() => setStudentPopup(false)}>
           <h3 className="text-lg font-bold mb-4">Danh sách sinh viên</h3>
           <div className="flex gap-2 mb-4">
@@ -794,7 +994,8 @@ const ExamSlotCreatePage = () => {
                 Thêm sinh viên
               </button>
             </div>
-          </div>        </Popup>
+          </div>
+        </Popup>
 
         {/* Popup giáo viên */}
         <Popup open={teacherPopup} onClose={() => setTeacherPopup(false)}>
@@ -922,7 +1123,9 @@ const ExamSlotCreatePage = () => {
               </button>
             </div>
           </div>
-        </Popup>        {/* Bảng ca thi đã tạo */}
+        </Popup>
+
+        {/* Bảng ca thi đã tạo */}
         {createdSlots.length > 0 && (
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
             <div className="bg-gradient-to-r from-gray-800 to-gray-900 p-6">
@@ -963,12 +1166,8 @@ const ExamSlotCreatePage = () => {
                       <td className="py-4 px-6">
                         <button
                           onClick={() => handleViewStudents(slot.students)}
-                          className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg text-sm font-medium"
+                          className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
                           Xem ({slot.students.length})
                         </button>
                       </td>
@@ -990,7 +1189,9 @@ const ExamSlotCreatePage = () => {
               </button>
             </div>
           </div>
-        )}        {/* Popup xem danh sách sinh viên của ca thi */}
+        )}
+
+        {/* Popup xem danh sách sinh viên trong ca thi */}
         <Popup open={studentListPopup} onClose={() => setStudentListPopup(false)}>
           <div className="space-y-6">
             <div className="flex items-center gap-3">
@@ -999,7 +1200,10 @@ const ExamSlotCreatePage = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800">Danh sách sinh viên trong ca thi</h3>
+              <h3 className="text-2xl font-bold text-gray-800">Danh sách sinh viên thi</h3>
+              <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                {selectedSlotStudents.length} sinh viên
+              </span>
             </div>
             
             <div className="bg-gray-50 rounded-xl p-6">
@@ -1008,95 +1212,198 @@ const ExamSlotCreatePage = () => {
                   <thead className="bg-gradient-to-r from-green-600 to-green-700 text-white">
                     <tr>
                       <th className="py-4 px-6 text-left font-semibold">STT</th>
-                      <th className="py-4 px-6 text-left font-semibold">Mã sinh viên</th>
-                      <th className="py-4 px-6 text-left font-semibold">Họ và tên</th>
+                      <th className="py-4 px-6 text-left font-semibold">MSSV</th>
+                      <th className="py-4 px-6 text-left font-semibold">Họ tên</th>
                       <th className="py-4 px-6 text-left font-semibold">Email</th>
+                      <th className="py-4 px-6 text-left font-semibold">Giới tính</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {selectedSlotStudents.map((student, idx) => (
-                      <tr key={idx} className={`hover:bg-green-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                        <td className="py-4 px-6 font-medium text-gray-900">{idx + 1}</td>
-                        <td className="py-4 px-6 text-gray-700 font-mono">{student.code}</td>
-                        <td className="py-4 px-6 text-gray-800 font-medium">{student.fullName}</td>
-                        <td className="py-4 px-6 text-gray-600">{student.email}</td>
+                    {selectedSlotStudents.map((student, index) => (
+                      <tr key={index} className={`hover:bg-green-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                        <td className="py-4 px-6 font-medium text-gray-900">{index + 1}</td>
+                        <td className="py-4 px-6 text-gray-700 font-medium">{student.code || student.mssv}</td>
+                        <td className="py-4 px-6 text-gray-900 font-medium">{student.fullName || student.name}</td>
+                        <td className="py-4 px-6 text-gray-700">{student.email}</td>
+                        <td className="py-4 px-6">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            student.gender === true || student.gender === 'Nam' 
+                              ? 'bg-blue-100 text-blue-800' 
+                              : 'bg-pink-100 text-pink-800'
+                          }`}>
+                            {student.gender === true || student.gender === 'Nam' ? 'Nam' : 'Nữ'}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
-                <p className="text-green-800 font-medium">
-                  Tổng số sinh viên: {selectedSlotStudents.length} người
-                </p>
-              </div>
+              
+              {selectedSlotStudents.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                  </svg>
+                  <p className="font-medium">Không có sinh viên nào trong ca thi này</p>
+                </div>
+              )}
             </div>
           </div>
         </Popup>
-      </div>      <style jsx global>{`
+      </div>
+
+      {/* CSS Animation Styles */}
+      <style jsx>{`
         @keyframes fadeIn {
-          from { 
+          from {
             opacity: 0;
-            transform: translateY(-10px);
           }
-          to { 
+          to {
             opacity: 1;
-            transform: translateY(0);
           }
         }
-        .animate-fadeIn { 
+
+        @keyframes popup {
+          from {
+            opacity: 0;
+            transform: scale(0.9) translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+
+        .animate-fadeIn {
           animation: fadeIn 0.3s ease-out;
         }
-        @keyframes popup {
-          from { 
-            transform: scale(0.95) translateY(-20px); 
-            opacity: 0;
-          }
-          to { 
-            transform: scale(1) translateY(0); 
-            opacity: 1;
-          }
-        }
-        .animate-popup { 
+
+        .animate-popup {
           animation: popup 0.3s ease-out;
         }
-        
-        /* Custom scrollbar */
+
+        /* React Select Custom Styles */
+        .react-select-container .react-select__control {
+          border-radius: 12px;
+          border-color: #e5e7eb;
+          min-height: 48px;
+          box-shadow: none;
+          transition: all 0.2s;
+        }
+
+        .react-select-container .react-select__control:hover {
+          border-color: #3b82f6;
+        }
+
+        .react-select-container .react-select__control--is-focused {
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+
+        .react-select-container .react-select__value-container {
+          padding: 0 16px;
+        }
+
+        .react-select-container .react-select__placeholder {
+          color: #9ca3af;
+          font-weight: 500;
+        }
+
+        .react-select-container .react-select__single-value {
+          color: #374151;
+          font-weight: 500;
+        }
+
+        .react-select-container .react-select__menu {
+          border-radius: 12px;
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          border: 1px solid #e5e7eb;
+        }
+
+        .react-select-container .react-select__option {
+          padding: 12px 16px;
+          font-weight: 500;
+          transition: all 0.2s;
+        }
+
+        .react-select-container .react-select__option:hover {
+          background-color: #eff6ff;
+          color: #1e40af;
+        }
+
+        .react-select-container .react-select__option--is-selected {
+          background-color: #3b82f6;
+          color: white;
+        }
+
+        .react-select-container .react-select__option--is-selected:hover {
+          background-color: #2563eb;
+        }
+
+        /* Scrollbar Styles */
         ::-webkit-scrollbar {
           width: 8px;
           height: 8px;
         }
+
         ::-webkit-scrollbar-track {
           background: #f1f5f9;
-          border-radius: 4px;
+          border-radius: 10px;
         }
+
         ::-webkit-scrollbar-thumb {
           background: #cbd5e1;
-          border-radius: 4px;
+          border-radius: 10px;
         }
+
         ::-webkit-scrollbar-thumb:hover {
           background: #94a3b8;
         }
 
-        /* React Select Custom Styles */
-        .react-select__control {
-          border-color: #e5e7eb !important;
-          box-shadow: none !important;
-          transition: all 0.2s !important;
+        /* Custom Table Styles */
+        table {
+          border-collapse: separate;
+          border-spacing: 0;
         }
-        .react-select__control:hover {
-          border-color: #3b82f6 !important;
+
+        table th:first-child {
+          border-radius: 12px 0 0 0;
         }
-        .react-select__control--is-focused {
-          border-color: #3b82f6 !important;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+
+        table th:last-child {
+          border-radius: 0 12px 0 0;
         }
-        .react-select__option--is-focused {
-          background-color: #dbeafe !important;
-          color: #1e40af !important;
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+          .container {
+            padding-left: 1rem;
+            padding-right: 1rem;
+          }
+          
+          .grid-cols-6 {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          
+          .grid-cols-4 {
+            grid-template-columns: repeat(2, 1fr);
+          }
         }
-        .react-select__option--is-selected {
-          background-color: #3b82f6 !important;
+
+        @media (max-width: 640px) {
+          .grid-cols-6,
+          .grid-cols-4 {
+            grid-template-columns: 1fr;
+          }
+          
+          .flex-wrap {
+            flex-direction: column;
+          }
+          
+          .flex-wrap > * {
+            width: 100%;
+          }
         }
       `}</style>
     </div>

@@ -5,8 +5,6 @@ import Select from 'react-select';
 import { useRouter } from 'next/navigation';
 import { getUserIdFromToken } from '@utils/tokenUtils';
 
-// const teacherId = "2A96A929-C6A1-4501-FC19-08DDB5DCA989";
-
 const statusOptions = [
   { value: 0, label: 'Chưa chấm' },
   { value: 1, label: 'Đã chấm' }
@@ -31,7 +29,7 @@ export default function GiveGradePage() {
   const [semesters, setSemesters] = useState<any[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<any>(null);
   const [selectedSemester, setSelectedSemester] = useState<any>(null);
-  const [selectedStatus, setSelectedStatus] = useState<any>(null);
+  const [selectedStatus, setSelectedStatus] = useState<any>(statusOptions[0]); // Mặc định: Chưa chấm
   const [selectedYear, setSelectedYear] = useState<any>(null);
 
   const [exams, setExams] = useState<any[]>([]);
@@ -41,29 +39,53 @@ export default function GiveGradePage() {
   const pageSize = 10;
   const router = useRouter();
 
-  const teacherId = getUserIdFromToken() || '2A96A929-C6A1-4501-FC19-08DDB5DCA989'; // Replace with actual logic to get teacher ID
+  const teacherId = getUserIdFromToken() || '2A96A929-C6A1-4501-FC19-08DDB5DCA989';
 
-  // Fetch subjects
+  // Lấy năm hiện tại làm mặc định
+  const yearOptions = useMemo(() => getYearOptions(), []);
+  
+  // Fetch subjects và set giá trị mặc định
   useEffect(() => {
     fetch(`https://localhost:7074/api/MultipleExam/subjects-by-teacher/${teacherId}`)
       .then(res => res.json())
-      .then(data => setSubjects(data.map((s: any) => ({
-        value: s.subjectId,
-        label: s.subjectName,
-      }))))
+      .then(data => {
+        const subjectOptions = data.map((s: any) => ({
+          value: s.subjectId,
+          label: s.subjectName,
+        }));
+        setSubjects(subjectOptions);
+        // Set môn học đầu tiên làm mặc định
+        if (subjectOptions.length > 0) {
+          setSelectedSubject(subjectOptions[0]);
+        }
+      })
       .catch(() => setSubjects([]));
-  }, []);
+  }, [teacherId]);
 
-  // Fetch semesters
+  // Fetch semesters và set giá trị mặc định
   useEffect(() => {
     fetch(`https://localhost:7074/api/Semesters`)
       .then(res => res.json())
-      .then(data => setSemesters(data.map((s: any) => ({
-        value: s.semesterId,
-        label: s.semesterName,
-      }))))
+      .then(data => {
+        const semesterOptions = data.map((s: any) => ({
+          value: s.semesterId,
+          label: s.semesterName,
+        }));
+        setSemesters(semesterOptions);
+        // Set học kỳ đầu tiên làm mặc định
+        if (semesterOptions.length > 0) {
+          setSelectedSemester(semesterOptions[0]);
+        }
+      })
       .catch(() => setSemesters([]));
   }, []);
+
+  // Set năm học hiện tại làm mặc định
+  useEffect(() => {
+    if (yearOptions.length > 0) {
+      setSelectedYear(yearOptions[0]);
+    }
+  }, [yearOptions]);
 
   // Fetch exams
   useEffect(() => {
@@ -82,7 +104,7 @@ export default function GiveGradePage() {
       .then(data => setExams(Array.isArray(data) ? data : []))
       .catch(() => setExams([]))
       .finally(() => setLoading(false));
-  }, [selectedSubject, selectedStatus, selectedSemester, selectedYear, page]);
+  }, [selectedSubject, selectedStatus, selectedSemester, selectedYear, page, teacherId]);
 
   // Fetch total pages
   useEffect(() => {
@@ -99,19 +121,19 @@ export default function GiveGradePage() {
       .then(res => res.json())
       .then(data => setTotalPages(Number(data) || 1))
       .catch(() => setTotalPages(1));
-  }, [selectedSubject, selectedStatus, selectedSemester, selectedYear, page]);
+  }, [selectedSubject, selectedStatus, selectedSemester, selectedYear, page, teacherId]);
 
   // Handle grading action
   const handleGrade = (examSlotRoomId: number, action: "edit" | "grade" = "grade") => {
     router.push(`/teacher/givegrade/examroom/${examSlotRoomId}?action=${action}`);
   };
 
-  // Reset filter
+  // Reset filter - set về giá trị mặc định
   const handleReset = () => {
-    setSelectedSubject(null);
-    setSelectedSemester(null);
-    setSelectedStatus(null);
-    setSelectedYear(null);
+    setSelectedSubject(subjects.length > 0 ? subjects[0] : null);
+    setSelectedSemester(semesters.length > 0 ? semesters[0] : null);
+    setSelectedStatus(statusOptions[0]);
+    setSelectedYear(yearOptions.length > 0 ? yearOptions[0] : null);
     setPage(1);
   };
 
@@ -214,7 +236,9 @@ export default function GiveGradePage() {
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end"
           >
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Môn học</label>
+              <label className="text-sm font-medium text-gray-700">
+                Môn học <span className="text-red-500">*</span>
+              </label>
               <Select
                 options={subjects}
                 value={selectedSubject}
@@ -222,11 +246,14 @@ export default function GiveGradePage() {
                 placeholder="Chọn môn học"
                 isClearable
                 styles={selectStyles}
+                noOptionsMessage={() => 'Không có dữ liệu'}
               />
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Kỳ học</label>
+              <label className="text-sm font-medium text-gray-700">
+                Kỳ học <span className="text-red-500">*</span>
+              </label>
               <Select
                 options={semesters}
                 value={selectedSemester}
@@ -234,11 +261,14 @@ export default function GiveGradePage() {
                 placeholder="Chọn kỳ học"
                 isClearable
                 styles={selectStyles}
+                noOptionsMessage={() => 'Không có dữ liệu'}
               />
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Trạng thái</label>
+              <label className="text-sm font-medium text-gray-700">
+                Trạng thái <span className="text-red-500">*</span>
+              </label>
               <Select
                 options={statusOptions}
                 value={selectedStatus}
@@ -246,18 +276,22 @@ export default function GiveGradePage() {
                 placeholder="Trạng thái"
                 isClearable
                 styles={selectStyles}
+                noOptionsMessage={() => 'Không có dữ liệu'}
               />
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Năm học</label>
+              <label className="text-sm font-medium text-gray-700">
+                Năm học <span className="text-red-500">*</span>
+              </label>
               <Select
-                options={getYearOptions()}
+                options={yearOptions}
                 value={selectedYear}
                 onChange={option => { setSelectedYear(option); setPage(1); }}
                 placeholder="Năm học"
                 isClearable
                 styles={selectStyles}
+                noOptionsMessage={() => 'Không có dữ liệu'}
               />
             </div>
             
@@ -272,6 +306,67 @@ export default function GiveGradePage() {
               Đặt lại
             </button>
           </form>
+        </div>
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Tổng bài thi</p>
+                <p className="text-2xl font-bold text-blue-600">{exams.length}</p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Chưa chấm</p>
+                <p className="text-2xl font-bold text-red-600">{exams.filter(e => !e.isGrade || e.isGrade === 0).length}</p>
+              </div>
+              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Đã chấm</p>
+                <p className="text-2xl font-bold text-green-600">{exams.filter(e => e.isGrade === 1).length}</p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Tỷ lệ hoàn thành</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {exams.length > 0 ? Math.round((exams.filter(e => e.isGrade === 1).length / exams.length) * 100) : 0}%
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                </svg>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Table Section */}

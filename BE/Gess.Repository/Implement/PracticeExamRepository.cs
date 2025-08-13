@@ -290,7 +290,11 @@ namespace GESS.Repository.Implement
                         PracExamId = practiceExam.PracExamId,
                         StudentId = studentId,
                         CheckIn = false,
-                        IsGraded = false
+                        IsGraded = false,
+                        StartTime = practiceExamCreateDto.StartDay,
+                        EndTime = practiceExamCreateDto.EndDay,
+                        StatusExam = PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM,
+                       
                     };
                     await _context.PracticeExamHistories.AddAsync(practiceExamHistory);
                 }
