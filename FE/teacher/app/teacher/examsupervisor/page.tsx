@@ -15,7 +15,9 @@ import {
   Eye,
   CheckCircle,
   Play,
-  UserCheck
+  UserCheck,
+  Lock,
+  AlertTriangle
 } from 'lucide-react';
 
 type YearOption = { value: number; label: string };
@@ -27,9 +29,12 @@ type ApiExamSchedule = {
   roomName: string;
   subjectName: string;
   examDate: string;
-  startDay: string;
-  endDay: string;
+  startDay: string; // Không dùng
+  endDay: string; // Không dùng
+  startTime: string; // Dùng cho thời gian bắt đầu
+  endTime: string; // Dùng cho thời gian kết thúc
   status: number; // 0: chưa điểm danh, 1: đang thi, 2: đã thi
+  examSlotStatus: string; // Trạng thái gán bài thi
 };
 
 const weekdays = [
@@ -70,12 +75,32 @@ function getWeekDatesFromStart(startDate: string): string[] {
   return dates;
 }
 
+// Format time từ TimeSpan string (HH:mm:ss)
+function formatTimeFromTimeSpan(timeSpan: string): string {
+  if (!timeSpan) return "";
+  
+  // Lấy phần time từ TimeSpan (HH:mm:ss)
+  const [hours, minutes] = timeSpan.split(':');
+  
+  return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+}
+
+// Kiểm tra xem ngày thi có trùng với ngày hiện tại không
+function isExamDateToday(examDate: string): boolean {
+  const today = new Date();
+  const examDay = new Date(examDate);
+  
+  return today.getFullYear() === examDay.getFullYear() &&
+         today.getMonth() === examDay.getMonth() &&
+         today.getDate() === examDay.getDate();
+}
+
 // Group lịch thi theo ngày và sắp xếp theo thời gian
 function groupSchedulesByDay(
   schedules: ApiExamSchedule[],
   weekDates: string[]
 ) {
-  const grouped: { [date: string]: (ApiExamSchedule & { timeLabel: string })[] } = {};
+  const grouped: { [date: string]: (ApiExamSchedule & { timeLabel: string; isToday: boolean })[] } = {};
   
   weekDates.forEach((date) => {
     grouped[date] = [];
@@ -83,18 +108,23 @@ function groupSchedulesByDay(
 
   schedules.forEach((exam) => {
     const date = exam.examDate.slice(0, 10);
-    const start = new Date(exam.startDay);
-    const end = new Date(exam.endDay);
-    const timeLabel = `${start.getHours().toString().padStart(2, '0')}:${start.getMinutes().toString().padStart(2, '0')} - ${end.getHours().toString().padStart(2, '0')}:${end.getMinutes().toString().padStart(2, '0')}`;
+    const startTime = formatTimeFromTimeSpan(exam.startTime);
+    const endTime = formatTimeFromTimeSpan(exam.endTime);
+    const timeLabel = `${startTime} - ${endTime}`;
+    const isToday = isExamDateToday(exam.examDate);
     
     if (weekDates.includes(date)) {
-      grouped[date].push({ ...exam, timeLabel });
+      grouped[date].push({ ...exam, timeLabel, isToday });
     }
   });
 
   // Sắp xếp các ca thi trong ngày theo thời gian bắt đầu
   Object.keys(grouped).forEach(date => {
-    grouped[date].sort((a, b) => new Date(a.startDay).getTime() - new Date(b.startDay).getTime());
+    grouped[date].sort((a, b) => {
+      const timeA = formatTimeFromTimeSpan(a.startTime);
+      const timeB = formatTimeFromTimeSpan(b.startTime);
+      return timeA.localeCompare(timeB);
+    });
   });
 
   return grouped;
@@ -123,30 +153,51 @@ function findWeekOfToday(weekOptions: WeekOption[]): WeekOption | undefined {
   return weekOptions[0];
 }
 
-// Hàm lấy thông tin trạng thái từ status
-function getStatusInfo(status: number) {
+// Hàm lấy thông tin trạng thái từ status, kiểm tra ngày và examSlotStatus
+function getStatusInfo(status: number, isToday: boolean, examSlotStatus: string) {
+  // Kiểm tra trường hợp chưa gán bài thi
+  const isNotAssigned = examSlotStatus === "Chưa gán bài thi";
+  const isDisabled = !isToday && (status === 0 || status === 1) || isNotAssigned;
+  
+  // Nếu chưa gán bài thi, return trạng thái đặc biệt
+  if (isNotAssigned) {
+    return {
+      label: 'Chưa gán bài thi',
+      color: 'red',
+      bgColor: 'from-red-50 to-pink-50',
+      borderColor: 'border-red-200',
+      textColor: 'text-red-600',
+      buttonColor: 'bg-red-400 cursor-not-allowed',
+      icon: AlertTriangle,
+      buttonText: 'Chưa gán bài thi',
+      disabled: true
+    };
+  }
+  
   switch (status) {
     case 0:
       return {
         label: 'Chưa điểm danh',
         color: 'blue',
-        bgColor: 'from-blue-50 to-indigo-50',
-        borderColor: 'border-blue-200',
-        textColor: 'text-blue-600',
-        buttonColor: 'bg-blue-600 hover:bg-blue-700',
-        icon: UserCheck,
-        buttonText: 'Điểm danh'
+        bgColor: isDisabled ? 'from-gray-50 to-gray-50' : 'from-blue-50 to-indigo-50',
+        borderColor: isDisabled ? 'border-gray-200' : 'border-blue-200',
+        textColor: isDisabled ? 'text-gray-500' : 'text-blue-600',
+        buttonColor: isDisabled ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700',
+        icon: isDisabled ? Lock : UserCheck,
+        buttonText: isDisabled ? 'Chưa đến ngày thi' : 'Điểm danh',
+        disabled: isDisabled
       };
     case 1:
       return {
         label: 'Đang thi',
         color: 'orange',
-        bgColor: 'from-orange-50 to-yellow-50',
-        borderColor: 'border-orange-200',
-        textColor: 'text-orange-600',
-        buttonColor: 'bg-orange-600 hover:bg-orange-700',
-        icon: Play,
-        buttonText: 'Đang diễn ra'
+        bgColor: isDisabled ? 'from-gray-50 to-gray-50' : 'from-orange-50 to-yellow-50',
+        borderColor: isDisabled ? 'border-gray-200' : 'border-orange-200',
+        textColor: isDisabled ? 'text-gray-500' : 'text-orange-600',
+        buttonColor: isDisabled ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700',
+        icon: isDisabled ? Lock : Play,
+        buttonText: isDisabled ? 'Chưa đến ngày thi' : 'Đang diễn ra',
+        disabled: isDisabled
       };
     case 2:
       return {
@@ -157,7 +208,8 @@ function getStatusInfo(status: number) {
         textColor: 'text-green-600',
         buttonColor: 'bg-green-600 hover:bg-green-700',
         icon: Eye,
-        buttonText: 'Xem lịch sử'
+        buttonText: 'Xem lịch sử',
+        disabled: false
       };
     default:
       return {
@@ -168,7 +220,8 @@ function getStatusInfo(status: number) {
         textColor: 'text-gray-600',
         buttonColor: 'bg-gray-600 hover:bg-gray-700',
         icon: Clock,
-        buttonText: 'Không xác định'
+        buttonText: 'Không xác định',
+        disabled: false
       };
   }
 }
@@ -179,7 +232,7 @@ export default function ExamSchedulePage() {
   const [weekOptions, setWeekOptions] = useState<WeekOption[]>(getWeekStartOptions(yearOptions[0].value));
   const [selectedWeek, setSelectedWeek] = useState<WeekOption | null>(null);
   const [examSchedules, setExamSchedules] = useState<ApiExamSchedule[]>([]);
-  const [updatingStatus, setUpdatingStatus] = useState<number | null>(null); // Track which exam is being updated
+  const [updatingStatus, setUpdatingStatus] = useState<number | null>(null);
   const router = useRouter();
 
   // Khi đổi năm, cập nhật tuần và chọn tuần chứa ngày hiện tại
@@ -244,7 +297,17 @@ export default function ExamSchedulePage() {
   };
 
   // Xử lý click nút theo status
-  const handleExamAction = async (exam: ApiExamSchedule) => {
+  const handleExamAction = async (exam: ApiExamSchedule & { isToday: boolean }) => {
+    // Kiểm tra nếu chưa gán bài thi
+    if (exam.examSlotStatus === "Chưa gán bài thi") {
+      return; // Không làm gì nếu chưa gán bài thi
+    }
+
+    // Kiểm tra validation ngày
+    if (!exam.isToday && (exam.status === 0 || exam.status === 1)) {
+      return; // Không làm gì nếu không phải ngày thi
+    }
+
     if (exam.status === 0) {
       // Chưa điểm danh -> cập nhật status thành 1 trước khi chuyển trang
       setUpdatingStatus(exam.examSlotRoomId);
@@ -396,7 +459,7 @@ export default function ExamSchedulePage() {
                     {weekdays.map((weekday, idx) => (
                       <th
                         key={weekday}
-                        className="px-6 py-4 text-left text-sm font-medium text-gray-700 border-b border-gray-200"
+                        className="px-4 py-4 text-left text-sm font-medium text-gray-700 border-b border-gray-200"
                       >
                         <div className="flex flex-col">
                           <span className="font-semibold text-gray-900">{weekday}</span>
@@ -419,7 +482,7 @@ export default function ExamSchedulePage() {
                           return (
                             <td
                               key={dayIdx}
-                              className="px-6 py-4 align-top border-b border-gray-200"
+                              className="px-4 py-4 align-top border-b border-gray-200"
                             >
                               <div className="h-32 flex items-center justify-center text-gray-400">
                                 <span className="text-sm">Không có ca thi</span>
@@ -428,41 +491,50 @@ export default function ExamSchedulePage() {
                           );
                         }
 
-                        const statusInfo = getStatusInfo(exam.status);
+                        const statusInfo = getStatusInfo(exam.status, exam.isToday, exam.examSlotStatus);
                         const StatusIcon = statusInfo.icon;
                         const isUpdating = updatingStatus === exam.examSlotRoomId;
                         
                         return (
                           <td
                             key={dayIdx}
-                            className="px-6 py-4 align-top border-b border-gray-200"
+                            className="px-4 py-4 align-top border-b border-gray-200"
                           >
-                            <div className={`border rounded-lg p-4 hover:shadow-md transition-shadow duration-200 bg-gradient-to-r ${statusInfo.bgColor} ${statusInfo.borderColor}`}>
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center space-x-2">
-                                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusInfo.textColor} bg-${statusInfo.color}-100`}>
-                                    Ca {rowIndex + 1}
-                                  </span>
-                                  <span className={`flex items-center text-xs px-2 py-1 rounded-full ${statusInfo.textColor} bg-${statusInfo.color}-100`}>
-                                    <StatusIcon className="w-3 h-3 mr-1" />
-                                    {statusInfo.label}
-                                  </span>
-                                </div>
-                                <div className="flex items-center text-xs text-gray-600">
-                                  <Clock className="w-3 h-3 mr-1" />
+                            <div className={`border rounded-lg p-3 hover:shadow-md transition-shadow duration-200 bg-gradient-to-r ${statusInfo.bgColor} ${statusInfo.borderColor}`}>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusInfo.textColor} bg-${statusInfo.color}-100`}>
+                                  Ca {rowIndex + 1}
+                                </span>
+                                <span className={`flex items-center text-xs px-2 py-1 rounded-full ${statusInfo.textColor} bg-${statusInfo.color}-100`}>
+                                  <StatusIcon className="w-3 h-3 mr-1" />
+                                  {statusInfo.label}
+                                </span>
+                              </div>
+                              
+                              {/* Thời gian ở dòng riêng */}
+                              <div className="mb-3">
+                                <div className="flex items-center justify-center text-sm font-semibold text-gray-800 bg-gray-100 rounded-md py-1">
+                                  <Clock className="w-4 h-4 mr-1" />
                                   {exam.timeLabel}
                                 </div>
                               </div>
                               
                               <div className="space-y-2 mb-3">
                                 <div className="flex items-center">
-                                  <BookOpen className="w-4 h-4 text-blue-600 mr-2" />
-                                  <span className="font-medium text-gray-900 text-sm">{exam.subjectName}</span>
+                                  <BookOpen className="w-4 h-4 text-blue-600 mr-2 flex-shrink-0" />
+                                  <span className="font-medium text-gray-900 text-sm leading-tight">{exam.subjectName}</span>
                                 </div>
                                 <div className="flex items-center">
-                                  <MapPin className="w-4 h-4 text-gray-500 mr-2" />
+                                  <MapPin className="w-4 h-4 text-gray-500 mr-2 flex-shrink-0" />
                                   <span className="text-sm text-gray-700">Phòng {exam.roomName}</span>
                                 </div>
+                                {/* Hiển thị trạng thái gán bài thi nếu cần */}
+                                {exam.examSlotStatus === "Chưa gán bài thi" && (
+                                  <div className="flex items-center">
+                                    <AlertTriangle className="w-4 h-4 text-red-500 mr-2 flex-shrink-0" />
+                                    <span className="text-sm text-red-600 font-medium">{exam.examSlotStatus}</span>
+                                  </div>
+                                )}
                               </div>
                               
                               <button
@@ -472,7 +544,7 @@ export default function ExamSchedulePage() {
                                     : statusInfo.buttonColor
                                 }`}
                                 onClick={() => handleExamAction(exam)}
-                                disabled={isUpdating}
+                                disabled={isUpdating || statusInfo.disabled}
                               >
                                 {isUpdating ? (
                                   <>
@@ -508,7 +580,7 @@ export default function ExamSchedulePage() {
 
         {/* Statistics */}
         {examSchedules.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mt-8">
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -524,9 +596,23 @@ export default function ExamSchedulePage() {
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
+                  <p className="text-sm font-medium text-gray-600">Chưa gán bài thi</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {examSchedules.filter(e => e.examSlotStatus === "Chưa gán bài thi").length}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between">
+                <div>
                   <p className="text-sm font-medium text-gray-600">Chưa điểm danh</p>
                   <p className="text-2xl font-bold text-blue-600">
-                    {examSchedules.filter(e => e.status === 0).length}
+                    {examSchedules.filter(e => e.status === 0 && e.examSlotStatus !== "Chưa gán bài thi").length}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">

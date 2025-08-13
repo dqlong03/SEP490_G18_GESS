@@ -18,7 +18,10 @@ import {
   Hash,
   Timer,
   Shield,
-  Eye
+  Eye,
+  Play,
+  FileText,
+  Pause
 } from "lucide-react";
 
 interface ExamInfo {
@@ -39,6 +42,7 @@ interface Student {
   fullName: string;
   avatarURL: string;
   isCheckedIn: number;
+  statusExamHistory: string; // Thêm field mới
 }
 
 export default function AttendanceCheckingPage() {
@@ -56,9 +60,14 @@ export default function AttendanceCheckingPage() {
   const [isFinishing, setIsFinishing] = useState(false); 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Timer state - chỉ hoạt động khi không phải view mode
-  const [timer, setTimer] = useState(300);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  // Timer states - phân biệt 2 loại timer
+  const [codeRefreshTimer, setCodeRefreshTimer] = useState(300); // 5 phút cho refresh code
+  const [dataRefreshTimer, setDataRefreshTimer] = useState(5); // 5 giây cho refresh data
+  
+  const codeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const dataTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const codeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const dataIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch exam info
   const fetchExamInfo = async () => {
@@ -74,8 +83,11 @@ export default function AttendanceCheckingPage() {
   };
 
   // Fetch students
-  const fetchStudents = async () => {
+  const fetchStudents = async (showLoader = false) => {
     if (!examId) return;
+    
+    if (showLoader) setIsRefreshing(true);
+    
     try {
       const res = await fetch(`https://localhost:7074/api/ExamSchedule/students/${examId}`);
       const data = await res.json();
@@ -92,6 +104,8 @@ export default function AttendanceCheckingPage() {
       console.error("Error fetching students:", error);
       setStudents([]);
       setAttendance({});
+    } finally {
+      if (showLoader) setIsRefreshing(false);
     }
   };
 
@@ -102,82 +116,162 @@ export default function AttendanceCheckingPage() {
     setLoading(false);
   };
 
-  // Refresh data every 5 minutes
-  const refreshData = async () => {
-    if (isViewMode || !examId) return;
-    
-    setIsRefreshing(true);
+  // Refresh code only
+  const refreshCode = async () => {
+    if (!examId) return;
     try {
-      // Call refresh API
+      console.log("Refreshing code...");
       await fetch(`https://localhost:7074/api/ExamSchedule/refresh?examSlotId=${examId}`, {
         method: "POST",
       });
-      
-      // Reload all data
-      await loadData();
+      console.log("Code refreshed successfully");
     } catch (error) {
-      console.error("Error refreshing data:", error);
-    } finally {
-      setIsRefreshing(false);
+      console.error("Error refreshing code:", error);
     }
   };
 
-  // Thêm function để gọi API refresh code
-    const refreshCode = async () => {
-      if (!examId) return;
-      try {
-        await fetch(`https://localhost:7074/api/ExamSchedule/refresh?examSlotId=${examId}`, {
-          method: "POST",
-        });
-      } catch (error) {
-        console.error("Error refreshing code:", error);
+  // Initial data load
+  useEffect(() => {
+    const initializeData = async () => {
+      if (!isViewMode && examId) {
+        // Gọi API refresh code trước khi load data (chỉ khi không phải view mode)
+        await refreshCode();
+      }
+      // Sau đó mới load data
+      await loadData();
+    };
+    
+    initializeData();
+  }, [examId, isViewMode]);
+
+  // Auto refresh code every 5 minutes - CHỈ khi KHÔNG phải view mode
+  useEffect(() => {
+    if (isViewMode || loading || !examId) return;
+
+    // Clear any existing interval
+    if (codeIntervalRef.current) {
+      clearInterval(codeIntervalRef.current);
+    }
+
+    // Set up new interval for code refresh (5 minutes)
+    codeIntervalRef.current = setInterval(async () => {
+      console.log("Auto refreshing code...");
+      await refreshCode();
+      await fetchExamInfo(); // Cũng cần lấy exam info mới sau khi refresh code
+      setCodeRefreshTimer(300); // Reset timer về 5 phút
+    }, 300000); // 300000ms = 5 phút
+
+    // Cleanup on unmount or dependency change
+    return () => {
+      if (codeIntervalRef.current) {
+        clearInterval(codeIntervalRef.current);
       }
     };
+  }, [isViewMode, loading, examId]);
 
-  // Initial data load
-      useEffect(() => {
-      const initializeData = async () => {
-        if (!isViewMode && examId) {
-          // Gọi API refresh code trước khi load data (chỉ khi không phải view mode)
-          await refreshCode();
-        }
-        // Sau đó mới load data
-        await loadData();
-      };
-      
-      initializeData();
-    }, [examId, isViewMode]);
-
-  // Timer countdown and refresh data - CHỈ hoạt động khi KHÔNG phải view mode
+  // Auto refresh students data every 5 seconds - CHỈ khi KHÔNG phải view mode
   useEffect(() => {
-    if (isViewMode) return; // Không chạy timer khi ở chế độ view
+    if (isViewMode || loading || !examId) return;
 
-    if (timer <= 0) {
-      // Gọi API refresh và load lại dữ liệu
-      refreshData().then(() => {
-        setTimer(300); // Reset lại 5 phút
-      });
+    // Clear any existing interval
+    if (dataIntervalRef.current) {
+      clearInterval(dataIntervalRef.current);
+    }
+
+    // Set up new interval for data refresh (5 seconds)
+    dataIntervalRef.current = setInterval(async () => {
+      console.log("Auto refreshing student data...");
+      await fetchStudents(true);
+      setDataRefreshTimer(5); // Reset timer về 5 giây
+    }, 5000);
+
+    // Cleanup on unmount or dependency change
+    return () => {
+      if (dataIntervalRef.current) {
+        clearInterval(dataIntervalRef.current);
+      }
+    };
+  }, [isViewMode, loading, examId]);
+
+  // Code refresh timer countdown (5 minutes) - CHỈ khi KHÔNG phải view mode
+  useEffect(() => {
+    if (isViewMode || loading) return;
+    
+    if (codeRefreshTimer <= 0) {
+      setCodeRefreshTimer(300); // Reset về 5 phút
       return;
     }
     
-    timerRef.current = setTimeout(() => setTimer(t => t - 1), 1000);
+    codeTimerRef.current = setTimeout(() => setCodeRefreshTimer(t => t - 1), 1000);
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (codeTimerRef.current) clearTimeout(codeTimerRef.current);
     };
-  }, [timer, examId, isViewMode]);
+  }, [codeRefreshTimer, isViewMode, loading]);
 
-  // Khi examId đổi thì reset timer (chỉ khi không phải view mode)
+  // Data refresh timer countdown (5 seconds) - CHỈ khi KHÔNG phải view mode
   useEffect(() => {
-    if (!isViewMode) {
-      setTimer(300);
+    if (isViewMode || loading) return;
+    
+    if (dataRefreshTimer <= 0) {
+      setDataRefreshTimer(5); // Reset về 5 giây
+      return;
     }
-  }, [examId, isViewMode]);
+    
+    dataTimerRef.current = setTimeout(() => setDataRefreshTimer(t => t - 1), 1000);
+    return () => {
+      if (dataTimerRef.current) clearTimeout(dataTimerRef.current);
+    };
+  }, [dataRefreshTimer, isViewMode, loading]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (codeTimerRef.current) clearTimeout(codeTimerRef.current);
+      if (dataTimerRef.current) clearTimeout(dataTimerRef.current);
+      if (codeIntervalRef.current) clearInterval(codeIntervalRef.current);
+      if (dataIntervalRef.current) clearInterval(dataIntervalRef.current);
+    };
+  }, []);
 
   // Format mm:ss
   const formatTime = (sec: number) => {
     const m = Math.floor(sec / 60).toString().padStart(2, "0");
     const s = (sec % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
+  };
+
+  // Get status badge for exam history
+  const getExamStatusBadge = (status: string) => {
+    switch (status) {
+      case "Chưa thi":
+        return (
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            <Pause className="w-3 h-3 mr-1" />
+            Chưa thi
+          </span>
+        );
+      case "Đang thi":
+        return (
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            <Play className="w-3 h-3 mr-1" />
+            Đang thi
+          </span>
+        );
+      case "Đã nộp bài":
+        return (
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <FileText className="w-3 h-3 mr-1" />
+            Đã nộp bài
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            <FileText className="w-3 h-3 mr-1" />
+            {status}
+          </span>
+        );
+    }
   };
 
   // Điểm danh từng sinh viên - VÔ HIỆU HÓA trong view mode
@@ -227,6 +321,12 @@ export default function AttendanceCheckingPage() {
       );
 
       if (response.ok) {
+        // Clear intervals before leaving
+        if (codeIntervalRef.current) clearInterval(codeIntervalRef.current);
+        if (dataIntervalRef.current) clearInterval(dataIntervalRef.current);
+        if (codeTimerRef.current) clearTimeout(codeTimerRef.current);
+        if (dataTimerRef.current) clearTimeout(dataTimerRef.current);
+        
         // Hiển thị thông báo thành công
         alert("Đã hoàn thành ca thi thành công!");
         
@@ -246,9 +346,11 @@ export default function AttendanceCheckingPage() {
   };
 
   // Manual refresh function
-  const handleManualRefresh = () => {
-    refreshData();
-    setTimer(300); // Reset timer
+  const handleManualRefresh = async () => {
+    await refreshCode();
+    await Promise.all([fetchExamInfo(), fetchStudents(true)]);
+    setCodeRefreshTimer(300); // Reset code timer về 5 phút
+    setDataRefreshTimer(5); // Reset data timer về 5 giây
   };
 
   const attendedCount = Object.values(attendance).filter(Boolean).length;
@@ -430,11 +532,18 @@ export default function AttendanceCheckingPage() {
                 
                 {!isViewMode && (
                   <div className="text-right">
-                    <p className="text-sm text-gray-600">Tự động làm mới sau</p>
-                    <div className="flex items-center space-x-2">
+                    <p className="text-sm text-gray-600 mb-2">Làm mới mã code sau</p>
+                    <div className="flex items-center space-x-2 mb-3">
                       <RefreshCw className={`w-4 h-4 text-red-600 ${isRefreshing ? 'animate-spin' : ''}`} />
-                      <span className="text-xl font-bold text-red-600 font-mono">{formatTime(timer)}</span>
+                      <span className="text-xl font-bold text-red-600 font-mono">{formatTime(codeRefreshTimer)}</span>
                     </div>
+                    {/* <div className="pt-3 border-t border-blue-200">
+                      <p className="text-sm text-gray-600 mb-1">Cập nhật dữ liệu sau</p>
+                      <div className="flex items-center space-x-2">
+                        <RefreshCw className={`w-4 h-4 text-orange-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        <span className="text-lg font-bold text-orange-600 font-mono">{formatTime(dataRefreshTimer)}</span>
+                      </div>
+                    </div> */}
                   </div>
                 )}
                 
@@ -544,6 +653,7 @@ export default function AttendanceCheckingPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã sinh viên</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên sinh viên</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái bài</th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
                     {!isViewMode && (
                       <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Điểm danh</th>
@@ -570,6 +680,9 @@ export default function AttendanceCheckingPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{sv.fullName}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        {getExamStatusBadge(sv.statusExamHistory)}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         {attendance[sv.id] ? (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
