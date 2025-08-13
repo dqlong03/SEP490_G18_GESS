@@ -13,6 +13,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using Google.Apis.Auth;
+using GESS.Common;
 
 namespace GESS.Service.authservice
 {
@@ -332,7 +333,7 @@ namespace GESS.Service.authservice
 
                 // Kiểm tra role - chỉ cho phép học sinh đăng nhập
                 var userRoles = await _userManager.GetRolesAsync(user);
-                if (!userRoles.Contains("Học sinh"))
+                if (!userRoles.Contains(PredefinedRole.STUDENT_ROLE))
                 {
                     return new GoogleLoginDesktopResult { Success = false, ErrorMessage = "Chỉ học sinh mới có quyền đăng nhập qua desktop app" };
                 }
