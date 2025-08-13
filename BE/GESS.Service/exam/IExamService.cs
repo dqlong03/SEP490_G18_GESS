@@ -24,6 +24,7 @@ namespace GESS.Service.exam
         Task<bool> UpdateMultiExamAsync(MultiExamUpdateDTO dto);
         Task<List<ExamListOfStudentResponse>> GetAllMultiExamOfStudentAsync(ExamFilterRequest request);
         Task<List<ExamListOfStudentResponse>> GetAllPracExamOfStudentAsync(ExamFilterRequest request);
+        Task<ExamStatusCheckListResponseDTO> CheckExamStatusAsync(ExamStatusCheckRequestDTO request);
     }
 
 }

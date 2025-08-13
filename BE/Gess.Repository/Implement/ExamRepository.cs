@@ -277,5 +277,50 @@ namespace GESS.Repository.Implement
 
             return await query.ToListAsync();
         }
+
+        public async Task<ExamStatusCheckListResponseDTO> CheckExamStatusAsync(ExamStatusCheckRequestDTO request)
+        {
+            var result = new ExamStatusCheckListResponseDTO();
+            
+            // Kiểm tra MultiExam nếu ExamType = "Multi" hoặc null
+            if (string.IsNullOrEmpty(request.ExamType) || request.ExamType.Equals("Multi", StringComparison.OrdinalIgnoreCase))
+            {
+                var multiExams = await _context.MultiExams
+                    .Where(m => request.ExamIds.Contains(m.MultiExamId))
+                    .ToListAsync();
+                
+                foreach (var exam in multiExams)
+                {
+                    result.Exams.Add(new ExamStatusCheckResponseDTO
+                    {
+                        ExamId = exam.MultiExamId,
+                        ExamName = exam.MultiExamName,
+                        ExamType = "MultiExam",
+                        Status = exam.Status ?? ""
+                    });
+                }
+            }
+
+            // Kiểm tra PracticeExam nếu ExamType = "Practice" hoặc null
+            if (string.IsNullOrEmpty(request.ExamType) || request.ExamType.Equals("Practice", StringComparison.OrdinalIgnoreCase))
+            {
+                var practiceExams = await _context.PracticeExams
+                    .Where(p => request.ExamIds.Contains(p.PracExamId))
+                    .ToListAsync();
+                
+                foreach (var exam in practiceExams)
+                {
+                    result.Exams.Add(new ExamStatusCheckResponseDTO
+                    {
+                        ExamId = exam.PracExamId,
+                        ExamName = exam.PracExamName,
+                        ExamType = "PracticeExam",
+                        Status = exam.Status ?? ""
+                    });
+                }
+            }
+
+            return result;
+        }
     }
 }
