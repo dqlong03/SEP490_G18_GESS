@@ -118,22 +118,19 @@ namespace GESS.Repository.Implement
         {
             var examSchedules = await _context.ExamSlotRooms
                 .Where(e => e.SupervisorId == teacherId &&
-                    (
-                        (e.MultiOrPractice == "Multiple" && e.MultiExam.StartDay >= fromDate && e.MultiExam.StartDay <= toDate) ||
-                        (e.MultiOrPractice == "Practice" && e.PracticeExam.StartDay >= fromDate && e.PracticeExam.StartDay <= toDate)
-                    )
+                   (fromDate<=e.ExamDate && e.ExamDate<=toDate)
                 )
                 .Include(e => e.Subject)
-                .Include(e => e.Room)   
+                .Include(e => e.Room)
                 .Include(e => e.MultiExam)
                 .Include(e => e.PracticeExam)
+                    .Include(e => e.ExamSlot)
                 .ToListAsync();
             if (examSchedules == null || !examSchedules.Any())
             {
                 return new List<ExamSlotRoom>();
             }
             return examSchedules;
-
         }
 
         public async Task<MultipleExamDetail> GetMultiMidTermExamBySlotIdsAsync(Guid teacherId, int examId)
@@ -239,7 +236,8 @@ namespace GESS.Repository.Implement
                             IsCheckedIn = m.CheckIn==true? 1:0,
                             FullName = m.Student.User.Fullname,
                             AvatarURL = m.Student.AvatarURL,
-                            Code = m.Student.User.Code
+                            Code = m.Student.User.Code,
+                            StatusExamHistory = m.StatusExam // Trạng thái bài thi của học sinh trong lịch sử thi
                         })
                         .ToListAsync();
                     return multiExamHistories;
@@ -254,7 +252,8 @@ namespace GESS.Repository.Implement
                             IsCheckedIn = p.CheckIn==true? 1:0,
                             FullName = p.Student.User.Fullname,
                             AvatarURL = p.Student.AvatarURL,
-                            Code = p.Student.User.Code
+                            Code = p.Student.User.Code,
+                            StatusExamHistory = p.StatusExam // Trạng thái bài thi của học sinh trong lịch sử thi
                         })
                         .ToListAsync();
                     return practiceExamHistories;
