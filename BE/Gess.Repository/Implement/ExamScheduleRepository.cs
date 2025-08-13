@@ -139,7 +139,7 @@ namespace GESS.Repository.Implement
         public async Task<MultipleExamDetail> GetMultiMidTermExamBySlotIdsAsync(Guid teacherId, int examId)
         {
             var multiExam = await _context.MultiExams
-                .Where(m => m.MultiExamId == examId && m.TeacherId == teacherId)
+                .Where(m => m.MultiExamId == examId)
                 .Include(m => m.Subject)
                 .Include(m => m.CategoryExam)
                 .FirstOrDefaultAsync();
@@ -155,7 +155,9 @@ namespace GESS.Repository.Implement
                     IsCheckedIn = m.CheckIn == true ? 1 : 0,
                     FullName = m.Student.User.Fullname,
                     AvatarURL = m.Student.AvatarURL,
-                    Code = m.Student.User.Code
+                    Code = m.Student.User.Code,
+                    StatusExamHistory = m.StatusExam // Trạng thái bài thi của học sinh trong lịch sử thi
+
                 })
                 .ToListAsync();
             if (students == null || !students.Any())
@@ -183,7 +185,7 @@ namespace GESS.Repository.Implement
         public async Task<PraticeExamDetail> GetPracMidTermExamBySlotIdsAsync(Guid teacherId, int examId)
         {
             var pracExam = await _context.PracticeExams
-               .Where(m => m.PracExamId == examId && m.TeacherId == teacherId)
+               .Where(m => m.PracExamId == examId)
                .Include(m => m.Subject)
                .Include(m => m.CategoryExam)
                .FirstOrDefaultAsync();
@@ -199,7 +201,8 @@ namespace GESS.Repository.Implement
                     IsCheckedIn = m.CheckIn == true ? 1 : 0,
                     FullName = m.Student.User.Fullname,
                     AvatarURL = m.Student.AvatarURL,
-                    Code = m.Student.User.Code
+                    Code = m.Student.User.Code,
+                    StatusExamHistory = m.StatusExam
                 })
                 .ToListAsync();
             if (students == null || !students.Any())

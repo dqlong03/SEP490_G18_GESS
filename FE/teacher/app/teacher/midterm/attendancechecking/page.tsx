@@ -11,6 +11,7 @@ interface Student {
   fullName: string;
   avatarURL: string;
   isCheckedIn: number;
+  statusExamHistory: string;
 }
 
 interface MidtermExamInfo {
@@ -38,20 +39,58 @@ export default function MidtermAttendancePage() {
   const [collapsed, setCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasOpenedExam, setHasOpenedExam] = useState(false);
 
-  // Timer state
-  const [timer, setTimer] = useState(300); // 5 phút = 300 giây
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  // Timer states - phân biệt 2 loại timer
+  const [codeRefreshTimer, setCodeRefreshTimer] = useState(300); // 5 phút = 300 giây
+  const [dataRefreshTimer, setDataRefreshTimer] = useState(5); // 5 giây
+  
+  const codeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const dataTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const codeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const dataIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch exam info
-  const fetchExamInfo = async () => {
-    if (!examId || !teacherId) return;
+  // Open exam slot function
+  const openExamSlot = async () => {
+    if (!examId || hasOpenedExam) return;
     
     try {
+      console.log("Opening exam slot...");
+      const response = await fetch(
+        `https://localhost:7074/api/ExamineTheMidTermExam/changestatus?examId=${examId}&status=%C4%90ang%20m%E1%BB%9F%20ca&examType=${examType}`,
+        { method: "POST" }
+      );
+      
+      if (response.ok) {
+        console.log("Exam slot opened successfully");
+        setHasOpenedExam(true);
+      } else {
+        console.error("Failed to open exam slot:", response.status);
+      }
+    } catch (error) {
+      console.error("Error opening exam slot:", error);
+    }
+  };
+
+  // Fetch exam info only
+  const fetchExamInfo = async (showLoader = false) => {
+    if (!examId || !teacherId) return;
+    
+    if (showLoader) setIsRefreshing(true);
+    
+    try {
+      console.log("Fetching exam info...");
       const response = await fetch(
         `https://localhost:7074/api/ExamineTheMidTermExam/slots/${teacherId}/${examId}?examType=${examType}`
       );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
+      console.log("Exam info received:", data);
+      
       setExamInfo(data);
       
       // Map trạng thái điểm danh
@@ -63,108 +102,142 @@ export default function MidtermAttendancePage() {
     } catch (error) {
       console.error("Error fetching exam info:", error);
       setExamInfo(null);
-    }
-  };
-
-
-  useEffect(() => {
-    const openExamSlot = async () => {
-      if (!examId) return;
-      try {
-        await fetch(
-          `https://localhost:7074/api/ExamineTheMidTermExam/changestatus?examId=${examId}&status=%C4%90ang%20m%E1%BB%9F%20ca&examType=${examType}`,
-          { method: "POST" }
-        );
-      } catch (error) {
-        // Có thể xử lý lỗi nếu cần
-      }
-    };
-
-    const initializeData = async () => {
-      setLoading(true);
-      await openExamSlot(); // Mở ca thi
-      if (examId) {
-        await refreshCode();
-      }
-      await fetchExamInfo();
-      setLoading(false);
-    };
-
-    initializeData();
-  }, [examId, teacherId, examType]);
-
-  // Initial load
-  useEffect(() => {
-    const initializeData = async () => {
-      setLoading(true);
-      
-      // Gọi API refresh code trước khi load data
-      if (examId) {
-        await refreshCode();
-      }
-      
-      // Sau đó mới load data
-      await fetchExamInfo();
-      
-      setLoading(false);
-    };
-    
-    initializeData();
-}, [examId, teacherId, examType]);
-
-  // Refresh data function
-  const refreshData = async () => {
-    if (!examId) return;
-    
-    setIsRefreshing(true);
-    try {
-      // Call refresh API
-      await fetch(
-        `https://localhost:7074/api/ExamineTheMidTermExam/refresh?examId=${examId}&examType=${examType}`,
-        { method: "POST" }
-      );
-      
-      // Reload exam data
-      await fetchExamInfo();
-    } catch (error) {
-      console.error("Error refreshing data:", error);
     } finally {
-      setIsRefreshing(false);
+      if (showLoader) setIsRefreshing(false);
     }
   };
 
-    const refreshCode = async () => {
+  // Refresh code only
+  const refreshCode = async () => {
     if (!examId) return;
     try {
+      console.log("Refreshing code...");
       await fetch(
         `https://localhost:7074/api/ExamineTheMidTermExam/refresh?examId=${examId}&examType=${examType}`,
         { method: "POST" }
       );
+      console.log("Code refreshed successfully");
     } catch (error) {
       console.error("Error refreshing code:", error);
     }
   };
 
-  // Timer countdown and refresh data
+  // Initial load
   useEffect(() => {
-    if (timer <= 0) {
-      // Gọi API refresh và load lại dữ liệu
-      refreshData().then(() => {
-        setTimer(300); // Reset lại 5 phút
-      });
+    const initializeData = async () => {
+      if (!examId || !teacherId) return;
+      
+      console.log("Initializing data...");
+      setLoading(true);
+      
+      try {
+        // Bước 1: Mở ca thi (chỉ gọi 1 lần)
+        await openExamSlot();
+        
+        // Bước 2: Refresh code
+        await refreshCode();
+        
+        // Bước 3: Load data
+        await fetchExamInfo();
+        
+      } catch (error) {
+        console.error("Error during initialization:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    initializeData();
+  }, [examId, teacherId, examType]);
+
+  // Auto refresh code every 5 minutes (300 seconds)
+  useEffect(() => {
+    if (loading || !examId || !teacherId) return;
+
+    // Clear any existing interval
+    if (codeIntervalRef.current) {
+      clearInterval(codeIntervalRef.current);
+    }
+
+    // Set up new interval for code refresh (5 minutes)
+    codeIntervalRef.current = setInterval(async () => {
+      console.log("Auto refreshing code...");
+      await refreshCode();
+      await fetchExamInfo(); // Cũng cần lấy data mới sau khi refresh code
+      setCodeRefreshTimer(300); // Reset timer về 5 phút
+    }, 300000); // 300000ms = 5 phút
+
+    // Cleanup on unmount or dependency change
+    return () => {
+      if (codeIntervalRef.current) {
+        clearInterval(codeIntervalRef.current);
+      }
+    };
+  }, [loading, examId, teacherId, examType]);
+
+  // Auto refresh data every 5 seconds
+  useEffect(() => {
+    if (loading || !examId || !teacherId) return;
+
+    // Clear any existing interval
+    if (dataIntervalRef.current) {
+      clearInterval(dataIntervalRef.current);
+    }
+
+    // Set up new interval for data refresh (5 seconds)
+    dataIntervalRef.current = setInterval(async () => {
+      console.log("Auto refreshing data...");
+      await fetchExamInfo(true);
+      setDataRefreshTimer(5); // Reset timer về 5 giây
+    }, 5000);
+
+    // Cleanup on unmount or dependency change
+    return () => {
+      if (dataIntervalRef.current) {
+        clearInterval(dataIntervalRef.current);
+      }
+    };
+  }, [loading, examId, teacherId, examType]);
+
+  // Code refresh timer countdown (5 minutes)
+  useEffect(() => {
+    if (loading) return;
+    
+    if (codeRefreshTimer <= 0) {
+      setCodeRefreshTimer(300); // Reset về 5 phút
       return;
     }
     
-    timerRef.current = setTimeout(() => setTimer(t => t - 1), 1000);
+    codeTimerRef.current = setTimeout(() => setCodeRefreshTimer(t => t - 1), 1000);
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (codeTimerRef.current) clearTimeout(codeTimerRef.current);
     };
-  }, [timer, examId, examType]);
+  }, [codeRefreshTimer, loading]);
 
-  // Khi examId đổi thì reset timer
+  // Data refresh timer countdown (5 seconds)
   useEffect(() => {
-    setTimer(300);
-  }, [examId]);
+    if (loading) return;
+    
+    if (dataRefreshTimer <= 0) {
+      setDataRefreshTimer(5); // Reset về 5 giây
+      return;
+    }
+    
+    dataTimerRef.current = setTimeout(() => setDataRefreshTimer(t => t - 1), 1000);
+    return () => {
+      if (dataTimerRef.current) clearTimeout(dataTimerRef.current);
+    };
+  }, [dataRefreshTimer, loading]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (codeTimerRef.current) clearTimeout(codeTimerRef.current);
+      if (dataTimerRef.current) clearTimeout(dataTimerRef.current);
+      if (codeIntervalRef.current) clearInterval(codeIntervalRef.current);
+      if (dataIntervalRef.current) clearInterval(dataIntervalRef.current);
+    };
+  }, []);
 
   // Format mm:ss
   const formatTime = (sec: number) => {
@@ -173,10 +246,12 @@ export default function MidtermAttendancePage() {
     return `${m}:${s}`;
   };
 
-  // Manual refresh function
-  const handleManualRefresh = () => {
-    refreshData();
-    setTimer(300); // Reset timer
+  // Manual refresh function - refresh cả code và data
+  const handleManualRefresh = async () => {
+    await refreshCode();
+    await fetchExamInfo(true);
+    setCodeRefreshTimer(300); // Reset code timer về 5 phút
+    setDataRefreshTimer(5); // Reset data timer về 5 giây
   };
 
   // Điểm danh từng sinh viên
@@ -191,32 +266,66 @@ export default function MidtermAttendancePage() {
         ...prev,
         [studentId]: !prev[studentId],
       }));
-    } catch {
-      // Có thể show toast lỗi nếu cần
+    } catch (error) {
+      console.error("Error checking attendance:", error);
     }
   };
 
   // Xác nhận điểm danh
   const handleConfirmAttendance = () => {
     setCollapsed(true);
-    // Có thể gọi API xác nhận điểm danh nếu cần
   };
 
   // Hoàn thành coi thi
   const handleFinishExam = async () => {
     if (!examInfo) return;
     try {
+      // Clear intervals before leaving
+      if (codeIntervalRef.current) clearInterval(codeIntervalRef.current);
+      if (dataIntervalRef.current) clearInterval(dataIntervalRef.current);
+      if (codeTimerRef.current) clearTimeout(codeTimerRef.current);
+      if (dataTimerRef.current) clearTimeout(dataTimerRef.current);
+      
       // Đóng ca thi trước khi chuyển trang
       await fetch(
         `https://localhost:7074/api/ExamineTheMidTermExam/changestatus?examId=${examId}&status=%C4%90%C3%A3%20%C4%91%C3%B3ng%20ca&examType=${examType}`,
         { method: "POST" }
       );
       router.push(`/teacher/myclass/classdetail/${classId}`);
-    } catch {
-      // Handle error
+    } catch (error) {
+      console.error("Error finishing exam:", error);
     }
   };
 
+  // Get status badge for exam history
+  const getExamStatusBadge = (status: string) => {
+    switch (status) {
+      case "Chưa thi":
+        return (
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            Chưa thi
+          </span>
+        );
+      case "Đang thi":
+        return (
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            Đang thi
+          </span>
+        );
+      case "Đã nộp bài":
+        return (
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Đã nộp bài
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            {status}
+          </span>
+        );
+    }
+  };
 
   // Tính toán thống kê
   const getAttendanceStats = () => {
@@ -232,7 +341,7 @@ export default function MidtermAttendancePage() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="flex items-center space-x-3">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="text-gray-600 font-medium">Đang tải dữ liệu...</span>
+          <span className="text-gray-600 font-medium">Đang khởi tạo ca thi...</span>
         </div>
       </div>
     );
@@ -337,7 +446,7 @@ export default function MidtermAttendancePage() {
                 <div className="text-right">
                   <p className="text-sm text-gray-600 mb-1">Trạng thái</p>
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                    examInfo.status === "Đang thi" 
+                    examInfo.status === "Đang mở ca" 
                       ? "bg-green-100 text-green-800" 
                       : "bg-yellow-100 text-yellow-800"
                   }`}>
@@ -370,13 +479,19 @@ export default function MidtermAttendancePage() {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-blue-100 mb-2">Tự động làm mới sau</p>
+                <p className="text-blue-100 mb-2">Làm mới mã code sau</p>
                 <div className="flex items-center space-x-2">
                   <RefreshCw className={`w-5 h-5 text-yellow-300 ${isRefreshing ? 'animate-spin' : ''}`} />
                   <div className="text-4xl font-bold font-mono">
-                    {formatTime(timer)}
+                    {formatTime(codeRefreshTimer)}
                   </div>
                 </div>
+                {/* <div className="mt-3 pt-3 border-t border-blue-400">
+                  <p className="text-blue-100 text-sm mb-1">Cập nhật dữ liệu sau</p>
+                  <div className="text-xl font-bold font-mono">
+                    {formatTime(dataRefreshTimer)}
+                  </div>
+                </div> */}
               </div>
             </div>
           </div>
@@ -462,6 +577,7 @@ export default function MidtermAttendancePage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã sinh viên</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên sinh viên</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái thi</th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Điểm danh</th>
                   </tr>
                 </thead>
@@ -479,6 +595,9 @@ export default function MidtermAttendancePage() {
                           </div>
                           <div className="text-sm font-medium text-gray-900">{sv.fullName}</div>
                         </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        {getExamStatusBadge(sv.statusExamHistory)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <label className="inline-flex items-center cursor-pointer">
