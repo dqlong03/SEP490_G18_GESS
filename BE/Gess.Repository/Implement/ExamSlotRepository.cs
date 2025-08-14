@@ -42,6 +42,16 @@ namespace GESS.Repository.Implement
                 }
                 examSlot.Status = "Chưa mở ca";
                 examSlot.MultiExamId = examId;
+                //Get multiple exam 
+                var multipleExam = await _context.MultiExams
+                    .FirstOrDefaultAsync(me => me.MultiExamId == examId);
+                if (multipleExam == null)
+                {
+                    return false; // Không tìm thấy bài thi nhiều lựa chọn
+                }
+                multipleExam.Duration = (int)(examSlot.EndTime - examSlot.StartTime).TotalMinutes;
+                _context.MultiExams.Update(multipleExam);
+                _context.SaveChanges();
             }
             else if (examType == "Practice")
             {
@@ -51,6 +61,16 @@ namespace GESS.Repository.Implement
                 }
                 examSlot.Status = "Chưa mở ca";
                 examSlot.PracticeExamId = examId;
+                //Get practice exam
+                var practiceExam = await _context.PracticeExams
+                    .FirstOrDefaultAsync(pe => pe.PracExamId == examId);
+                if (practiceExam == null)
+                {
+                    return false; // Không tìm thấy bài thi thực hành
+                }
+                practiceExam.Duration = (int)(examSlot.EndTime - examSlot.StartTime).TotalMinutes;
+                _context.PracticeExams.Update(practiceExam);
+                _context.SaveChanges();
             }
             else
             {

@@ -244,7 +244,7 @@ namespace GESS.Repository.Implement
                     ExamId = x.MultiExamId,
                     ExamName = x.MultiExamName,
                     ExamType = 1,
-                    ClassId = x.ClassId,
+                    ClassId = x.ClassId??0,
                     IsGrade = x.IsGraded,
                     SemesterId = x.SemesterId
                 });
@@ -260,7 +260,7 @@ namespace GESS.Repository.Implement
                     ExamId = x.PracExamId,
                     ExamName = x.PracExamName,
                     ExamType = 2,
-                    ClassId = x.ClassId,
+                    ClassId = x.ClassId??0,
                     IsGrade = x.IsGraded,
                     SemesterId = x.SemesterId
                 });
