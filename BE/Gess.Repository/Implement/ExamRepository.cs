@@ -28,7 +28,7 @@ namespace GESS.Repository.Implement
             int? majorId,
             int? semesterId,
             int? subjectId,
-           // string? gradeComponent,
+            // string? gradeComponent,
             string? examType,
             string? searchName)
         {
@@ -37,7 +37,7 @@ namespace GESS.Repository.Implement
                 .Where(e => !majorId.HasValue || e.Teacher.MajorId == majorId)
                 .Where(e => !semesterId.HasValue || e.SemesterId == semesterId)
                 .Where(e => !subjectId.HasValue || e.SubjectId == subjectId)
-               // .Where(e => string.IsNullOrEmpty(gradeComponent) || e.GradeComponent == gradeComponent)
+                // .Where(e => string.IsNullOrEmpty(gradeComponent) || e.GradeComponent == gradeComponent)
                 .Where(e => string.IsNullOrEmpty(searchName) || e.MultiExamName.Contains(searchName))
                 .Select(e => new ExamListResponse
                 {
@@ -140,7 +140,47 @@ namespace GESS.Repository.Implement
             if (latestSemesterId == 0)
                 return new List<ExamListOfStudentResponse>();
 
-            var query = _context.StudentExamSlotRoom
+            // Query cho bài giữa kỳ (Midterm)
+            var midtermQuery = _context.ClassStudents
+         .Where(cs => cs.StudentId == request.StudentId)
+         .Join(_context.Classes,
+             cs => cs.ClassId,
+             c => c.ClassId,
+             (cs, c) => new { ClassStudent = cs, Class = c })
+         .Join(_context.MultiExams,
+             x => x.Class.ClassId,
+             me => me.ClassId,
+             (x, me) => new { x.ClassStudent, x.Class, MultiExam = me })
+         .Where(x => x.MultiExam.SemesterId == latestSemesterId
+             && x.MultiExam.CreateAt.Year == latestYear
+             && x.MultiExam.ClassId != null
+             && x.MultiExam.Status.ToLower().Trim() == "đang mở ca".ToLower().Trim())
+         .Join(_context.MultiExamHistories,
+             x => new { x.MultiExam.MultiExamId, x.ClassStudent.StudentId },
+             meh => new { meh.MultiExamId, meh.StudentId },
+             (x, meh) => new { x.ClassStudent, x.Class, x.MultiExam, MultiExamHistory = meh })
+         .Where(x => x.MultiExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM.ToLower().Trim()
+             || x.MultiExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM.ToLower().Trim())
+         .Join(_context.Subjects,
+             x => x.MultiExam.SubjectId,
+             s => s.SubjectId,
+             (x, s) => new { x.ClassStudent, x.Class, x.MultiExam, x.MultiExamHistory, SubjectName = s.SubjectName })
+         .Select(x => new ExamListOfStudentResponse
+         {
+             ExamId = x.MultiExam.MultiExamId,
+             ExamName = x.MultiExam.MultiExamName,
+             SubjectName = x.SubjectName,
+             Duration = x.MultiExam.Duration,
+             Status = x.MultiExam.Status,
+             ExamDate = x.MultiExam.EndDay,
+             RoomName = x.Class.ClassName,
+             ExamSlotName = $"{x.MultiExam.StartDay:dd/MM/yyyy HH:mm} - {x.MultiExam.EndDay:dd/MM/yyyy HH:mm}",
+             StartTime = default,
+             EndTime = default
+         });
+
+            // Query cho bài cuối kỳ (Final)
+            var finalQuery = _context.StudentExamSlotRoom
                 .Where(sesr => sesr.StudentId == request.StudentId)
                 .Join(_context.ExamSlotRooms,
                     sesr => sesr.ExamSlotRoomId,
@@ -149,7 +189,8 @@ namespace GESS.Repository.Implement
                 .Where(x => x.ExamSlotRoom.SemesterId == latestSemesterId
                     && x.ExamSlotRoom.MultiExamId != null
                     && x.ExamSlotRoom.ExamDate.Year == latestYear
-                    && x.ExamSlotRoom.Status == 1) // Kiểm tra trạng thái ca thi: Đang mở ca
+                    && x.ExamSlotRoom.Status == 1
+                    && x.ExamSlotRoom.MultiExam.ClassId == null)
                 .Join(_context.MultiExams,
                     x => x.ExamSlotRoom.MultiExamId,
                     me => me.MultiExamId,
@@ -185,88 +226,256 @@ namespace GESS.Repository.Implement
                         EndTime = x.ExamSlot.EndTime
                     });
 
-            return await query.ToListAsync();
+            // Kết hợp hai query và loại bỏ trùng lặp
+            var combinedQuery = midtermQuery.Union(finalQuery);
+
+            return await combinedQuery.ToListAsync();
         }
 
 
+        //public async Task<List<ExamListOfStudentResponse>> GetAllPracExamOfStudentAsync(ExamFilterRequest request)
+        //{
+        //    // Lấy năm mới nhất từ CreateAt của PracticeExam
+        //    var latestYear = await _context.PracticeExams
+        //        .MaxAsync(pe => (int?)pe.CreateAt.Year) ?? DateTime.Now.Year;
+
+        //    // Lấy học kỳ mới nhất trong năm mới nhất
+        //    var latestSemesterId = await _context.PracticeExams
+        //        .Where(pe => pe.CreateAt.Year == latestYear)
+        //        .Join(_context.Semesters,
+        //            pe => pe.SemesterId,
+        //            s => s.SemesterId,
+        //            (pe, s) => s.SemesterId)
+        //        .OrderByDescending(semesterId => semesterId)
+        //        .FirstOrDefaultAsync();
+
+        //    if (latestSemesterId == 0)
+        //        return new List<ExamListOfStudentResponse>();
+
+        //    // Lấy tất cả StudentId liên quan đến email của request.StudentId
+        //    var studentIds = await _context.Students
+        //        .Where(s => s.StudentId == request.StudentId)
+        //        .Select(s => s.User.Email)
+        //        .Join(_context.Users,
+        //            email => email,
+        //            u => u.Email,
+        //            (email, u) => u.Id)
+        //        .Join(_context.Students,
+        //            userId => userId,
+        //            s => s.UserId,
+        //            (userId, s) => s.StudentId)
+        //        .ToListAsync();
+
+        //    // Query cho bài giữa kỳ (Midterm)
+        //    var midtermQuery = _context.ClassStudents
+        //        .Where(cs => studentIds.Contains(cs.StudentId))
+        //        .Join(_context.Classes,
+        //            cs => cs.ClassId,
+        //            c => c.ClassId,
+        //            (cs, c) => new { ClassStudent = cs, Class = c })
+        //        .Join(_context.PracticeExams,
+        //            x => x.Class.ClassId,
+        //            pe => pe.ClassId,
+        //            (x, pe) => new { x.ClassStudent, x.Class, PracticeExam = pe })
+        //        .Where(x => x.PracticeExam.SemesterId == latestSemesterId
+        //            && x.PracticeExam.CreateAt.Year == latestYear
+        //            && x.PracticeExam.ClassId != null
+        //            && x.PracticeExam.Status.ToLower().Trim() == "Đang mở ca".ToLower().Trim())
+        //        .Join(_context.PracticeExamHistories,
+        //            x => new { x.PracticeExam.PracExamId, x.ClassStudent.StudentId },
+        //            peh => new { peh.PracExamId, peh.StudentId },
+        //            (x, peh) => new { x.ClassStudent, x.Class, x.PracticeExam, PracticeExamHistory = peh })
+        //        .Where(x => x.PracticeExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM.ToLower().Trim()
+        //            || x.PracticeExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM.ToLower().Trim())
+        //        .Join(_context.Subjects,
+        //            x => x.PracticeExam.SubjectId,
+        //            s => s.SubjectId,
+        //            (x, s) => new { x.ClassStudent, x.Class, x.PracticeExam, x.PracticeExamHistory, SubjectName = s.SubjectName })
+        //        .Select(x => new ExamListOfStudentResponse
+        //        {
+        //            ExamId = x.PracticeExam.PracExamId,
+        //            ExamName = x.PracticeExam.PracExamName,
+        //            SubjectName = x.SubjectName,
+        //            Duration = x.PracticeExam.Duration,
+        //            Status = x.PracticeExam.Status,
+        //            ExamDate = x.PracticeExam.EndDay,
+        //            RoomName = x.Class.ClassName,
+        //            ExamSlotName = $"{x.PracticeExam.StartDay:dd/MM/yyyy HH:mm} - {x.PracticeExam.EndDay:dd/MM/yyyy HH:mm}",
+        //            StartTime = default,
+        //            EndTime = default
+        //        });
+
+        //    // Query cho bài cuối kỳ (Final)
+        //    var finalQuery = _context.StudentExamSlotRoom
+        //        .Where(sesr => studentIds.Contains(sesr.StudentId))
+        //        .Join(_context.ExamSlotRooms,
+        //            sesr => sesr.ExamSlotRoomId,
+        //            esr => esr.ExamSlotRoomId,
+        //            (sesr, esr) => new { StudentExamSlotRoom = sesr, ExamSlotRoom = esr })
+        //        .Where(x => x.ExamSlotRoom.SemesterId == latestSemesterId
+        //            && x.ExamSlotRoom.PracticeExamId != null
+        //            && x.ExamSlotRoom.ExamDate.Year == latestYear
+        //            && x.ExamSlotRoom.Status == 1
+        //            && x.ExamSlotRoom.PracticeExam.ClassId == null)
+        //        .Join(_context.PracticeExams,
+        //            x => x.ExamSlotRoom.PracticeExamId,
+        //            pe => pe.PracExamId,
+        //            (x, pe) => new { x.StudentExamSlotRoom, x.ExamSlotRoom, PracticeExam = pe })
+        //        .Join(_context.PracticeExamHistories,
+        //            x => new { x.PracticeExam.PracExamId, x.StudentExamSlotRoom.StudentId },
+        //            peh => new { peh.PracExamId, peh.StudentId },
+        //            (x, peh) => new { x.StudentExamSlotRoom, x.ExamSlotRoom, x.PracticeExam, PracticeExamHistory = peh })
+        //        .Where(x => x.PracticeExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM.ToLower().Trim()
+        //            || x.PracticeExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM.ToLower().Trim())
+        //        .Join(_context.Subjects,
+        //            x => x.PracticeExam.SubjectId,
+        //            s => s.SubjectId,
+        //            (x, s) => new { x.StudentExamSlotRoom, x.ExamSlotRoom, x.PracticeExam, x.PracticeExamHistory, SubjectName = s.SubjectName })
+        //        .Join(_context.ExamSlots,
+        //            x => x.ExamSlotRoom.ExamSlotId,
+        //            es => es.ExamSlotId,
+        //            (x, es) => new { x.StudentExamSlotRoom, x.ExamSlotRoom, x.PracticeExam, x.PracticeExamHistory, x.SubjectName, ExamSlot = es })
+        //        .Join(_context.Rooms,
+        //            x => x.ExamSlotRoom.RoomId,
+        //            r => r.RoomId,
+        //            (x, r) => new ExamListOfStudentResponse
+        //            {
+        //                ExamId = x.PracticeExam.PracExamId,
+        //                ExamName = x.PracticeExam.PracExamName,
+        //                SubjectName = x.SubjectName,
+        //                Duration = x.PracticeExam.Duration,
+        //                Status = x.PracticeExam.Status,
+        //                ExamDate = x.ExamSlotRoom.ExamDate,
+        //                RoomName = r.RoomName,
+        //                ExamSlotName = x.ExamSlot.SlotName,
+        //                StartTime = x.ExamSlot.StartTime,
+        //                EndTime = x.ExamSlot.EndTime
+        //            });
+
+        //    // Kết hợp hai query và loại bỏ trùng lặp
+        //   // var combinedQuery = finalQuery.Union(finalQuery);
+
+        //    return await midtermQuery.ToListAsync();
+        //}
+
         public async Task<List<ExamListOfStudentResponse>> GetAllPracExamOfStudentAsync(ExamFilterRequest request)
         {
-            // Lấy năm mới nhất từ CreateAt của MultiExam
+            // Lấy năm mới nhất từ CreateAt của PracticeExam
             var latestYear = await _context.PracticeExams
-                .MaxAsync(me => (int?)me.CreateAt.Year) ?? DateTime.Now.Year;
+                .MaxAsync(pe => (int?)pe.CreateAt.Year) ?? DateTime.Now.Year;
 
             // Lấy học kỳ mới nhất trong năm mới nhất
             var latestSemesterId = await _context.PracticeExams
-                .Where(me => me.CreateAt.Year == latestYear)
+                .Where(pe => pe.CreateAt.Year == latestYear)
                 .Join(_context.Semesters,
-                    me => me.SemesterId,
+                    pe => pe.SemesterId,
                     s => s.SemesterId,
-                    (me, s) => s.SemesterId)
+                    (pe, s) => s.SemesterId)
                 .OrderByDescending(semesterId => semesterId)
                 .FirstOrDefaultAsync();
 
             if (latestSemesterId == 0)
                 return new List<ExamListOfStudentResponse>();
 
-            var query = _context.StudentExamSlotRoom
-                .Where(sesr => sesr.StudentId == request.StudentId)
-                .Join(_context.ExamSlotRooms,
-                    sesr => sesr.ExamSlotRoomId,
-                    esr => esr.ExamSlotRoomId,
-                    (sesr, esr) => new { StudentExamSlotRoom = sesr, ExamSlotRoom = esr })
-                .Where(x => x.ExamSlotRoom.SemesterId == latestSemesterId
-                    && x.ExamSlotRoom.PracticeExamId != null
-                    && x.ExamSlotRoom.ExamDate.Year == latestYear
-                    && x.ExamSlotRoom.Status == 1)
-                .Join(_context.PracticeExams,
-                    x => x.ExamSlotRoom.PracticeExamId,
-                    me => me.PracExamId,
-                    (x, me) => new { x.StudentExamSlotRoom, x.ExamSlotRoom, PracticeExam = me })
-                .Join(_context.PracticeExamHistories,
-                    x => new { x.PracticeExam.PracExamId, x.StudentExamSlotRoom.StudentId },
-                    meh => new { meh.PracExamId, meh.StudentId },
-                    (x, meh) => new { x.StudentExamSlotRoom, x.ExamSlotRoom, x.PracticeExam, PracticeExamHistory = meh })
-                .Where(x => x.PracticeExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM.ToLower().Trim()
-                    || x.PracticeExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM.ToLower().Trim())
+            // Lấy tất cả StudentId liên quan đến email của request.StudentId
+            var studentIds = await _context.Students
+                .Where(s => s.StudentId == request.StudentId)
+                .Select(s => s.User.Email)
+                .Join(_context.Users,
+                    email => email,
+                    u => u.Email,
+                    (email, u) => u.Id)
+                .Join(_context.Students,
+                    userId => userId,
+                    s => s.UserId,
+                    (userId, s) => s.StudentId)
+                .ToListAsync();
+
+            // Query gộp: Bắt đầu từ PracticeExams, join với histories và subjects, sau đó GroupJoin với midterm và final
+            var combinedQuery = _context.PracticeExams
+                .Where(pe => pe.SemesterId == latestSemesterId && pe.CreateAt.Year == latestYear)
                 .Join(_context.Subjects,
-                    x => x.PracticeExam.SubjectId,
+                    pe => pe.SubjectId,
                     s => s.SubjectId,
-                    (x, s) => new { x.StudentExamSlotRoom, x.ExamSlotRoom, x.PracticeExam, x.PracticeExamHistory, SubjectName = s.SubjectName })
-                .Join(_context.ExamSlots,
-                    x => x.ExamSlotRoom.ExamSlotId,
+                    (pe, s) => new { PracticeExam = pe, SubjectName = s.SubjectName })
+                .GroupJoin(_context.PracticeExamHistories.Where(peh => studentIds.Contains(peh.StudentId)),
+                    x => x.PracticeExam.PracExamId,
+                    peh => peh.PracExamId,
+                    (x, pehGroup) => new { x.PracticeExam, x.SubjectName, PracticeExamHistories = pehGroup })
+                .SelectMany(x => x.PracticeExamHistories.DefaultIfEmpty(),
+                    (x, peh) => new { x.PracticeExam, x.SubjectName, PracticeExamHistory = peh })
+                .Where(x => x.PracticeExamHistory != null // Đảm bảo có history
+                    && (x.PracticeExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM.ToLower().Trim()
+                        || x.PracticeExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM.ToLower().Trim()))
+                // GroupJoin với midterm (ClassStudents và Classes) nếu ClassId != null và Status = "Đang mở ca"
+                .GroupJoin(_context.ClassStudents.Where(cs => studentIds.Contains(cs.StudentId)),
+                    x => x.PracticeExam.ClassId,
+                    cs => cs.ClassId,
+                    (x, csGroup) => new { x.PracticeExam, x.SubjectName, x.PracticeExamHistory, ClassStudents = csGroup })
+                .SelectMany(x => x.ClassStudents.DefaultIfEmpty(),
+                    (x, cs) => new { x.PracticeExam, x.SubjectName, x.PracticeExamHistory, ClassStudent = cs })
+                .GroupJoin(_context.Classes,
+                    x => x.ClassStudent != null ? x.ClassStudent.ClassId : 0,
+                    c => c.ClassId,
+                    (x, cGroup) => new { x.PracticeExam, x.SubjectName, x.PracticeExamHistory, x.ClassStudent, Classes = cGroup })
+                .SelectMany(x => x.Classes.DefaultIfEmpty(),
+                    (x, c) => new { x.PracticeExam, x.SubjectName, x.PracticeExamHistory, x.ClassStudent, Class = c })
+                // GroupJoin với final (StudentExamSlotRooms, ExamSlotRooms, ExamSlots, Rooms) nếu ClassId == null
+                .GroupJoin(_context.StudentExamSlotRoom.Where(sesr => studentIds.Contains(sesr.StudentId)),
+                    x => x.PracticeExam.PracExamId, // Join dựa trên PracExamId cho final
+                    sesr => sesr.ExamSlotRoom.PracticeExamId ?? 0,
+                    (x, sesrGroup) => new { x.PracticeExam, x.SubjectName, x.PracticeExamHistory, x.ClassStudent, x.Class, StudentExamSlotRooms = sesrGroup })
+                .SelectMany(x => x.StudentExamSlotRooms.DefaultIfEmpty(),
+                    (x, sesr) => new { x.PracticeExam, x.SubjectName, x.PracticeExamHistory, x.ClassStudent, x.Class, StudentExamSlotRoom = sesr })
+                .GroupJoin(_context.ExamSlotRooms.Where(esr => esr.Status == 1 && esr.SemesterId == latestSemesterId && esr.ExamDate.Year == latestYear),
+                    x => x.StudentExamSlotRoom != null ? x.StudentExamSlotRoom.ExamSlotRoomId : 0,
+                    esr => esr.ExamSlotRoomId,
+                    (x, esrGroup) => new { x.PracticeExam, x.SubjectName, x.PracticeExamHistory, x.ClassStudent, x.Class, x.StudentExamSlotRoom, ExamSlotRooms = esrGroup })
+                .SelectMany(x => x.ExamSlotRooms.DefaultIfEmpty(),
+                    (x, esr) => new { x.PracticeExam, x.SubjectName, x.PracticeExamHistory, x.ClassStudent, x.Class, x.StudentExamSlotRoom, ExamSlotRoom = esr })
+                .GroupJoin(_context.ExamSlots,
+                    x => x.ExamSlotRoom != null ? x.ExamSlotRoom.ExamSlotId : 0,
                     es => es.ExamSlotId,
-                    (x, es) => new { x.StudentExamSlotRoom, x.ExamSlotRoom, x.PracticeExam, x.PracticeExamHistory, x.SubjectName, ExamSlot = es })
-                .Join(_context.Rooms,
-                    x => x.ExamSlotRoom.RoomId,
+                    (x, esGroup) => new { x.PracticeExam, x.SubjectName, x.PracticeExamHistory, x.ClassStudent, x.Class, x.StudentExamSlotRoom, x.ExamSlotRoom, ExamSlots = esGroup })
+                .SelectMany(x => x.ExamSlots.DefaultIfEmpty(),
+                    (x, es) => new { x.PracticeExam, x.SubjectName, x.PracticeExamHistory, x.ClassStudent, x.Class, x.StudentExamSlotRoom, x.ExamSlotRoom, ExamSlot = es })
+                .GroupJoin(_context.Rooms,
+                    x => x.ExamSlotRoom != null ? x.ExamSlotRoom.RoomId : 0,
                     r => r.RoomId,
-                    (x, r) => new ExamListOfStudentResponse
-                    {
-                        ExamId = x.PracticeExam.PracExamId,
-                        ExamName = x.PracticeExam.PracExamName,
-                        SubjectName = x.SubjectName,
-                        Duration = x.PracticeExam.Duration,
-                        Status = x.PracticeExam.Status,
-                        ExamDate = x.ExamSlotRoom.ExamDate,
-                        RoomName = r.RoomName,
-                        ExamSlotName = x.ExamSlot.SlotName,
-                        StartTime = x.ExamSlot.StartTime,
-                        EndTime = x.ExamSlot.EndTime
-                    });
+                    (x, rGroup) => new { x.PracticeExam, x.SubjectName, x.PracticeExamHistory, x.ClassStudent, x.Class, x.StudentExamSlotRoom, x.ExamSlotRoom, x.ExamSlot, Rooms = rGroup })
+                .SelectMany(x => x.Rooms.DefaultIfEmpty(),
+                    (x, r) => new { x.PracticeExam, x.SubjectName, x.PracticeExamHistory, x.ClassStudent, x.Class, x.StudentExamSlotRoom, x.ExamSlotRoom, x.ExamSlot, Room = r })
+                // Lọc cuối cùng dựa trên midterm/final
+                .Where(x => (x.PracticeExam.ClassId != null && x.ClassStudent != null && x.Class != null && x.PracticeExam.Status.ToLower().Trim() == "Đang mở ca".ToLower().Trim())
+                    || (x.PracticeExam.ClassId == null && x.StudentExamSlotRoom != null && x.ExamSlotRoom != null && x.ExamSlotRoom.Status == 1 && x.ExamSlotRoom.PracticeExamId != null && x.ExamSlot != null && x.Room != null))
+                // Select để tạo DTO
+                .Select(x => new ExamListOfStudentResponse
+                {
+                    ExamId = x.PracticeExam.PracExamId,
+                    ExamName = x.PracticeExam.PracExamName,
+                    SubjectName = x.SubjectName,
+                    Duration = x.PracticeExam.Duration,
+                    Status = x.PracticeExam.Status,
+                    ExamDate = x.ExamSlotRoom != null ? x.ExamSlotRoom.ExamDate : x.PracticeExam.EndDay ?? default(DateTime),
+                    RoomName = x.Room != null ? x.Room.RoomName : x.Class.ClassName,
+                    ExamSlotName = x.ExamSlot != null ? x.ExamSlot.SlotName : $"{x.PracticeExam.StartDay:dd/MM/yyyy HH:mm} - {x.PracticeExam.EndDay:dd/MM/yyyy HH:mm}",
+                    StartTime = x.ExamSlot != null ? x.ExamSlot.StartTime : default,
+                    EndTime = x.ExamSlot != null ? x.ExamSlot.EndTime : default
+                });
 
-            return await query.ToListAsync();
+            return await combinedQuery.ToListAsync();
         }
-
         public async Task<ExamStatusCheckListResponseDTO> CheckExamStatusAsync(ExamStatusCheckRequestDTO request)
         {
             var result = new ExamStatusCheckListResponseDTO();
-            
+
             // Kiểm tra MultiExam nếu ExamType = "Multi" hoặc null
             if (string.IsNullOrEmpty(request.ExamType) || request.ExamType.Equals("Multi", StringComparison.OrdinalIgnoreCase))
             {
                 var multiExams = await _context.MultiExams
                     .Where(m => request.ExamIds.Contains(m.MultiExamId))
                     .ToListAsync();
-                
+
                 foreach (var exam in multiExams)
                 {
                     result.Exams.Add(new ExamStatusCheckResponseDTO
@@ -285,7 +494,7 @@ namespace GESS.Repository.Implement
                 var practiceExams = await _context.PracticeExams
                     .Where(p => request.ExamIds.Contains(p.PracExamId))
                     .ToListAsync();
-                
+
                 foreach (var exam in practiceExams)
                 {
                     result.Exams.Add(new ExamStatusCheckResponseDTO
