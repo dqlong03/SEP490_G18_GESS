@@ -382,7 +382,16 @@ namespace GESS.Repository.Implement
                     SubjectName = es.Subject.SubjectName,
                     SemesterId = es.SemesterId,
                     SemesterName = es.Semester.SemesterName,
-                    ExamDate = es.ExamDate
+                    ExamDate = es.ExamDate,
+                    // Kiểm tra Proctor
+                    ProctorStatus = es.ExamSlotRooms.Any(r => r.SupervisorId != null)
+                    ? "Chưa gán giảng viên coi thi"
+                    : "Đã gán giảng viên coi thi",
+
+                    // Kiểm tra Grader
+                    GradeTeacherStatus = es.ExamSlotRooms.Any(r => r.ExamGradedId == null)
+                    ? "Chưa gán giảng viên chấm thi"
+                    : "Đã gán giảng viên chấm thi"
                 })
                 .Skip((pageIndex - 1) * pageSize)
                 .Take(pageSize)
@@ -582,7 +591,7 @@ namespace GESS.Repository.Implement
                     foreach (var student in room.Students)
                     {
                         var existingStudent = await _context.Students
-                            .FirstOrDefaultAsync(s => s.User.Code == student.Code);
+                            .FirstOrDefaultAsync(s => s.User.Code == student.Code || s.User.Email==student.Email);
 
                         if (existingStudent == null)
                         {

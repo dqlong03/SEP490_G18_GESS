@@ -115,5 +115,6 @@ namespace GESS.Api.Controllers
             }
             return Ok(exams);
         }
+
     }
 }
