@@ -484,7 +484,7 @@ export default function CreateFinalPracExamPage() {
         {/* Popup chọn đề thi */}
         {showExamPopup && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[80vh] overflow-hidden">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[100vh] overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-800 flex items-center">
@@ -665,7 +665,7 @@ export default function CreateFinalPracExamPage() {
         {/* Chi tiết đề thi modal */}
         {showDetail && (
           <div className="fixed inset-0 z-60 flex items-center justify-center bg-black bg-opacity-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[100vh] overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-800 flex items-center">
@@ -681,7 +681,7 @@ export default function CreateFinalPracExamPage() {
                 </div>
               </div>
               
-              <div className="p-6 overflow-y-auto max-h-[70vh]">
+              <div className="p-6 overflow-y-auto max-h-[100vh]">
                 {loadingDetail ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>

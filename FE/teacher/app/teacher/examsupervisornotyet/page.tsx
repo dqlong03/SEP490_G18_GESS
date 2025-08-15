@@ -3,76 +3,126 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getUserIdFromToken } from "@/utils/tokenUtils";
-import { 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  BookOpen, 
-  Users,
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  BookOpen,
   ChevronLeft,
-  AlertCircle,
-  CheckCircle2,
-  CalendarDays,
   Eye,
   Play,
-  UserCheck
+  UserCheck,
+  Lock,
+  AlertTriangle,
+  CheckCircle2
 } from 'lucide-react';
 
+// Kiểu dữ liệu ca thi
 type ApiExamSchedule = {
   examSlotRoomId: number;
   examSlotId: number;
   roomName: string;
   subjectName: string;
   examDate: string;
-  startDay: string;
-  endDay: string;
+  startTime: string;
+  endTime: string;
   status: number; // 0: chưa điểm danh, 1: đang thi, 2: đã thi
+  examSlotStatus: string; // Trạng thái gán bài thi
 };
 
-// Hàm lấy thông tin trạng thái từ status
-function getStatusInfo(status: number) {
+// Hàm lấy thông tin trạng thái từ status, kiểm tra ngày và examSlotStatus
+function getStatusInfo(status: number, isToday: boolean, examSlotStatus: string) {
+  const isNotAssigned = examSlotStatus === "Chưa gán bài thi";
+  const isNotOpened = examSlotStatus === "Chưa mở ca";
+  const isDisabled = !isToday && (status === 0 || status === 1) || isNotAssigned || isNotOpened;
+
+  if (isNotOpened) {
+    return {
+      label: 'Chưa mở ca',
+      color: 'gray',
+      buttonColor: 'bg-gray-400 cursor-not-allowed',
+      icon: Lock,
+      buttonText: 'Chưa mở ca',
+      disabled: true
+    };
+  }
+  if (isNotAssigned) {
+    return {
+      label: 'Chưa gán bài thi',
+      color: 'red',
+      buttonColor: 'bg-red-400 cursor-not-allowed',
+      icon: AlertTriangle,
+      buttonText: 'Chưa gán bài thi',
+      disabled: true
+    };
+  }
   switch (status) {
     case 0:
       return {
         label: 'Chưa điểm danh',
-        color: 'bg-blue-100 text-blue-800',
-        icon: UserCheck,
-        buttonText: 'Điểm danh',
-        buttonColor: 'bg-blue-600 hover:bg-blue-700'
+        color: isDisabled ? 'gray' : 'blue',
+        buttonColor: isDisabled ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700',
+        icon: isDisabled ? Lock : UserCheck,
+        buttonText: isDisabled ? 'Chưa đến ngày thi' : 'Điểm danh',
+        disabled: isDisabled
       };
     case 1:
       return {
         label: 'Đang thi',
-        color: 'bg-orange-100 text-orange-800',
-        icon: Play,
-        buttonText: 'Đang diễn ra',
-        buttonColor: 'bg-orange-600 hover:bg-orange-700'
+        color: isDisabled ? 'gray' : 'orange',
+        buttonColor: isDisabled ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700',
+        icon: isDisabled ? Lock : Play,
+        buttonText: isDisabled ? 'Chưa đến ngày thi' : 'Đang diễn ra',
+        disabled: isDisabled
       };
     case 2:
       return {
         label: 'Đã thi',
-        color: 'bg-green-100 text-green-800',
+        color: 'green',
+        buttonColor: 'bg-green-600 hover:bg-green-700',
         icon: Eye,
         buttonText: 'Xem lịch sử',
-        buttonColor: 'bg-green-600 hover:bg-green-700'
+        disabled: false
       };
     default:
       return {
         label: 'Không xác định',
-        color: 'bg-gray-100 text-gray-800',
+        color: 'gray',
+        buttonColor: 'bg-gray-600 hover:bg-gray-700',
         icon: Clock,
         buttonText: 'Không xác định',
-        buttonColor: 'bg-gray-600 hover:bg-gray-700'
+        disabled: false
       };
   }
 }
 
-export default function TodayExamSchedulePage() {
+// Format time từ TimeSpan string (HH:mm:ss)
+function formatTimeFromTimeSpan(timeSpan: string): string {
+  if (!timeSpan) return "";
+  const [hours, minutes] = timeSpan.split(':');
+  return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+}
+
+// Kiểm tra xem ngày thi có trùng với ngày hiện tại không
+function isExamDateToday(examDate: string): boolean {
+  const today = new Date();
+  const examDay = new Date(examDate);
+  return today.getFullYear() === examDay.getFullYear() &&
+    today.getMonth() === examDay.getMonth() &&
+    today.getDate() === examDay.getDate();
+}
+
+// Format ngày
+function formatDate(dateStr: string) {
+  const d = new Date(dateStr);
+  return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getFullYear()}`;
+}
+
+export default function ExamSupervisorNotYetPage() {
   const [examSchedules, setExamSchedules] = useState<ApiExamSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(() => {
-    // Mặc định là ngày hiện tại
     const today = new Date();
     return today.toISOString().slice(0, 10);
   });
@@ -86,8 +136,9 @@ export default function TodayExamSchedulePage() {
       setLoading(false);
       return;
     }
- 
-    // Tạo Date object từ string
+
+
+        // Tạo Date object từ string
     const currentDate = new Date(date);
     // Tạo ngày hôm qua
     const date1 = new Date(currentDate);
@@ -107,7 +158,11 @@ export default function TodayExamSchedulePage() {
       .then((data) => {
         const schedules = Array.isArray(data) ? data : [];
         // Sắp xếp theo thời gian bắt đầu
-        schedules.sort((a, b) => new Date(a.startDay).getTime() - new Date(b.startDay).getTime());
+        schedules.sort((a, b) => {
+          const tA = formatTimeFromTimeSpan(a.startTime);
+          const tB = formatTimeFromTimeSpan(b.startTime);
+          return tA.localeCompare(tB);
+        });
         setExamSchedules(schedules);
       })
       .catch(() => setExamSchedules([]))
@@ -121,10 +176,13 @@ export default function TodayExamSchedulePage() {
 
   // Xử lý click nút theo status
   const handleExamAction = async (exam: ApiExamSchedule) => {
+    const isToday = isExamDateToday(exam.examDate);
+    const statusInfo = getStatusInfo(exam.status, isToday, exam.examSlotStatus);
+
+    if (statusInfo.disabled) return;
+
     if (exam.status === 0) {
-      // Chưa điểm danh -> cập nhật status thành 1 trước khi chuyển trang
       setUpdatingStatus(exam.examSlotRoomId);
-      
       try {
         const response = await fetch(
           `https://localhost:7074/api/ExamSchedule/changestatus?examSlotRoomId=${exam.examSlotRoomId}&status=1`,
@@ -135,102 +193,42 @@ export default function TodayExamSchedulePage() {
             },
           }
         );
-
         if (response.ok) {
-          // Cập nhật lại state local để UI reflect ngay lập tức
-          setExamSchedules(prev => 
-            prev.map(e => 
-              e.examSlotRoomId === exam.examSlotRoomId 
-                ? { ...e, status: 1 } 
+          setExamSchedules(prev =>
+            prev.map(e =>
+              e.examSlotRoomId === exam.examSlotRoomId
+                ? { ...e, status: 1 }
                 : e
             )
           );
-          
-          // Chuyển đến trang điểm danh
           router.push(`/teacher/examsupervisor/attendancechecking?examId=${exam.examSlotRoomId}`);
         } else {
           alert("Không thể cập nhật trạng thái ca thi. Vui lòng thử lại.");
         }
       } catch (error) {
-        console.error("Error updating exam status:", error);
         alert("Có lỗi xảy ra khi cập nhật trạng thái ca thi. Vui lòng thử lại.");
       } finally {
         setUpdatingStatus(null);
       }
     } else if (exam.status === 1) {
-      // Đang thi -> vào trang điểm danh
       router.push(`/teacher/examsupervisor/attendancechecking?examId=${exam.examSlotRoomId}`);
     } else if (exam.status === 2) {
-      // Đã thi -> xem lịch sử
       router.push(`/teacher/examsupervisor/attendancechecking?examId=${exam.examSlotRoomId}&view=true`);
     }
   };
 
   // Xử lý khi thay đổi ngày
   const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newDate = event.target.value;
-    setSelectedDate(newDate);
-  };
-
-  // Format thời gian
-  const formatTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-  };
-
-  // Format ngày hiển thị
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return `${date.getDate().toString().padStart(2, "0")}/${(date.getMonth() + 1).toString().padStart(2, "0")}/${date.getFullYear()}`;
-  };
-
-  // Format ngày cho tiêu đề
-  const formatDateForTitle = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const today = new Date();
-    const isToday = date.toDateString() === today.toDateString();
-    
-    if (isToday) {
-      return `hôm nay (${formatDate(dateStr)})`;
-    }
-    
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const isYesterday = date.toDateString() === yesterday.toDateString();
-    
-    if (isYesterday) {
-      return `hôm qua (${formatDate(dateStr)})`;
-    }
-    
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const isTomorrow = date.toDateString() === tomorrow.toDateString();
-    
-    if (isTomorrow) {
-      return `ngày mai (${formatDate(dateStr)})`;
-    }
-    
-    return formatDate(dateStr);
-  };
-
-  // Kiểm tra ca thi đã qua hay chưa
-  const isExamPassed = (endTime: string) => {
-    return new Date() > new Date(endTime);
-  };
-
-  // Kiểm tra ca thi đang diễn ra
-  const isExamOngoing = (startTime: string, endTime: string) => {
-    const now = new Date();
-    return now >= new Date(startTime) && now <= new Date(endTime);
+    setSelectedDate(event.target.value);
   };
 
   // Nút nhanh chọn ngày
   const getQuickDateButtons = () => {
     const today = new Date();
     const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setDate(today.getDate() - 1);
     const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setDate(today.getDate() + 1);
 
     return [
       { label: 'Hôm qua', date: yesterday.toISOString().slice(0, 10) },
@@ -252,11 +250,10 @@ export default function TodayExamSchedulePage() {
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Lịch coi thi</h1>
                 <p className="text-gray-600">
-                  Danh sách các ca thi cần coi trong ngày {formatDateForTitle(selectedDate)}
+                  Danh sách các ca thi cần coi trong ngày {formatDate(selectedDate)}
                 </p>
               </div>
             </div>
-            
             <button
               onClick={() => router.back()}
               className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 font-medium text-gray-700"
@@ -271,13 +268,11 @@ export default function TodayExamSchedulePage() {
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-              <CalendarDays className="w-5 h-5 mr-2 text-blue-600" />
+              <Calendar className="w-5 h-5 mr-2 text-blue-600" />
               Chọn ngày xem lịch
             </h3>
           </div>
-          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Date Input */}
             <div>
               <label htmlFor="date-input" className="block text-sm font-medium text-gray-700 mb-2">
                 Chọn ngày cụ thể
@@ -290,8 +285,6 @@ export default function TodayExamSchedulePage() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
               />
             </div>
-            
-            {/* Quick Date Buttons */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Chọn nhanh
@@ -329,13 +322,25 @@ export default function TodayExamSchedulePage() {
                 </div>
               </div>
             </div>
-            
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Chưa gán bài thi</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {examSchedules.filter(e => e.examSlotStatus === "Chưa gán bài thi").length}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                </div>
+              </div>
+            </div>
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Chưa điểm danh</p>
                   <p className="text-2xl font-bold text-blue-600">
-                    {examSchedules.filter(e => e.status === 0).length}
+                    {examSchedules.filter(e => e.status === 0 && e.examSlotStatus !== "Chưa gán bài thi").length}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -343,7 +348,6 @@ export default function TodayExamSchedulePage() {
                 </div>
               </div>
             </div>
-            
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -354,20 +358,6 @@ export default function TodayExamSchedulePage() {
                 </div>
                 <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                   <Play className="w-6 h-6 text-orange-600" />
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Đã hoàn thành</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    {examSchedules.filter(e => e.status === 2).length}
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <CheckCircle2 className="w-6 h-6 text-green-600" />
                 </div>
               </div>
             </div>
@@ -382,7 +372,6 @@ export default function TodayExamSchedulePage() {
               Danh sách ca thi ngày {formatDate(selectedDate)}
             </h3>
           </div>
-          
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -421,10 +410,11 @@ export default function TodayExamSchedulePage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {examSchedules.length > 0 ? examSchedules.map((exam, index) => {
-                    const statusInfo = getStatusInfo(exam.status);
+                    const isToday = isExamDateToday(exam.examDate);
+                    const statusInfo = getStatusInfo(exam.status, isToday, exam.examSlotStatus);
                     const StatusIcon = statusInfo.icon;
                     const isUpdating = updatingStatus === exam.examSlotRoomId;
-                    
+
                     return (
                       <tr key={exam.examSlotRoomId} className="hover:bg-blue-50 transition-colors duration-200">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -446,7 +436,7 @@ export default function TodayExamSchedulePage() {
                           <div className="flex items-center justify-center">
                             <Clock className="w-4 h-4 text-green-600 mr-2" />
                             <span className="text-sm text-gray-900 font-medium">
-                              {formatTime(exam.startDay)}
+                              {formatTimeFromTimeSpan(exam.startTime)}
                             </span>
                           </div>
                         </td>
@@ -454,7 +444,7 @@ export default function TodayExamSchedulePage() {
                           <div className="flex items-center justify-center">
                             <Clock className="w-4 h-4 text-red-600 mr-2" />
                             <span className="text-sm text-gray-900 font-medium">
-                              {formatTime(exam.endDay)}
+                              {formatTimeFromTimeSpan(exam.endTime)}
                             </span>
                           </div>
                         </td>
@@ -467,7 +457,7 @@ export default function TodayExamSchedulePage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${statusInfo.color}`}>
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-${statusInfo.color}-600 bg-${statusInfo.color}-100`}>
                             <StatusIcon className="w-3 h-3 mr-1" />
                             {statusInfo.label}
                           </span>
@@ -475,10 +465,10 @@ export default function TodayExamSchedulePage() {
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                           <button
                             onClick={() => handleExamAction(exam)}
-                            disabled={isUpdating}
+                            disabled={isUpdating || statusInfo.disabled}
                             className={`inline-flex items-center space-x-2 px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg ${
-                              isUpdating 
-                                ? 'bg-gray-400 cursor-not-allowed' 
+                              isUpdating
+                                ? 'bg-gray-400 cursor-not-allowed'
                                 : statusInfo.buttonColor
                             }`}
                           >
@@ -501,7 +491,7 @@ export default function TodayExamSchedulePage() {
                     <tr>
                       <td colSpan={8} className="px-6 py-12 text-center">
                         <div className="flex flex-col items-center">
-                          <AlertCircle className="w-12 h-12 text-gray-300 mb-4" />
+                          <CheckCircle2 className="w-12 h-12 text-gray-300 mb-4" />
                           <p className="text-gray-500 text-lg font-medium">
                             Không có ca thi nào trong ngày {formatDate(selectedDate)}
                           </p>
@@ -515,49 +505,6 @@ export default function TodayExamSchedulePage() {
             </div>
           )}
         </div>
-
-        {/* Quick Actions */}
-        {examSchedules.length > 0 && (
-          <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Thao tác nhanh</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button
-                onClick={() => router.push('/teacher/examsupervisor')}
-                className="flex items-center justify-center space-x-2 px-6 py-3 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg font-medium transition-colors duration-200"
-              >
-                <Calendar className="w-5 h-5" />
-                <span>Xem lịch tuần</span>
-              </button>
-              
-              <button
-                onClick={() => {
-                  const ongoingExam = examSchedules.find(e => e.status === 1);
-                  if (ongoingExam) {
-                    router.push(`/teacher/examsupervisor/attendancechecking?examId=${ongoingExam.examSlotRoomId}`);
-                  } else {
-                    alert('Không có ca thi nào đang diễn ra');
-                  }
-                }}
-                disabled={!examSchedules.some(e => e.status === 1)}
-                className="flex items-center justify-center space-x-2 px-6 py-3 bg-green-100 hover:bg-green-200 text-green-800 rounded-lg font-medium transition-colors duration-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
-              >
-                <CheckCircle2 className="w-5 h-5" />
-                <span>Ca thi hiện tại</span>
-              </button>
-              
-              <button
-                onClick={() => {
-                  const today = new Date().toISOString().slice(0, 10);
-                  setSelectedDate(today);
-                }}
-                className="flex items-center justify-center space-x-2 px-6 py-3 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-lg font-medium transition-colors duration-200"
-              >
-                <Clock className="w-5 h-5" />
-                <span>Về hôm nay</span>
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

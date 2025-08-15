@@ -254,7 +254,7 @@ export default function ExamSlotListPage() {
   };
 
   // Fetch exam slots
-  const fetchExamSlots = async () => {
+const fetchExamSlots = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -269,7 +269,14 @@ export default function ExamSlotListPage() {
       params.append('pageIndex', currentPage.toString());
 
       const response = await fetch(`${API_BASE}/ViewExamSlot/GetAllExamSlotsPagination?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch exam slots');
+      if (!response.ok) {
+        // Show alert and clear examSlots if filter API fails
+        const errorText = await response.text();
+       // alert(`Lỗi khi lọc ca thi: ${errorText || response.statusText}`);
+        setExamSlots([]);
+        setTotalPages(1);
+        return;
+      }
       const data = await response.json();
       setExamSlots(data);
 
@@ -280,7 +287,9 @@ export default function ExamSlotListPage() {
         setTotalPages(totalPagesData);
       }
     } catch (err) {
-      setError('Không thể tải danh sách ca thi');
+      alert('Không thể tải danh sách ca thi do lỗi hệ thống hoặc kết nối!');
+      setExamSlots([]);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -750,21 +759,32 @@ export default function ExamSlotListPage() {
                   </button>
                   
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const pageNum = Math.max(1, Math.min(currentPage - 2 + i, totalPages - 4 + i));
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => setCurrentPage(pageNum)}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium ${
-                          currentPage === pageNum
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
+                      let pageNum = i + 1;
+                      if (totalPages > 5) {
+                        if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                      }
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                            currentPage === pageNum
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                          }`}
+                          disabled={pageNum < 1 || pageNum > totalPages}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })
+                  }
                   
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}

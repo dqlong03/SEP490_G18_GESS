@@ -70,11 +70,12 @@ export default function AttendanceCheckingPage() {
   const dataIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch exam info
-  const fetchExamInfo = async () => {
+   const fetchExamInfo = async () => {
     if (!examId) return;
     try {
       const res = await fetch(`https://localhost:7074/api/ExamSchedule/slots/${examId}`);
       const data = await res.json();
+     
       setExamInfo(data);
     } catch (error) {
       console.error("Error fetching exam info:", error);
@@ -179,9 +180,22 @@ export default function AttendanceCheckingPage() {
     }
 
     // Set up new interval for data refresh (5 seconds)
-    dataIntervalRef.current = setInterval(async () => {
+     dataIntervalRef.current = setInterval(async () => {
       console.log("Auto refreshing student data...");
-      await fetchStudents(true);
+      // Gọi đồng thời lấy students và exam info mới nhất
+      const [_, examInfoRes] = await Promise.all([
+        fetchStudents(true),
+        fetch(`https://localhost:7074/api/ExamSchedule/slots/${examId}`)
+      ]);
+      // Kiểm tra status của examInfo mới nhất
+      let examInfoData = null;
+      try {
+        examInfoData = await examInfoRes.json();
+      } catch {}
+      if (examInfoData && examInfoData.status === 2) {
+        router.push("/teacher/examsupervisor");
+        return;
+      }
       setDataRefreshTimer(5); // Reset timer về 5 giây
     }, 5000);
 
