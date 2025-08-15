@@ -148,13 +148,12 @@ namespace GESS.Repository.Implement
                     (sesr, esr) => new { StudentExamSlotRoom = sesr, ExamSlotRoom = esr })
                 .Where(x => x.ExamSlotRoom.SemesterId == latestSemesterId
                     && x.ExamSlotRoom.MultiExamId != null
-                    && x.ExamSlotRoom.ExamDate.Year == latestYear)
+                    && x.ExamSlotRoom.ExamDate.Year == latestYear
+                    && x.ExamSlotRoom.Status == 1) // Kiểm tra trạng thái ca thi: Đang mở ca
                 .Join(_context.MultiExams,
                     x => x.ExamSlotRoom.MultiExamId,
                     me => me.MultiExamId,
                     (x, me) => new { x.StudentExamSlotRoom, x.ExamSlotRoom, MultiExam = me })
-                .Where(x => x.MultiExam.Status.ToLower().Trim() == PredefinedStatusAllExam.ONHOLD_EXAM.ToLower().Trim()
-                    || x.MultiExam.Status.ToLower().Trim() == PredefinedStatusAllExam.OPENING_EXAM.ToLower().Trim())
                 .Join(_context.MultiExamHistories,
                     x => new { x.MultiExam.MultiExamId, x.StudentExamSlotRoom.StudentId },
                     meh => new { meh.MultiExamId, meh.StudentId },
@@ -217,13 +216,12 @@ namespace GESS.Repository.Implement
                     (sesr, esr) => new { StudentExamSlotRoom = sesr, ExamSlotRoom = esr })
                 .Where(x => x.ExamSlotRoom.SemesterId == latestSemesterId
                     && x.ExamSlotRoom.PracticeExamId != null
-                    && x.ExamSlotRoom.ExamDate.Year == latestYear)
+                    && x.ExamSlotRoom.ExamDate.Year == latestYear
+                    && x.ExamSlotRoom.Status == 1)
                 .Join(_context.PracticeExams,
                     x => x.ExamSlotRoom.PracticeExamId,
                     me => me.PracExamId,
                     (x, me) => new { x.StudentExamSlotRoom, x.ExamSlotRoom, PracticeExam = me })
-                .Where(x => x.PracticeExam.Status.ToLower().Trim() == PredefinedStatusAllExam.ONHOLD_EXAM.ToLower().Trim()
-                    || x.PracticeExam.Status.ToLower().Trim() == PredefinedStatusAllExam.OPENING_EXAM.ToLower().Trim())
                 .Join(_context.PracticeExamHistories,
                     x => new { x.PracticeExam.PracExamId, x.StudentExamSlotRoom.StudentId },
                     meh => new { meh.PracExamId, meh.StudentId },
