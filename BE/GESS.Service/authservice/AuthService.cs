@@ -317,11 +317,13 @@ namespace GESS.Service.authservice
         {
             try
             {
+                // Validate Google token
                 var payload = await GoogleJsonWebSignature.ValidateAsync(model.IdToken, new GoogleJsonWebSignature.ValidationSettings
                 {
                     Audience = new[] { _configuration["Authenticationdesk:Google:ClientId"] }
                 });
 
+                // Tìm user theo email
                 var user = await _userManager.FindByEmailAsync(payload.Email);
                 if (user == null)
                 {
@@ -384,9 +386,18 @@ namespace GESS.Service.authservice
                     StudentName = user.Fullname
                 };
             }
-            catch (Exception ex)
+            catch (InvalidJwtException ex)
             {
                 return new GoogleLoginDesktopResult { Success = false, ErrorMessage = "Token Google không hợp lệ: " + ex.Message };
+            }
+            catch (ArgumentException ex)
+            {
+                return new GoogleLoginDesktopResult { Success = false, ErrorMessage = "Dữ liệu đầu vào không hợp lệ: " + ex.Message };
+            }
+            catch (Exception ex)
+            {
+                // Log chi tiết lỗi để debug
+                return new GoogleLoginDesktopResult { Success = false, ErrorMessage = $"Lỗi hệ thống: {ex.GetType().Name} - {ex.Message}" };
             }
         }
     }
