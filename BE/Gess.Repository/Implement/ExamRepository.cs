@@ -581,17 +581,43 @@ namespace GESS.Repository.Implement
             if (string.IsNullOrEmpty(request.ExamType) || request.ExamType.Equals("Multi", StringComparison.OrdinalIgnoreCase))
             {
                 var multiExams = await _context.MultiExams
+                    .Include(m => m.CategoryExam)
                     .Where(m => request.ExamIds.Contains(m.MultiExamId))
                     .ToListAsync();
 
                 foreach (var exam in multiExams)
                 {
+                    string status = "";
+                    
+                    // Kiểm tra nếu là bài thi cuối kỳ
+                    if (exam.CategoryExam?.CategoryExamName == PredefinedCategoryExam.Final_EXAM_CATEGORY)
+                    {
+                        // Bài thi cuối kỳ - check status từ ExamSlotRoom
+                        var examSlotRoom = await _context.ExamSlotRooms
+                            .Where(esr => esr.MultiExamId == exam.MultiExamId)
+                            .FirstOrDefaultAsync();
+                        
+                        if (examSlotRoom != null)
+                        {
+                            status = GetExamSlotRoomStatusText(examSlotRoom.Status);
+                        }
+                        else
+                        {
+                            status = "Chưa có ca thi";
+                        }
+                    }
+                    else
+                    {
+                        // Bài thi giữa kỳ - check status từ MultiExam
+                        status = exam.Status ?? "";
+                    }
+                    
                     result.Exams.Add(new ExamStatusCheckResponseDTO
                     {
                         ExamId = exam.MultiExamId,
                         ExamName = exam.MultiExamName,
                         ExamType = "MultiExam",
-                        Status = exam.Status ?? ""
+                        Status = status
                     });
                 }
             }
@@ -600,22 +626,64 @@ namespace GESS.Repository.Implement
             if (string.IsNullOrEmpty(request.ExamType) || request.ExamType.Equals("Practice", StringComparison.OrdinalIgnoreCase))
             {
                 var practiceExams = await _context.PracticeExams
+                    .Include(p => p.CategoryExam)
                     .Where(p => request.ExamIds.Contains(p.PracExamId))
                     .ToListAsync();
 
                 foreach (var exam in practiceExams)
                 {
+                    string status = "";
+                    
+                    // Kiểm tra nếu là bài thi cuối kỳ
+                    if (exam.CategoryExam?.CategoryExamName == PredefinedCategoryExam.Final_EXAM_CATEGORY)
+                    {
+                        // Bài thi cuối kỳ - check status từ ExamSlotRoom
+                        var examSlotRoom = await _context.ExamSlotRooms
+                            .Where(esr => esr.PracticeExamId == exam.PracExamId)
+                            .FirstOrDefaultAsync();
+                        
+                        if (examSlotRoom != null)
+                        {
+                            status = GetExamSlotRoomStatusText(examSlotRoom.Status);
+                        }
+                        else
+                        {
+                            status = "Chưa có ca thi";
+                        }
+                    }
+                    else
+                    {
+                        // Bài thi giữa kỳ - check status từ PracticeExam
+                        status = exam.Status ?? "";
+                    }
+                    
                     result.Exams.Add(new ExamStatusCheckResponseDTO
                     {
                         ExamId = exam.PracExamId,
                         ExamName = exam.PracExamName,
                         ExamType = "PracticeExam",
-                        Status = exam.Status ?? ""
+                        Status = status
                     });
                 }
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Chuyển đổi status int của ExamSlotRoom sang text mô tả
+        /// </summary>
+        /// <param name="status">Status int từ ExamSlotRoom</param>
+        /// <returns>Text mô tả trạng thái</returns>
+        private static string GetExamSlotRoomStatusText(int status)
+        {
+            return status switch
+            {
+                0 => "Chưa mở ca",
+                1 => "Đang mở ca", 
+                2 => "Đã đóng ca",
+                _ => "Không xác định"
+            };
         }
     }
 }

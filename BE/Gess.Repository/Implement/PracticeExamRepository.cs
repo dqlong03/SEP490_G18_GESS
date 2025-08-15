@@ -352,8 +352,8 @@ namespace GESS.Repository.Implement
             }
 
             // 3. Lấy danh sách sinh viên và validate
-            List<Guid> studentIds;
-            if (exam.ClassId != 0) // Giữa kỳ
+            List<Guid> studentIds;  
+            if (exam.ClassId !=  null) // Giữa kỳ
             {
                 studentIds = await _context.ClassStudents
                     .Where(cs => cs.ClassId == exam.ClassId)
@@ -363,11 +363,22 @@ namespace GESS.Repository.Implement
             }
             else // Cuối kỳ
             {
-                var examSlotRoomId = exam.ExamSlotRoom?.ExamSlotRoomId;
-                studentIds = await _context.PracticeExamHistories
-                    .Where(h => h.ExamSlotRoomId == examSlotRoomId && h.PracExamId == exam.PracExamId)
-                    .OrderBy(h => h.StudentId)
-                    .Select(h => h.StudentId)
+                // Tìm ExamSlotRoom mà sinh viên này thuộc về thông qua bảng StudentExamSlotRoom
+                var studentExamSlotRoom = await _context.StudentExamSlotRoom
+                    .Include(s => s.ExamSlotRoom)
+                    .FirstOrDefaultAsync(s => s.StudentId == request.StudentId && 
+                                            s.ExamSlotRoom.PracticeExamId == exam.PracExamId);
+
+                if (studentExamSlotRoom == null)
+                {
+                    throw new Exception("Sinh viên không thuộc phòng/ca nào của bài thi này.");
+                }
+
+                var examSlotRoomId = studentExamSlotRoom.ExamSlotRoomId;
+                studentIds = await _context.StudentExamSlotRoom
+                    .Where(s => s.ExamSlotRoomId == examSlotRoomId)
+                    .OrderBy(s => s.StudentId)
+                    .Select(s => s.StudentId)
                     .ToListAsync();
             }
 

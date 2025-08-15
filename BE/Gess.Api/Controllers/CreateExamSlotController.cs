@@ -86,6 +86,7 @@ namespace GESS.Api.Controllers
 
             return Ok(existingTeachers);
         }
+        [HttpPost("SaveExam")]
         public async Task<IActionResult> SaveExamSlot([FromBody] List<GeneratedExamSlot> examSlots)
         {
             if (examSlots == null || !examSlots.Any())
