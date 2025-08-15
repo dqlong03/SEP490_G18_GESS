@@ -30,7 +30,7 @@ namespace GESS.Api.Controllers
         }
       
         [HttpPost("CheckExamNameAndCodeME")]
-        [CustomRoleAuth(PredefinedRole.STUDENT_ROLE)]
+        //[CustomRoleAuth(PredefinedRole.STUDENT_ROLE)]
         public async Task<IActionResult> CheckExamNameAndCodeME([FromBody] CheckExamRequestDTO request)
         {
             try
