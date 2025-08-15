@@ -140,43 +140,38 @@ namespace GESS.Repository.Implement
             if (latestSemesterId == 0)
                 return new List<ExamListOfStudentResponse>();
 
-            var query = _context.MultiExams
-                .Where(me => me.CreateAt.Year == latestYear
-                    && me.SemesterId == latestSemesterId
-                    && (me.Status.ToLower().Trim() == PredefinedStatusAllExam.ONHOLD_EXAM.ToLower().Trim() || me.Status.ToLower().Trim() == PredefinedStatusAllExam.OPENING_EXAM.ToLower().Trim())) 
-
-                .Join(_context.MultiExamHistories,
+            var query = _context.StudentExamSlotRoom
+                .Where(sesr => sesr.StudentId == request.StudentId)
+                .Join(_context.ExamSlotRooms,
+                    sesr => sesr.ExamSlotRoomId,
+                    esr => esr.ExamSlotRoomId,
+                    (sesr, esr) => new { StudentExamSlotRoom = sesr, ExamSlotRoom = esr })
+                .Where(x => x.ExamSlotRoom.SemesterId == latestSemesterId
+                    && x.ExamSlotRoom.MultiExamId != null
+                    && x.ExamSlotRoom.ExamDate.Year == latestYear)
+                .Join(_context.MultiExams,
+                    x => x.ExamSlotRoom.MultiExamId,
                     me => me.MultiExamId,
-                    meh => meh.MultiExamId,
-                    (me, meh) => new { MultiExam = me, MultiExamHistory = meh })
-
-                .Where(x => x.MultiExamHistory.StudentId == request.StudentId
-                    && (x.MultiExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM.ToLower().Trim() || x.MultiExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM.ToLower().Trim())) 
-                .Select(x => x.MultiExam)
-
-
+                    (x, me) => new { x.StudentExamSlotRoom, x.ExamSlotRoom, MultiExam = me })
+                .Where(x => x.MultiExam.Status.ToLower().Trim() == PredefinedStatusAllExam.ONHOLD_EXAM.ToLower().Trim()
+                    || x.MultiExam.Status.ToLower().Trim() == PredefinedStatusAllExam.OPENING_EXAM.ToLower().Trim())
+                .Join(_context.MultiExamHistories,
+                    x => new { x.MultiExam.MultiExamId, x.StudentExamSlotRoom.StudentId },
+                    meh => new { meh.MultiExamId, meh.StudentId },
+                    (x, meh) => new { x.StudentExamSlotRoom, x.ExamSlotRoom, x.MultiExam, MultiExamHistory = meh })
+                .Where(x => x.MultiExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM.ToLower().Trim()
+                    || x.MultiExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM.ToLower().Trim())
                 .Join(_context.Subjects,
-                    me => me.SubjectId,
+                    x => x.MultiExam.SubjectId,
                     s => s.SubjectId,
-                    (me, s) => new { MultiExam = me, SubjectName = s.SubjectName })
-
-                .GroupJoin(_context.ExamSlotRooms,
-                    x => x.MultiExam.MultiExamId,
-                    esr => esr.MultiExamId,
-                    (x, esr) => new { x.MultiExam, x.SubjectName, ExamSlotRooms = esr })
-                .SelectMany(x => x.ExamSlotRooms.DefaultIfEmpty(),
-                    (x, esr) => new { x.MultiExam, x.SubjectName, ExamSlotRoom = esr })
-                .GroupJoin(_context.ExamSlots,
-                    x => x.ExamSlotRoom != null ? x.ExamSlotRoom.ExamSlotId : 0,
+                    (x, s) => new { x.StudentExamSlotRoom, x.ExamSlotRoom, x.MultiExam, x.MultiExamHistory, SubjectName = s.SubjectName })
+                .Join(_context.ExamSlots,
+                    x => x.ExamSlotRoom.ExamSlotId,
                     es => es.ExamSlotId,
-                    (x, es) => new { x.MultiExam, x.SubjectName, x.ExamSlotRoom, ExamSlots = es })
-                .SelectMany(x => x.ExamSlots.DefaultIfEmpty(),
-                    (x, es) => new { x.MultiExam, x.SubjectName, x.ExamSlotRoom, ExamSlot = es })
-                .GroupJoin(_context.Rooms,
-                    x => x.ExamSlotRoom != null ? x.ExamSlotRoom.RoomId : 0,
+                    (x, es) => new { x.StudentExamSlotRoom, x.ExamSlotRoom, x.MultiExam, x.MultiExamHistory, x.SubjectName, ExamSlot = es })
+                .Join(_context.Rooms,
+                    x => x.ExamSlotRoom.RoomId,
                     r => r.RoomId,
-                    (x, r) => new { x.MultiExam, x.SubjectName, x.ExamSlotRoom, x.ExamSlot, Rooms = r })
-                .SelectMany(x => x.Rooms.DefaultIfEmpty(),
                     (x, r) => new ExamListOfStudentResponse
                     {
                         ExamId = x.MultiExam.MultiExamId,
@@ -184,23 +179,20 @@ namespace GESS.Repository.Implement
                         SubjectName = x.SubjectName,
                         Duration = x.MultiExam.Duration,
                         Status = x.MultiExam.Status,
-                        //CodeStart = x.MultiExam.CodeStart,
-                        //StartDay = x.MultiExam != null ? x.MultiExam.StartDay : default,
-                        //EndDay = x.MultiExam != null ? x.MultiExam.EndDay : default,
                         ExamDate = x.ExamSlotRoom.ExamDate,
-                        RoomName = r != null ? r.RoomName : null,
-                        ExamSlotName = x.ExamSlot != null ? x.ExamSlot.SlotName : null,
-                        StartTime = x.ExamSlot != null ? x.ExamSlot.StartTime : default,
-                        EndTime = x.ExamSlot != null ? x.ExamSlot.EndTime : default,
-                        //ExamSlotRoom = x.ExamSlotRoom
+                        RoomName = r.RoomName,
+                        ExamSlotName = x.ExamSlot.SlotName,
+                        StartTime = x.ExamSlot.StartTime,
+                        EndTime = x.ExamSlot.EndTime
                     });
-
 
             return await query.ToListAsync();
         }
-    
+
+
         public async Task<List<ExamListOfStudentResponse>> GetAllPracExamOfStudentAsync(ExamFilterRequest request)
         {
+            // Lấy năm mới nhất từ CreateAt của MultiExam
             var latestYear = await _context.PracticeExams
                 .MaxAsync(me => (int?)me.CreateAt.Year) ?? DateTime.Now.Year;
 
@@ -217,45 +209,38 @@ namespace GESS.Repository.Implement
             if (latestSemesterId == 0)
                 return new List<ExamListOfStudentResponse>();
 
-            var query = _context.PracticeExams
-                .Where(me => me.CreateAt.Year == latestYear
-                    && me.SemesterId == latestSemesterId
-                    && (me.Status.ToLower().Trim() == PredefinedStatusAllExam.ONHOLD_EXAM.ToLower().Trim() || me.Status.ToLower().Trim() == PredefinedStatusAllExam.OPENING_EXAM.ToLower().Trim()))
-
-                .Join(_context.PracticeExamHistories,
+            var query = _context.StudentExamSlotRoom
+                .Where(sesr => sesr.StudentId == request.StudentId)
+                .Join(_context.ExamSlotRooms,
+                    sesr => sesr.ExamSlotRoomId,
+                    esr => esr.ExamSlotRoomId,
+                    (sesr, esr) => new { StudentExamSlotRoom = sesr, ExamSlotRoom = esr })
+                .Where(x => x.ExamSlotRoom.SemesterId == latestSemesterId
+                    && x.ExamSlotRoom.PracticeExamId != null
+                    && x.ExamSlotRoom.ExamDate.Year == latestYear)
+                .Join(_context.PracticeExams,
+                    x => x.ExamSlotRoom.PracticeExamId,
                     me => me.PracExamId,
-                    meh => meh.PracExamId,
-                    (me, meh) => new { PracticeExam = me, PracticeExamHistory = meh })
-
-                .Where(x => x.PracticeExamHistory.StudentId == request.StudentId
-                    && (x.PracticeExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM.ToLower().Trim() || x.PracticeExamHistory.StatusExam == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM.ToLower().Trim()))
-                .Select(x => x.PracticeExam)
-
-
+                    (x, me) => new { x.StudentExamSlotRoom, x.ExamSlotRoom, PracticeExam = me })
+                .Where(x => x.PracticeExam.Status.ToLower().Trim() == PredefinedStatusAllExam.ONHOLD_EXAM.ToLower().Trim()
+                    || x.PracticeExam.Status.ToLower().Trim() == PredefinedStatusAllExam.OPENING_EXAM.ToLower().Trim())
+                .Join(_context.PracticeExamHistories,
+                    x => new { x.PracticeExam.PracExamId, x.StudentExamSlotRoom.StudentId },
+                    meh => new { meh.PracExamId, meh.StudentId },
+                    (x, meh) => new { x.StudentExamSlotRoom, x.ExamSlotRoom, x.PracticeExam, PracticeExamHistory = meh })
+                .Where(x => x.PracticeExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM.ToLower().Trim()
+                    || x.PracticeExamHistory.StatusExam.ToLower().Trim() == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM.ToLower().Trim())
                 .Join(_context.Subjects,
-                    me => me.SubjectId,
+                    x => x.PracticeExam.SubjectId,
                     s => s.SubjectId,
-                    (me, s) => new { PracticeExam = me, SubjectName = s.SubjectName })
-
-                .GroupJoin(_context.ExamSlotRooms,
-                    x => x.PracticeExam.PracExamId,
-                    esr => esr.PracticeExamId,
-                    (x, esr) => new { x.PracticeExam, x.SubjectName, ExamSlotRooms = esr })
-                .SelectMany(x => x.ExamSlotRooms.DefaultIfEmpty(),
-
-                    (x, esr) => new { x.PracticeExam, x.SubjectName, ExamSlotRoom = esr })
-                .GroupJoin(_context.ExamSlots,
-                    x => x.ExamSlotRoom != null ? x.ExamSlotRoom.ExamSlotId : 0,
+                    (x, s) => new { x.StudentExamSlotRoom, x.ExamSlotRoom, x.PracticeExam, x.PracticeExamHistory, SubjectName = s.SubjectName })
+                .Join(_context.ExamSlots,
+                    x => x.ExamSlotRoom.ExamSlotId,
                     es => es.ExamSlotId,
-                    (x, es) => new { x.PracticeExam, x.SubjectName, x.ExamSlotRoom, ExamSlots = es })
-                .SelectMany(x => x.ExamSlots.DefaultIfEmpty(),
-                    (x, es) => new { x.PracticeExam, x.SubjectName, x.ExamSlotRoom, ExamSlot = es })
-
-                .GroupJoin(_context.Rooms,
-                    x => x.ExamSlotRoom != null ? x.ExamSlotRoom.RoomId : 0,
+                    (x, es) => new { x.StudentExamSlotRoom, x.ExamSlotRoom, x.PracticeExam, x.PracticeExamHistory, x.SubjectName, ExamSlot = es })
+                .Join(_context.Rooms,
+                    x => x.ExamSlotRoom.RoomId,
                     r => r.RoomId,
-                    (x, r) => new { x.PracticeExam, x.SubjectName, x.ExamSlotRoom, x.ExamSlot, Rooms = r })
-                .SelectMany(x => x.Rooms.DefaultIfEmpty(),
                     (x, r) => new ExamListOfStudentResponse
                     {
                         ExamId = x.PracticeExam.PracExamId,
@@ -263,17 +248,12 @@ namespace GESS.Repository.Implement
                         SubjectName = x.SubjectName,
                         Duration = x.PracticeExam.Duration,
                         Status = x.PracticeExam.Status,
-                        //CodeStart = x.PracticeExam.CodeStart,
-                        //StartDay = x.PracticeExam != null ? x.PracticeExam.StartDay : default,
-                        //EndDay = x.PracticeExam != null ? x.PracticeExam.EndDay : default,
                         ExamDate = x.ExamSlotRoom.ExamDate,
-                        RoomName = r != null ? r.RoomName : null,
-                        ExamSlotName = x.ExamSlot != null ? x.ExamSlot.SlotName : null,
-                        StartTime = x.ExamSlot != null ? x.ExamSlot.StartTime : default,
-                        EndTime = x.ExamSlot != null ? x.ExamSlot.EndTime : default,
-                        // ExamSlotRoom = x.ExamSlotRoom
+                        RoomName = r.RoomName,
+                        ExamSlotName = x.ExamSlot.SlotName,
+                        StartTime = x.ExamSlot.StartTime,
+                        EndTime = x.ExamSlot.EndTime
                     });
-
 
             return await query.ToListAsync();
         }

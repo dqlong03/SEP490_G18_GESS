@@ -293,11 +293,29 @@ namespace GESS.Repository.Implement
 
             // 1. Find exam by id
             var exam = await _context.MultiExams
-                .Include(m => m.Class)
+
                 .Include(m => m.Subject)
                 .Include(m => m.CategoryExam)
                 .Include(m => m.NoQuestionInChapters)
-                .SingleOrDefaultAsync(m => m.MultiExamId == examId);
+                .SingleOrDefaultAsync(m => m.MultiExamId == examId && m.CodeStart == code);
+            List<Guid> studentIds;
+            if (exam.ClassId != 0) // Giữa kỳ
+            {
+               studentIds = await _context.ClassStudents
+                    .Where(cs => cs.ClassId == exam.ClassId)
+                    .OrderBy(cs => cs.StudentId)
+                    .Select(cs => cs.StudentId)
+                    .ToListAsync();
+            }
+            else // Cuối kỳ
+            {
+                var examSlotRoomId = exam.ExamSlotRoom?.ExamSlotRoomId;
+                studentIds = await _context.MultiExamHistories
+                    .Where(h => h.ExamSlotRoomId == examSlotRoomId && h.MultiExamId == exam.MultiExamId)
+                    .OrderBy(h => h.StudentId)
+                    .Select(h => h.StudentId)
+                    .ToListAsync();
+            }
 
             if (exam == null)
             {
@@ -318,14 +336,16 @@ namespace GESS.Repository.Implement
             // 3. VALIDATE KHUNG THỜI GIAN CHO KỲ THI GIỮA KỲ
             await ValidateExamTimeFrame(exam);
 
-            // 4. Validate student is in the class for the exam
-            var isStudentInClass = await _context.ClassStudents
-                .AnyAsync(cs => cs.ClassId == exam.ClassId && cs.StudentId == studentId);
+            //// 4. Validate student is in the class for the exam
+            //var isStudentInClass = await _context.ClassStudents
+            //    .AnyAsync(cs => cs.ClassId == exam.ClassId && cs.StudentId == studentId);
 
-            if (!isStudentInClass)
-            {
-                throw new Exception("Bạn không thuộc lớp của bài thi này.");
-            }
+
+           
+            //if (!isStudentInClass)
+            //{
+            //    throw new Exception("Bạn không thuộc lớp của bài thi này.");
+            //}
 
             // 5. Get exam history and check for attendance
             var history = await _context.MultiExamHistories
