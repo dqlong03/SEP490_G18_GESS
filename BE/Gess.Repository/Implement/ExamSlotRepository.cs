@@ -567,8 +567,6 @@ namespace GESS.Repository.Implement
                     RoomId = room.RoomId,
                     ExamSlotId = examSlot.ExamSlotId,
                     SemesterId = item.SemesterId,
-                    SupervisorId = item.Proctors.FirstOrDefault()?.TeacherId,
-                    ExamGradedId = item.Graders.FirstOrDefault(g => g.RoomId == room.RoomId)?.TeacherId,
                     SubjectId = item.SubjectId,
                     MultiOrPractice = item.MultiOrPractice,
                     ExamDate = item.Date,
