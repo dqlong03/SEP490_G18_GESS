@@ -109,6 +109,7 @@ namespace GESS.Repository.Implement
                     Code = examSlotRoom.MultiOrPractice.Equals("Multiple")
                         ? examSlotRoom.MultiExam?.CodeStart
                         : examSlotRoom.PracticeExam?.CodeStart,
+                    Status = examSlotRoom.Status
                 };
 
                 return examSlotRoomDetail;

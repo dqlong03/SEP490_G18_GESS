@@ -17,5 +17,7 @@ namespace GESS.Model.ExamSlotRoomDTO
         public TimeSpan ? StartTime { get; set; }
         public TimeSpan? EndTime { get; set; }
         public string? Code { get; set; }
+
+        public int? Status { get; set; }
     }
 }

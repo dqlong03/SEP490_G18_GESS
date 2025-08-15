@@ -28,6 +28,8 @@ namespace GESS.Model.PracticeExamPaper
         [Range(1, int.MaxValue, ErrorMessage = "CategoryExamId phải lớn hơn 0")]
         public int CategoryExamId { get; set; }
 
+        public int SemesterId { get; set; }
+
         public List<ManualQuestionDTO> ManualQuestions { get; set; }
         public List<SelectedQuestionDTO> SelectedQuestions { get; set; }
     }
