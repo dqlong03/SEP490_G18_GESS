@@ -49,7 +49,7 @@ namespace GESS.Repository.Implement
                 CreateAt = exam.CreateAt,
                 TeacherId = exam.TeacherId,
                 SubjectId = exam.SubjectId,
-                ClassId = exam.ClassId,
+                ClassId = exam.ClassId??0,
                 CategoryExamId = exam.CategoryExamId,
                 SemesterId = exam.SemesterId,
                 IsPublish = exam.IsPublish,

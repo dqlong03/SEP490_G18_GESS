@@ -113,7 +113,7 @@ namespace GESS.Repository.Implement
                 TeacherId = exam.TeacherId,
                 CategoryExamId = exam.CategoryExamId,
                 SubjectId = exam.SubjectId,
-                ClassId = exam.ClassId,
+                ClassId = exam.ClassId??0,
                 Status = exam.Status,
                 SemesterId = exam.SemesterId,
                 PracticeExamPaperDTO = examPapers.Select(p => new PracticeExamPaperDTO

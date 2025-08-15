@@ -188,7 +188,7 @@ namespace GESS.Repository.Implement
                 TeacherId = multipleExamCreateDto.TeacherId,
                 CreateAt = multipleExamCreateDto.CreateAt,
                 IsPublish = true,
-                ClassId = 1
+                Status = "Chưa mở ca"
             };
 
             try
@@ -335,7 +335,7 @@ namespace GESS.Repository.Implement
                     SemesterId = finalPracExamCreateDto.SemesterId,
                     TeacherId = finalPracExamCreateDto.TeacherId,
                     CreateAt = DateTime.Now,
-                    ClassId = 1 // Mặc định lớp ảo
+                    Status = "Chưa mở ca"
                 };
 
                 await _context.PracticeExams.AddAsync(pracExam);

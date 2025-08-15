@@ -50,6 +50,11 @@ namespace GESS.Service.exam
         {
             return await _unitOfWork.ExamRepository.GetAllPracExamOfStudentAsync(request);
         }
+
+        public async Task<ExamStatusCheckListResponseDTO> CheckExamStatusAsync(ExamStatusCheckRequestDTO request)
+        {
+            return await _unitOfWork.ExamRepository.CheckExamStatusAsync(request);
+        }
     }
 
 }

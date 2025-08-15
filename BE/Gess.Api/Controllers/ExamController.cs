@@ -79,6 +79,29 @@ namespace GESS.Api.Controllers
             var result = await _examService.GetAllPracExamOfStudentAsync(request);
             return Ok(result);
         }
+
+        /// <summary>
+        /// API kiểm tra trạng thái của multiexam và practice exam - đơn giản cho desktop app polling
+        /// Trả về trạng thái hiện tại: "Chưa mở ca", "Đang mở ca", "Đã đóng ca", etc.
+        /// </summary>
+        /// <param name="request">Request chứa danh sách exam IDs và loại exam cần check</param>
+        /// <returns>Danh sách exam với trạng thái hiện tại</returns>
+        [HttpPost("check-status")]
+        public async Task<IActionResult> CheckExamStatus([FromBody] ExamStatusCheckRequestDTO request)
+        {
+            if (request == null || request.ExamIds == null || !request.ExamIds.Any())
+                return BadRequest("ExamIds không được để trống!");
+
+            try
+            {
+                var result = await _examService.CheckExamStatusAsync(request);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Có lỗi xảy ra khi kiểm tra trạng thái bài thi: {ex.Message}");
+            }
+        }
     }
     
 }

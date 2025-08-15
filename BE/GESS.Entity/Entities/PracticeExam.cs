@@ -61,8 +61,8 @@ namespace GESS.Entity.Entities
         public Semester Semester { get; set; }
 
         // Khóa ngoại liên kết đến lớp học (Class), 1 kỳ thi thuộc 1 lớp học
-        public int ClassId { get; set; }
-        public Class Class { get; set; }
+        public int ? ClassId { get; set; }
+        public Class ? Class { get; set; }
 
         // Phòng thi và ca thi mà kỳ thi này diễn ra (1 kỳ thi diễn ra ở 1 phòng/ca)
         public ExamSlotRoom ExamSlotRoom { get; set; }

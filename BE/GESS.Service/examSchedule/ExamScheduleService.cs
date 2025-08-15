@@ -47,9 +47,7 @@ namespace GESS.Service.examSchedule
             {
                 ExamSlotRoomId = schedule.ExamSlotRoomId,
                 SubjectName = schedule.Subject?.SubjectName ?? "N/A",
-                ExamDate = schedule.MultiOrPractice.Equals("Multiple")
-                    ? (schedule.MultiExam?.StartDay ?? DateTime.MinValue)
-                    : (schedule.PracticeExam?.StartDay ?? DateTime.MinValue),
+                ExamDate = schedule.ExamDate,
                 RoomName = schedule.Room?.RoomName ?? "N/A",
                 ExamSlotId = schedule.ExamSlotId,
                 StartDay = schedule.MultiOrPractice.Equals("Multiple")
@@ -58,7 +56,10 @@ namespace GESS.Service.examSchedule
                 EndDay = schedule.MultiOrPractice.Equals("Multiple")
                     ? (schedule.MultiExam?.EndDay ?? DateTime.MinValue)
                     : (schedule.PracticeExam?.EndDay ?? DateTime.MinValue),
-                Status = schedule.Status
+                Status = schedule.Status,
+                StartTime = schedule.ExamSlot?.StartTime,
+                EndTime = schedule.ExamSlot?.EndTime,
+                ExamSlotStatus = schedule.ExamSlot?.Status ?? "Chưa gán bài thi"
             });
             return examScheduleDtos;
         }

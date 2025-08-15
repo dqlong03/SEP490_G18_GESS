@@ -52,7 +52,7 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProp
             <p className="text-xs text-gray-500">Hệ thống quản lý giáo dục</p>
           </div>
         </div>        <nav className="py-6 px-3 h-[calc(100vh-120px)] overflow-y-auto">
-          {role === 'Admin' && (
+          {role?.toLowerCase() === 'admin' && (
             <div className="mb-8">
               <h3 className="mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3">Quản trị hệ thống</h3>
               <ul className="space-y-1">
@@ -91,7 +91,7 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProp
               </ul>
             </div>
           )}
-          {role === 'Examination' && (
+          {role?.toLowerCase() === 'examination' && (
             <>
               <div className="mb-8">
                 <h3 className="mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3">Quản lý học thuật</h3>
