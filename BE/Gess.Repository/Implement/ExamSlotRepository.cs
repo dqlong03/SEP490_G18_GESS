@@ -154,6 +154,8 @@ namespace GESS.Repository.Implement
 
         public async Task<bool> ChangeStatusExamSlot(int examSlotId, string examType)
         {
+            bool shouldUpdateExamSlotRoomStatus = false;
+
             var examSlot = await _context.ExamSlots
                 .FirstOrDefaultAsync(es => es.ExamSlotId == examSlotId);
             if (examSlot == null)
@@ -181,6 +183,7 @@ namespace GESS.Repository.Implement
                 {
                     examSlot.Status = "Đang chấm thi";
                 }
+                shouldUpdateExamSlotRoomStatus = true;
             }
             else if (examSlot.Status == "Đang chấm thi")
             {
@@ -191,6 +194,23 @@ namespace GESS.Repository.Implement
                 return false;
             }
             _context.ExamSlots.Update(examSlot);
+
+
+            // Update ExamSlotRoom status to 2 when transitioning from "Đang mở ca" to ended/grading states
+            if (shouldUpdateExamSlotRoomStatus)
+            {
+                var examSlotRooms = await _context.ExamSlotRooms
+                    .Where(esr => esr.ExamSlotId == examSlotId && esr.MultiOrPractice == examType)
+                    .ToListAsync();
+
+                foreach (var room in examSlotRooms)
+                {
+                    room.Status = 2;
+                }
+
+                _context.ExamSlotRooms.UpdateRange(examSlotRooms);
+            }
+
             await _context.SaveChangesAsync();
             return true;
         }
