@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { getUserIdFromToken } from '@/utils/tokenUtils';
 import { 
   BookOpen, 
@@ -21,6 +21,7 @@ import {
   Eye,
   Star
 } from 'lucide-react';
+
 
 type Question = {
   id: number;
@@ -62,7 +63,13 @@ const API_URL = 'https://localhost:7074';
 export default function CreateExamPaperPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
+
   const classId = Number(params.classId);
+  const semesterId = searchParams.get('semesterId'); // sẽ là string hoặc null
+  const semesterIdNumber = semesterId ? Number(semesterId) : null;
+
+  console.log(semesterId);
 
   // State
   const [inputName, setInputName] = useState('');
@@ -203,6 +210,7 @@ export default function CreateExamPaperPage() {
       totalQuestion: selectedQuestions.length + manualQuestions.length,
       teacherId,
       categoryExamId: selectedGradeComponent.value,
+      semesterId: semesterIdNumber, // Sử dụng semesterIdNumber đã chuyển đổi
       manualQuestions: manualQuestions.map(q => ({
         content: q.content,
         criteria: JSON.stringify(q.criteria), // Serialize criteria array to JSON string

@@ -154,6 +154,8 @@ namespace GESS.Repository.Implement
 
         public async Task<bool> ChangeStatusExamSlot(int examSlotId, string examType)
         {
+            bool shouldUpdateExamSlotRoomStatus = false;
+
             var examSlot = await _context.ExamSlots
                 .FirstOrDefaultAsync(es => es.ExamSlotId == examSlotId);
             if (examSlot == null)
@@ -181,6 +183,7 @@ namespace GESS.Repository.Implement
                 {
                     examSlot.Status = "Đang chấm thi";
                 }
+                shouldUpdateExamSlotRoomStatus = true;
             }
             else if (examSlot.Status == "Đang chấm thi")
             {
@@ -191,6 +194,23 @@ namespace GESS.Repository.Implement
                 return false;
             }
             _context.ExamSlots.Update(examSlot);
+
+
+            // Update ExamSlotRoom status to 2 when transitioning from "Đang mở ca" to ended/grading states
+            if (shouldUpdateExamSlotRoomStatus)
+            {
+                var examSlotRooms = await _context.ExamSlotRooms
+                    .Where(esr => esr.ExamSlotId == examSlotId && esr.MultiOrPractice == examType)
+                    .ToListAsync();
+
+                foreach (var room in examSlotRooms)
+                {
+                    room.Status = 2;
+                }
+
+                _context.ExamSlotRooms.UpdateRange(examSlotRooms);
+            }
+
             await _context.SaveChangesAsync();
             return true;
         }
@@ -362,7 +382,16 @@ namespace GESS.Repository.Implement
                     SubjectName = es.Subject.SubjectName,
                     SemesterId = es.SemesterId,
                     SemesterName = es.Semester.SemesterName,
-                    ExamDate = es.ExamDate
+                    ExamDate = es.ExamDate,
+                    // Kiểm tra Proctor
+                    ProctorStatus = es.ExamSlotRooms.Any(r => r.SupervisorId != null)
+                    ? "Chưa gán giảng viên coi thi"
+                    : "Đã gán giảng viên coi thi",
+
+                    // Kiểm tra Grader
+                    GradeTeacherStatus = es.ExamSlotRooms.Any(r => r.ExamGradedId == null)
+                    ? "Chưa gán giảng viên chấm thi"
+                    : "Đã gán giảng viên chấm thi"
                 })
                 .Skip((pageIndex - 1) * pageSize)
                 .Take(pageSize)
@@ -547,8 +576,6 @@ namespace GESS.Repository.Implement
                     RoomId = room.RoomId,
                     ExamSlotId = examSlot.ExamSlotId,
                     SemesterId = item.SemesterId,
-                    SupervisorId = item.Proctors.FirstOrDefault()?.TeacherId,
-                    ExamGradedId = item.Graders.FirstOrDefault(g => g.RoomId == room.RoomId)?.TeacherId,
                     SubjectId = item.SubjectId,
                     MultiOrPractice = item.MultiOrPractice,
                     ExamDate = item.Date,
@@ -564,7 +591,7 @@ namespace GESS.Repository.Implement
                     foreach (var student in room.Students)
                     {
                         var existingStudent = await _context.Students
-                            .FirstOrDefaultAsync(s => s.User.Code == student.Code);
+                            .FirstOrDefaultAsync(s => s.User.Code == student.Code || s.User.Email==student.Email);
 
                         if (existingStudent == null)
                         {

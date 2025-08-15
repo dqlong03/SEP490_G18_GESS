@@ -19,8 +19,6 @@ namespace GESS.Model.ExamSlotCreateDTO
         public DateTime StartTime { get; set; }        
         public DateTime EndTime { get; set; }         
         public List<RoomExamSlot> Rooms { get; set; }  
-        public List<TeacherAssignment> Proctors { get; set; }
-        public List<GraderAssignment> Graders { get; set; }
     }
 
     public class RoomExamSlot

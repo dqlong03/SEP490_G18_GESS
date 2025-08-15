@@ -157,8 +157,24 @@ function findWeekOfToday(weekOptions: WeekOption[]): WeekOption | undefined {
 function getStatusInfo(status: number, isToday: boolean, examSlotStatus: string) {
   // Kiểm tra trường hợp chưa gán bài thi
   const isNotAssigned = examSlotStatus === "Chưa gán bài thi";
-  const isDisabled = !isToday && (status === 0 || status === 1) || isNotAssigned;
-  
+  const isNotOpened = examSlotStatus === "Chưa mở ca";
+  const isDisabled = !isToday && (status === 0 || status === 1) || isNotAssigned || isNotOpened;
+
+  // Nếu chưa mở ca, return trạng thái đặc biệt
+  if (isNotOpened) {
+    return {
+      label: 'Chưa mở ca',
+      color: 'gray',
+      bgColor: 'from-gray-50 to-gray-50',
+      borderColor: 'border-gray-200',
+      textColor: 'text-gray-500',
+      buttonColor: 'bg-gray-400 cursor-not-allowed',
+      icon: Lock,
+      buttonText: 'Chưa mở ca',
+      disabled: true
+    };
+  }
+
   // Nếu chưa gán bài thi, return trạng thái đặc biệt
   if (isNotAssigned) {
     return {
@@ -173,7 +189,7 @@ function getStatusInfo(status: number, isToday: boolean, examSlotStatus: string)
       disabled: true
     };
   }
-  
+
   switch (status) {
     case 0:
       return {

@@ -283,69 +283,77 @@ const ExamSlotCreatePage = () => {
     }
   };
 
- const handleSaveSlots = async () => {
-    if (createdSlots.length === 0) {
-      alert('Không có ca thi nào để lưu!');
-      return;
-    }
+const handleSaveSlots = async () => {
+  if (createdSlots.length === 0) {
+    alert('Không có ca thi nào để lưu!');
+    return;
+  }
 
-    try {
-      // Gửi từng slot một, lấy đúng dữ liệu từng slot đã tạo
-      const saveData = createdSlots.map((slot, index) => {
-        // Lấy rooms từ slot.originalData thay vì selectedRooms
-        const slotRooms = slot.originalData?.rooms || [];
-        return {
-          subjectId: subject?.value || 1,
-          status: "Chưa gán bài thi",
-          multiOrPractice: examType,
-          slotName: slotName || `Slot ${index + 1}`,
-          semesterId: semester?.value || 1,
-          date: slot.originalData?.date || new Date(`${date}T${slot.originalData?.startTime || slot.startTime}`).toISOString(),
-          startTime: slot.originalData?.startTime || new Date(`${date}T${slot.originalData?.startTime || slot.startTime}`).toISOString(),
-          endTime: slot.originalData?.endTime || new Date(`${date}T${slot.originalData?.endTime || slot.endTime}`).toISOString(),
-          rooms: slotRooms.map((room: any) => ({
-            roomId: room.roomId,
-            students: (room.students || []).map((student: any) => ({
-              email: student.email || "string",
-              code: student.code || student.mssv || "string",
-              fullName: student.fullName || student.name || "string",
-              gender: student.gender === 'Nam' || student.gender === true,
-              dateOfBirth: student.dateOfBirth || student.dob || new Date().toISOString(),
-              urlAvatar: student.urlAvatar || student.avatar || "default.png"
-            }))
-          })),
-          proctors: (slot.originalData?.proctors || []).map((teacher: any) => ({
-            teacherId: teacher.teacherId || "2a96a929-c6a1-4501-fc19-08ddb5dca989",
-            fullName: teacher.fullName || teacher.name || "string"
-          })),
-          graders: (slot.originalData?.graders || []).map((teacher: any) => ({
-            teacherId: teacher.teacherId || "2a96a929-c6a1-4501-fc19-08ddb5dca989",
-            fullName: teacher.fullName || teacher.name || "string"
-          }))
-        };
-      });
+  try {
+    const saveData = createdSlots.map((slot, index) => {
+      const slotRooms = slot.originalData?.rooms || [];
+      // Nếu đã có startTime/endTime dạng ISO thì dùng luôn, không cần ghép lại
+      const startISO = slot.originalData?.startTime || slot.startTime;
+      const endISO = slot.originalData?.endTime || slot.endTime;
+      const slotDate = slot.originalData?.date || date;
 
-      const response = await fetch('https://localhost:7074/api/CreateExamSlot/SaveExamSlot', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(saveData)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error('Failed to save exam slots: ' + errorText);
+      // Kiểm tra hợp lệ
+      if (!startISO || !endISO) {
+        throw new Error(`Ca thi số ${index + 1} có ngày hoặc giờ không hợp lệ!`);
       }
 
-      alert('Lưu ca thi thành công!');
-      router.back(); 
-      
-    } catch (error) {
-      console.error('Error saving exam slots:', error);
-      alert('Có lỗi xảy ra khi lưu ca thi!');
+      return {
+        subjectId: subject?.value || 1,
+        status: "Chưa gán bài thi",
+        multiOrPractice: examType,
+        slotName: slotName || `Slot ${index + 1}`,
+        semesterId: semester?.value || 1,
+        date: slotDate,
+        startTime: startISO,
+        endTime: endISO,
+        rooms: slotRooms.map((room: any) => ({
+          roomId: room.roomId,
+          students: (room.students || []).map((student: any) => ({
+            email: student.email || "string",
+            code: student.code || student.mssv || "string",
+            fullName: student.fullName || student.name || "string",
+            gender: student.gender === 'Nam' || student.gender === true,
+            dateOfBirth: student.dateOfBirth || student.dob || new Date().toISOString(),
+            urlAvatar: student.urlAvatar || student.avatar || "default.png"
+          }))
+        })),
+        proctors: (slot.originalData?.proctors || []).map((teacher: any) => ({
+          teacherId: teacher.teacherId || "2a96a929-c6a1-4501-fc19-08ddb5dca989",
+          fullName: teacher.fullName || teacher.name || "string"
+        })),
+        graders: (slot.originalData?.graders || []).map((teacher: any) => ({
+          teacherId: teacher.teacherId || "2a96a929-c6a1-4501-fc19-08ddb5dca989",
+          fullName: teacher.fullName || teacher.name || "string"
+        }))
+      };
+    });
+
+    const response = await fetch('https://localhost:7074/api/CreateExamSlot/SaveExamSlot', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(saveData)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error('Failed to save exam slots: ' + errorText);
     }
-  };
+
+    alert('Lưu ca thi thành công!');
+    router.back();
+
+  } catch (error: any) {
+    console.error('Error saving exam slots:', error);
+    alert(error.message || 'Có lỗi xảy ra khi lưu ca thi!');
+  }
+};
 
   const handleStudentEdit = (idx: number, field: string, value: string) => {
     const newList = [...studentList];

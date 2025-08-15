@@ -80,6 +80,8 @@ export default function ExamPaperListPage() {
   const [showDetail, setShowDetail] = useState(false);
   const [detailData, setDetailData] = useState<ExamPaperDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+    const [fetchError, setFetchError] = useState(false); // Thêm state để theo dõi lỗi API
+
 
   // Lấy danh sách môn học, kỳ, năm
   useEffect(() => {
@@ -112,16 +114,27 @@ export default function ExamPaperListPage() {
     }
   }, []);
 
-  // Lấy danh sách đề thi khi chọn đủ bộ lọc
+ // Lấy danh sách đề thi khi chọn đủ bộ lọc
   useEffect(() => {
     if (selectedSubject && selectedSemester && selectedYear) {
       setLoading(true);
+      setFetchError(false); // Reset lỗi trước khi fetch
       fetch(`${API_URL}/api/FinalExamPaper/GetAllFinalExamPaper?subjectId=${selectedSubject.value}&semesterId=${selectedSemester.value}&year=${selectedYear.value}`)
-        .then(res => res.json())
-        .then(data => setExamPapers(data || []))
+        .then(res => {
+          if (!res.ok) throw new Error('API error');
+          return res.json();
+        })
+        .then(data => {
+          setExamPapers(data || []);
+        })
+        .catch(() => {
+          setExamPapers([]);
+          setFetchError(true); // Đánh dấu lỗi
+        })
         .finally(() => setLoading(false));
     } else {
       setExamPapers([]);
+      setFetchError(false);
     }
   }, [selectedSubject, selectedSemester, selectedYear]);
 
@@ -377,6 +390,23 @@ export default function ExamPaperListPage() {
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                         <span className="text-gray-500 font-medium">Đang tải dữ liệu...</span>
                       </div>
+                    </td>
+                  </tr>
+                ) : fetchError ? ( // Nếu có lỗi API, hiển thị như không có đề nào
+                  <tr>
+                    <td colSpan={4} className="px-6 py-12 text-center">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <FileText className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-800 mb-2">Chưa có đề thi nào</h3>
+                      <p className="text-gray-600 mb-4">Tạo đề thi đầu tiên để bắt đầu</p>
+                      <Link 
+                        href="/teacher/finalexampaper/createfinalpaper"
+                        className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Tạo đề thi mới</span>
+                      </Link>
                     </td>
                   </tr>
                 ) : filteredExamPapers.length === 0 ? (

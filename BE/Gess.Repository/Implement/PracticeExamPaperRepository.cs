@@ -56,7 +56,7 @@ namespace GESS.Repository.Implement
                     ChapterId = mq.ChapterId,
                     CategoryExamId = request.CategoryExamId,
                     LevelQuestionId = levelId,
-                    SemesterId = semester.SemesterId,
+                    SemesterId = request.SemesterId,
                     CreateAt = DateTime.UtcNow,
                     CreatedBy = request.TeacherId,
                     IsPublic = true
@@ -88,8 +88,8 @@ namespace GESS.Repository.Implement
                 TeacherId = request.TeacherId,
                 CategoryExamId = request.CategoryExamId,
                 SubjectId = subjectId,
-                SemesterId = semester.SemesterId,
-                Status = "published"
+                SemesterId = request.SemesterId,
+                Status = "Published"
             };
             _context.PracticeExamPapers.Add(examPaper);
             await _context.SaveChangesAsync();

@@ -25,6 +25,9 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+import { useCallback } from 'react'; // thêm nếu chưa có
+
+
 const API_URL = "https://localhost:7074";
 
 interface PracticeExamPaperDTO {
@@ -132,43 +135,41 @@ export default function CreateEssayExamPage() {
     setYears(yearArr);
   }, [classId]);
 
+
   // Lấy danh sách đề thi khi mở popup hoặc khi đổi kỳ/năm
   const fetchExamPapers = async (semesterName: string | null, year: string | null) => {
-    setLoadingExams(true);
-    try {
-      const teacherId = getUserIdFromToken();
-      if (!subjectId) throw new Error('Không lấy được subjectId');
-      const categoryId = selectedGradeComponent?.value;
-      if (!categoryId) throw new Error('Vui lòng chọn đầu điểm');
-      const examRes = await fetch(
-        `${API_URL}/api/PracticeExam/exams_paper?subjectId=${subjectId}&categoryId=${categoryId}&teacherId=${teacherId}`
-      );
-      if (!examRes.ok) throw new Error('Không lấy được danh sách đề thi');
-      const exams = await examRes.json();
-      let filtered = exams || [];
-      // Nếu đã chọn kỳ và năm thì lọc, còn không thì lấy hết
-      if (semesterName && year) {
-        filtered = filtered.filter(
-          (e: PracticeExamPaperDTO) =>
-            e.semester === semesterName &&
-            e.year === year &&
-            !selectedExams.some(se => se.pracExamPaperId === e.pracExamPaperId)
+      setLoadingExams(true);
+      try {
+        const teacherId = getUserIdFromToken();
+        if (!subjectId) throw new Error('Không lấy được subjectId');
+        const categoryId = selectedGradeComponent?.value;
+        if (!categoryId) throw new Error('Vui lòng chọn đầu điểm');
+        const examRes = await fetch(
+          `${API_URL}/api/PracticeExam/exams_paper?subjectId=${subjectId}&categoryId=${categoryId}&teacherId=${teacherId}`
         );
-      } else {
-        filtered = filtered.filter(
-          (e: PracticeExamPaperDTO) =>
-            !selectedExams.some(se => se.pracExamPaperId === e.pracExamPaperId)
-        );
-      }
-      setExamPapers(filtered);
-    } catch (err: any) {
-      setExamPapers([]);
-      alert(err.message || 'Lỗi lấy danh sách đề thi');
-    } finally {
-      setLoadingExams(false);
-    }
-  };
+        if (!examRes.ok) throw new Error('Không lấy được danh sách đề thi');
+        const exams = await examRes.json();
+        let filtered = exams || [];
 
+        // Xác định giá trị mặc định nếu chưa chọn
+        const semesterFilter = semesterName || semesters[0]?.semesterName;
+        const yearFilter = year || years[0]?.value;
+
+        filtered = filtered.filter(
+          (e: PracticeExamPaperDTO) =>
+            e.semester === semesterFilter &&
+            e.year === yearFilter &&
+            !selectedExams.some(se => se.pracExamPaperId === e.pracExamPaperId)
+        );
+
+        setExamPapers(filtered);
+      } catch (err: any) {
+        setExamPapers([]);
+        alert(err.message || 'Lỗi lấy danh sách đề thi');
+      } finally {
+        setLoadingExams(false);
+      }
+    };
   // Khi mở popup chọn đề hoặc đổi kỳ/năm thì load lại đề
   useEffect(() => {
     if (showExamPopup) {
@@ -356,6 +357,40 @@ export default function CreateEssayExamPage() {
         backgroundColor: state.isSelected ? '#3b82f6' : '#eff6ff'
       }
     })
+  };
+
+  // Hàm chuyển trang tạo đề thi mới, bắt buộc chọn kỳ
+  const handleCreateNewExamPaper = useCallback(() => {
+    if (!selectedSemester) {
+      alert('Vui lòng chọn học kỳ trước khi tạo đề thi mới!');
+      return;
+    }
+    router.push(`/teacher/myexampaper/createexampaper/${classId}?semesterId=${selectedSemester.value}`);
+  }, [router, classId, selectedSemester]);
+
+  // Hàm parse answerContent thành các ý (nếu là JSON)
+  interface GradingCriterion {
+    criterionName: string;
+    weightPercent: number;
+    description: string;
+  }
+  const parseGradingCriteria = (answerContent: string): GradingCriterion[] => {
+    if (!answerContent) return [];
+    try {
+      const parsed = JSON.parse(answerContent);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(
+          (item) =>
+            item &&
+            typeof item === 'object' &&
+            item.criterionName &&
+            item.description
+        );
+      }
+    } catch {
+      // Nếu không phải JSON thì trả về rỗng
+    }
+    return [];
   };
 
   return (
@@ -572,13 +607,14 @@ export default function CreateEssayExamPage() {
                   <span>Chọn đề thi có sẵn</span>
                 </button>
                 
-                <Link
-                  href={`/teacher/myexampaper/createexampaper/${classId}`}
+                <button
+                  type="button"
+                  onClick={handleCreateNewExamPaper}
                   className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Tạo đề thi mới</span>
-                </Link>
+                </button>
               </div>
               
               {selectedExams.length > 0 && (
@@ -821,31 +857,31 @@ export default function CreateEssayExamPage() {
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                   <div>
-                    <Select
-                      options={semesters.map(s => ({ value: s.semesterId, label: s.semesterName }))}
-                      value={selectedSemester}
-                      onChange={option => {
-                        setSelectedSemester(option);
-                        setExamPapers([]);
-                      }}
-                      placeholder="Chọn học kỳ"
-                      isClearable
-                      styles={selectStyles}
-                    />
-                  </div>
-                  <div>
-                    <Select
-                      options={years}
-                      value={selectedYear}
-                      onChange={option => {
-                        setSelectedYear(option);
-                        setExamPapers([]);
-                      }}
-                      placeholder="Chọn năm"
-                      isClearable
-                      styles={selectStyles}
-                    />
-                  </div>
+                      <Select
+                        options={semesters.map(s => ({ value: s.semesterId, label: s.semesterName }))}
+                        value={selectedSemester || (semesters.length > 0 ? { value: semesters[0].semesterId, label: semesters[0].semesterName } : null)}
+                        onChange={option => {
+                          setSelectedSemester(option);
+                          setExamPapers([]);
+                        }}
+                        placeholder="Chọn học kỳ"
+                        isClearable
+                        styles={selectStyles}
+                      />
+                    </div>
+                    <div>
+                      <Select
+                        options={years}
+                        value={selectedYear || (years.length > 0 ? years[0] : null)}
+                        onChange={option => {
+                          setSelectedYear(option);
+                          setExamPapers([]);
+                        }}
+                        placeholder="Chọn năm"
+                        isClearable
+                        styles={selectStyles}
+                      />
+                    </div>
                   <button
                     type="button"
                     className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
@@ -1055,27 +1091,44 @@ export default function CreateEssayExamPage() {
                       </div>
                     </div>
                     
-                    <div>
+                     <div>
                       <label className="block text-sm font-medium text-gray-600 mb-3">Danh sách câu hỏi</label>
                       <div className="space-y-4">
-                        {detailData.questions.map(q => (
-                          <div key={q.questionOrder} className="border border-gray-200 rounded-lg p-4">
-                            <div className="flex items-center space-x-2 mb-2">
-                              <span className="w-6 h-6 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-xs font-bold">
-                                {q.questionOrder}
-                              </span>
-                              <span className="font-medium text-gray-900">Câu {q.questionOrder}</span>
-                              <span className="ml-auto text-sm text-gray-600">Điểm: {q.score}</span>
+                        {detailData.questions.map(q => {
+                          const criteria = parseGradingCriteria(q.answerContent);
+                          return (
+                            <div key={q.questionOrder} className="border border-gray-200 rounded-lg p-4">
+                              <div className="flex items-center space-x-2 mb-2">
+                                <span className="w-6 h-6 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-xs font-bold">
+                                  {q.questionOrder}
+                                </span>
+                                <span className="font-medium text-gray-900">Câu {q.questionOrder}</span>
+                                <span className="ml-auto text-sm text-gray-600">Điểm: {q.score}</span>
+                              </div>
+                              <div className="mb-3">
+                                <p className="text-gray-800">{q.content}</p>
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Tiêu chí chấm:</label>
+                                {criteria.length > 0 ? (
+                                  <ul className="list-disc pl-6 space-y-1">
+                                    {criteria.map((c, i) => (
+                                      <li key={i}>
+                                        <span className="font-semibold">{c.criterionName}</span>
+                                        {c.weightPercent ? (
+                                          <span className="ml-2 text-xs text-blue-600">({c.weightPercent}%)</span>
+                                        ) : null}
+                                        : <span>{c.description}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  <p className="text-gray-700 text-sm bg-gray-50 p-2 rounded">{q.answerContent}</p>
+                                )}
+                              </div>
                             </div>
-                            <div className="mb-3">
-                              <p className="text-gray-800">{q.content}</p>
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Đáp án:</label>
-                              <p className="text-gray-700 text-sm bg-gray-50 p-2 rounded">{q.answerContent}</p>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
