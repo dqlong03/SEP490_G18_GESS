@@ -51,9 +51,9 @@ namespace GESS.Api.Controllers
         }
         //API to get all exam slot by subject id, semeester id, year, status, exam slot name, exam type, from date and to date need pagination
         [HttpGet("GetAllExamSlotsPagination")]
-        public async Task<IActionResult> GetAllExamSlotsPagination([FromQuery] ExamSlotFilterRequest filterRequest, int pageSize=10, int pageIndex=1 )
+        public async Task<IActionResult> GetAllExamSlotsPagination([FromQuery] ExamSlotFilterRequest filterRequest, int pageSize = 10, int pageIndex = 1)
         {
-            var examSlots = await _examSlotService.GetAllExamSlotsPagination(filterRequest,pageIndex,pageSize);
+            var examSlots = await _examSlotService.GetAllExamSlotsPagination(filterRequest, pageIndex, pageSize);
             if (examSlots == null || !examSlots.Any())
             {
                 return NotFound("No exam slots found.");
@@ -114,6 +114,63 @@ namespace GESS.Api.Controllers
                 return NotFound("No exams found.");
             }
             return Ok(exams);
+        }
+        //API to add teacher to exam slot room // Gán giảng viên coi thi
+        [HttpPost("AddTeacherToExamSlotRoom")]
+        public async Task<IActionResult> AddTeacherToExamSlotRoom([FromBody] ExamSlotRoomList examSlotRoomList)
+        {
+            if (examSlotRoomList == null || examSlotRoomList.teacherExamslotRoom == null || !examSlotRoomList.teacherExamslotRoom.Any())
+            {
+                return BadRequest("Invalid request data.");
+            }
+            var result = await _examSlotService.AddTeacherToExamSlotRoom(examSlotRoomList);
+            if (!result)
+            {
+                return BadRequest("Failed to add teacher to exam slot room.");
+            }
+            return Ok("Teacher added to exam slot room successfully.");
+        }
+        // API to add grade teacher to exam slot
+        [HttpPost("AddGradeTeacherToExamSlot")]
+        public async Task<IActionResult> AddGradeTeacherToExamSlot([FromBody] ExamSlotRoomListGrade gradeTeacherRequest)
+        {
+            if (gradeTeacherRequest == null || gradeTeacherRequest.teacherExamslotRoom == null || !gradeTeacherRequest.teacherExamslotRoom.Any())
+            {
+                return BadRequest("Invalid request data.");
+            }
+            var result = await _examSlotService.AddGradeTeacherToExamSlot(gradeTeacherRequest);
+            if (!result)
+            {
+                return BadRequest("Failed to add grade teacher to exam slot.");
+            }
+            return Ok("Grade teacher added to exam slot successfully.");
+        }
+        //API to check exist protocol teacher or not
+        [HttpPost("CheckTeacherExist")]
+        public async Task<IActionResult> CheckTeacherExist([FromBody] List<ExistTeacherDTO> teachers)
+        {
+            if (teachers == null || !teachers.Any())
+            {
+                return BadRequest("Invalid request data.");
+            }
+            var result = await _examSlotService.CheckTeacherExist(teachers);
+            if (result == null || !result.Any())
+            {
+                return NotFound("No available protocol teachers found.");
+            }
+            return Ok(result);
+        }
+        //API to check if teacher free in start time to end time or not
+        [HttpGet("IsTeacherAvailable")]
+        public async Task<IActionResult> IsTeacherAvailable(ExamSlotCheck examSlotCheck)
+        {
+            // Assuming you have a method in your service to check teacher availability
+            var result = await _examSlotService.IsTeacherAvailable(examSlotCheck);
+            if (result == null)
+            {
+                return NotFound("Teacher availability check failed.");
+            }
+            return Ok(result);
         }
     }
 }

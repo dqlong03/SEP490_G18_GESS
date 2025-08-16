@@ -30,6 +30,8 @@ namespace GESS.Model.ExamSlot
         public string SemesterName { get; set; }
 
         public DateTime ExamDate { get; set; }
+        public string GradeTeacherStatus { get; set; }
+        public string ProctorStatus { get; set; }
     }
     public class ExamSlotDetail
     {

@@ -271,8 +271,7 @@ namespace GESS.Test
                 ClassId = classEntity.ClassId,
                 Class = classEntity,
                 CreateAt = DateTime.UtcNow,
-                IsPublish = true,
-                ExamSlotRoom = examSlotRoom
+                IsPublish = true
             };
             _context.MultiExams.Add(multiExam);
 
@@ -379,8 +378,7 @@ namespace GESS.Test
                 ClassId = _context.Classes.First().ClassId,
                 Class = _context.Classes.First(),
                 CreateAt = DateTime.UtcNow,
-                IsPublish = true,
-                ExamSlotRoom = _context.ExamSlotRooms.First()
+                IsPublish = true
             };
             _context.MultiExams.Add(newMultiExam);
             await _context.SaveChangesAsync();

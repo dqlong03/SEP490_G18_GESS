@@ -11,19 +11,33 @@ namespace GESS.Model.ExamSlotCreateDTO
 {
     public class ExamSlotCreateDTO
     {
+        public string slotName { get; set; }
+        public int subjectId { get; set; }  
+        public int semesterId { get; set; }
         public List<StudentAddDto> students { get; set; }
-        public List<TeacherCreationFinalRequest> teachers { get; set; }
         public List<RoomListDTO> rooms { get; set; }
-        public List<GradeTeacherResponse> gradeTeachers { get; set; }
         public DateTime StartDate { get; set; }
         public int Duration { get; set; }
         public int ExamType { get; set; } 
-        public DateTime StartTimeInday { get; set; }
+        public DateTime StartTimeInDay { get; set; }
         public DateTime EndTimeInDay { get; set; }
         public int RelaxationTime { get; set; } 
         public bool OptimizedByRoom { get; set; } = false;
-        public bool OptimizedByTeacher { get; set; } = false;
         public bool OptimizedBySlotExam { get; set; } = true;
 
+    }
+    public class TeacherExamSlotRoom
+    {
+        public int examSlotId { get; set; }
+        public Guid TeacherId { get; set; }
+    }
+    public class ExamSlotRoomList
+    {
+        public List<TeacherExamSlotRoom> teacherExamslotRoom { get; set; }
+        public bool isTheSame { get; set; }
+    }
+    public class ExamSlotRoomListGrade
+    {
+        public List<TeacherExamSlotRoom> teacherExamslotRoom { get; set; }
     }
 }

@@ -16,6 +16,8 @@ namespace GESS.Repository.Interface
     public interface IExamSlotRepository
     {
         Task<bool> AddExamToExamSlotAsync(int examSlotId, int examId, string examType);
+        Task<bool> AddGradeTeacherToExamSlotAsync(ExamSlotRoomListGrade gradeTeacherRequest);
+        Task<bool> AddTeacherToExamSlotRoomAsync(ExamSlotRoomList examSlotRoomList);
         Task<bool> ChangeStatusExamSlot(int examSlotId, string examType);
         Task<IEnumerable<TeacherCreationFinalRequest>> CheckTeacherExistAsync(List<ExistTeacherDTO> teachers);
         Task<int> CountPageExamSlotsAsync(ExamSlotFilterRequest filterRequest, int pageSize);
@@ -26,6 +28,7 @@ namespace GESS.Repository.Interface
         Task<IEnumerable<SubjectDTODDL>> GetAllSubjectsByMajorIdAsync(int majorId);
         Task<ExamSlotDetail> GetExamSlotByIdAsync(int examSlotId);
         bool IsRoomAvailable(int roomId, DateTime slotStart, DateTime slotEnd);
+        Task<ExamSlotCheck> IsTeacherAvailableAsync(ExamSlotCheck examSlotCheck);
         Task<bool> SaveExamSlotsAsync(List<GeneratedExamSlot> examSlots);
     }
 }

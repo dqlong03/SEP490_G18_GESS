@@ -273,12 +273,12 @@ namespace GESS.Repository.Implement
         public async Task<List<int>> GetAllYearOfStudentAsync(Guid studentId)
         {
             var multiExamYears = await _context.MultiExamHistories
-                 .Where(meh => meh.Student.UserId == studentId)
+                 .Where(meh => meh.Student.StudentId == studentId)
                  .Select(meh => meh.MultiExam.CreateAt.Year)
                  .ToListAsync();
 
             var practiceExamYears = await _context.PracticeExamHistories
-                .Where(peh => peh.Student.UserId == studentId)
+                .Where(peh => peh.Student.StudentId == studentId)
                 .Select(peh => peh.PracticeExam.CreateAt.Year)
                 .ToListAsync();
 
@@ -296,7 +296,7 @@ namespace GESS.Repository.Implement
             {
                 // Tìm năm mới nhất từ MultiExam và PracticeExam
                 var latestMultiExamYear = await _context.MultiExamHistories
-                    .Where(meh => meh.Student.UserId == studentId
+                    .Where(meh => meh.Student.StudentId == studentId
                         && meh.MultiExam.SubjectId == subjectId
                         && meh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM)
                     .Select(meh => meh.MultiExam.CreateAt.Year)
@@ -304,7 +304,7 @@ namespace GESS.Repository.Implement
                     .FirstOrDefaultAsync();
 
                 var latestPracticeExamYear = await _context.PracticeExamHistories
-                    .Where(peh => peh.Student.UserId == studentId
+                    .Where(peh => peh.Student.StudentId == studentId
                         && peh.PracticeExam.SubjectId == subjectId
                         && peh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM)
                     .Select(peh => peh.PracticeExam.CreateAt.Year)
@@ -317,25 +317,25 @@ namespace GESS.Repository.Implement
 
                 // Tìm học kỳ mới nhất trong năm mới nhất
                 var latestMultiExamSemester = await _context.MultiExamHistories
-                    .Where(meh => meh.Student.UserId == studentId
+                    .Where(meh => meh.Student.StudentId == studentId
                         && meh.MultiExam.SubjectId == subjectId
                         && meh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM
                         && meh.MultiExam.CreateAt.Year == year)
-                    .Select(meh => new { meh.MultiExam.SemesterId, meh.MultiExam.CreateAt })
-                    .OrderByDescending(x => x.CreateAt)
+                    .Select(meh => new { meh.MultiExam.SemesterId, meh.MultiExam.CreateAt.Year })
+                    .OrderByDescending(x => x.SemesterId)
                     .FirstOrDefaultAsync();
 
                 var latestPracticeExamSemester = await _context.PracticeExamHistories
-                    .Where(peh => peh.Student.UserId == studentId
+                    .Where(peh => peh.Student.StudentId == studentId
                         && peh.PracticeExam.SubjectId == subjectId
                         && peh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM
                         && peh.PracticeExam.CreateAt.Year == year)
-                    .Select(peh => new { peh.PracticeExam.SemesterId, peh.PracticeExam.CreateAt })
-                    .OrderByDescending(x => x.CreateAt)
+                    .Select(peh => new { peh.PracticeExam.SemesterId, peh.PracticeExam.CreateAt.Year })
+                    .OrderByDescending(x => x.SemesterId)
                     .FirstOrDefaultAsync();
 
                 semesterId = latestMultiExamSemester != null && latestPracticeExamSemester != null
-                    ? (latestMultiExamSemester.CreateAt > latestPracticeExamSemester.CreateAt
+                    ? (latestMultiExamSemester.Year > latestPracticeExamSemester.Year
                         ? latestMultiExamSemester.SemesterId
                         : latestPracticeExamSemester.SemesterId)
                     : latestMultiExamSemester?.SemesterId ?? latestPracticeExamSemester?.SemesterId;
@@ -345,7 +345,7 @@ namespace GESS.Repository.Implement
             }
 
             var multiExams = await _context.MultiExamHistories
-                .Where(meh => meh.Student.UserId == studentId
+                .Where(meh => meh.Student.StudentId == studentId
                     && meh.MultiExam.SubjectId == subjectId
                     && meh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM
                     && (!semesterId.HasValue || meh.MultiExam.SemesterId == semesterId)
@@ -362,7 +362,7 @@ namespace GESS.Repository.Implement
                 .ToListAsync();
 
             var practiceExams = await _context.PracticeExamHistories
-                .Where(peh => peh.Student.UserId == studentId
+                .Where(peh => peh.Student.StudentId == studentId
                     && peh.PracticeExam.SubjectId == subjectId
                     && peh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM
                     && (!semesterId.HasValue || peh.PracticeExam.SemesterId == semesterId)
@@ -391,13 +391,13 @@ namespace GESS.Repository.Implement
             {
                 // Tìm năm mới nhất từ MultiExam và PracticeExam
                 var latestMultiExamYear = await _context.MultiExamHistories
-                    .Where(meh => meh.Student.UserId == userId && meh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM)
+                    .Where(meh => meh.Student.StudentId == userId && meh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM)
                     .Select(meh => meh.MultiExam.CreateAt.Year)
                     .OrderByDescending(y => y)
                     .FirstOrDefaultAsync();
 
                 var latestPracticeExamYear = await _context.PracticeExamHistories
-                    .Where(peh => peh.Student.UserId == userId && peh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM)
+                    .Where(peh => peh.Student.StudentId == userId && peh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM)
                     .Select(peh => peh.PracticeExam.CreateAt.Year)
                     .OrderByDescending(y => y)
                     .FirstOrDefaultAsync();
@@ -408,7 +408,7 @@ namespace GESS.Repository.Implement
 
                 // Tìm học kỳ mới nhất trong năm mới nhất
                 var latestMultiExamSemester = await _context.MultiExamHistories
-                    .Where(meh => meh.Student.UserId == userId
+                    .Where(meh => meh.Student.StudentId == userId
                         && meh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM
                         && meh.MultiExam.CreateAt.Year == year)
                     .Select(meh => new { meh.MultiExam.SemesterId, meh.MultiExam.CreateAt })
@@ -416,7 +416,7 @@ namespace GESS.Repository.Implement
                     .FirstOrDefaultAsync();
 
                 var latestPracticeExamSemester = await _context.PracticeExamHistories
-                    .Where(peh => peh.Student.UserId == userId
+                    .Where(peh => peh.Student.StudentId == userId
                         && peh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM
                         && peh.PracticeExam.CreateAt.Year == year)
                     .Select(peh => new { peh.PracticeExam.SemesterId, peh.PracticeExam.CreateAt })
@@ -434,9 +434,9 @@ namespace GESS.Repository.Implement
                     return new List<AllSubjectBySemesterOfStudentDTOResponse>();
                 return await _context.Subjects
              .Where(s => s.Classes.Any(c => c.SemesterId == semesterId
-                 && c.ClassStudents.Any(cs => cs.Student.UserId == userId)
-                 && (c.MultiExams.Any(me => me.MultiExamHistories.Any(meh => meh.Student.UserId == userId && meh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM))
-                     || c.PracticeExams.Any(pe => pe.PracticeExamHistories.Any(peh => peh.Student.UserId == userId && peh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM)))))
+                 && c.ClassStudents.Any(cs => cs.Student.StudentId == userId)
+                 && (c.MultiExams.Any(me => me.MultiExamHistories.Any(meh => meh.Student.StudentId == userId && meh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM))
+                     || c.PracticeExams.Any(pe => pe.PracticeExamHistories.Any(peh => peh.Student.StudentId == userId && peh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM)))))
              .Select(s => new AllSubjectBySemesterOfStudentDTOResponse
              {
                  Id = s.SubjectId,
@@ -453,12 +453,12 @@ namespace GESS.Repository.Implement
             if (!semesterId.HasValue && year.HasValue)
             {
                 var semesterIds = await _context.MultiExamHistories
-                    .Where(meh => meh.Student.UserId == userId
+                    .Where(meh => meh.Student.StudentId == userId
                         && meh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM
                         && meh.MultiExam.CreateAt.Year == year)
                     .Select(meh => meh.MultiExam.SemesterId)
                     .Union(_context.PracticeExamHistories
-                        .Where(peh => peh.Student.UserId == userId
+                        .Where(peh => peh.Student.StudentId == userId
                             && peh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM
                             && peh.PracticeExam.CreateAt.Year == year)
                         .Select(peh => peh.PracticeExam.SemesterId))
@@ -471,9 +471,9 @@ namespace GESS.Repository.Implement
 
                 return await _context.Subjects
                     .Where(s => s.Classes.Any(c => semesterIds.Contains(c.SemesterId)
-                        && c.ClassStudents.Any(cs => cs.Student.UserId == userId)
-                        && (c.MultiExams.Any(me => me.MultiExamHistories.Any(meh => meh.Student.UserId == userId && meh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM && me.CreateAt.Year == year))
-                            || c.PracticeExams.Any(pe => pe.PracticeExamHistories.Any(peh => peh.Student.UserId == userId && peh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM && pe.CreateAt.Year == year)))))
+                        && c.ClassStudents.Any(cs => cs.Student.StudentId == userId)
+                        && (c.MultiExams.Any(me => me.MultiExamHistories.Any(meh => meh.Student.StudentId == userId && meh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM && me.CreateAt.Year == year))
+                            || c.PracticeExams.Any(pe => pe.PracticeExamHistories.Any(peh => peh.Student.StudentId == userId && peh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM && pe.CreateAt.Year == year)))))
                     .Select(s => new AllSubjectBySemesterOfStudentDTOResponse
                     {
                         Id = s.SubjectId,
@@ -492,9 +492,9 @@ namespace GESS.Repository.Implement
                 // Truy vấn môn học dựa trên semesterId và year
                 return await _context.Subjects
                     .Where(s => s.Classes.Any(c => c.SemesterId == semesterId
-                        && c.ClassStudents.Any(cs => cs.Student.UserId == userId)
-                        && (c.MultiExams.Any(me => me.MultiExamHistories.Any(meh => meh.Student.UserId == userId && meh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM && me.CreateAt.Year == year))
-                            || c.PracticeExams.Any(pe => pe.PracticeExamHistories.Any(peh => peh.Student.UserId == userId && peh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM && pe.CreateAt.Year == year)))))
+                        && c.ClassStudents.Any(cs => cs.Student.StudentId == userId)
+                        && (c.MultiExams.Any(me => me.MultiExamHistories.Any(meh => meh.Student.StudentId == userId && meh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM && me.CreateAt.Year == year))
+                            || c.PracticeExams.Any(pe => pe.PracticeExamHistories.Any(peh => peh.Student.StudentId == userId && peh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM && pe.CreateAt.Year == year)))))
                     .Select(s => new AllSubjectBySemesterOfStudentDTOResponse
                     {
                         Id = s.SubjectId,

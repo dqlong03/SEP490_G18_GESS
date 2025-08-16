@@ -17,6 +17,8 @@ namespace GESS.Service.examSlotService
     public interface IExamSlotService : IBaseService<ExamSlot>
     {
         Task<bool> AddExamToExamSlot(int examSlotId, int examId, string examType);
+        Task<bool> AddGradeTeacherToExamSlot(ExamSlotRoomListGrade gradeTeacherRequest);
+        Task<bool> AddTeacherToExamSlotRoom(ExamSlotRoomList examSlotRoomList);
         Task<bool> ChangeStatusExamSlot(int examSlotId, string examType);
         Task <IEnumerable<TeacherCreationFinalRequest>>CheckTeacherExist(List<ExistTeacherDTO> teachers);
         Task <int> CountPageExamSlots(ExamSlotFilterRequest filterRequest, int pageSize);
@@ -29,6 +31,7 @@ namespace GESS.Service.examSlotService
         Task<IEnumerable<SubjectDTODDL>> GetAllSubjectsByMajorId(int majorId);
         Task <ExamSlotDetail> GetExamSlotById(int examSlotId);
         bool IsRoomAvailable(int roomId, DateTime slotStart, DateTime slotEnd);
+        Task<ExamSlotCheck> IsTeacherAvailable(ExamSlotCheck examSlotCheck);
         Task<bool> SaveExamSlotsAsync(List<GeneratedExamSlot> examSlots);
     }
 }

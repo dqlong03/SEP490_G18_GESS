@@ -89,11 +89,7 @@ namespace GESS.Repository.Implement
                     ? examSlotRoom.MultiExam?.StartDay
                     : examSlotRoom.PracticeExam?.StartDay;
 
-                if (!examDate.HasValue)
-                {
-                    throw new InvalidOperationException("Exam date is null.");
-                }
-
+              
                 var examSlotRoomDetail = new ExamSlotRoomDetail
                 {
                     ExamSlotRoomId = examSlotRoom.ExamSlotRoomId,

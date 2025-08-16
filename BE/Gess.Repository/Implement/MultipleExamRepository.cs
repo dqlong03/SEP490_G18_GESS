@@ -175,7 +175,7 @@ namespace GESS.Repository.Implement
         }
 
         // Helper: Validate khung thời gian cho kỳ thi giữa kỳ
-        private async Task ValidateExamTimeFrame(MultiExam exam)
+        private Task ValidateExamTimeFrame(MultiExam exam)
         {
             // Kiểm tra xem có phải kỳ thi giữa kỳ không
             bool isMidtermExam = IsMidtermExam(exam.CategoryExam.CategoryExamName);
@@ -185,14 +185,14 @@ namespace GESS.Repository.Implement
                 DateTime currentTime = DateTime.Now;
                 
                 // Validate thời gian hiện tại có nằm trong khung thời gian cho phép không
-                if (currentTime < exam.StartDay)
+                if (exam.StartDay.HasValue && currentTime < exam.StartDay.Value)
                 {
                     throw new Exception($"Kỳ thi giữa kỳ chưa được mở. " +
                                       $"Thời gian bắt đầu: {exam.StartDay:dd/MM/yyyy HH:mm}. " +
                                       $"Thời gian hiện tại: {currentTime:dd/MM/yyyy HH:mm}.");
                 }
                 
-                if (currentTime > exam.EndDay)
+                if (exam.EndDay.HasValue && currentTime > exam.EndDay.Value)
                 {
                     throw new Exception($"Kỳ thi giữa kỳ đã hết hạn. " +
                                       $"Thời gian kết thúc: {exam.EndDay:dd/MM/yyyy HH:mm}. " +
@@ -208,6 +208,8 @@ namespace GESS.Repository.Implement
             {
                 Console.WriteLine($"[DEBUG] Not a midterm exam ({exam.CategoryExam.CategoryExamName}), skipping time frame validation.");
             }
+
+            return Task.CompletedTask;
         }
 
         // Helper: Kiểm tra có phải kỳ thi giữa kỳ không dựa vào tên danh mục
@@ -297,7 +299,7 @@ namespace GESS.Repository.Implement
                 .Include(m => m.Subject)
                 .Include(m => m.CategoryExam)
                 .Include(m => m.NoQuestionInChapters)
-                .SingleOrDefaultAsync(m => m.MultiExamId == examId);
+                .SingleOrDefaultAsync(m => m.MultiExamId == examId && m.CodeStart == code);
 
             if (exam == null)
             {
@@ -305,12 +307,12 @@ namespace GESS.Repository.Implement
             }
 
             // 2. Validate Code and Status
-            if (exam.CodeStart != code)
+            if (!string.Equals(exam.CodeStart?.Trim(), code?.Trim(), StringComparison.OrdinalIgnoreCase))
             {
                 throw new Exception("Mã thi không đúng.");
             }
 
-            if (exam.Status.ToLower().Trim() != PredefinedStatusAllExam.OPENING_EXAM.ToLower().Trim())
+            if (!string.Equals(exam.Status?.Trim(), PredefinedStatusAllExam.OPENING_EXAM, StringComparison.OrdinalIgnoreCase))
             {
                 throw new Exception("Bài thi chưa được mở.");
             }
@@ -318,13 +320,44 @@ namespace GESS.Repository.Implement
             // 3. VALIDATE KHUNG THỜI GIAN CHO KỲ THI GIỮA KỲ
             await ValidateExamTimeFrame(exam);
 
-            // 4. Validate student is in the class for the exam
-            var isStudentInClass = await _context.ClassStudents
-                .AnyAsync(cs => cs.ClassId == exam.ClassId && cs.StudentId == studentId);
-
-            if (!isStudentInClass)
+            // 4. Validate eligibility: Giữa kỳ (theo lớp) / Cuối kỳ (theo phòng/ca)
+            bool isMidterm = IsMidtermExam(exam.CategoryExam.CategoryExamName);
+            
+            // Lấy danh sách sinh viên theo loại kỳ thi
+            List<Guid> studentIds;
+            if (isMidterm) // Giữa kỳ
             {
-                throw new Exception("Bạn không thuộc lớp của bài thi này.");
+                studentIds = await _context.ClassStudents
+                    .Where(cs => cs.ClassId == exam.ClassId)
+                    .OrderBy(cs => cs.StudentId)
+                    .Select(cs => cs.StudentId)
+                    .ToListAsync();
+            }
+            else // Cuối kỳ
+            {
+                // Tìm ExamSlotRoom mà sinh viên này thuộc về thông qua bảng StudentExamSlotRoom
+                var studentExamSlotRoom = await _context.StudentExamSlotRoom
+                    .Include(s => s.ExamSlotRoom)
+                    .FirstOrDefaultAsync(s => s.StudentId == studentId && 
+                                            s.ExamSlotRoom.MultiExamId == exam.MultiExamId);
+
+                if (studentExamSlotRoom == null)
+                {
+                    throw new Exception("Sinh viên không thuộc phòng/ca nào của bài thi này.");
+                }
+
+                var examSlotRoomId = studentExamSlotRoom.ExamSlotRoomId;
+                studentIds = await _context.StudentExamSlotRoom
+                    .Where(esr => esr.ExamSlotRoomId == examSlotRoomId)
+                    .OrderBy(esr => esr.StudentId)
+                    .Select(esr => esr.StudentId)
+                    .ToListAsync();
+            }
+
+            // Kiểm tra sinh viên có trong danh sách dự thi không
+            if (!studentIds.Contains(studentId))
+            {
+                throw new Exception(isMidterm ? "Bạn không thuộc lớp của bài thi này." : "Bạn không thuộc phòng/ca của bài thi này.");
             }
 
             // 5. Get exam history and check for attendance
@@ -426,13 +459,15 @@ namespace GESS.Repository.Implement
             // Tạo câu hỏi mới (random) - GenerateRandomQuestions sẽ tự xóa câu cũ nếu có
             var questions = await GenerateRandomQuestions(exam, history.ExamHistoryId);
             
-            var studentUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == history.StudentId);
+            var student = await _context.Students
+                .Include(s => s.User)
+                .FirstOrDefaultAsync(s => s.StudentId == history.StudentId);
             
             return new ExamInfoResponseDTO
             {
                 MultiExamHistoryId = history.ExamHistoryId,
-                StudentFullName = studentUser?.Fullname,
-                StudentCode = studentUser?.Code,
+                StudentFullName = student?.User?.Fullname,
+                StudentCode = student?.User?.Code,
                 SubjectName = exam.Subject.SubjectName,
                 ExamCategoryName = exam.CategoryExam.CategoryExamName,
                 Duration = exam.Duration,
@@ -458,13 +493,15 @@ namespace GESS.Repository.Implement
             // Random câu hỏi mới hoàn toàn (GenerateRandomQuestions sẽ tự xóa câu cũ)
             var newQuestions = await GenerateRandomQuestions(exam, history.ExamHistoryId);
             
-            var studentUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == history.StudentId);
+            var student = await _context.Students
+                .Include(s => s.User)
+                .FirstOrDefaultAsync(s => s.StudentId == history.StudentId);
             
             return new ExamInfoResponseDTO
             {
                 MultiExamHistoryId = history.ExamHistoryId,
-                StudentFullName = studentUser?.Fullname,
-                StudentCode = studentUser?.Code,
+                StudentFullName = student?.User?.Fullname,
+                StudentCode = student?.User?.Code,
                 SubjectName = exam.Subject.SubjectName,
                 ExamCategoryName = exam.CategoryExam.CategoryExamName,
                 Duration = exam.Duration,
@@ -506,13 +543,15 @@ namespace GESS.Repository.Implement
                 })
                 .ToListAsync();
 
-            var studentUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == history.StudentId);
+            var student = await _context.Students
+                .Include(s => s.User)
+                .FirstOrDefaultAsync(s => s.StudentId == history.StudentId);
 
             return new ExamInfoResponseDTO
             {
                 MultiExamHistoryId = history.ExamHistoryId,
-                StudentFullName = studentUser?.Fullname,
-                StudentCode = studentUser?.Code,
+                StudentFullName = student?.User?.Fullname,
+                StudentCode = student?.User?.Code,
                 SubjectName = exam.Subject.SubjectName,
                 ExamCategoryName = exam.CategoryExam.CategoryExamName,
                 Duration = exam.Duration,

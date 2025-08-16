@@ -15,12 +15,10 @@ namespace GESS.Model.ExamSlotCreateDTO
         public string MultiOrPractice { get; set; }
         public string SlotName { get; set; }
         public int SemesterId { get; set; }
-        public DateTime Date { get; set; }             
-        public DateTime StartTime { get; set; }        
-        public DateTime EndTime { get; set; }         
-        public List<RoomExamSlot> Rooms { get; set; }  
-        public List<TeacherAssignment> Proctors { get; set; }
-        public List<GraderAssignment> Graders { get; set; }
+        public DateTime Date { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+        public List<RoomExamSlot> Rooms { get; set; }
     }
 
     public class RoomExamSlot
@@ -43,15 +41,15 @@ namespace GESS.Model.ExamSlotCreateDTO
         public string SemesterName { get; set; }
         public List<StudentAddDto> Students { get; set; }
     }
-    public class TeacherAssignment
+    public class ExamSlotCheck
     {
-        public Guid ?TeacherId { get; set; }
-        public string FullName { get; set; }
+        public int ExamSlotId { get; set; }
+        public List<TeacherCheck> TeacherChecks { get; set; }
     }
-    public class GraderAssignment
+    public class TeacherCheck
     {
-        public int RoomId { get; set; }
-        public Guid ?TeacherId { get; set; }
-        public string FullName { get; set; }
+        public Guid TeacherId { get; set; }
+        public string TeacherName { get; set; }
+        public bool IsChecked { get; set; }
     }
 }
