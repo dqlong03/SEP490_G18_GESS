@@ -152,6 +152,101 @@ namespace GESS.Repository.Implement
             return true;
         }
 
+        public async Task<bool> AddGradeTeacherToExamSlotAsync(ExamSlotRoomListGrade gradeTeacherRequest)
+        {
+            if(gradeTeacherRequest == null || gradeTeacherRequest.teacherExamslotRoom == null || !gradeTeacherRequest.teacherExamslotRoom.Any())
+            {
+                return false;
+            }
+            foreach (var item in gradeTeacherRequest.teacherExamslotRoom)
+            {
+                var examSlotRoom = await _context.ExamSlotRooms
+                    .FirstOrDefaultAsync(esr => esr.ExamSlotId == item.examSlotId);
+                if (examSlotRoom != null)
+                {
+                    // Kiểm tra xem giảng viên đã được gán chưa
+                    if (examSlotRoom.ExamGradedId == null)
+                    {
+                        examSlotRoom.ExamGradedId = item.TeacherId; // Gán giảng viên chấm thi
+                        _context.ExamSlotRooms.Update(examSlotRoom);
+                        await _context.SaveChangesAsync();
+                    }
+                    else
+                    {
+                        return false; // Giảng viên đã được gán, không thể thêm nữa
+                    }
+                }
+                else
+                {
+                    return false; // Không tìm thấy ExamSlotRoom tương ứng
+                }
+            }
+            return true; // Thêm giảng viên thành công
+        }
+
+        public async Task<bool> AddTeacherToExamSlotRoomAsync(ExamSlotRoomList examSlotRoomList)
+        {
+            if (examSlotRoomList == null || examSlotRoomList.teacherExamslotRoom == null || !examSlotRoomList.teacherExamslotRoom.Any())
+            {
+                return false;
+            }
+            if (examSlotRoomList.isTheSame)
+            {
+                foreach (var item in examSlotRoomList.teacherExamslotRoom)
+                {
+                    var examSlotRoom = await _context.ExamSlotRooms
+                        .FirstOrDefaultAsync(esr => esr.ExamSlotId == item.examSlotId);
+                    if (examSlotRoom != null)
+                    {
+                        // Kiểm tra xem giảng viên đã được gán chưa
+                        if (examSlotRoom.SupervisorId == null)
+                        {
+                            examSlotRoom.SupervisorId = item.TeacherId; // Gán giảng viên coi thi
+                            examSlotRoom.ExamGradedId = item.TeacherId; // Gán giảng viên chấm thi
+                            _context.ExamSlotRooms.Update(examSlotRoom);
+                            await _context.SaveChangesAsync();
+                        }
+                        else
+                        {
+                            return false; 
+                        }
+                    }
+                    else
+                    {
+                        return false; 
+                    }
+                }
+            }
+            else
+            {
+                foreach (var item in examSlotRoomList.teacherExamslotRoom)
+                {
+                    var examSlotRoom = await _context.ExamSlotRooms
+                        .FirstOrDefaultAsync(esr => esr.ExamSlotId == item.examSlotId);
+                    if (examSlotRoom != null)
+                    {
+                        // Kiểm tra xem giảng viên đã được gán chưa
+                        if (examSlotRoom.SupervisorId == null)
+                        {
+                            examSlotRoom.SupervisorId = item.TeacherId; // Gán giảng viên coi thi
+                            _context.ExamSlotRooms.Update(examSlotRoom);
+                            await _context.SaveChangesAsync();
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+
+        }
+
         public async Task<bool> ChangeStatusExamSlot(int examSlotId, string examType)
         {
             bool shouldUpdateExamSlotRoomStatus = false;

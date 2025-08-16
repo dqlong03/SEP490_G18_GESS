@@ -26,4 +26,18 @@ namespace GESS.Model.ExamSlotCreateDTO
         public bool OptimizedBySlotExam { get; set; } = true;
 
     }
+    public class TeacherExamSlotRoom
+    {
+        public int examSlotId { get; set; }
+        public Guid TeacherId { get; set; }
+    }
+    public class ExamSlotRoomList
+    {
+        public List<TeacherExamSlotRoom> teacherExamslotRoom { get; set; }
+        public bool isTheSame { get; set; }
+    }
+    public class ExamSlotRoomListGrade
+    {
+        public List<TeacherExamSlotRoom> teacherExamslotRoom { get; set; }
+    }
 }

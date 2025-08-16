@@ -51,9 +51,9 @@ namespace GESS.Api.Controllers
         }
         //API to get all exam slot by subject id, semeester id, year, status, exam slot name, exam type, from date and to date need pagination
         [HttpGet("GetAllExamSlotsPagination")]
-        public async Task<IActionResult> GetAllExamSlotsPagination([FromQuery] ExamSlotFilterRequest filterRequest, int pageSize=10, int pageIndex=1 )
+        public async Task<IActionResult> GetAllExamSlotsPagination([FromQuery] ExamSlotFilterRequest filterRequest, int pageSize = 10, int pageIndex = 1)
         {
-            var examSlots = await _examSlotService.GetAllExamSlotsPagination(filterRequest,pageIndex,pageSize);
+            var examSlots = await _examSlotService.GetAllExamSlotsPagination(filterRequest, pageIndex, pageSize);
             if (examSlots == null || !examSlots.Any())
             {
                 return NotFound("No exam slots found.");
@@ -114,6 +114,36 @@ namespace GESS.Api.Controllers
                 return NotFound("No exams found.");
             }
             return Ok(exams);
+        }
+        //API to add teacher to exam slot room // Gán giảng viên coi thi
+        [HttpPost("AddTeacherToExamSlotRoom")]
+        public async Task<IActionResult> AddTeacherToExamSlotRoom([FromBody] ExamSlotRoomList examSlotRoomList)
+        {
+            if (examSlotRoomList == null || examSlotRoomList.teacherExamslotRoom == null || !examSlotRoomList.teacherExamslotRoom.Any())
+            {
+                return BadRequest("Invalid request data.");
+            }
+            var result = await _examSlotService.AddTeacherToExamSlotRoom(examSlotRoomList);
+            if (!result)
+            {
+                return BadRequest("Failed to add teacher to exam slot room.");
+            }
+            return Ok("Teacher added to exam slot room successfully.");
+        }
+        // API to add grade teacher to exam slot
+        [HttpPost("AddGradeTeacherToExamSlot")]
+        public async Task<IActionResult> AddGradeTeacherToExamSlot([FromBody] ExamSlotRoomListGrade gradeTeacherRequest)
+        {
+            if (gradeTeacherRequest == null || gradeTeacherRequest.teacherExamslotRoom == null || !gradeTeacherRequest.teacherExamslotRoom.Any())
+            {
+                return BadRequest("Invalid request data.");
+            }
+            var result = await _examSlotService.AddGradeTeacherToExamSlot(gradeTeacherRequest);
+            if (!result)
+            {
+                return BadRequest("Failed to add grade teacher to exam slot.");
+            }
+            return Ok("Grade teacher added to exam slot successfully.");
         }
 
     }
