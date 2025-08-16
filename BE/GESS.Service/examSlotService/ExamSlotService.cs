@@ -164,6 +164,16 @@ namespace GESS.Service.examSlotService
             return _unitOfWork.ExamSlotRepository.IsRoomAvailable(roomId, slotStart, slotEnd);
         }
 
+        public async Task<ExamSlotCheck> IsTeacherAvailable(ExamSlotCheck examSlotCheck)
+        {
+            var result = await _unitOfWork.ExamSlotRepository.IsTeacherAvailableAsync(examSlotCheck);
+            if (result == null)
+            {
+                return new ExamSlotCheck();
+            }
+            return result;
+        }
+
         public async Task<bool> SaveExamSlotsAsync(List<GeneratedExamSlot> examSlots)
         {
             return await _unitOfWork.ExamSlotRepository.SaveExamSlotsAsync(examSlots);

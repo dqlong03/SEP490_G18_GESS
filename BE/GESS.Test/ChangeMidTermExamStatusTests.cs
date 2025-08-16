@@ -868,6 +868,11 @@ namespace GESS.Test
             throw new NotImplementedException();
         }
 
+        public Task<Model.ExamSlotCreateDTO.ExamSlotCheck> IsTeacherAvailable(Model.ExamSlotCreateDTO.ExamSlotCheck examSlotCheck)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<bool> SaveExamSlotsAsync(List<Model.ExamSlotCreateDTO.GeneratedExamSlot> examSlots)
         {
             throw new NotImplementedException();

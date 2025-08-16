@@ -331,6 +331,9 @@ namespace GESS.Repository.Implement
                             Email = item.Email,
                             PhoneNumber = item.PhoneNumber,
                             DateOfBirth = item.DateOfBirth,
+                            Gender = item.Gender,
+                            UserName = item.UserName,
+                            Code = item.Code,
                         },
                         HireDate = item.HireDate,
                         MajorId = item.MajorId,
@@ -351,7 +354,7 @@ namespace GESS.Repository.Implement
                         Email = teacher.User.Email,
                         PhoneNumber = teacher.User.PhoneNumber,
                         Code = teacher.User.Code,
-                        Fullname = teacher.User.Fullname,
+                        Fullname = teacher.User.Fullname
                     });
                 }
             }
@@ -584,30 +587,31 @@ namespace GESS.Repository.Implement
                 SubjectName = examSlot.Subject.SubjectName,
                 SemesterName = examSlot.Semester.SemesterName
             };
-            
+
             // Lấy danh sách phòng thi cho ca thi này
             var examSlotRooms = await _context.ExamSlotRooms
                 .Where(esr => esr.ExamSlotId == examSlotId)
                 .Include(esr => esr.Room)
-                .Include(esr => esr.Supervisor)
-                .Include(esr => esr.ExamGrader)
+                .Include(esr => esr.Supervisor).ThenInclude(s => s.User)
+                .Include(esr => esr.ExamGrader).ThenInclude(g => g.User)
                 .Select(esr => new ExamSlotRoomDetail
                 {
                     ExamSlotRoomId = esr.ExamSlotRoomId,
                     RoomId = esr.RoomId,
                     RoomName = esr.Room.RoomName,
-                    GradeTeacherName = esr.Supervisor.User.Fullname,
-                    ProctorName = esr.ExamGrader.User.Fullname,
+                    GradeTeacherName = esr.Supervisor != null ? esr.Supervisor.User.Fullname : "Chưa gán giáo viên coi thi",
+                    ProctorName = esr.ExamGrader != null ? esr.ExamGrader.User.Fullname : "Chưa gán giáo viên chấm thi",
                     Status = esr.Status,
                     ExamType = esr.MultiOrPractice,
                     ExamDate = esr.ExamDate,
                     SubjectName = examSlot.Subject.SubjectName,
                     SemesterName = examSlot.Semester.SemesterName,
                     ExamName = esr.MultiOrPractice == "Multiple"
-                    ? (esr.MultiExam != null ? esr.MultiExam.MultiExamName : null)
-                    : (esr.PracticeExam != null ? esr.PracticeExam.PracExamName : null),
+                        ? (esr.MultiExam != null ? esr.MultiExam.MultiExamName : null)
+                        : (esr.PracticeExam != null ? esr.PracticeExam.PracExamName : null),
                 })
                 .ToListAsync();
+
             //Lay danh sách sinh viên trong từng phòng thi
             foreach (var room in examSlotRooms)
             {
@@ -645,6 +649,46 @@ namespace GESS.Repository.Implement
                 return start < slotEnd && end > slotStart;
             });
         }
+
+        public async Task<ExamSlotCheck?> IsTeacherAvailableAsync(ExamSlotCheck examSlotCheck)
+        {
+            var examSlot = await _context.ExamSlots
+                .FirstOrDefaultAsync(es => es.ExamSlotId == examSlotCheck.ExamSlotId);
+
+            if (examSlot == null)
+            {
+                return null;
+            }
+
+            // Thời gian bắt đầu và kết thúc của ca thi hiện tại
+            var startTime = examSlot.ExamDate + examSlot.StartTime;
+            var endTime = examSlot.ExamDate + examSlot.EndTime;
+
+            foreach (var item in examSlotCheck.TeacherChecks)
+            {
+                // Lấy tất cả ca thi mà teacher này đã tham gia
+                var teacherExamSlots = await _context.ExamSlotRooms
+                    .Include(esr => esr.ExamSlot)
+                    .Where(esr =>
+                        (esr.SupervisorId == item.TeacherId))
+                    .ToListAsync();
+
+                // Kiểm tra xem có ca nào trùng giờ không
+                var hasConflict = teacherExamSlots.Any(esr =>
+                {
+                    var otherStart = esr.ExamSlot.ExamDate + esr.ExamSlot.StartTime;
+                    var otherEnd = esr.ExamSlot.ExamDate + esr.ExamSlot.EndTime;
+
+                    // Điều kiện trùng lịch: (start < otherEnd && end > otherStart)
+                    return startTime < otherEnd && endTime > otherStart;
+                });
+
+                item.IsChecked = !hasConflict;
+            }
+
+            return examSlotCheck;
+        }
+
 
         public async Task<bool> SaveExamSlotsAsync(List<GeneratedExamSlot> examSlots)
         {

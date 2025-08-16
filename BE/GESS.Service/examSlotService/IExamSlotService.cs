@@ -31,6 +31,7 @@ namespace GESS.Service.examSlotService
         Task<IEnumerable<SubjectDTODDL>> GetAllSubjectsByMajorId(int majorId);
         Task <ExamSlotDetail> GetExamSlotById(int examSlotId);
         bool IsRoomAvailable(int roomId, DateTime slotStart, DateTime slotEnd);
+        Task<ExamSlotCheck> IsTeacherAvailable(ExamSlotCheck examSlotCheck);
         Task<bool> SaveExamSlotsAsync(List<GeneratedExamSlot> examSlots);
     }
 }

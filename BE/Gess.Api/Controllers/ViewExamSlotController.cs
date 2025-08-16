@@ -145,6 +145,32 @@ namespace GESS.Api.Controllers
             }
             return Ok("Grade teacher added to exam slot successfully.");
         }
-
+        //API to check exist protocol teacher or not
+        [HttpPost("CheckTeacherExist")]
+        public async Task<IActionResult> CheckTeacherExist([FromBody] List<ExistTeacherDTO> teachers)
+        {
+            if (teachers == null || !teachers.Any())
+            {
+                return BadRequest("Invalid request data.");
+            }
+            var result = await _examSlotService.CheckTeacherExist(teachers);
+            if (result == null || !result.Any())
+            {
+                return NotFound("No available protocol teachers found.");
+            }
+            return Ok(result);
+        }
+        //API to check if teacher free in start time to end time or not
+        [HttpGet("IsTeacherAvailable")]
+        public async Task<IActionResult> IsTeacherAvailable(ExamSlotCheck examSlotCheck)
+        {
+            // Assuming you have a method in your service to check teacher availability
+            var result = await _examSlotService.IsTeacherAvailable(examSlotCheck);
+            if (result == null)
+            {
+                return NotFound("Teacher availability check failed.");
+            }
+            return Ok(result);
+        }
     }
 }

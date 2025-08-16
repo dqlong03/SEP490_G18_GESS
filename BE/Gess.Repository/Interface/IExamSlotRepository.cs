@@ -28,6 +28,7 @@ namespace GESS.Repository.Interface
         Task<IEnumerable<SubjectDTODDL>> GetAllSubjectsByMajorIdAsync(int majorId);
         Task<ExamSlotDetail> GetExamSlotByIdAsync(int examSlotId);
         bool IsRoomAvailable(int roomId, DateTime slotStart, DateTime slotEnd);
+        Task<ExamSlotCheck> IsTeacherAvailableAsync(ExamSlotCheck examSlotCheck);
         Task<bool> SaveExamSlotsAsync(List<GeneratedExamSlot> examSlots);
     }
 }
