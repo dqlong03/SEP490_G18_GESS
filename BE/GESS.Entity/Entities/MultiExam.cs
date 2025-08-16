@@ -73,8 +73,6 @@ namespace GESS.Entity.Entities
         [Column(TypeName = "BIT")]
         public bool IsPublish { get; set; }
 
-        // Phòng thi và ca thi mà kỳ thi này diễn ra (1 kỳ thi diễn ra ở 1 phòng/ca)
-        public ExamSlotRoom ExamSlotRoom { get; set; }
 
         // Danh sách chương (chapter) được thi trong kỳ thi này (qua bảng trung gian NoQuestionInChapter)
         public ICollection<NoQuestionInChapter> NoQuestionInChapters { get; set; }
@@ -84,10 +82,12 @@ namespace GESS.Entity.Entities
 
         // Lịch sử thi của sinh viên trong kỳ thi này (qua bảng trung gian MultiExamHistory)
         public ICollection<MultiExamHistory> MultiExamHistories { get; set; }
+        public ICollection<ExamSlotRoom> ExamSlotRooms { get; set; } // thêm navigation
 
         // Constructor khởi tạo các danh sách
         public MultiExam()
         {
+            ExamSlotRooms = new List<ExamSlotRoom>();
             NoQuestionInChapters = new List<NoQuestionInChapter>();
             FinalExams = new List<FinalExam>();
             MultiExamHistories = new List<MultiExamHistory>();
