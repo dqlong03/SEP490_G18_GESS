@@ -49,6 +49,8 @@ export default function MidtermAttendancePage() {
   const dataTimerRef = useRef<NodeJS.Timeout | null>(null);
   const codeIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const dataIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [isClosed, setIsClosed] = useState(false);
+
 
   // Open exam slot function
   const openExamSlot = async () => {
@@ -90,6 +92,13 @@ export default function MidtermAttendancePage() {
       
       const data = await response.json();
       console.log("Exam info received:", data);
+
+        // Nếu status là "Đã đóng ca" thì tự động quay lại
+        if (data.status === "Đã đóng ca") {
+          setIsClosed(true);
+          router.back();
+          return true;
+        }
       
       setExamInfo(data);
       
@@ -99,6 +108,8 @@ export default function MidtermAttendancePage() {
         att[sv.id] = sv.isCheckedIn === 1;
       });
       setAttendance(att);
+
+      return false;
     } catch (error) {
       console.error("Error fetching exam info:", error);
       setExamInfo(null);
@@ -131,14 +142,14 @@ export default function MidtermAttendancePage() {
       setLoading(true);
       
       try {
-        // Bước 1: Mở ca thi (chỉ gọi 1 lần)
+        const closed = await fetchExamInfo();
+        if (closed) return; // Nếu đã đóng ca thì không mở lại ca thi
+
+        // Bước 2: Mở ca thi (chỉ gọi 1 lần)
         await openExamSlot();
-        
-        // Bước 2: Refresh code
+
+        // Bước 3: Refresh code
         await refreshCode();
-        
-        // Bước 3: Load data
-        await fetchExamInfo();
         
       } catch (error) {
         console.error("Error during initialization:", error);

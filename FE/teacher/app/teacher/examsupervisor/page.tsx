@@ -69,7 +69,7 @@ function getWeekDatesFromStart(startDate: string): string[] {
   const d = new Date(startDate);
   for (let i = 0; i < 7; i++) {
     const dateCopy = new Date(d);
-    dateCopy.setDate(d.getDate() + i);
+    dateCopy.setDate(d.getDate() + i+1);
     dates.push(dateCopy.toISOString().slice(0, 10));
   }
   return dates;
@@ -139,18 +139,20 @@ function getYearOptions(): YearOption[] {
   }));
 }
 
-// Tìm tuần chứa ngày hiện tại
 function findWeekOfToday(weekOptions: WeekOption[]): WeekOption | undefined {
   const today = new Date();
   for (let i = 0; i < weekOptions.length; i++) {
     const weekStart = new Date(weekOptions[i].value);
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 6);
+    // Đặt giờ về 0 để so sánh chính xác ngày
+    weekStart.setHours(0,0,0,0);
+    weekEnd.setHours(23,59,59,999);
     if (today >= weekStart && today <= weekEnd) {
       return weekOptions[i];
     }
   }
-  return weekOptions[0];
+  return undefined;
 }
 
 // Hàm lấy thông tin trạng thái từ status, kiểm tra ngày và examSlotStatus
@@ -251,14 +253,17 @@ export default function ExamSchedulePage() {
   const [updatingStatus, setUpdatingStatus] = useState<number | null>(null);
   const router = useRouter();
 
-  // Khi đổi năm, cập nhật tuần và chọn tuần chứa ngày hiện tại
+
   useEffect(() => {
     const options = getWeekStartOptions(selectedYear.value);
     setWeekOptions(options);
+
+    // Luôn tìm tuần hiện tại mỗi khi đổi năm
     const weekOfToday = findWeekOfToday(options);
     setSelectedWeek(weekOfToday || options[0] || null);
   }, [selectedYear]);
 
+  
   // Khi đổi tuần, fetch lịch thi
   useEffect(() => {
     const fetchExamSchedules = async () => {
@@ -269,7 +274,7 @@ export default function ExamSchedulePage() {
       }
       const fromDate = selectedWeek.value;
       const d = new Date(selectedWeek.value);
-      d.setDate(d.getDate() + 6);
+      d.setDate(d.getDate() + 8);
       const toDate = d.toISOString().slice(0, 10);
 
       try {
@@ -500,9 +505,7 @@ export default function ExamSchedulePage() {
                               key={dayIdx}
                               className="px-4 py-4 align-top border-b border-gray-200"
                             >
-                              <div className="h-32 flex items-center justify-center text-gray-400">
-                                <span className="text-sm">Không có ca thi</span>
-                              </div>
+                             
                             </td>
                           );
                         }
