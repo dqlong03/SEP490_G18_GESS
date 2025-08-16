@@ -124,11 +124,7 @@ namespace GESS.Api.Controllers
                 return BadRequest("Invalid request data.");
             }
             var result = await _examSlotService.AddTeacherToExamSlotRoom(examSlotRoomList);
-            if (!result)
-            {
-                return BadRequest("Failed to add teacher to exam slot room.");
-            }
-            return Ok("Teacher added to exam slot room successfully.");
+            return Ok(result);
         }
         // API to add grade teacher to exam slot
         [HttpPost("AddGradeTeacherToExamSlot")]
@@ -139,11 +135,7 @@ namespace GESS.Api.Controllers
                 return BadRequest("Invalid request data.");
             }
             var result = await _examSlotService.AddGradeTeacherToExamSlot(gradeTeacherRequest);
-            if (!result)
-            {
-                return BadRequest("Failed to add grade teacher to exam slot.");
-            }
-            return Ok("Grade teacher added to exam slot successfully.");
+            return Ok(result);
         }
         //API to check exist protocol teacher or not
         [HttpPost("CheckTeacherExist")]

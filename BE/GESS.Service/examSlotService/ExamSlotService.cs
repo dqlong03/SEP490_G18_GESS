@@ -29,20 +29,16 @@ namespace GESS.Service.examSlotService
             return await _unitOfWork.ExamSlotRepository.AddExamToExamSlotAsync(examSlotId, examId, examType);
         }
 
-        public async Task<bool> AddGradeTeacherToExamSlot(ExamSlotRoomListGrade gradeTeacherRequest)
+        public async Task<string> AddGradeTeacherToExamSlot(ExamSlotRoomListGrade gradeTeacherRequest)
         {
             var result = await _unitOfWork.ExamSlotRepository.AddGradeTeacherToExamSlotAsync(gradeTeacherRequest);
             return result;
         }
 
-        public async  Task<bool> AddTeacherToExamSlotRoom(ExamSlotRoomList examSlotRoomList)
+        public async  Task<string> AddTeacherToExamSlotRoom(ExamSlotRoomList examSlotRoomList)
         {
             var result = await _unitOfWork.ExamSlotRepository.AddTeacherToExamSlotRoomAsync(examSlotRoomList);
-            if (result == null)
-            {
-                return false;
-            }
-            return true;
+            return result;
         }
 
         public async Task<bool> ChangeStatusExamSlot(int examSlotId, string examType)

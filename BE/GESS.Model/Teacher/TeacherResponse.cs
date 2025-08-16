@@ -59,6 +59,7 @@ namespace GESS.Model.Teacher
         public int MajorId { get; set; }
         public string? MajorName { get; set; }
         public DateTime HireDate { get; set; } = DateTime.Now;
+        public int subjectId { get; set; }
 
     }
 }
