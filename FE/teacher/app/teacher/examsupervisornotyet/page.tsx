@@ -142,7 +142,7 @@ export default function ExamSupervisorNotYetPage() {
     const currentDate = new Date(date);
     // Tạo ngày hôm qua
     const date1 = new Date(currentDate);
-    date1.setDate(date1.getDate() - 1);
+    date1.setDate(date1.getDate());
     const yesterdayString = date1.toISOString().slice(0, 10);
     
     // Tạo ngày mai
