@@ -161,7 +161,7 @@ namespace GESS.Api.Controllers
             return Ok(result);
         }
         //API to check if teacher free in start time to end time or not
-        [HttpGet("IsTeacherAvailable")]
+        [HttpPost("IsTeacherAvailable")]
         public async Task<IActionResult> IsTeacherAvailable(ExamSlotCheck examSlotCheck)
         {
             // Assuming you have a method in your service to check teacher availability
