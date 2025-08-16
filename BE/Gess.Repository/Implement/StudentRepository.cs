@@ -321,8 +321,8 @@ namespace GESS.Repository.Implement
                         && meh.MultiExam.SubjectId == subjectId
                         && meh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM
                         && meh.MultiExam.CreateAt.Year == year)
-                    .Select(meh => new { meh.MultiExam.SemesterId, meh.MultiExam.CreateAt })
-                    .OrderByDescending(x => x.CreateAt)
+                    .Select(meh => new { meh.MultiExam.SemesterId, meh.MultiExam.CreateAt.Year })
+                    .OrderByDescending(x => x.SemesterId)
                     .FirstOrDefaultAsync();
 
                 var latestPracticeExamSemester = await _context.PracticeExamHistories
@@ -330,12 +330,12 @@ namespace GESS.Repository.Implement
                         && peh.PracticeExam.SubjectId == subjectId
                         && peh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM
                         && peh.PracticeExam.CreateAt.Year == year)
-                    .Select(peh => new { peh.PracticeExam.SemesterId, peh.PracticeExam.CreateAt })
-                    .OrderByDescending(x => x.CreateAt)
+                    .Select(peh => new { peh.PracticeExam.SemesterId, peh.PracticeExam.CreateAt.Year })
+                    .OrderByDescending(x => x.SemesterId)
                     .FirstOrDefaultAsync();
 
                 semesterId = latestMultiExamSemester != null && latestPracticeExamSemester != null
-                    ? (latestMultiExamSemester.CreateAt > latestPracticeExamSemester.CreateAt
+                    ? (latestMultiExamSemester.Year > latestPracticeExamSemester.Year
                         ? latestMultiExamSemester.SemesterId
                         : latestPracticeExamSemester.SemesterId)
                     : latestMultiExamSemester?.SemesterId ?? latestPracticeExamSemester?.SemesterId;
