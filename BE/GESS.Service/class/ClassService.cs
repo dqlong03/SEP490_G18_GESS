@@ -131,8 +131,6 @@ namespace GESS.Service
                             UpdatedAt = DateTime.UtcNow,
                             IsActive = true,
                             IsDeleted = false,
-                            
-                            
                         };
 
                         var result = await _unitOfWork.UserManager.CreateAsync(newUser, randomPassword);
@@ -143,22 +141,22 @@ namespace GESS.Service
                         userId = newUser.Id;
 
                         // Gán vai trò "Sinh viên" cho người dùng mới
-                        var roleExists = await _unitOfWork.RoleManager.RoleExistsAsync("Sinh viên");
+                        var roleExists = await _unitOfWork.RoleManager.RoleExistsAsync("Học sinh");
                         if (!roleExists)
                         {
                             var role = new IdentityRole<Guid>
                             {
                                 Id = Guid.NewGuid(),
-                                Name = "Sinh viên",
-                                NormalizedName = "SINH VIÊN"
+                                Name = "Học sinh",
+                                NormalizedName = "STUDENT"
                             };
                             var roleResult = await _unitOfWork.RoleManager.CreateAsync(role);
                             if (!roleResult.Succeeded)
                             {
-                                throw new Exception($"Không thể tạo vai trò Sinh viên: {string.Join(", ", roleResult.Errors.Select(e => e.Description))}");
+                                throw new Exception($"Không thể tạo vai trò Học sinh: {string.Join(", ", roleResult.Errors.Select(e => e.Description))}");
                             }
                         }
-                        await _unitOfWork.UserManager.AddToRoleAsync(newUser, "Sinh viên");
+                        await _unitOfWork.UserManager.AddToRoleAsync(newUser, "Học sinh");
                         // (Tùy chọn) Gửi mật khẩu qua email
                         // await _emailService.SendPasswordAsync(newUser.Email, randomPassword);
                     }
