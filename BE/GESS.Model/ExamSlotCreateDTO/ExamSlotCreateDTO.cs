@@ -28,7 +28,7 @@ namespace GESS.Model.ExamSlotCreateDTO
     }
     public class TeacherExamSlotRoom
     {
-        public int examSlotId { get; set; }
+        public int examSlotRoomId { get; set; }
         public Guid TeacherId { get; set; }
     }
     public class ExamSlotRoomList

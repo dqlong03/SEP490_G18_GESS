@@ -161,7 +161,7 @@ namespace GESS.Repository.Implement
             foreach (var item in gradeTeacherRequest.teacherExamslotRoom)
             {
                 var examSlotRoom = await _context.ExamSlotRooms
-                    .FirstOrDefaultAsync(esr => esr.ExamSlotId == item.examSlotId);
+                    .FirstOrDefaultAsync(esr => esr.ExamSlotRoomId == item.examSlotRoomId);
                 if (examSlotRoom != null)
                 {
                     // Kiểm tra xem giảng viên đã được gán chưa
@@ -195,7 +195,7 @@ namespace GESS.Repository.Implement
                 foreach (var item in examSlotRoomList.teacherExamslotRoom)
                 {
                     var examSlotRoom = await _context.ExamSlotRooms
-                        .FirstOrDefaultAsync(esr => esr.ExamSlotId == item.examSlotId);
+                        .FirstOrDefaultAsync(esr => esr.ExamSlotRoomId== item.examSlotRoomId);
                     if (examSlotRoom != null)
                     {
                         // Kiểm tra xem giảng viên đã được gán chưa
@@ -222,7 +222,7 @@ namespace GESS.Repository.Implement
                 foreach (var item in examSlotRoomList.teacherExamslotRoom)
                 {
                     var examSlotRoom = await _context.ExamSlotRooms
-                        .FirstOrDefaultAsync(esr => esr.ExamSlotId == item.examSlotId);
+                        .FirstOrDefaultAsync(esr => esr.ExamSlotRoomId == item.examSlotRoomId);
                     if (examSlotRoom != null)
                     {
                         // Kiểm tra xem giảng viên đã được gán chưa
