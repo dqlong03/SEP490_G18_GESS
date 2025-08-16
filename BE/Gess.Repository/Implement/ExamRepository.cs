@@ -331,8 +331,10 @@ namespace GESS.Repository.Implement
                     Duration = x.MultiExam.Duration,
                     Status = x.MultiExam.Status,
                     ExamDate = x.ExamSlotRoom != null ? x.ExamSlotRoom.ExamDate : x.MultiExam.EndDay ?? default(DateTime),
-                    RoomName = x.Room != null ? x.Room.RoomName : x.Class.ClassName,
-                    ExamSlotName = x.ExamSlot != null ? x.ExamSlot.SlotName : $"{x.MultiExam.StartDay:dd/MM/yyyy HH:mm} - {x.MultiExam.EndDay:dd/MM/yyyy HH:mm}",
+                   // RoomName = x.Room != null ? x.Room.RoomName : x.Class.ClassName,
+                    RoomName = x.Room != null ? x.Room.RoomName : "-",
+                   // ExamSlotName = x.ExamSlot != null ? x.ExamSlot.SlotName : $"{x.MultiExam.StartDay:dd/MM/yyyy HH:mm} - {x.MultiExam.EndDay:dd/MM/yyyy HH:mm}",
+                    ExamSlotName = x.ExamSlot != null ? x.ExamSlot.SlotName : "-",
                     StartTime = x.ExamSlot != null ? x.ExamSlot.StartTime : default,
                     EndTime = x.ExamSlot != null ? x.ExamSlot.EndTime : default
                 });
@@ -564,15 +566,20 @@ namespace GESS.Repository.Implement
                     SubjectName = x.SubjectName,
                     Duration = x.PracticeExam.Duration,
                     Status = x.PracticeExam.Status,
+                    //ExamDate = x.ExamSlotRoom != null ? x.ExamSlotRoom.ExamDate : x.PracticeExam.EndDay ?? default(DateTime),
                     ExamDate = x.ExamSlotRoom != null ? x.ExamSlotRoom.ExamDate : x.PracticeExam.EndDay ?? default(DateTime),
-                    RoomName = x.Room != null ? x.Room.RoomName : x.Class.ClassName,
-                    ExamSlotName = x.ExamSlot != null ? x.ExamSlot.SlotName : $"{x.PracticeExam.StartDay:dd/MM/yyyy HH:mm} - {x.PracticeExam.EndDay:dd/MM/yyyy HH:mm}",
+                    //RoomName = x.Room != null ? x.Room.RoomName : x.Class.ClassName,
+                    RoomName = x.Room != null ? x.Room.RoomName : "-",
+                    //ExamSlotName = x.ExamSlot != null ? x.ExamSlot.SlotName : $"{x.PracticeExam.StartDay:dd/MM/yyyy HH:mm} - {x.PracticeExam.EndDay:dd/MM/yyyy HH:mm}",
+                    ExamSlotName = x.ExamSlot != null ? x.ExamSlot.SlotName : "-",
                     StartTime = x.ExamSlot != null ? x.ExamSlot.StartTime : default,
                     EndTime = x.ExamSlot != null ? x.ExamSlot.EndTime : default
                 });
 
             return await combinedQuery.ToListAsync();
         }
+
+
         public async Task<ExamStatusCheckListResponseDTO> CheckExamStatusAsync(ExamStatusCheckRequestDTO request)
         {
             var result = new ExamStatusCheckListResponseDTO();
