@@ -381,7 +381,7 @@ namespace GESS.Repository.Implement
             }
 
             var submissions = await _context.PracticeExamHistories
-                .Where(p => p.StudentId == studentId && p.PracticeExam.ExamSlotRoom.ExamSlotRoomId == examId)
+                .Where(p => p.StudentId == studentId && p.ExamSlotRoomId == examId)
                 .Select(p => new StudentSubmission
                 {
                     PracExamHistoryId = p.PracExamHistoryId,

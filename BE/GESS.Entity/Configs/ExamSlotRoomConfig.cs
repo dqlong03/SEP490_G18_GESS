@@ -37,19 +37,20 @@ namespace GESS.Entity.Configs
                    .WithMany(t => t.ExamSlotRoomGraders)
                    .HasForeignKey(esr => esr.ExamGradedId)
                    .OnDelete(DeleteBehavior.Restrict)
-                   .IsRequired(false); 
+                   .IsRequired(false);
 
             builder.HasOne(esr => esr.PracticeExam)
-                   .WithOne(pe => pe.ExamSlotRoom)
-                   .HasForeignKey<ExamSlotRoom>(esr => esr.PracticeExamId)
+                   .WithMany(pe => pe.ExamSlotRooms)   
+                   .HasForeignKey(esr => esr.PracticeExamId)
                    .OnDelete(DeleteBehavior.Restrict)
-                   .IsRequired(false); 
+                   .IsRequired(false);
 
             builder.HasOne(esr => esr.MultiExam)
-                   .WithOne(me => me.ExamSlotRoom)
-                   .HasForeignKey<ExamSlotRoom>(esr => esr.MultiExamId)
+                   .WithMany(me => me.ExamSlotRooms)   
+                   .HasForeignKey(esr => esr.MultiExamId)
                    .OnDelete(DeleteBehavior.Restrict)
-                   .IsRequired(false); 
+                   .IsRequired(false);
+
         }
     }
 }
