@@ -753,12 +753,22 @@ namespace GESS.Test
             throw new NotImplementedException();
         }
 
+        public Task<bool> AddGradeTeacherToExamSlot(Model.ExamSlotCreateDTO.ExamSlotRoomListGrade gradeTeacherRequest)
+        {
+            throw new NotImplementedException();
+        }
+
         public int AddRange(IEnumerable<ExamSlot> entities)
         {
             throw new NotImplementedException();
         }
 
         public Task<int> AddRangeAsync(IEnumerable<ExamSlot> entities)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> AddTeacherToExamSlotRoom(Model.ExamSlotCreateDTO.ExamSlotRoomList examSlotRoomList)
         {
             throw new NotImplementedException();
         }
