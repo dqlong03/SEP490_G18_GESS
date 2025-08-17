@@ -288,7 +288,7 @@ const ExamSlotCreatePage = () => {
       return {
         subjectId: subject?.value || 1,
         status: slot.status || "Chưa gán bài thi",
-        multiOrPractice: slot.multiOrPractice || examType,
+        multiOrPractice: examType,
         slotName: slot.slotName || `Slot ${index + 1}`,
         semesterId: semester?.value || 1,
         date: toVNISOString(examDateObj),
@@ -319,7 +319,7 @@ const ExamSlotCreatePage = () => {
       throw new Error('Failed to save exam slots: ' + errorText);
     }
     alert('Lưu ca thi thành công!');
-    router.back();
+    router.push('/examination/examslot/list');
   } catch (error: any) {
     console.error('Error saving exam slots:', error);
     alert(error.message || 'Có lỗi xảy ra khi lưu ca thi!');
