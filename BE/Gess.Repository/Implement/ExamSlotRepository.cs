@@ -14,6 +14,7 @@ using GESS.Model.Teacher;
 using GESS.Model.ExamSlotCreateDTO;
 using GESS.Model.ExamSlot;
 using GESS.Model.Student;
+using Microsoft.AspNetCore.Identity;
 namespace GESS.Repository.Implement
 {
     public class ExamSlotRepository : IExamSlotRepository
@@ -152,16 +153,58 @@ namespace GESS.Repository.Implement
             return true;
         }
 
-        public async Task<bool> AddGradeTeacherToExamSlotAsync(ExamSlotRoomListGrade gradeTeacherRequest)
+        public async Task<string> AddGradeTeacherToExamSlotAsync(ExamSlotRoomListGrade gradeTeacherRequest)
         {
             if(gradeTeacherRequest == null || gradeTeacherRequest.teacherExamslotRoom == null || !gradeTeacherRequest.teacherExamslotRoom.Any())
             {
-                return false;
+                return "Danh sách giảng viên chấm thi trống!";
+            }
+            foreach (var item in gradeTeacherRequest.teacherExamslotRoom)
+            {
+                var trainingProgram = await _context.TrainingPrograms
+                    .Where(tp => tp.MajorId == item.majorId)
+                    .OrderByDescending(tp => tp.StartDate)
+                    .FirstOrDefaultAsync();
+                if (trainingProgram == null)
+                {
+                    return "Ngành của giảng viên " + item.TeacherName + " không tồn tại";
+                }
+                var subjectTrainingProgram = await _context.SubjectTrainingPrograms
+                    .Where(stp => stp.TrainProId == trainingProgram.TrainProId && stp.SubjectId == gradeTeacherRequest.subjectId)
+                    .FirstOrDefaultAsync();
+                if (subjectTrainingProgram == null)
+                {
+                    return "Ngành của giảng viên " + item.TeacherName + " không có môn " + gradeTeacherRequest.subjectName;
+                }
+                var subjectTeacher = await _context.SubjectTeachers
+                    .FirstOrDefaultAsync(st => st.SubjectId == gradeTeacherRequest.subjectId && st.TeacherId == item.TeacherId);
+                if (subjectTeacher == null)
+                {
+                    //Tạo mới SubjectTeacher nếu không tồn tại
+                    subjectTeacher = new SubjectTeacher
+                    {
+                        SubjectId = gradeTeacherRequest.subjectId,
+                        TeacherId = item.TeacherId,
+                        IsActiveSubjectTeacher = true,
+                        IsCreateExamTeacher = true,
+                        IsGradeTeacher = true
+                    };
+                    _context.SubjectTeachers.Add(subjectTeacher);
+                    await _context.SaveChangesAsync(); // Lưu thay đổi để có SubjectTeacherId
+                }
+                else
+                {
+                    subjectTeacher.IsGradeTeacher = true; // Cập nhật nếu đã tồn tại
+                    subjectTeacher.IsCreateExamTeacher = true; // Cập nhật nếu đã tồn tại
+                    subjectTeacher.IsActiveSubjectTeacher = true; // Cập nhật nếu đã tồn tại
+                    _context.SubjectTeachers.Update(subjectTeacher);
+                    await _context.SaveChangesAsync(); // Lưu thay đổi
+                }
             }
             foreach (var item in gradeTeacherRequest.teacherExamslotRoom)
             {
                 var examSlotRoom = await _context.ExamSlotRooms
-                    .FirstOrDefaultAsync(esr => esr.ExamSlotId == item.examSlotId);
+                    .FirstOrDefaultAsync(esr => esr.ExamSlotRoomId == item.examSlotRoomId);
                 if (examSlotRoom != null)
                 {
                     // Kiểm tra xem giảng viên đã được gán chưa
@@ -173,29 +216,71 @@ namespace GESS.Repository.Implement
                     }
                     else
                     {
-                        return false; // Giảng viên đã được gán, không thể thêm nữa
+                        return "Đã tồn tại giảng viên chấm thi"; // Giảng viên đã được gán, không thể thêm nữa
                     }
                 }
                 else
                 {
-                    return false; // Không tìm thấy ExamSlotRoom tương ứng
+                    return "Không tìm thấy phòng thi tương ứng"; // Không tìm thấy ExamSlotRoom tương ứng
                 }
             }
-            return true; // Thêm giảng viên thành công
+            return "Thêm giảng viên chấm thi thành công"; // Thêm giảng viên thành công
         }
 
-        public async Task<bool> AddTeacherToExamSlotRoomAsync(ExamSlotRoomList examSlotRoomList)
+        public async Task<string> AddTeacherToExamSlotRoomAsync(ExamSlotRoomList examSlotRoomList)
         {
             if (examSlotRoomList == null || examSlotRoomList.teacherExamslotRoom == null || !examSlotRoomList.teacherExamslotRoom.Any())
             {
-                return false;
+                return "Danh sách giảng viên chấm thi trống!";
             }
             if (examSlotRoomList.isTheSame)
             {
                 foreach (var item in examSlotRoomList.teacherExamslotRoom)
                 {
+                    var trainingProgram = await _context.TrainingPrograms
+                        .Where(tp => tp.MajorId == item.majorId)
+                        .OrderByDescending(tp => tp.StartDate)
+                        .FirstOrDefaultAsync();
+                    if (trainingProgram == null)
+                    {
+                        return "Ngành của giảng viên " + item.TeacherName + " không tồn tại";
+                    }
+                    var subjectTrainingProgram = await _context.SubjectTrainingPrograms
+                        .Where(stp => stp.TrainProId == trainingProgram.TrainProId && stp.SubjectId == examSlotRoomList.subjectId)
+                        .FirstOrDefaultAsync();
+                    if (subjectTrainingProgram == null)
+                    {
+                        return "Ngành của giảng viên " + item.TeacherName + " không có môn " + examSlotRoomList.subjectName;
+                    }
+                    var subjectTeacher = await _context.SubjectTeachers
+                        .FirstOrDefaultAsync(st => st.SubjectId == examSlotRoomList.subjectId && st.TeacherId == item.TeacherId);
+                    if (subjectTeacher == null)
+                    {
+                        //Tạo mới SubjectTeacher nếu không tồn tại
+                        subjectTeacher = new SubjectTeacher
+                        {
+                            SubjectId = examSlotRoomList.subjectId,
+                            TeacherId = item.TeacherId,
+                            IsActiveSubjectTeacher = true,
+                            IsCreateExamTeacher = true,
+                            IsGradeTeacher = true
+                        };
+                        _context.SubjectTeachers.Add(subjectTeacher);
+                        await _context.SaveChangesAsync(); // Lưu thay đổi để có SubjectTeacherId
+                    }
+                    else
+                    {
+                        subjectTeacher.IsGradeTeacher = true; // Cập nhật nếu đã tồn tại
+                        subjectTeacher.IsCreateExamTeacher = true; // Cập nhật nếu đã tồn tại
+                        subjectTeacher.IsActiveSubjectTeacher = true; // Cập nhật nếu đã tồn tại
+                        _context.SubjectTeachers.Update(subjectTeacher);
+                        await _context.SaveChangesAsync(); // Lưu thay đổi
+                    }
+                }
+                foreach (var item in examSlotRoomList.teacherExamslotRoom)
+                {
                     var examSlotRoom = await _context.ExamSlotRooms
-                        .FirstOrDefaultAsync(esr => esr.ExamSlotId == item.examSlotId);
+                        .FirstOrDefaultAsync(esr => esr.ExamSlotRoomId== item.examSlotRoomId);
                     if (examSlotRoom != null)
                     {
                         // Kiểm tra xem giảng viên đã được gán chưa
@@ -208,12 +293,12 @@ namespace GESS.Repository.Implement
                         }
                         else
                         {
-                            return false; 
+                            return "Đã tồn tại giảng viên coi/chấm thi"; // Giảng viên đã được gán, không thể thêm nữa
                         }
                     }
                     else
                     {
-                        return false; 
+                        return "Không tìm thấy phòng thi tương ứng"; // Không tìm thấy ExamSlotRoom tương ứng
                     }
                 }
             }
@@ -222,7 +307,7 @@ namespace GESS.Repository.Implement
                 foreach (var item in examSlotRoomList.teacherExamslotRoom)
                 {
                     var examSlotRoom = await _context.ExamSlotRooms
-                        .FirstOrDefaultAsync(esr => esr.ExamSlotId == item.examSlotId);
+                        .FirstOrDefaultAsync(esr => esr.ExamSlotRoomId == item.examSlotRoomId);
                     if (examSlotRoom != null)
                     {
                         // Kiểm tra xem giảng viên đã được gán chưa
@@ -234,16 +319,16 @@ namespace GESS.Repository.Implement
                         }
                         else
                         {
-                            return false;
+                            return "Đã tồn tại giảng viên coi thi"; // Giảng viên đã được gán, không thể thêm nữa
                         }
                     }
                     else
                     {
-                        return false;
+                        return "Không tìm thấy phòng thi tương ứng"; // Không tìm thấy ExamSlotRoom tương ứng
                     }
                 }
             }
-            return true;
+            return "true";
 
         }
 
@@ -339,6 +424,34 @@ namespace GESS.Repository.Implement
                         MajorId = item.MajorId,
                     };
                     _context.Teachers.Add(newTeacher);
+                    await _context.SaveChangesAsync();
+                    var roleTeacherId = await _context.Roles
+                                .Where(r => r.Name == "Giáo viên")
+                                .Select(r => r.Id)
+                                .FirstOrDefaultAsync();
+
+                    if (roleTeacherId == Guid.Empty)
+                    {
+                        var role = new IdentityRole<Guid>
+                        {
+                            Id = Guid.NewGuid(),
+                            Name = "Giáo viên",
+                            NormalizedName = "TEACHER"
+                        };
+
+                        _context.Roles.Add(role);
+                        await _context.SaveChangesAsync();
+
+                        roleTeacherId = role.Id;
+                    }
+
+                    var userRole = new IdentityUserRole<Guid>
+                    {
+                        UserId = newTeacher.User.Id,
+                        RoleId = roleTeacherId
+                    };
+
+                    _context.UserRoles.Add(userRole);
                     await _context.SaveChangesAsync();
                 }
                 // Lấy thông tin giáo viên đã tồn tại hoặc mới thêm
@@ -483,13 +596,13 @@ namespace GESS.Repository.Implement
                     ExamDate = es.ExamDate,
                     // Kiểm tra Proctor
                     ProctorStatus = es.ExamSlotRooms.Any(r => r.SupervisorId != null)
-                    ? "Chưa gán giảng viên coi thi"
-                    : "Đã gán giảng viên coi thi",
+                    ? "Đã gán giảng viên coi thi"
+                    : "Chưa gán giảng viên coi thi",
 
                     // Kiểm tra Grader
-                    GradeTeacherStatus = es.ExamSlotRooms.Any(r => r.ExamGradedId == null)
-                    ? "Chưa gán giảng viên chấm thi"
-                    : "Đã gán giảng viên chấm thi"
+                    GradeTeacherStatus = es.ExamSlotRooms.Any(r => r.ExamGradedId != null)
+                    ? "Đã gán giảng viên chấm thi"
+                    : "Chưa gán giảng viên chấm thi"
                 })
                 .Skip((pageIndex - 1) * pageSize)
                 .Take(pageSize)
@@ -599,8 +712,8 @@ namespace GESS.Repository.Implement
                     ExamSlotRoomId = esr.ExamSlotRoomId,
                     RoomId = esr.RoomId,
                     RoomName = esr.Room.RoomName,
-                    GradeTeacherName = esr.Supervisor != null ? esr.Supervisor.User.Fullname : "Chưa gán giáo viên coi thi",
-                    ProctorName = esr.ExamGrader != null ? esr.ExamGrader.User.Fullname : "Chưa gán giáo viên chấm thi",
+                    GradeTeacherName = esr.ExamGrader != null ? esr.ExamGrader.User.Fullname : "Chưa gán giáo viên chấm thi",
+                    ProctorName = esr.Supervisor != null ? esr.Supervisor.User.Fullname : "Chưa gán giáo viên coi thi",
                     Status = esr.Status,
                     ExamType = esr.MultiOrPractice,
                     ExamDate = esr.ExamDate,
@@ -697,8 +810,8 @@ namespace GESS.Repository.Implement
                 // 1. Tạo ExamSlot
                 var examSlot = new ExamSlot
                 {
-                    StartTime = item.StartTime.TimeOfDay,
-                    EndTime = item.EndTime.TimeOfDay,
+                    StartTime = item.StartTime.ToLocalTime().TimeOfDay,
+                    EndTime = item.EndTime.ToLocalTime().TimeOfDay,
                     SlotName = item.SlotName,
                     ExamDate = item.Date,
                     MultiOrPractice = item.MultiOrPractice,
@@ -750,15 +863,37 @@ namespace GESS.Repository.Implement
 
                             };
                             _context.Students.Add(newStudent);
-                            try
+                            await _context.SaveChangesAsync();
+
+                            var roleStudentId = await _context.Roles
+                                .Where(r => r.Name == "Học sinh")
+                                .Select(r => r.Id)
+                                .FirstOrDefaultAsync();
+
+                            if (roleStudentId == Guid.Empty)
                             {
+                                var role = new IdentityRole<Guid>
+                                {
+                                    Id = Guid.NewGuid(),
+                                    Name = "Học sinh",
+                                    NormalizedName = "STUDENT"
+                                };
+
+                                _context.Roles.Add(role);
                                 await _context.SaveChangesAsync();
+
+                                roleStudentId = role.Id; 
                             }
-                            catch (DbUpdateException ex)
+
+                            var userRole = new IdentityUserRole<Guid>
                             {
-                                Console.WriteLine(ex.InnerException?.Message);
-                                throw;
-                            }
+                                UserId = newStudent.User.Id,
+                                RoleId = roleStudentId
+                            };
+
+                            _context.UserRoles.Add(userRole);
+                            await _context.SaveChangesAsync();
+
                             existingStudent = newStudent; 
                         }
 

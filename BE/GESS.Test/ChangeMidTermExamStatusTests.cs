@@ -753,7 +753,7 @@ namespace GESS.Test
             throw new NotImplementedException();
         }
 
-        public Task<bool> AddGradeTeacherToExamSlot(Model.ExamSlotCreateDTO.ExamSlotRoomListGrade gradeTeacherRequest)
+        public Task<string> AddGradeTeacherToExamSlot(Model.ExamSlotCreateDTO.ExamSlotRoomListGrade gradeTeacherRequest)
         {
             throw new NotImplementedException();
         }
@@ -768,7 +768,7 @@ namespace GESS.Test
             throw new NotImplementedException();
         }
 
-        public Task<bool> AddTeacherToExamSlotRoom(Model.ExamSlotCreateDTO.ExamSlotRoomList examSlotRoomList)
+        public Task<string> AddTeacherToExamSlotRoom(Model.ExamSlotCreateDTO.ExamSlotRoomList examSlotRoomList)
         {
             throw new NotImplementedException();
         }
