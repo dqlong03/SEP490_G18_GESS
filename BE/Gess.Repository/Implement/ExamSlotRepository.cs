@@ -596,13 +596,13 @@ namespace GESS.Repository.Implement
                     ExamDate = es.ExamDate,
                     // Kiểm tra Proctor
                     ProctorStatus = es.ExamSlotRooms.Any(r => r.SupervisorId != null)
-                    ? "Chưa gán giảng viên coi thi"
-                    : "Đã gán giảng viên coi thi",
+                    ? "Đã gán giảng viên coi thi"
+                    : "Chưa gán giảng viên coi thi",
 
                     // Kiểm tra Grader
-                    GradeTeacherStatus = es.ExamSlotRooms.Any(r => r.ExamGradedId == null)
-                    ? "Chưa gán giảng viên chấm thi"
-                    : "Đã gán giảng viên chấm thi"
+                    GradeTeacherStatus = es.ExamSlotRooms.Any(r => r.ExamGradedId != null)
+                    ? "Đã gán giảng viên chấm thi"
+                    : "Chưa gán giảng viên chấm thi"
                 })
                 .Skip((pageIndex - 1) * pageSize)
                 .Take(pageSize)
@@ -712,8 +712,8 @@ namespace GESS.Repository.Implement
                     ExamSlotRoomId = esr.ExamSlotRoomId,
                     RoomId = esr.RoomId,
                     RoomName = esr.Room.RoomName,
-                    GradeTeacherName = esr.Supervisor != null ? esr.Supervisor.User.Fullname : "Chưa gán giáo viên coi thi",
-                    ProctorName = esr.ExamGrader != null ? esr.ExamGrader.User.Fullname : "Chưa gán giáo viên chấm thi",
+                    GradeTeacherName = esr.ExamGrader != null ? esr.ExamGrader.User.Fullname : "Chưa gán giáo viên chấm thi",
+                    ProctorName = esr.Supervisor != null ? esr.Supervisor.User.Fullname : "Chưa gán giáo viên coi thi",
                     Status = esr.Status,
                     ExamType = esr.MultiOrPractice,
                     ExamDate = esr.ExamDate,
@@ -810,8 +810,8 @@ namespace GESS.Repository.Implement
                 // 1. Tạo ExamSlot
                 var examSlot = new ExamSlot
                 {
-                    StartTime = item.StartTime.TimeOfDay,
-                    EndTime = item.EndTime.TimeOfDay,
+                    StartTime = item.StartTime.ToLocalTime().TimeOfDay,
+                    EndTime = item.EndTime.ToLocalTime().TimeOfDay,
                     SlotName = item.SlotName,
                     ExamDate = item.Date,
                     MultiOrPractice = item.MultiOrPractice,

@@ -1,5 +1,4 @@
 "use client";
-import { url } from "inspector";
 import React, { useState, useEffect } from "react";
 import Select from "react-select";
 import * as XLSX from 'xlsx';
@@ -34,29 +33,21 @@ const ExamSlotCreatePage = () => {
   const [semester, setSemester] = useState<any>(null);
   const [roomPopup, setRoomPopup] = useState(false);
   const [studentPopup, setStudentPopup] = useState(false);
-  const [teacherPopup, setTeacherPopup] = useState(false);
   const [selectedRooms, setSelectedRooms] = useState<number[]>([]);
   const [studentList, setStudentList] = useState<any[]>([]);
-  const [teacherList, setTeacherList] = useState<any[]>([]);
   const [date, setDate] = useState("");
   const [duration, setDuration] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [breakTime, setBreakTime] = useState("");
   const [createdSlots, setCreatedSlots] = useState<any[]>([]);
-  const [teacherFileName, setTeacherFileName] = useState<string>('');
-  const [teacherErrorMsg, setTeacherErrorMsg] = useState<string>('');
   const [studentFileName, setStudentFileName] = useState<string>('');
   const [studentErrorMsg, setStudentErrorMsg] = useState<string>('');
   const [studentListPopup, setStudentListPopup] = useState(false);
   const [selectedSlotStudents, setSelectedSlotStudents] = useState<any[]>([]);
-  
-  // Thêm các state mới
   const [examType, setExamType] = useState<'Multiple' | 'Practice'>('Multiple');
-  const [optimizationType, setOptimizationType] = useState<'room' | 'teacher' | 'slot'>('slot');
+  const [optimizationType, setOptimizationType] = useState<'room' | 'slot'>('slot');
   const [slotName, setSlotName] = useState('');
-  
-  // API data states
   const [majors, setMajors] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [semesters, setSemesters] = useState<any[]>([]);
@@ -64,14 +55,12 @@ const ExamSlotCreatePage = () => {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Fetch initial data
   useEffect(() => {
     fetchMajors();
     fetchSemesters();
     fetchRooms();
   }, []);
 
-  // Fetch subjects when major changes
   useEffect(() => {
     if (major?.value) {
       fetchSubjects(major.value);
@@ -138,7 +127,6 @@ const ExamSlotCreatePage = () => {
       alert('Vui lòng điền đầy đủ thông tin!');
       return false;
     }
-    // Validate ngày thi >= hôm nay
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const examDate = new Date(date);
@@ -146,9 +134,6 @@ const ExamSlotCreatePage = () => {
       alert('Ngày thi phải lớn hơn hoặc bằng ngày hiện tại!');
       return false;
     }
-    // Validate giờ bắt đầu + thời lượng <= giờ kết thúc
-    const [startHour, startMinute] = startTime.split(":").map(Number);
-    const [endHour, endMinute] = endTime.split(":").map(Number);
     const start = new Date(`${date}T${startTime}`);
     const end = new Date(`${date}T${endTime}`);
     const durationMinutes = parseInt(duration) || 0;
@@ -157,60 +142,26 @@ const ExamSlotCreatePage = () => {
       alert('Giờ bắt đầu cộng thời lượng phải nhỏ hơn hoặc bằng giờ kết thúc!');
       return false;
     }
-    if (selectedRooms.length === 0 || studentList.length === 0 || teacherList.length === 0) {
-      alert('Vui lòng chọn phòng thi, danh sách sinh viên và giáo viên!');
+    if (selectedRooms.length === 0 || studentList.length === 0) {
+      alert('Vui lòng chọn phòng thi và danh sách sinh viên!');
       return false;
     }
     return true;
   };
 
-
   const handleCreateSlots = async () => {
-    if (!major || !subject || !semester || !date || !duration || !startTime || !endTime || !breakTime || !slotName) {
-      alert('Vui lòng điền đầy đủ thông tin!');
-      return;
-    }
-
-    if (selectedRooms.length === 0 || studentList.length === 0 || teacherList.length === 0) {
-      alert('Vui lòng chọn phòng thi, danh sách sinh viên và giáo viên!');
-      return;
-    }
-
-   if (!validateForm()) return;
-
-
+    if (!validateForm()) return;
     setLoading(true);
     try {
       const selectedRoomData = rooms.filter(room => selectedRooms.includes(room.roomId));
-      
-      // Prepare students data
       const studentsData = studentList.map(student => ({
         email: student.email || "string",
         code: student.mssv || "string",
         fullName: student.name || "string",
-        gender: student.gender === 'Nam',
+        gender: student.gender === 'Nam' || student.gender === true,
         dateOfBirth: student.dob ? new Date(student.dob).toISOString() : new Date().toISOString(),
         urlAvatar: student.avatar || "https://randomuser.me/api/portraits/men/1.jpg"
       }));
-
-      // Prepare teachers data  
-      const teachersData = teacherList.map(teacher => ({
-        teacherId: "2a96a929-c6a1-4501-fc19-08ddb5dca989", // Fixed teacher ID as requested
-        userName: teacher.msgv || "string",
-        email: teacher.email || "string",
-        phoneNumber: "string",
-        dateOfBirth: teacher.dob ? new Date(teacher.dob).toISOString() : new Date().toISOString(),
-        fullname: teacher.name || "string",
-        gender: teacher.gender === 'Nam',
-        isActive: true,
-        password: "string",
-        code: teacher.msgv || "string",
-        majorId: major?.value || 1,
-        majorName: major?.label || "string",
-        hireDate: new Date().toISOString()
-      }));
-
-      // Prepare rooms data
       const roomsData = selectedRoomData.map(room => ({
         roomId: room.roomId,
         roomName: room.roomName || "string",
@@ -219,31 +170,33 @@ const ExamSlotCreatePage = () => {
         capacity: room.capacity || 1
       }));
 
-      // Prepare grade teachers data
-      const gradeTeachersData = teacherList.map(teacher => ({
-        teacherId: "2a96a929-c6a1-4501-fc19-08ddb5dca989", // Fixed teacher ID
-        fullName: teacher.name || "string"
-      }));
+      
+      // Chuyển sang giờ Việt Nam (UTC+7)
+        const toVNISOString = (date: Date) => {
+          // KHÔNG cộng thêm 7 tiếng nữa!
+          return date.toISOString();
+        };
 
-      // Combine date and time
-      const startDateTime = new Date(`${date}T${startTime}`);
-      const endDateTime = new Date(`${date}T${endTime}`);
+      // Tạo các đối tượng Date cùng ngày, khác giờ
+      const examDateObj = new Date(date + "T00:00:00");
+      const startDateTime = new Date(date + "T" + startTime);
+      const endDateTime = new Date(date + "T" + endTime);
 
+    
       const requestBody = {
         students: studentsData,
-        teachers: teachersData,
         rooms: roomsData,
-        gradeTeachers: gradeTeachersData,
-        startDate: startDateTime.toISOString(),
+         startDate: toVNISOString(startDateTime),
         duration: parseInt(duration) || 1,
-        startTimeInday: startDateTime.toISOString(),
-        endTimeInDay: endDateTime.toISOString(),
+        startTimeInday: toVNISOString(startDateTime),
+        endTimeInDay: toVNISOString(endDateTime),
         relaxationTime: parseInt(breakTime) || 1,
         optimizedByRoom: optimizationType === 'room',
-        optimizedByTeacher: optimizationType === 'teacher',
-        optimizedBySlotExam: optimizationType === 'slot'
+        optimizedBySlotExam: optimizationType === 'slot',
+        slotName: slotName,
+        subjectId: subject?.value || 1,
+        semesterId: semester?.value || 1
       };
-
       const response = await fetch('https://localhost:7074/api/CreateExamSlot/CalculateExamSlot', {
         method: 'POST',
         headers: {
@@ -251,30 +204,26 @@ const ExamSlotCreatePage = () => {
         },
         body: JSON.stringify(requestBody)
       });
-
       if (!response.ok) {
         throw new Error('Failed to create exam slots');
       }
-
       const result = await response.json();
-      
-      // Process the result and update created slots
+      // Dự liệu bảng dựa vào response body mới
       const processedSlots = result.map((slot: any, index: number) => ({
         stt: index + 1,
-        date: new Date(slot.date).toLocaleDateString('vi-VN'),
+       date: new Date(slot.date).toLocaleDateString('vi-VN'),
         startTime: new Date(slot.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
         endTime: new Date(slot.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
         rooms: slot.rooms.map((r: any) => rooms.find(room => room.roomId === r.roomId)?.roomName).join(", "),
-        teachers: slot.proctors.map((p: any) => p.fullName).join(", "),
-        graders: slot.graders.map((g: any) => g.fullName).join(", "),
         students: slot.rooms.flatMap((r: any) => r.students),
         studentsDisplay: slot.rooms.flatMap((r: any) => r.students.map((s: any) => s.fullName)).join(", "),
-        originalData: slot // Store original data for saving
+        slotName: slot.slotName,
+        status: slot.status,
+        multiOrPractice: slot.multiOrPractice,
+        originalData: slot
       }));
-
-      setCreatedSlots(processedSlots); // Replace instead of append
+      setCreatedSlots(processedSlots);
       alert('Tạo ca thi thành công!');
-      
     } catch (error) {
       console.error('Error creating exam slots:', error);
       alert('Có lỗi xảy ra khi tạo ca thi!');
@@ -283,34 +232,68 @@ const ExamSlotCreatePage = () => {
     }
   };
 
-const handleSaveSlots = async () => {
+  const handleSaveSlots = async () => {
   if (createdSlots.length === 0) {
     alert('Không có ca thi nào để lưu!');
     return;
   }
 
+  const toVNISOString = (date: Date) => date.toISOString();
+
   try {
     const saveData = createdSlots.map((slot, index) => {
       const slotRooms = slot.originalData?.rooms || [];
-      // Nếu đã có startTime/endTime dạng ISO thì dùng luôn, không cần ghép lại
-      const startISO = slot.originalData?.startTime || slot.startTime;
-      const endISO = slot.originalData?.endTime || slot.endTime;
-      const slotDate = slot.originalData?.date || date;
+      // Lấy ngày, giờ từ originalData nếu có, nếu không lấy từ state
+      let slotDateStr = slot.originalData?.date || date;
+      let slotStartStr = slot.originalData?.startTime || startTime;
+      let slotEndStr = slot.originalData?.endTime || endTime;
 
-      // Kiểm tra hợp lệ
-      if (!startISO || !endISO) {
-        throw new Error(`Ca thi số ${index + 1} có ngày hoặc giờ không hợp lệ!`);
+      // Nếu là ISO string thì dùng luôn, nếu chỉ là "HH:mm" thì ghép ngày
+      let startDateTime: Date;
+      let endDateTime: Date;
+      let examDateObj: Date;
+
+      // Xử lý ngày (nếu là ISO string thì lấy phần ngày, nếu là yyyy-MM-dd thì giữ nguyên)
+      if (/^\d{4}-\d{2}-\d{2}T/.test(slotDateStr)) {
+        // ISO string, lấy phần ngày
+        slotDateStr = slotDateStr.substring(0, 10);
+      }
+
+      // Xử lý giờ bắt đầu
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(slotStartStr)) {
+        startDateTime = new Date(slotStartStr);
+      } else if (/^\d{2}:\d{2}/.test(slotStartStr)) {
+        startDateTime = new Date(`${slotDateStr}T${slotStartStr}`);
+      } else {
+        throw new Error('Giờ bắt đầu không hợp lệ');
+      }
+
+      // Xử lý giờ kết thúc
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(slotEndStr)) {
+        endDateTime = new Date(slotEndStr);
+      } else if (/^\d{2}:\d{2}/.test(slotEndStr)) {
+        endDateTime = new Date(`${slotDateStr}T${slotEndStr}`);
+      } else {
+        throw new Error('Giờ kết thúc không hợp lệ');
+      }
+
+      // Ngày thi (00:00:00)
+      examDateObj = new Date(`${slotDateStr}T00:00:00`);
+
+      // Kiểm tra lại các giá trị Date
+      if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime()) || isNaN(examDateObj.getTime())) {
+        throw new Error('Giá trị ngày hoặc giờ không hợp lệ!');
       }
 
       return {
         subjectId: subject?.value || 1,
-        status: "Chưa gán bài thi",
-        multiOrPractice: examType,
-        slotName: slotName || `Slot ${index + 1}`,
+        status: slot.status || "Chưa gán bài thi",
+        multiOrPractice: slot.multiOrPractice || examType,
+        slotName: slot.slotName || `Slot ${index + 1}`,
         semesterId: semester?.value || 1,
-        date: slotDate,
-        startTime: startISO,
-        endTime: endISO,
+        date: toVNISOString(examDateObj),
+        startTime: toVNISOString(startDateTime),
+        endTime: toVNISOString(endDateTime),
         rooms: slotRooms.map((room: any) => ({
           roomId: room.roomId,
           students: (room.students || []).map((student: any) => ({
@@ -321,18 +304,9 @@ const handleSaveSlots = async () => {
             dateOfBirth: student.dateOfBirth || student.dob || new Date().toISOString(),
             urlAvatar: student.urlAvatar || student.avatar || "default.png"
           }))
-        })),
-        proctors: (slot.originalData?.proctors || []).map((teacher: any) => ({
-          teacherId: teacher.teacherId || "2a96a929-c6a1-4501-fc19-08ddb5dca989",
-          fullName: teacher.fullName || teacher.name || "string"
-        })),
-        graders: (slot.originalData?.graders || []).map((teacher: any) => ({
-          teacherId: teacher.teacherId || "2a96a929-c6a1-4501-fc19-08ddb5dca989",
-          fullName: teacher.fullName || teacher.name || "string"
         }))
       };
     });
-
     const response = await fetch('https://localhost:7074/api/CreateExamSlot/SaveExamSlot', {
       method: 'POST',
       headers: {
@@ -340,21 +314,17 @@ const handleSaveSlots = async () => {
       },
       body: JSON.stringify(saveData)
     });
-
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error('Failed to save exam slots: ' + errorText);
     }
-
     alert('Lưu ca thi thành công!');
     router.back();
-
   } catch (error: any) {
     console.error('Error saving exam slots:', error);
     alert(error.message || 'Có lỗi xảy ra khi lưu ca thi!');
   }
 };
-
   const handleStudentEdit = (idx: number, field: string, value: string) => {
     const newList = [...studentList];
     // @ts-ignore
@@ -362,7 +332,6 @@ const handleSaveSlots = async () => {
     setStudentList(newList);
   };
 
-  // Download student template
   const handleDownloadStudentTemplate = () => {
     const header = ['Avatar', 'MSSV', 'Email', 'Giới tính', 'Ngày sinh', 'Họ và tên'];
     const rows = [
@@ -375,15 +344,12 @@ const handleSaveSlots = async () => {
     XLSX.writeFile(wb, 'mau_sinh_vien.xlsx');
   };
 
-  // Upload and validate student file
   const handleStudentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const resetInput = () => {
       if (e.target) e.target.value = '';
     };
-
     const reader = new FileReader();
     reader.onload = (evt) => {
       setStudentErrorMsg('');
@@ -392,7 +358,6 @@ const handleSaveSlots = async () => {
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
       const json: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-
       if (json.length < 2) {
         setStudentErrorMsg('File phải có ít nhất 1 dòng dữ liệu sinh viên.');
         setStudentFileName('');
@@ -448,103 +413,10 @@ const handleSaveSlots = async () => {
     reader.readAsArrayBuffer(file);
   };
 
-  const handleTeacherEdit = (idx: number, field: string, value: string) => {
-    const newList = [...teacherList];
-    // @ts-ignore
-    newList[idx][field] = value;
-    setTeacherList(newList);
-  };
-
-  // Download teacher template
-  const handleDownloadTeacherTemplate = () => {
-    const header = ['Avatar', 'MSGV', 'Email', 'Giới tính', 'Ngày sinh', 'Họ và tên'];
-    const rows = [
-      ['https://randomuser.me/api/portraits/men/1.jpg', 'GV001', 'gv001@example.com', 'Nam', '1980-01-01', 'Nguyễn Văn A'],
-      ['https://randomuser.me/api/portraits/women/2.jpg', 'GV002', 'gv002@example.com', 'Nữ', '1985-02-02', 'Trần Thị B'],
-    ];
-    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'DanhSach');
-    XLSX.writeFile(wb, 'mau_giao_vien.xlsx');
-  };
-
-  // Upload and validate teacher file
-  const handleTeacherUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const resetInput = () => {
-      if (e.target) e.target.value = '';
-    };
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      setTeacherErrorMsg('');
-      const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const json: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-
-      if (json.length < 2) {
-        setTeacherErrorMsg('File phải có ít nhất 1 dòng dữ liệu giáo viên.');
-        setTeacherFileName('');
-        resetInput();
-        return;
-      }
-      const header = json[0];
-      const requiredHeader = ['Avatar', 'MSGV', 'Email', 'Giới tính', 'Ngày sinh', 'Họ và tên'];
-      const isHeaderValid = requiredHeader.every((h, idx) => header[idx] === h);
-      if (!isHeaderValid) {
-        setTeacherErrorMsg('File mẫu không đúng định dạng hoặc thiếu trường thông tin!');
-        setTeacherFileName('');
-        resetInput();
-        return;
-      }
-      const dataArr = [];
-      for (let i = 1; i < json.length; i++) {
-        const row = json[i];
-        if (row.length < 6 || row.some((cell: string, idx: number) => cell === '')) {
-          setTeacherErrorMsg(`Dòng ${i + 1} thiếu thông tin. Vui lòng điền đầy đủ tất cả trường!`);
-          setTeacherFileName('');
-          resetInput();
-          return;
-        }
-        const [avatar, msgv, email, gender, dob, name] = row;
-        if (!isValidEmail(email)) {
-          setTeacherErrorMsg(`Email không hợp lệ ở dòng ${i + 1}: ${email}`);
-          setTeacherFileName('');
-          resetInput();
-          return;
-        }
-        if (!isValidDate(dob)) {
-          setTeacherErrorMsg(`Ngày sinh không hợp lệ ở dòng ${i + 1}: ${dob} (Định dạng: YYYY-MM-DD)`);
-          setTeacherFileName('');
-          resetInput();
-          return;
-        }
-        dataArr.push({
-          id: Date.now() + i,
-          avatar,
-          msgv,
-          email,
-          gender,
-          dob,
-          name,
-        });
-      }
-      setTeacherFileName(file.name);
-      setTeacherList(dataArr);
-      setTeacherErrorMsg('');
-      resetInput();
-    };
-    reader.readAsArrayBuffer(file);
-  };
-
   function isValidEmail(email: string) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
-  
+
   function isValidDate(date: string) {
     return /^\d{4}-\d{2}-\d{2}$/.test(date) && !isNaN(Date.parse(date));
   }
@@ -570,164 +442,162 @@ const handleSaveSlots = async () => {
               <p className="text-gray-600 mt-1">Thiết lập và quản lý ca thi một cách dễ dàng</p>
             </div>
           </div>
-
           {/* Form Section */}
-           <div className="space-y-6">
-          {/* Row 1: 3 fields */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">Ngành</label>
-              <Select 
-                options={majors} 
-                value={major} 
-                onChange={setMajor} 
-                placeholder="Chọn ngành..." 
-                className="react-select-container"
-                classNamePrefix="react-select"
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    minHeight: 48,
-                    borderRadius: 12,
-                    borderColor: '#e5e7eb',
-                    boxShadow: 'none',
-                    '&:hover': { borderColor: '#3b82f6' }
-                  })
-                }}
-              />
+          <div className="space-y-6">
+            {/* Row 1: 3 fields */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Ngành</label>
+                <Select
+                  options={majors}
+                  value={major}
+                  onChange={setMajor}
+                  placeholder="Chọn ngành..."
+                  className="react-select-container"
+                  classNamePrefix="react-select"
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      minHeight: 48,
+                      borderRadius: 12,
+                      borderColor: '#e5e7eb',
+                      boxShadow: 'none',
+                      '&:hover': { borderColor: '#3b82f6' }
+                    })
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Môn học</label>
+                <Select
+                  options={subjects}
+                  value={subject}
+                  onChange={setSubject}
+                  placeholder="Chọn môn học..."
+                  className="react-select-container"
+                  classNamePrefix="react-select"
+                  isDisabled={!major}
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      minHeight: 48,
+                      borderRadius: 12,
+                      borderColor: '#e5e7eb',
+                      boxShadow: 'none',
+                      '&:hover': { borderColor: '#3b82f6' }
+                    })
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Học kỳ</label>
+                <Select
+                  options={semesters}
+                  value={semester}
+                  onChange={setSemester}
+                  placeholder="Chọn học kỳ..."
+                  className="react-select-container"
+                  classNamePrefix="react-select"
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      minHeight: 48,
+                      borderRadius: 12,
+                      borderColor: '#e5e7eb',
+                      boxShadow: 'none',
+                      '&:hover': { borderColor: '#3b82f6' }
+                    })
+                  }}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">Môn học</label>
-              <Select 
-                options={subjects} 
-                value={subject} 
-                onChange={setSubject} 
-                placeholder="Chọn môn học..." 
-                className="react-select-container"
-                classNamePrefix="react-select"
-                isDisabled={!major}
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    minHeight: 48,
-                    borderRadius: 12,
-                    borderColor: '#e5e7eb',
-                    boxShadow: 'none',
-                    '&:hover': { borderColor: '#3b82f6' }
-                  })
-                }}
-              />
+            {/* Row 2: 3 fields */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Ngày thi</label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={e => setDate(e.target.value)}
+                  className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Tên ca thi</label>
+                <input
+                  type="text"
+                  value={slotName}
+                  onChange={e => setSlotName(e.target.value)}
+                  className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="Nhập tên ca thi..."
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Loại bài thi</label>
+                <Select
+                  options={examTypeOptions}
+                  value={examTypeOptions.find(opt => opt.value === examType)}
+                  onChange={opt => setExamType(opt?.value as 'Multiple' | 'Practice')}
+                  placeholder="Chọn loại bài thi..."
+                  className="react-select-container"
+                  classNamePrefix="react-select"
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      minHeight: 48,
+                      borderRadius: 12,
+                      borderColor: '#e5e7eb',
+                      boxShadow: 'none',
+                      '&:hover': { borderColor: '#3b82f6' }
+                    })
+                  }}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">Học kỳ</label>
-              <Select 
-                options={semesters} 
-                value={semester} 
-                onChange={setSemester} 
-                placeholder="Chọn học kỳ..." 
-                className="react-select-container"
-                classNamePrefix="react-select"
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    minHeight: 48,
-                    borderRadius: 12,
-                    borderColor: '#e5e7eb',
-                    boxShadow: 'none',
-                    '&:hover': { borderColor: '#3b82f6' }
-                  })
-                }}
-              />
+            {/* Row 3: 4 fields */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Giờ bắt đầu</label>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={e => setStartTime(e.target.value)}
+                  className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Giờ kết thúc</label>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={e => setEndTime(e.target.value)}
+                  className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Thời lượng (phút)</label>
+                <input
+                  type="number"
+                  value={duration}
+                  onChange={e => setDuration(e.target.value)}
+                  className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="Nhập thời lượng..."
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Thời gian nghỉ (phút)</label>
+                <input
+                  type="number"
+                  value={breakTime}
+                  onChange={e => setBreakTime(e.target.value)}
+                  className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="Nhập thời gian nghỉ..."
+                />
+              </div>
             </div>
-          </div>
-          {/* Row 2: 3 fields */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">Ngày thi</label>
-              <input 
-                type="date" 
-                value={date} 
-                onChange={e => setDate(e.target.value)} 
-                className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" 
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">Tên ca thi</label>
-              <input 
-                type="text" 
-                value={slotName} 
-                onChange={e => setSlotName(e.target.value)} 
-                className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" 
-                placeholder="Nhập tên ca thi..."
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">Loại bài thi</label>
-              <Select
-                options={examTypeOptions}
-                value={examTypeOptions.find(opt => opt.value === examType)}
-                onChange={opt => setExamType(opt?.value as 'Multiple' | 'Practice')}
-                placeholder="Chọn loại bài thi..."
-                className="react-select-container"
-                classNamePrefix="react-select"
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    minHeight: 48,
-                    borderRadius: 12,
-                    borderColor: '#e5e7eb',
-                    boxShadow: 'none',
-                    '&:hover': { borderColor: '#3b82f6' }
-                  })
-                }}
-              />
-            </div>
-          </div>
-          {/* Row 3: 4 fields */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">Giờ bắt đầu</label>
-              <input 
-                type="time" 
-                value={startTime} 
-                onChange={e => setStartTime(e.target.value)} 
-                className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" 
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">Giờ kết thúc</label>
-              <input 
-                type="time" 
-                value={endTime} 
-                onChange={e => setEndTime(e.target.value)} 
-                className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" 
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">Thời lượng (phút)</label>
-              <input 
-                type="number" 
-                value={duration} 
-                onChange={e => setDuration(e.target.value)} 
-                className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" 
-                placeholder="Nhập thời lượng..."
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">Thời gian nghỉ (phút)</label>
-              <input 
-                type="number" 
-                value={breakTime} 
-                onChange={e => setBreakTime(e.target.value)} 
-                className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" 
-                placeholder="Nhập thời gian nghỉ..."
-              />
-            </div>
-          </div>
-
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-4 pt-4">
-              <button 
+              <button
                 onClick={() => setRoomPopup(true)}
                 className="flex items-center gap-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl font-semibold"
               >
@@ -736,7 +606,7 @@ const handleSaveSlots = async () => {
                 </svg>
                 Chọn phòng thi
               </button>
-              <button 
+              <button
                 onClick={() => setStudentPopup(true)}
                 className="flex items-center gap-3 bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg hover:shadow-xl font-semibold"
               >
@@ -745,60 +615,38 @@ const handleSaveSlots = async () => {
                 </svg>
                 Danh sách sinh viên
               </button>
-              <button 
-                onClick={() => setTeacherPopup(true)}
-                className="flex items-center gap-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-lg hover:shadow-xl font-semibold"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                Danh sách giáo viên
-              </button>
             </div>
-
             {/* Optimization Options */}
             <div className="pt-6 border-t border-gray-200">
               <label className="block text-sm font-semibold text-gray-700 mb-4">Tùy chọn tối ưu hóa:</label>
               <div className="flex flex-wrap gap-6">
                 <label className="flex items-center gap-3 cursor-pointer">
-                  <input 
-                    type="radio" 
-                    name="optimization" 
-                    value="room" 
-                    checked={optimizationType === 'room'} 
-                    onChange={(e) => setOptimizationType(e.target.value as 'room' | 'teacher' | 'slot')}
+                  <input
+                    type="radio"
+                    name="optimization"
+                    value="room"
+                    checked={optimizationType === 'room'}
+                    onChange={(e) => setOptimizationType(e.target.value as 'room' | 'slot')}
                     className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                   />
                   <span className="text-gray-700 font-medium">Tối ưu theo phòng</span>
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer">
-                  <input 
-                    type="radio" 
-                    name="optimization" 
-                    value="teacher" 
-                    checked={optimizationType === 'teacher'} 
-                    onChange={(e) => setOptimizationType(e.target.value as 'room' | 'teacher' | 'slot')}
-                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                  />
-                  <span className="text-gray-700 font-medium">Tối ưu theo giáo viên</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input 
-                    type="radio" 
-                    name="optimization" 
-                    value="slot" 
-                    checked={optimizationType === 'slot'} 
-                    onChange={(e) => setOptimizationType(e.target.value as 'room' | 'teacher' | 'slot')}
+                  <input
+                    type="radio"
+                    name="optimization"
+                    value="slot"
+                    checked={optimizationType === 'slot'}
+                    onChange={(e) => setOptimizationType(e.target.value as 'room' | 'slot')}
                     className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                   />
                   <span className="text-gray-700 font-medium">Tối ưu theo ca thi</span>
                 </label>
               </div>
             </div>
-
             {/* Create Button */}
             <div className="pt-6">
-              <button 
+              <button
                 onClick={handleCreateSlots}
                 disabled={loading}
                 className="w-full md:w-auto bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-4 rounded-xl hover:from-orange-600 hover:to-red-600 transition-all duration-200 shadow-lg hover:shadow-xl font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
@@ -823,7 +671,6 @@ const handleSaveSlots = async () => {
             </div>
           </div>
         </div>
-
         {/* Popup phòng thi */}
         <Popup open={roomPopup} onClose={() => setRoomPopup(false)}>
           <div className="space-y-6">
@@ -835,7 +682,6 @@ const handleSaveSlots = async () => {
               </div>
               <h3 className="text-2xl font-bold text-gray-800">Chọn phòng thi</h3>
             </div>
-            
             <div className="bg-gray-50 rounded-xl p-6">
               <div className="overflow-hidden rounded-lg shadow-sm border border-gray-200">
                 <table className="w-full bg-white">
@@ -850,9 +696,9 @@ const handleSaveSlots = async () => {
                     {rooms.map((r, index) => (
                       <tr key={r.roomId} className={`hover:bg-blue-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                         <td className="py-4 px-6">
-                          <input 
-                            type="checkbox" 
-                            checked={selectedRooms.includes(r.roomId)} 
+                          <input
+                            type="checkbox"
+                            checked={selectedRooms.includes(r.roomId)}
                             onChange={e => {
                               setSelectedRooms(e.target.checked ? [...selectedRooms, r.roomId] : selectedRooms.filter(id => id !== r.roomId));
                             }}
@@ -876,12 +722,11 @@ const handleSaveSlots = async () => {
             </div>
           </div>
         </Popup>
-
         {/* Popup sinh viên */}
         <Popup open={studentPopup} onClose={() => setStudentPopup(false)}>
           <h3 className="text-lg font-bold mb-4">Danh sách sinh viên</h3>
           <div className="flex gap-2 mb-4">
-            <button 
+            <button
               type="button"
               onClick={handleDownloadStudentTemplate}
               className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition font-semibold"
@@ -901,12 +746,9 @@ const handleSaveSlots = async () => {
               <span className="text-gray-600 text-sm ml-2">{studentFileName}</span>
             )}
           </div>
-          
-          {/* Hiển thị lỗi */}
           {studentErrorMsg && (
             <div className="text-red-600 font-semibold mb-4">{studentErrorMsg}</div>
           )}
-          
           <div className="overflow-x-auto rounded shadow bg-white w-full">
             <table className="min-w-[900px] w-full text-sm md:text-base border border-gray-200">
               <thead>
@@ -1004,135 +846,6 @@ const handleSaveSlots = async () => {
             </div>
           </div>
         </Popup>
-
-        {/* Popup giáo viên */}
-        <Popup open={teacherPopup} onClose={() => setTeacherPopup(false)}>
-          <h3 className="text-lg font-bold mb-4">Danh sách giáo viên coi thi</h3>
-          <div className="flex gap-2 mb-4">
-            <button 
-              type="button"
-              onClick={handleDownloadTeacherTemplate}
-              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition font-semibold"
-            >
-              Tải file mẫu
-            </button>
-            <label className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold cursor-pointer">
-              Tải lên danh sách giáo viên
-              <input
-                type="file"
-                accept=".xlsx, .xls"
-                onChange={handleTeacherUpload}
-                className="hidden"
-              />
-            </label>
-            {teacherFileName && (
-              <span className="text-gray-600 text-sm ml-2">{teacherFileName}</span>
-            )}
-          </div>
-          
-          {/* Hiển thị lỗi */}
-          {teacherErrorMsg && (
-            <div className="text-red-600 font-semibold mb-4">{teacherErrorMsg}</div>
-          )}
-          
-          <div className="overflow-x-auto rounded shadow bg-white w-full">
-            <table className="min-w-[900px] w-full text-sm md:text-base border border-gray-200">
-              <thead>
-                <tr className="bg-gray-100 text-gray-700 font-semibold">
-                  <th className="py-2 px-2 border-b min-w-[60px] text-center">STT</th>
-                  <th className="py-2 px-2 border-b min-w-[120px] text-center">Avatar</th>
-                  <th className="py-2 px-2 border-b min-w-[100px] text-left">MSGV</th>
-                  <th className="py-2 px-2 border-b min-w-[220px] text-left">Email</th>
-                  <th className="py-2 px-2 border-b min-w-[100px] text-center">Giới tính</th>
-                  <th className="py-2 px-2 border-b min-w-[140px] text-center">Ngày sinh</th>
-                  <th className="py-2 px-2 border-b min-w-[200px] text-left">Họ và tên</th>
-                  <th className="py-2 px-2 border-b min-w-[80px] text-center"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {teacherList.map((t, idx) => (
-                  <tr key={t.id} className="hover:bg-blue-50 transition">
-                    <td className="py-2 px-2 border-b text-center">{idx + 1}</td>
-                    <td className="py-2 px-2 border-b text-center">
-                      <input
-                        type="text"
-                        value={t.avatar || ''}
-                        onChange={e => handleTeacherEdit(idx, 'avatar', e.target.value)}
-                        className="border rounded px-2 py-1 w-full"
-                        placeholder="URL ảnh"
-                      />
-                    </td>
-                    <td className="py-2 px-2 border-b">
-                      <input
-                        type="text"
-                        value={t.msgv || ''}
-                        onChange={e => handleTeacherEdit(idx, 'msgv', e.target.value)}
-                        className="border rounded px-2 py-1 w-full"
-                      />
-                    </td>
-                    <td className="py-2 px-2 border-b">
-                      <input
-                        type="email"
-                        value={t.email || ''}
-                        onChange={e => handleTeacherEdit(idx, 'email', e.target.value)}
-                        className="border rounded px-2 py-1 w-full"
-                      />
-                    </td>
-                    <td className="py-2 px-2 border-b text-center">
-                      <select
-                        value={t.gender || ''}
-                        onChange={e => handleTeacherEdit(idx, 'gender', e.target.value)}
-                        className="border rounded px-2 py-1 w-full"
-                      >
-                        <option value="">--</option>
-                        <option value="Nam">Nam</option>
-                        <option value="Nữ">Nữ</option>
-                      </select>
-                    </td>
-                    <td className="py-2 px-2 border-b text-center">
-                      <input
-                        type="date"
-                        value={t.dob || ''}
-                        onChange={e => handleTeacherEdit(idx, 'dob', e.target.value)}
-                        className="border rounded px-2 py-1 w-full"
-                      />
-                    </td>
-                    <td className="py-2 px-2 border-b">
-                      <input
-                        type="text"
-                        value={t.name || ''}
-                        onChange={e => handleTeacherEdit(idx, 'name', e.target.value)}
-                        className="border rounded px-2 py-1 w-full"
-                      />
-                    </td>
-                    <td className="py-2 px-2 border-b text-center">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newList = teacherList.filter((_, i) => i !== idx);
-                          setTeacherList(newList);
-                        }}
-                        className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition"
-                      >
-                        Xóa
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="mt-2">
-              <button
-                type="button"
-                onClick={() => setTeacherList([...teacherList, { id: Date.now(), avatar: '', msgv: '', email: '', gender: '', dob: '', name: '' }])}
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 transition font-semibold"
-              >
-                Thêm giáo viên
-              </button>
-            </div>
-          </div>
-        </Popup>
-
         {/* Bảng ca thi đã tạo */}
         {createdSlots.length > 0 && (
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
@@ -1146,18 +859,16 @@ const handleSaveSlots = async () => {
                 <h3 className="text-2xl font-bold text-white">Danh sách ca thi đã tạo</h3>
               </div>
             </div>
-            
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="py-4 px-6 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">STT</th>
+                    <th className="py-4 px-6 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">Tên ca thi</th>
                     <th className="py-4 px-6 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">Ngày thi</th>
                     <th className="py-4 px-6 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">Bắt đầu</th>
                     <th className="py-4 px-6 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">Kết thúc</th>
                     <th className="py-4 px-6 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">Phòng</th>
-                    <th className="py-4 px-6 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">GV coi thi</th>
-                    <th className="py-4 px-6 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">GV chấm thi</th>
                     <th className="py-4 px-6 text-left text-sm font-semibold text-gray-700 uppercase tracking-wider">Sinh viên</th>
                   </tr>
                 </thead>
@@ -1165,12 +876,11 @@ const handleSaveSlots = async () => {
                   {createdSlots.map((slot, idx) => (
                     <tr key={idx} className="hover:bg-blue-50 transition-colors duration-200">
                       <td className="py-4 px-6 text-sm font-medium text-gray-900">{slot.stt}</td>
+                      <td className="py-4 px-6 text-sm text-gray-700">{slot.slotName}</td>
                       <td className="py-4 px-6 text-sm text-gray-700">{slot.date}</td>
                       <td className="py-4 px-6 text-sm text-gray-700">{slot.startTime}</td>
                       <td className="py-4 px-6 text-sm text-gray-700">{slot.endTime}</td>
                       <td className="py-4 px-6 text-sm text-gray-700">{slot.rooms}</td>
-                      <td className="py-4 px-6 text-sm text-gray-700">{slot.teachers}</td>
-                      <td className="py-4 px-6 text-sm text-gray-700">{slot.graders}</td>
                       <td className="py-4 px-6">
                         <button
                           onClick={() => handleViewStudents(slot.students)}
@@ -1184,7 +894,6 @@ const handleSaveSlots = async () => {
                 </tbody>
               </table>
             </div>
-            
             <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
               <button
                 onClick={handleSaveSlots}
@@ -1198,7 +907,6 @@ const handleSaveSlots = async () => {
             </div>
           </div>
         )}
-
         {/* Popup xem danh sách sinh viên trong ca thi */}
         <Popup open={studentListPopup} onClose={() => setStudentListPopup(false)}>
           <div className="space-y-6">
@@ -1213,7 +921,6 @@ const handleSaveSlots = async () => {
                 {selectedSlotStudents.length} sinh viên
               </span>
             </div>
-            
             <div className="bg-gray-50 rounded-xl p-6">
               <div className="overflow-hidden rounded-lg shadow-sm border border-gray-200">
                 <table className="w-full bg-white">
@@ -1235,8 +942,8 @@ const handleSaveSlots = async () => {
                         <td className="py-4 px-6 text-gray-700">{student.email}</td>
                         <td className="py-4 px-6">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            student.gender === true || student.gender === 'Nam' 
-                              ? 'bg-blue-100 text-blue-800' 
+                            student.gender === true || student.gender === 'Nam'
+                              ? 'bg-blue-100 text-blue-800'
                               : 'bg-pink-100 text-pink-800'
                           }`}>
                             {student.gender === true || student.gender === 'Nam' ? 'Nam' : 'Nữ'}
@@ -1247,7 +954,6 @@ const handleSaveSlots = async () => {
                   </tbody>
                 </table>
               </div>
-              
               {selectedSlotStudents.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1260,7 +966,6 @@ const handleSaveSlots = async () => {
           </div>
         </Popup>
       </div>
-
       {/* CSS Animation Styles */}
       <style jsx>{`
         @keyframes fadeIn {
@@ -1271,7 +976,6 @@ const handleSaveSlots = async () => {
             opacity: 1;
           }
         }
-
         @keyframes popup {
           from {
             opacity: 0;
@@ -1282,16 +986,12 @@ const handleSaveSlots = async () => {
             transform: scale(1) translateY(0);
           }
         }
-
         .animate-fadeIn {
           animation: fadeIn 0.3s ease-out;
         }
-
         .animate-popup {
           animation: popup 0.3s ease-out;
         }
-
-        /* React Select Custom Styles */
         .react-select-container .react-select__control {
           border-radius: 12px;
           border-color: #e5e7eb;
@@ -1299,116 +999,90 @@ const handleSaveSlots = async () => {
           box-shadow: none;
           transition: all 0.2s;
         }
-
         .react-select-container .react-select__control:hover {
           border-color: #3b82f6;
         }
-
         .react-select-container .react-select__control--is-focused {
           border-color: #3b82f6;
           box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
         }
-
         .react-select-container .react-select__value-container {
           padding: 0 16px;
         }
-
         .react-select-container .react-select__placeholder {
           color: #9ca3af;
           font-weight: 500;
         }
-
         .react-select-container .react-select__single-value {
           color: #374151;
           font-weight: 500;
         }
-
         .react-select-container .react-select__menu {
           border-radius: 12px;
           box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
           border: 1px solid #e5e7eb;
         }
-
         .react-select-container .react-select__option {
           padding: 12px 16px;
           font-weight: 500;
           transition: all 0.2s;
         }
-
         .react-select-container .react-select__option:hover {
           background-color: #eff6ff;
           color: #1e40af;
         }
-
         .react-select-container .react-select__option--is-selected {
           background-color: #3b82f6;
           color: white;
         }
-
         .react-select-container .react-select__option--is-selected:hover {
           background-color: #2563eb;
         }
-
-        /* Scrollbar Styles */
         ::-webkit-scrollbar {
           width: 8px;
           height: 8px;
         }
-
         ::-webkit-scrollbar-track {
           background: #f1f5f9;
           border-radius: 10px;
         }
-
         ::-webkit-scrollbar-thumb {
           background: #cbd5e1;
           border-radius: 10px;
         }
-
         ::-webkit-scrollbar-thumb:hover {
           background: #94a3b8;
         }
-
-        /* Custom Table Styles */
         table {
           border-collapse: separate;
           border-spacing: 0;
         }
-
         table th:first-child {
           border-radius: 12px 0 0 0;
         }
-
         table th:last-child {
           border-radius: 0 12px 0 0;
         }
-
-        /* Responsive Styles */
         @media (max-width: 768px) {
           .container {
             padding-left: 1rem;
             padding-right: 1rem;
           }
-          
           .grid-cols-6 {
             grid-template-columns: repeat(2, 1fr);
           }
-          
           .grid-cols-4 {
             grid-template-columns: repeat(2, 1fr);
           }
         }
-
         @media (max-width: 640px) {
           .grid-cols-6,
           .grid-cols-4 {
             grid-template-columns: 1fr;
           }
-          
           .flex-wrap {
             flex-direction: column;
           }
-          
           .flex-wrap > * {
             width: 100%;
           }

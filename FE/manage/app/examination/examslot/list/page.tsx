@@ -2,7 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
-import { 
+import * as XLSX from 'xlsx';
+
+import ExcelJS from 'exceljs';
+
+import {
   Calendar,
   FileText,
   Eye,
@@ -17,7 +21,10 @@ import {
   Users,
   MapPin,
   User,
-  Filter
+  Filter,
+  Upload,
+  Download,
+  Copy
 } from 'lucide-react';
 
 // Types
@@ -26,8 +33,13 @@ interface ExamSlot {
   slotName: string;
   status: string;
   examType: 'Multiple' | 'Practice';
+  subjectId: number;
   subjectName: string;
+  semesterId: number;
+  semesterName: string;
   examDate: string;
+  gradeTeacherStatus: string;
+  proctorStatus: string;
 }
 
 interface ExamSlotDetail {
@@ -35,6 +47,7 @@ interface ExamSlotDetail {
   slotName: string;
   status: string;
   examType: 'Multiple' | 'Practice';
+  subjectId: number;
   subjectName: string;
   examDate: string;
   startTime: string;
@@ -53,7 +66,7 @@ interface ExamSlotRoom {
   status: number;
   examType: string;
   examDate: string;
-  examName: string;
+  examName: string | null;
   subjectName: string;
   semesterName: string;
   students: Student[];
@@ -65,6 +78,7 @@ interface Student {
   fullName: string;
   gender: boolean;
   dateOfBirth: string;
+  urlAvatar?: string | null;
 }
 
 interface Major {
@@ -93,10 +107,27 @@ interface SelectOption {
   label: string;
 }
 
+interface TeacherExcelRow {
+  code: string;
+  fullName: string;
+  email: string;
+  majorName: string;
+}
+
+interface TeacherCheck {
+  teacherId: string;
+  teacherName: string;
+  isChecked: boolean;
+  code?: string;
+  majorId?: number;
+  majorName?: string;
+}
+
 const statusOptions = [
   { value: 'Chưa gán bài thi', label: 'Chưa gán bài thi', color: 'gray' },
   { value: 'Chưa mở ca', label: 'Chưa mở ca', color: 'yellow' },
   { value: 'Đang mở ca', label: 'Đang mở ca', color: 'green' },
+  { value: 'Đang chấm thi', label: 'Đang chấm thi', color: 'blue' },
   { value: 'Đã kết thúc', label: 'Đã kết thúc', color: 'red' }
 ];
 
@@ -107,7 +138,6 @@ const examTypes = [
 
 const API_BASE = 'https://localhost:7074/api';
 
-// Custom styles for react-select
 const customSelectStyles = {
   control: (provided: any, state: any) => ({
     ...provided,
@@ -123,10 +153,10 @@ const customSelectStyles = {
   }),
   option: (provided: any, state: any) => ({
     ...provided,
-    backgroundColor: state.isSelected 
-      ? '#3B82F6' 
-      : state.isFocused 
-        ? '#EBF4FF' 
+    backgroundColor: state.isSelected
+      ? '#3B82F6'
+      : state.isFocused
+        ? '#EBF4FF'
         : 'white',
     color: state.isSelected ? 'white' : '#374151',
     '&:hover': {
@@ -150,11 +180,8 @@ export default function ExamSlotListPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
-  
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  
-  // Filter states
   const [selectedMajor, setSelectedMajor] = useState<SelectOption | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<SelectOption | null>(null);
   const [selectedSemester, setSelectedSemester] = useState<SelectOption | null>(null);
@@ -163,48 +190,46 @@ export default function ExamSlotListPage() {
   const [toDate, setToDate] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<SelectOption | null>(null);
   const [selectedExamType, setSelectedExamType] = useState<SelectOption | null>(null);
-  
-  // Pagination
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [pageSize] = useState<number>(10);
-  
-  // Modal states
   const [showViewModal, setShowViewModal] = useState<boolean>(false);
+  const [assignType, setAssignType] = useState<'grade' | 'proctor' | null>(null);
   const [showExamModal, setShowExamModal] = useState<boolean>(false);
   const [selectedExamSlot, setSelectedExamSlot] = useState<ExamSlotDetail | null>(null);
   const [selectedExamId, setSelectedExamId] = useState<string>('');
+  // Teacher assign popup logic (now handled in view modal)
+  const [teacherFileName, setTeacherFileName] = useState<string>('');
+  const [teacherErrorMsg, setTeacherErrorMsg] = useState<string>('');
+  const [teacherExcelRows, setTeacherExcelRows] = useState<TeacherExcelRow[]>([]);
+  const [teacherChecks, setTeacherChecks] = useState<TeacherCheck[]>([]);
+  const [teacherDropdowns, setTeacherDropdowns] = useState<{ [roomId: number]: TeacherCheck | null }>({});
+  const [isTheSame, setIsTheSame] = useState(false);
+  const [showStudents, setShowStudents] = useState<{ [roomId: number]: boolean }>({});
 
-  // Generate years (10 years from current year backwards)
+  // Years, options
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 10 }, (_, i) => currentYear - i);
-
-  // Convert data to select options
   const majorOptions: SelectOption[] = majors.map(major => ({
     value: major.majorId.toString(),
     label: major.majorName
   }));
-
   const subjectOptions: SelectOption[] = subjects.map(subject => ({
-    value: subject.subjectId.toString(),
+    value: subject.subjectId?.toString() ?? '',
     label: subject.subjectName
   }));
-
   const semesterOptions: SelectOption[] = semesters.map(semester => ({
-    value: semester.semesterId.toString(),
+    value: semester.semesterId?.toString() ?? '',
     label: semester.semesterName
   }));
-
   const yearOptions: SelectOption[] = years.map(year => ({
     value: year.toString(),
     label: year.toString()
   }));
-
   const statusSelectOptions: SelectOption[] = statusOptions.map(status => ({
     value: status.value,
     label: status.label
   }));
-
   const examTypeOptions: SelectOption[] = examTypes.map(type => ({
     value: type.value,
     label: type.label
@@ -214,13 +239,12 @@ export default function ExamSlotListPage() {
   useEffect(() => {
     fetchMajors();
     fetchSemesters();
-    fetchExamSlots(); // Fetch exam slots on initial load
+    fetchExamSlots();
   }, []);
 
-  // Fetch majors
   const fetchMajors = async () => {
     try {
-      const response = await fetch(`${API_BASE}/ViewExamSlot/GetAllMajor`);
+      const response = await fetch(`${API_BASE}/Major/GetAllMajors`);
       if (!response.ok) throw new Error('Failed to fetch majors');
       const data = await response.json();
       setMajors(data);
@@ -229,7 +253,6 @@ export default function ExamSlotListPage() {
     }
   };
 
-  // Fetch subjects by major
   const fetchSubjectsByMajor = async (majorId: number) => {
     try {
       const response = await fetch(`${API_BASE}/ViewExamSlot/GetAllSubjectsByMajorId/${majorId}`);
@@ -241,7 +264,6 @@ export default function ExamSlotListPage() {
     }
   };
 
-  // Fetch semesters
   const fetchSemesters = async () => {
     try {
       const response = await fetch(`${API_BASE}/Semesters`);
@@ -253,8 +275,7 @@ export default function ExamSlotListPage() {
     }
   };
 
-  // Fetch exam slots
-const fetchExamSlots = async () => {
+  const fetchExamSlots = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -270,9 +291,6 @@ const fetchExamSlots = async () => {
 
       const response = await fetch(`${API_BASE}/ViewExamSlot/GetAllExamSlotsPagination?${params}`);
       if (!response.ok) {
-        // Show alert and clear examSlots if filter API fails
-        const errorText = await response.text();
-       // alert(`Lỗi khi lọc ca thi: ${errorText || response.statusText}`);
         setExamSlots([]);
         setTotalPages(1);
         return;
@@ -295,7 +313,6 @@ const fetchExamSlots = async () => {
     }
   };
 
-  // Fetch exam slot detail
   const fetchExamSlotDetail = async (examSlotId: number) => {
     try {
       const response = await fetch(`${API_BASE}/ViewExamSlot/GetExamSlotById/${examSlotId}`);
@@ -303,12 +320,18 @@ const fetchExamSlots = async () => {
       const data = await response.json();
       setSelectedExamSlot(data);
       setShowViewModal(true);
+      setAssignType(null);
+      setTeacherChecks([]);
+      setTeacherDropdowns({});
+      setTeacherExcelRows([]);
+      setTeacherFileName('');
+      setTeacherErrorMsg('');
+      setIsTheSame(false);
     } catch (err) {
       setError('Không thể tải thông tin ca thi');
     }
   };
 
-  // Fetch exams
   const fetchExams = async (semesterId: string, subjectId: string, examType: string, year: string) => {
     try {
       const params = new URLSearchParams({
@@ -326,7 +349,6 @@ const fetchExamSlots = async () => {
     }
   };
 
-  // Add exam to exam slot
   const addExamToSlot = async (examSlotId: number, examId: number, examType: string) => {
     try {
       const params = new URLSearchParams({
@@ -338,9 +360,8 @@ const fetchExamSlots = async () => {
         method: 'POST'
       });
       if (!response.ok) throw new Error('Failed to add exam to slot');
-      
       setShowExamModal(false);
-      fetchExamSlots(); // Refresh data
+      fetchExamSlots();
       alert('Thêm bài thi vào ca thi thành công!');
     } catch (err) {
       alert('Thêm bài thi vào ca thi không thành công!');
@@ -348,7 +369,6 @@ const fetchExamSlots = async () => {
     }
   };
 
-  // Change exam slot status
   const changeExamSlotStatus = async (examSlotId: number, examType: string) => {
     try {
       const params = new URLSearchParams({
@@ -359,15 +379,13 @@ const fetchExamSlots = async () => {
         method: 'POST'
       });
       if (!response.ok) throw new Error('Failed to change status');
-      
-      fetchExamSlots(); // Refresh data
+      fetchExamSlots();
       alert('Thay đổi trạng thái ca thi thành công!');
     } catch (err) {
       setError('Không thể thay đổi trạng thái ca thi');
     }
   };
 
-  // Handle major change
   const handleMajorChange = (option: SelectOption | null) => {
     setSelectedMajor(option);
     setSelectedSubject(null);
@@ -377,10 +395,8 @@ const fetchExamSlots = async () => {
     }
   };
 
-  // Handle status click with date validation
   const handleStatusClick = async (examSlot: ExamSlot) => {
     if (examSlot.status === 'Chưa gán bài thi') {
-      // Show exam selection modal
       if (selectedSemester?.value && selectedSubject?.value && selectedYear?.value) {
         await fetchExams(selectedSemester.value, selectedSubject.value, examSlot.examType, selectedYear.value);
         setSelectedExamSlot({ ...examSlot } as ExamSlotDetail);
@@ -389,44 +405,346 @@ const fetchExamSlots = async () => {
         alert('Vui lòng chọn học kỳ, môn học và năm để xem danh sách bài thi');
       }
     } else if (examSlot.status === 'Chưa mở ca') {
-      // Validate exam date before changing status
+        if (examSlot.proctorStatus !== 'Đã gán giảng viên coi thi') {
+        alert('Bạn cần gán đủ người coi thi cho tất cả các phòng trước khi mở ca!');
+        return;
+      }
+
       const examDate = new Date(examSlot.examDate);
       const currentDate = new Date();
-      
-      // Reset time to compare only dates
       examDate.setHours(0, 0, 0, 0);
       currentDate.setHours(0, 0, 0, 0);
-      
       if (examDate.getTime() !== currentDate.getTime()) {
-        // Show warning if exam date doesn't match current date
         const examDateStr = examDate.toLocaleDateString('vi-VN');
         const currentDateStr = currentDate.toLocaleDateString('vi-VN');
-        
         alert(
           `Không thể mở ca thi!\n\n` +
           `Ngày thi: ${examDateStr}\n` +
           `Ngày hiện tại: ${currentDateStr}\n\n` +
           `Ca thi chỉ có thể được mở vào đúng ngày thi.`
         );
-        return; // Don't proceed with status change
+        return;
       }
-      
-      // If date matches, proceed with status change
       const examTypeNum = examSlot.examType === 'Multiple' ? 'Multiple' : "Practice";
       await changeExamSlotStatus(examSlot.examSlotId, examTypeNum);
     } else {
-      // Change status for other statuses (Đang mở ca -> Đã kết thúc)
       const examTypeNum = examSlot.examType === 'Multiple' ? 'Multiple' : "Practice";
       await changeExamSlotStatus(examSlot.examSlotId, examTypeNum);
     }
   };
 
-  // Handle search when filters change
+  // Khi bấm nút Gán, mở popup xem và truyền loại gán vào state
+  const handleAssignTeacher = async (examSlotId: number, type: 'grade' | 'proctor') => {
+    try {
+      const response = await fetch(`${API_BASE}/ViewExamSlot/GetExamSlotById/${examSlotId}`);
+      if (!response.ok) throw new Error('Failed to fetch exam slot detail');
+      const data = await response.json();
+      setSelectedExamSlot(data);
+      setShowViewModal(true);
+      setAssignType(type);
+      setTeacherChecks([]);
+      setTeacherDropdowns({});
+      setTeacherExcelRows([]);
+      setTeacherFileName('');
+      setTeacherErrorMsg('');
+      setIsTheSame(false);
+    } catch (err) {
+      setError('Không thể tải thông tin ca thi');
+    }
+  };
+
+  // Handle teacher dropdown change
+  const handleTeacherDropdownChange = (roomId: number, teacher: TeacherCheck | null) => {
+    setTeacherDropdowns(prev => {
+      const newDropdowns = { ...prev, [roomId]: teacher };
+      // Remove teacher from other rooms' dropdowns if selected
+      if (teacher) {
+        Object.keys(newDropdowns).forEach(key => {
+          if (parseInt(key) !== roomId && newDropdowns[key]?.teacherId === teacher.teacherId) {
+            newDropdowns[key] = null;
+          }
+        });
+      }
+      return newDropdowns;
+    });
+  };
+
+  // Download teacher template
+const handleDownloadTeacherTemplate = async () => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('DanhSachGV');
+
+  // Header
+  worksheet.addRow(['Mã GV', 'Họ tên', 'Email', 'Ngành']);
+  worksheet.addRow(['GV001', 'Nguyễn Văn A', 'gv001@example.com', majors[0]?.majorName || '']);
+  worksheet.addRow(['GV002', 'Trần Thị B', 'gv002@example.com', majors[1]?.majorName || majors[0]?.majorName || '']);
+
+  // Tạo dropdown cho cột D (Ngành) ở 2 dòng mẫu
+  const majorNames = majors.map(m => m.majorName);
+  worksheet.getColumn(4).eachCell((cell, rowNumber) => {
+    if (rowNumber > 1 && rowNumber <= 3) { // Dòng 2 và 3
+      cell.dataValidation = {
+        type: 'list',
+        allowBlank: false,
+        formulae: [`"${majorNames.join(',')}"`],
+        showErrorMessage: true,
+        errorTitle: 'Lỗi',
+        error: 'Vui lòng chọn ngành từ danh sách!'
+      };
+    }
+  });
+
+  // Xuất file
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mau_giao_vien.xlsx';
+  a.click();
+  window.URL.revokeObjectURL(url);
+};
+
+  // Upload teacher file
+  const handleTeacherUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  setTeacherErrorMsg('');
+  setTeacherExcelRows([]);
+  setTeacherChecks([]);
+  setTeacherDropdowns({});
+  setTeacherFileName('');
+  const resetInput = () => {
+    if (e.target) e.target.value = '';
+  };
+  const reader = new FileReader();
+  reader.onload = async (evt) => {
+    const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const json: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    if (json.length < 2) {
+      setTeacherErrorMsg('File phải có ít nhất 1 dòng dữ liệu giáo viên.');
+      setTeacherFileName('');
+      resetInput();
+      return;
+    }
+    const header = json[0];
+    const requiredHeader = ['Mã GV', 'Họ tên', 'Email', 'Ngành'];
+    const isHeaderValid = requiredHeader.every((h, idx) => header[idx] === h);
+    if (!isHeaderValid) {
+      setTeacherErrorMsg('File mẫu không đúng định dạng hoặc thiếu trường thông tin!');
+      setTeacherFileName('');
+      resetInput();
+      return;
+    }
+    const dataArr: TeacherExcelRow[] = [];
+    for (let i = 1; i < json.length; i++) {
+      const row = json[i];
+      if (row.length < 4 || row.some((cell: string, idx: number) => cell === '')) {
+        setTeacherErrorMsg(`Dòng ${i + 1} thiếu thông tin. Vui lòng điền đầy đủ tất cả trường!`);
+        setTeacherFileName('');
+        resetInput();
+        return;
+      }
+      const [code, fullName, email, majorName] = row;
+      const foundMajor = majors.find(m => m.majorName === majorName);
+      if (!foundMajor) {
+        setTeacherErrorMsg(`Ngành "${majorName}" ở dòng ${i + 1} không tồn tại. Vui lòng tải lên file khác!`);
+        setTeacherFileName('');
+        resetInput();
+        return;
+      }
+      dataArr.push({ code, fullName, email, majorName });
+    }
+    setTeacherFileName(file.name);
+    setTeacherExcelRows(dataArr);
+
+    // Call CheckTeacherExist API
+    try {
+      const checkExistBody = dataArr.map(row => ({
+        code: row.code,
+        fullname: row.fullName,
+        email: row.email,
+        majorName: row.majorName,
+      }));
+
+      const body = checkExistBody.map(row => ({
+        code: row.code,
+        fullname: row.fullname,
+        email: row.email,
+        majorName: row.majorName,
+        userName: "string",
+        phoneNumber: "string",
+        dateOfBirth: "2025-08-17T07:17:00.631Z",
+        gender: true,
+        isActive: true,
+        password: "string",
+        majorId: majorOptions.find(m => m.label === row.majorName)?.value || 0,
+        hireDate: "2025-08-17T07:17:00.631Z",
+        subjectId: 1
+      }));
+      if (!selectedExamSlot) return;
+      const checkExistRes = await fetch(`${API_BASE}/ViewExamSlot/CheckTeacherExist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!checkExistRes.ok) throw new Error('CheckTeacherExist failed');
+      const checkExistData = await checkExistRes.json();
+      // Only take teacherId, teacherName, code, majorId, majorName
+      const teacherIds = checkExistData.map((t: any, idx: number) => ({
+        teacherId: t.teacherId,
+        teacherName: t.fullname,
+        code: t.code,
+        majorId: majorOptions.find(m => m.label === dataArr[idx].majorName)?.value || 1,
+        majorName: dataArr[idx].majorName
+      }));
+
+      // Nếu là gán chấm thi thì KHÔNG gọi IsTeacherAvailable, lấy luôn danh sách này
+      if (assignType === 'grade') {
+        setTeacherChecks(teacherIds);
+        setTeacherErrorMsg('');
+        resetInput();
+        return;
+      }
+
+      // Nếu là gán coi thi thì vẫn gọi IsTeacherAvailable như cũ
+      const isAvailableRes = await fetch(`${API_BASE}/ViewExamSlot/IsTeacherAvailable`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          examSlotId: selectedExamSlot.examSlotId,
+          teacherChecks: teacherIds.map((t: any) => ({
+            teacherId: t.teacherId,
+            teacherName: t.teacherName,
+            isChecked: true
+          }))
+        })
+      });
+      if (!isAvailableRes.ok) throw new Error('IsTeacherAvailable failed');
+      const isAvailableData = await isAvailableRes.json();
+      // Only teachers with isChecked true
+      const availableTeachers: TeacherCheck[] = isAvailableData.teacherChecks
+        .filter((t: any) => t.isChecked)
+        .map((t: any) => {
+          const found = teacherIds.find((x: any) => x.teacherId === t.teacherId);
+          return {
+            teacherId: t.teacherId,
+            teacherName: t.teacherName,
+            isChecked: t.isChecked,
+            code: found?.code,
+            majorId: found?.majorId,
+            majorName: found?.majorName
+          };
+        });
+      setTeacherChecks(availableTeachers);
+      setTeacherErrorMsg('');
+    } catch (err) {
+      setTeacherErrorMsg('Lỗi kiểm tra giáo viên. Vui lòng thử lại!');
+    }
+    resetInput();
+  };
+  reader.readAsArrayBuffer(file);
+};
+  // Save grade teacher
+  const handleSaveGradeTeacher = async () => {
+    if (!selectedExamSlot) return;
+
+      const missingRooms = selectedExamSlot.examSlotRoomDetails.filter(room => !teacherDropdowns[room.roomId]);
+      if (missingRooms.length > 0) {
+        alert('Vui lòng chọn giáo viên cho tất cả các phòng trước khi lưu!');
+        return;
+      }
+    const teacherExamslotRoom = selectedExamSlot.examSlotRoomDetails.map(room => {
+      const teacher = teacherDropdowns[room.roomId];
+      if (!teacher) return null;
+      return {
+        examSlotRoomId: room.examSlotRoomId,
+        teacherId: teacher.teacherId,
+        teacherName: teacher.teacherName,
+        majorId: teacher.majorId
+      };
+    }).filter(Boolean);
+    if (teacherExamslotRoom.length !== selectedExamSlot.examSlotRoomDetails.length) {
+      alert('Vui lòng chọn đủ giáo viên cho tất cả các phòng!');
+      return;
+    }
+    try {
+      await fetch(`${API_BASE}/ViewExamSlot/AddGradeTeacherToExamSlot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teacherExamslotRoom,
+          subjectId: 1,
+          subjectName: 0
+        })
+      });
+      alert('Thêm giảng viên chấm thi thành công!');
+      setShowViewModal(false);
+      setAssignType(null);
+      fetchExamSlots();
+    } catch (err) {
+      alert('Lỗi khi lưu giảng viên chấm thi!');
+    }
+  };
+
+  // Save proctor teacher
+  const handleSaveProctorTeacher = async () => {
+    if (!selectedExamSlot) return;
+
+      const missingRooms = selectedExamSlot.examSlotRoomDetails.filter(room => !teacherDropdowns[room.roomId]);
+      if (missingRooms.length > 0) {
+        alert('Vui lòng chọn giáo viên cho tất cả các phòng trước khi lưu!');
+        return;
+      }
+    const teacherExamslotRoom = selectedExamSlot.examSlotRoomDetails.map(room => {
+      const teacher = teacherDropdowns[room.roomId];
+      if (!teacher) return null;
+      return {
+        examSlotRoomId: room.examSlotRoomId,
+        teacherId: teacher.teacherId,
+        teacherName: teacher.teacherName,
+        majorId: teacher.majorId
+      };
+    }).filter(Boolean);
+    if (teacherExamslotRoom.length !== selectedExamSlot.examSlotRoomDetails.length) {
+      alert('Vui lòng chọn đủ giáo viên cho tất cả các phòng!');
+      return;
+    }
+    try {
+      await fetch(`${API_BASE}/ViewExamSlot/AddTeacherToExamSlotRoom`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teacherExamslotRoom,
+          isTheSame,
+          subjectId: 1,
+          subjectName: 0
+        })
+      });
+      alert('Thêm giảng viên coi thi thành công!');
+      setShowViewModal(false);
+      setAssignType(null);
+      fetchExamSlots();
+    } catch (err) {
+      alert('Lỗi khi lưu giảng viên coi thi!');
+    }
+  };
+
+  // Toggle show students
+  const handleToggleStudents = (roomId: number) => {
+    setShowStudents(prev => ({
+      ...prev,
+      [roomId]: !prev[roomId]
+    }));
+  };
+
   useEffect(() => {
     fetchExamSlots();
   }, [selectedSubject, selectedSemester, selectedYear, selectedStatus, selectedExamType, fromDate, toDate, currentPage]);
 
-  // Clear filters
   const handleClearFilters = () => {
     setSelectedMajor(null);
     setSelectedSubject(null);
@@ -439,56 +757,49 @@ const fetchExamSlots = async () => {
     setCurrentPage(1);
   };
 
-  // Get status badge with enhanced styling for clickable statuses
   const getStatusBadge = (status: string, isClickable: boolean = false, examDate?: string) => {
-    const statusConfig = statusOptions.find(s => s.value === status);
-    if (!statusConfig) return null;
-
-    const colorClasses = {
-      gray: 'bg-gray-100 text-gray-700 border-gray-200',
-      yellow: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-      green: 'bg-green-100 text-green-700 border-green-200',
-      red: 'bg-red-100 text-red-700 border-red-200'
-    };
-
-    const icons = {
-      'Chưa gán bài thi': <AlertCircle className="w-3.5 h-3.5" />,
-      'Chưa mở ca': <Clock className="w-3.5 h-3.5" />,
-      'Đang mở ca': <CheckCircle className="w-3.5 h-3.5" />,
-      'Đã kết thúc': <XCircle className="w-3.5 h-3.5" />
-    };
-
-    // Check if status change is allowed for "Chưa mở ca"
-    let isDisabled = false;
-    let disabledReason = '';
-    
-    if (status === 'Chưa mở ca' && examDate && isClickable) {
-      const examDateObj = new Date(examDate);
-      const currentDate = new Date();
-      
-      examDateObj.setHours(0, 0, 0, 0);
-      currentDate.setHours(0, 0, 0, 0);
-      
-      isDisabled = examDateObj.getTime() !== currentDate.getTime();
-      if (isDisabled) {
-        disabledReason = 'Chỉ có thể mở ca thi vào đúng ngày thi';
-      }
-    }
-
-    return (
-      <span 
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${
-          colorClasses[statusConfig.color as keyof typeof colorClasses]
-        } ${isClickable && !isDisabled ? 'cursor-pointer hover:shadow-md transition-shadow' : ''} ${
-          isDisabled ? 'opacity-60 cursor-not-allowed' : ''
-        }`}
-        title={isDisabled ? disabledReason : ''}
-      >
-        {icons[status as keyof typeof icons]}
-        {statusConfig.label}
-      </span>
-    );
+  const statusConfig = statusOptions.find(s => s.value === status);
+  if (!statusConfig) return null;
+  const colorClasses = {
+    gray: 'bg-gray-100 text-gray-700 border-gray-200',
+    yellow: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+    green: 'bg-green-100 text-green-700 border-green-200',
+    blue: 'bg-blue-100 text-blue-700 border-blue-200',
+    red: 'bg-red-100 text-red-700 border-red-200'
   };
+  const icons = {
+    'Chưa gán bài thi': <AlertCircle className="w-3.5 h-3.5" />,
+    'Chưa mở ca': <Clock className="w-3.5 h-3.5" />,
+    'Đang mở ca': <CheckCircle className="w-3.5 h-3.5" />,
+    'Đang chấm thi': <Copy className="w-3.5 h-3.5" />,
+    'Đã kết thúc': <XCircle className="w-3.5 h-3.5" />
+  };
+  let isDisabled = false;
+  let disabledReason = '';
+  if (status === 'Chưa mở ca' && examDate && isClickable) {
+    const examDateObj = new Date(examDate);
+    const currentDate = new Date();
+    examDateObj.setHours(0, 0, 0, 0);
+    currentDate.setHours(0, 0, 0, 0);
+    isDisabled = examDateObj.getTime() !== currentDate.getTime();
+    if (isDisabled) {
+      disabledReason = 'Chỉ có thể mở ca thi vào đúng ngày thi';
+    }
+  }
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${
+        colorClasses[statusConfig.color as keyof typeof colorClasses]
+      } ${isClickable && !isDisabled ? 'cursor-pointer hover:shadow-md transition-shadow' : ''} ${
+        isDisabled ? 'opacity-60 cursor-not-allowed' : ''
+      }`}
+      title={isDisabled ? disabledReason : ''}
+    >
+      {icons[status as keyof typeof icons]}
+      {statusConfig.label}
+    </span>
+  );
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 pl-4 pr-4">
@@ -511,7 +822,7 @@ const fetchExamSlots = async () => {
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-red-500" />
             <span className="text-red-700">{error}</span>
-            <button 
+            <button
               onClick={() => setError('')}
               className="ml-auto text-red-500 hover:text-red-700"
             >
@@ -538,7 +849,6 @@ const fetchExamSlots = async () => {
                   isSearchable
                 />
               </div>
-
               {/* Subject Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Môn học</label>
@@ -553,7 +863,6 @@ const fetchExamSlots = async () => {
                   isDisabled={!selectedMajor}
                 />
               </div>
-
               {/* Semester Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Học kỳ</label>
@@ -567,7 +876,6 @@ const fetchExamSlots = async () => {
                   isSearchable
                 />
               </div>
-
               {/* Year Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Năm học</label>
@@ -581,7 +889,6 @@ const fetchExamSlots = async () => {
                   isSearchable
                 />
               </div>
-
               {/* From Date */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Từ ngày</label>
@@ -595,7 +902,6 @@ const fetchExamSlots = async () => {
                   />
                 </div>
               </div>
-
               {/* To Date */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Đến ngày</label>
@@ -609,7 +915,6 @@ const fetchExamSlots = async () => {
                   />
                 </div>
               </div>
-
               {/* Status Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Trạng thái</label>
@@ -623,7 +928,6 @@ const fetchExamSlots = async () => {
                   isSearchable
                 />
               </div>
-
               {/* Exam Type Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Loại bài thi</label>
@@ -638,7 +942,6 @@ const fetchExamSlots = async () => {
                 />
               </div>
             </div>
-
             {/* Clear Filters Button */}
             <div className="flex justify-end">
               <button
@@ -650,7 +953,6 @@ const fetchExamSlots = async () => {
               </button>
             </div>
           </div>
-
           {/* Table Section */}
           <div className="overflow-hidden">
             {loading ? (
@@ -681,6 +983,8 @@ const fetchExamSlots = async () => {
                       <th className="text-center py-4 px-6 font-semibold text-gray-700">Ngày thi</th>
                       <th className="text-center py-4 px-6 font-semibold text-gray-700">Trạng thái</th>
                       <th className="text-center py-4 px-6 font-semibold text-gray-700">Loại bài thi</th>
+                      <th className="text-center py-4 px-6 font-semibold text-gray-700">Chấm thi</th>
+                      <th className="text-center py-4 px-6 font-semibold text-gray-700">Coi thi</th>
                       <th className="text-center py-4 px-6 font-semibold text-gray-700">Chi tiết</th>
                     </tr>
                   </thead>
@@ -715,12 +1019,47 @@ const fetchExamSlots = async () => {
                         </td>
                         <td className="py-4 px-6 text-center">
                           <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                            slot.examType === 'Practice' 
-                              ? 'bg-green-100 text-green-800' 
+                            slot.examType === 'Practice'
+                              ? 'bg-green-100 text-green-800'
                               : 'bg-purple-100 text-purple-800'
                           }`}>
                             {examTypes.find(type => type.value === slot.examType)?.label}
                           </span>
+                        </td>
+                        {/* Chấm thi */}
+                        <td className="py-4 px-6 text-center">
+                          {slot.examType === 'Practice' ? (
+                            slot.gradeTeacherStatus === 'Đã gán giảng viên chấm thi' ? (
+                              <span className="inline-block px-3 py-1 rounded-full bg-green-100 text-green-800 text-xs font-semibold">Đã gán</span>
+                            ) : (
+                               // Chỉ cho bấm nút Gán khi trạng thái là "Đang chấm thi"
+                            slot.status === 'Đang chấm thi' ? (
+                                <button
+                                  className="px-3 py-1 rounded-lg bg-yellow-100 text-yellow-800 text-xs font-semibold hover:bg-yellow-200 transition"
+                                  onClick={() => handleAssignTeacher(slot.examSlotId, 'grade')}
+                                >
+                                  Gán
+                                </button>
+                              ) : (
+                                <span className="text-gray-400 italic">-</span>
+                              )
+                            )
+                          ) : (
+                            <span className="text-gray-400 italic">-</span>
+                          )}
+                        </td>
+                        {/* Coi thi */}
+                        <td className="py-4 px-6 text-center">
+                          {slot.proctorStatus === 'Đã gán giảng viên coi thi' ? (
+                            <span className="inline-block px-3 py-1 rounded-full bg-green-100 text-green-800 text-xs font-semibold">Đã gán</span>
+                          ) : (
+                            <button
+                              className="px-3 py-1 rounded-lg bg-yellow-100 text-yellow-800 text-xs font-semibold hover:bg-yellow-200 transition"
+                              onClick={() => handleAssignTeacher(slot.examSlotId, 'proctor')}
+                            >
+                              Gán
+                            </button>
+                          )}
                         </td>
                         <td className="py-4 px-6">
                           <div className="flex items-center justify-center">
@@ -741,7 +1080,6 @@ const fetchExamSlots = async () => {
               </div>
             )}
           </div>
-
           {/* Pagination */}
           {examSlots.length > 0 && totalPages > 1 && (
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-t border-gray-200 px-6 py-4">
@@ -757,35 +1095,32 @@ const fetchExamSlots = async () => {
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum = i + 1;
-                      if (totalPages > 5) {
-                        if (currentPage <= 3) {
-                          pageNum = i + 1;
-                        } else if (currentPage >= totalPages - 2) {
-                          pageNum = totalPages - 4 + i;
-                        } else {
-                          pageNum = currentPage - 2 + i;
-                        }
+                    let pageNum = i + 1;
+                    if (totalPages > 5) {
+                      if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
                       }
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={`px-3 py-2 rounded-lg text-sm font-medium ${
-                            currentPage === pageNum
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                          }`}
-                          disabled={pageNum < 1 || pageNum > totalPages}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })
-                  }
-                  
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                          currentPage === pageNum
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                        }`}
+                        disabled={pageNum < 1 || pageNum > totalPages}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
@@ -801,128 +1136,262 @@ const fetchExamSlots = async () => {
 
         {/* View Exam Slot Detail Modal */}
         {showViewModal && selectedExamSlot && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-6xl mx-4 max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
-                    <Eye className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-800">Thông tin ca thi</h3>
-                    <p className="text-sm text-gray-600">{selectedExamSlot.slotName}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowViewModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-                >
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-6xl mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
+            <Eye className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-gray-800">Thông tin ca thi</h3>
+            <p className="text-sm text-gray-600">{selectedExamSlot.slotName}</p>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            setShowViewModal(false);
+            setAssignType(null);
+          }}
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+        >
+          <X className="w-5 h-5 text-gray-500" />
+        </button>
+      </div>
+      {/* Exam Info */}
+      <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+        <div>
+          <span className="text-sm font-medium text-gray-500">Môn học:</span>
+          <p className="font-semibold text-gray-900">{selectedExamSlot.subjectName}</p>
+        </div>
+        <div>
+          <span className="text-sm font-medium text-gray-500">Học kỳ:</span>
+          <p className="font-semibold text-gray-900">{selectedExamSlot.semesterName}</p>
+        </div>
+        <div>
+          <span className="text-sm font-medium text-gray-500">Ngày thi:</span>
+          <p className="font-semibold text-gray-900">{new Date(selectedExamSlot.examDate).toLocaleDateString('vi-VN')}</p>
+        </div>
+        <div>
+          <span className="text-sm font-medium text-gray-500">Thời gian:</span>
+          <p className="font-semibold text-gray-900">{selectedExamSlot.startTime} - {selectedExamSlot.endTime}</p>
+        </div>
+        <div>
+          <span className="text-sm font-medium text-gray-500">Tên bài thi:</span>
+          <p className="font-semibold text-gray-900">{selectedExamSlot.examName || 'Chưa có'}</p>
+        </div>
+        <div>
+          <span className="text-sm font-medium text-gray-500">Loại bài thi:</span>
+          <p className="font-semibold text-gray-900">
+            {examTypes.find(type => type.value === selectedExamSlot.examType)?.label}
+          </p>
+        </div>
+      </div>
 
-              {/* Exam Info */}
-              <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <span className="text-sm font-medium text-gray-500">Môn học:</span>
-                  <p className="font-semibold text-gray-900">{selectedExamSlot.subjectName}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-500">Học kỳ:</span>
-                  <p className="font-semibold text-gray-900">{selectedExamSlot.semesterName}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-500">Ngày thi:</span>
-                  <p className="font-semibold text-gray-900">{new Date(selectedExamSlot.examDate).toLocaleDateString('vi-VN')}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-500">Thời gian:</span>
-                  <p className="font-semibold text-gray-900">{selectedExamSlot.startTime} - {selectedExamSlot.endTime}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-500">Tên bài thi:</span>
-                  <p className="font-semibold text-gray-900">{selectedExamSlot.examName || 'Chưa có'}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-500">Loại bài thi:</span>
-                  <p className="font-semibold text-gray-900">
-                    {examTypes.find(type => type.value === selectedExamSlot.examType)?.label}
-                  </p>
-                </div>
-              </div>
+      {/* --- BẮT ĐẦU: KHU VỰC GÁN GIÁO VIÊN --- */}
+    <div className="mt-8">
+  {/* Khu vực gán giáo viên: chỉ hiện khi đang gán */}
+  {assignType && (
+    <>
+      <div className="flex gap-4 mb-4">
+        <button
+          type="button"
+          onClick={handleDownloadTeacherTemplate}
+          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition font-semibold flex items-center gap-2"
+        >
+          <Download className="w-4 h-4" />
+          Tải file mẫu
+        </button>
+        <label className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold cursor-pointer flex items-center gap-2">
+          <Upload className="w-4 h-4" />
+          Tải lên danh sách giáo viên
+          <input
+            type="file"
+            accept=".xlsx, .xls"
+            onChange={handleTeacherUpload}
+            className="hidden"
+          />
+        </label>
+        {teacherFileName && (
+          <span className="text-gray-600 text-sm ml-2">{teacherFileName}</span>
+        )}
+      </div>
+      {teacherErrorMsg && (
+        <div className="text-red-600 font-semibold mb-4">{teacherErrorMsg}</div>
+      )}
+    </>
+  )}
 
-              {/* Rooms List */}
-              <div className="space-y-4">
-                <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-blue-600" />
-                  Danh sách phòng thi ({selectedExamSlot.examSlotRoomDetails.length} phòng):
-                </h4>
-                {selectedExamSlot.examSlotRoomDetails.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <AlertCircle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <p>Chưa có phòng thi nào được phân công</p>
-                  </div>
-                ) : (
-                  <div className="grid gap-4">
-                    {selectedExamSlot.examSlotRoomDetails.map((room) => (
-                      <div key={room.examSlotRoomId} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <h5 className="font-medium text-gray-900 flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-blue-600" />
-                            Phòng {room.roomName}
-                          </h5>
-                          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
-                            {room.students.length} sinh viên
-                          </span>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4 mb-3 text-sm">
-                          <div>
-                            <span className="text-gray-500">Giáo viên chấm thi:</span>
-                            <p className="font-medium">{room.gradeTeacherName}</p>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Giáo viên coi thi:</span>
-                            <p className="font-medium">{room.proctorName}</p>
-                          </div>
-                        </div>
-
-                        {/* Students List */}
-                        {room.students.length > 0 && (
-                          <div className="mt-3 pt-3 border-t border-gray-100">
-                            <h6 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
-                              <Users className="w-4 h-4" />
-                              Danh sách sinh viên:
-                            </h6>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                              {room.students.map((student) => (
-                                <div key={student.email} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                                  <User className="w-3 h-3 text-gray-400" />
-                                  <span className="font-medium">{student.code}</span>
-                                  <span>-</span>
-                                  <span>{student.fullName}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+  {/* Danh sách phòng thi luôn hiển thị */}
+  <div className="grid gap-4">
+    {/* Checkbox "Gán giáo viên coi thi là giáo viên chấm thi" chỉ hiện khi gán coi thi và là thực hành */}
+    {assignType === 'proctor' && selectedExamSlot.examType === 'Practice' && (
+      <div className="mb-2 flex items-center gap-3">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isTheSame}
+            onChange={e => setIsTheSame(e.target.checked)}
+          />
+          <span className="text-sm">Gán giáo viên coi thi là giáo viên chấm thi</span>
+        </label>
+      </div>
+    )}
+    {selectedExamSlot.examSlotRoomDetails.map(room => (
+      <div key={room.examSlotRoomId} className="border border-gray-200 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h5 className="font-medium text-gray-900 flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-blue-600" />
+            Phòng {room.roomName}
+          </h5>
+          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+            {room.students.length} sinh viên
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-4 mb-3 text-sm items-center">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500 min-w-[120px]">Giáo viên chấm thi:</span>
+            {assignType === 'grade' ? (
+              <div className="flex-1 min-w-[220px]">
+                <Select
+                  options={teacherChecks
+                    .filter(t =>
+                      !Object.values(teacherDropdowns)
+                        .filter(sel => sel && sel.teacherId !== teacherDropdowns[room.roomId]?.teacherId)
+                        .map(sel => sel!.teacherId)
+                        .includes(t.teacherId)
+                    )
+                    .map(t => ({
+                      value: t.teacherId,
+                      label: `${t.teacherName} (${t.code}) - ${t.majorName}`
+                    }))
+                  }
+                  value={
+                    teacherDropdowns[room.roomId]
+                      ? {
+                          value: teacherDropdowns[room.roomId]!.teacherId,
+                          label: `${teacherDropdowns[room.roomId]!.teacherName} (${teacherDropdowns[room.roomId]!.code}) - ${teacherDropdowns[room.roomId]!.majorName}`
+                        }
+                      : null
+                  }
+                  onChange={opt => {
+                    const teacher = teacherChecks.find(t => t.teacherId === opt?.value) || null;
+                    handleTeacherDropdownChange(room.roomId, teacher);
+                  }}
+                  placeholder="Chọn giáo viên"
+                  isClearable
+                  isSearchable
+                />
               </div>
-
-              <div className="flex justify-end mt-6 pt-4 border-t border-gray-200">
-                <button
-                  onClick={() => setShowViewModal(false)}
-                  className="flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200 font-medium"
-                >
-                  Đóng
-                </button>
+            ) : (
+              <span className="font-medium">{room.gradeTeacherName}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500 min-w-[120px]">Giáo viên coi thi:</span>
+            {assignType === 'proctor' ? (
+              <div className="flex-1 min-w-[220px]">
+                <Select
+                  options={teacherChecks
+                    .filter(t =>
+                      !Object.values(teacherDropdowns)
+                        .filter(sel => sel && sel.teacherId !== teacherDropdowns[room.roomId]?.teacherId)
+                        .map(sel => sel!.teacherId)
+                        .includes(t.teacherId)
+                    )
+                    .map(t => ({
+                      value: t.teacherId,
+                      label: `${t.teacherName} (${t.code}) - ${t.majorName}`
+                    }))
+                  }
+                  value={
+                    teacherDropdowns[room.roomId]
+                      ? {
+                          value: teacherDropdowns[room.roomId]!.teacherId,
+                          label: `${teacherDropdowns[room.roomId]!.teacherName} (${teacherDropdowns[room.roomId]!.code}) - ${teacherDropdowns[room.roomId]!.majorName}`
+                        }
+                      : null
+                  }
+                  onChange={opt => {
+                    const teacher = teacherChecks.find(t => t.teacherId === opt?.value) || null;
+                    handleTeacherDropdownChange(room.roomId, teacher);
+                  }}
+                  placeholder="Chọn giáo viên"
+                  isClearable
+                  isSearchable
+                />
               </div>
+            ) : (
+              <span className="font-medium">{room.proctorName}</span>
+            )}
+          </div>
+        </div>
+        <button
+          className="text-blue-600 underline text-sm mb-2"
+          onClick={() => handleToggleStudents(room.examSlotRoomId)}
+        >
+          {showStudents[room.examSlotRoomId] ? 'Ẩn danh sách sinh viên' : 'Hiện danh sách sinh viên'}
+        </button>
+        {showStudents[room.examSlotRoomId] && room.students.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <h6 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+              <Users className="w-4 h-4" />
+              Danh sách sinh viên:
+            </h6>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+              {room.students.map((student) => (
+                <div key={student.email} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                  <User className="w-3 h-3 text-gray-400" />
+                  <span className="font-medium">{student.code}</span>
+                  <span>-</span>
+                  <span>{student.fullName}</span>
+                </div>
+              ))}
             </div>
           </div>
         )}
+      </div>
+    ))}
+  </div>
+  {/* Nút lưu và đóng ở cuối popup, chỉ hiện khi đang gán */}
+  {assignType && (
+    <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+      {assignType === 'grade' && teacherChecks.length > 0 && (
+        <button
+          type="button"
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          onClick={handleSaveGradeTeacher}
+        >
+          <Check className="w-4 h-4" />
+          Lưu giáo viên chấm thi
+        </button>
+      )}
+      {assignType === 'proctor' && teacherChecks.length > 0 && (
+        <button
+          type="button"
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          onClick={handleSaveProctorTeacher}
+        >
+          <Check className="w-4 h-4" />
+          Lưu giáo viên coi thi
+        </button>
+      )}
+      <button
+        onClick={() => {
+          setShowViewModal(false);
+          setAssignType(null);
+        }}
+        className="flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200 font-medium"
+      >
+        Đóng
+      </button>
+    </div>
+  )}
+</div>
+      {/* --- KẾT THÚC: KHU VỰC GÁN GIÁO VIÊN --- */}
+    </div>
+  </div>
+)}
 
         {/* Select Exam Modal */}
         {showExamModal && selectedExamSlot && (
@@ -945,7 +1414,6 @@ const fetchExamSlots = async () => {
                   <X className="w-5 h-5 text-gray-500" />
                 </button>
               </div>
-
               <div className="space-y-4">
                 <h4 className="font-semibold text-gray-800 mb-4">Chọn bài thi cho ca thi:</h4>
                 {exams.length === 0 ? (
@@ -972,7 +1440,6 @@ const fetchExamSlots = async () => {
                   ))
                 )}
               </div>
-
               <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
                 <button
                   onClick={() => {
