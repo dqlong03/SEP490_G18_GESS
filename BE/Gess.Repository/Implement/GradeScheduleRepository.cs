@@ -367,11 +367,11 @@ namespace GESS.Repository.Implement
             //}
 
             // 2. Validate examId - kiểm tra exam có tồn tại không
-            var exam = await _context.PracticeExams.FirstOrDefaultAsync(e => e.PracExamId == examId);
-            if (exam == null)
-            {
-                return null;
-            }
+            //var exam = await _context.PracticeExams.FirstOrDefaultAsync(e => e.PracExamId == examId);
+            //if (exam == null)
+            //{
+            //    return null;
+            //}
 
             // 3. Validate studentId - kiểm tra student có tồn tại không
             var student = await _context.Students.FirstOrDefaultAsync(s => s.StudentId == studentId);

@@ -750,18 +750,28 @@ namespace GESS.Repository.Implement
         {
             var examDate = slotStart.Date;
 
+            // Lấy tất cả ca thi trong ngày đó cho phòng này
             var examSlotRooms = _context.ExamSlotRooms
                 .Include(e => e.ExamSlot)
-                .Where(e => e.RoomId == roomId)
-                .ToList(); 
+                .Where(e => e.RoomId == roomId && e.ExamDate.Date == examDate)
+                .ToList();
 
-            return !examSlotRooms.Any(e =>
+            foreach (var e in examSlotRooms)
             {
-                var start = examDate + e.ExamSlot.StartTime;
-                var end = examDate + e.ExamSlot.EndTime;
-                return start < slotEnd && end > slotStart;
-            });
+                var start = e.ExamDate.Add(e.ExamSlot.StartTime);
+                var end = e.ExamDate.Add(e.ExamSlot.EndTime);
+
+                // Kiểm tra overlap: (start < slotEnd && end > slotStart)
+                if (start < slotEnd && end > slotStart)
+                {
+                    return false; // Đã có ca trùng
+                }
+            }
+
+            return true; // Chưa có ca nào trùng
         }
+
+
 
         public async Task<ExamSlotCheck?> IsTeacherAvailableAsync(ExamSlotCheck examSlotCheck)
         {
@@ -813,7 +823,7 @@ namespace GESS.Repository.Implement
                     StartTime = item.StartTime.ToLocalTime().TimeOfDay,
                     EndTime = item.EndTime.ToLocalTime().TimeOfDay,
                     SlotName = item.SlotName,
-                    ExamDate = item.Date,
+                    ExamDate = item.Date.ToLocalTime(),
                     MultiOrPractice = item.MultiOrPractice,
                     Status = string.IsNullOrEmpty(item.Status) ? "Chưa gán bài thi" : item.Status,
                     SubjectId = item.SubjectId,
@@ -830,7 +840,7 @@ namespace GESS.Repository.Implement
                     SemesterId = item.SemesterId,
                     SubjectId = item.SubjectId,
                     MultiOrPractice = item.MultiOrPractice,
-                    ExamDate = item.Date,
+                    ExamDate = item.Date.ToLocalTime(),
                     IsGraded = 0,
                     Status = 0
                 }).ToList();

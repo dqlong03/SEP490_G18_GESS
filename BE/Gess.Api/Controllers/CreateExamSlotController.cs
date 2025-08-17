@@ -141,9 +141,6 @@ namespace GESS.Api.Controllers
             // Hàng đợi sinh viên chưa xếp lịch
             var remainingStudents = new Queue<StudentAddDto>(dto.students);
 
-            // Tính thời lượng slot (thi + nghỉ)
-            int slotDuration = dto.Duration + dto.RelaxationTime;
-
             // Thời gian bắt đầu
             DateTime currentDay = dto.StartDate.Date;
             DateTime slotStartTime = currentDay.Add(dto.StartTimeInDay.TimeOfDay);
@@ -162,7 +159,8 @@ namespace GESS.Api.Controllers
                     slotEndTimeInDay = currentDay.Add(dto.EndTimeInDay.TimeOfDay);
                 }
 
-                DateTime slotEndTime = slotStartTime.AddMinutes(slotDuration);
+                // EndTime chỉ = StartTime + Duration (KHÔNG cộng RelaxationTime)
+                DateTime slotEndTime = slotStartTime.AddMinutes(dto.Duration);
 
                 // Danh sách phòng trống cho slot này
                 var availableRooms = dto.rooms
@@ -172,7 +170,7 @@ namespace GESS.Api.Controllers
                 if (!availableRooms.Any())
                 {
                     // Không còn phòng → chuyển slot kế tiếp
-                    slotStartTime = slotStartTime.AddMinutes(slotDuration);
+                    slotStartTime = slotStartTime.AddMinutes(dto.Duration + dto.RelaxationTime);
                     continue;
                 }
 
@@ -203,22 +201,20 @@ namespace GESS.Api.Controllers
                     SubjectId = dto.subjectId,
                     Status = "Chưa gán bài thi",
                     MultiOrPractice = dto.ExamType == 1 ? "Multiple" : "Practice",
-                    SlotName = dto.slotName,
-                    SemesterId = dto.semesterId, 
+                    SlotName = dto.slotName + $"_{slotCounter++}",
+                    SemesterId = dto.semesterId,
                     Date = currentDay,
                     StartTime = slotStartTime,
                     EndTime = slotEndTime,
                     Rooms = roomExamSlots
                 });
 
-                // Chuyển sang slot kế tiếp
-                slotStartTime = slotStartTime.AddMinutes(slotDuration);
+                // Sau mỗi ca thì + Duration + RelaxationTime để ra slot tiếp theo
+                slotStartTime = slotEndTime.AddMinutes(dto.RelaxationTime);
             }
 
             return result;
         }
-
-
 
         private bool IsRoomAvailable(RoomListDTO room, DateTime slotStart, DateTime slotEnd)
         {
@@ -229,9 +225,7 @@ namespace GESS.Api.Controllers
             var result = new List<GeneratedExamSlot>();
             var remainingStudents = new Queue<StudentAddDto>(dto.students);
 
-            int slotDuration = dto.Duration + dto.RelaxationTime;
             int slotCounter = 1;
-
             DateTime currentDay = dto.StartDate.Date;
 
             // Sắp xếp phòng theo capacity giảm dần
@@ -250,12 +244,18 @@ namespace GESS.Api.Controllers
 
                     while (slotStartTime < slotEndTimeInDay && remainingStudents.Any())
                     {
-                        DateTime slotEndTime = slotStartTime.AddMinutes(slotDuration);
+                        // EndTime chỉ tính theo Duration
+                        DateTime slotEndTime = slotStartTime.AddMinutes(dto.Duration);
+
+                        // Nếu EndTime vượt quá giới hạn trong ngày thì break
+                        if (slotEndTime > slotEndTimeInDay)
+                            break;
 
                         // Kiểm tra phòng trống ở slot này
                         if (!IsRoomAvailable(room, slotStartTime, slotEndTime))
                         {
-                            slotStartTime = slotStartTime.AddMinutes(slotDuration);
+                            // sang slot kế tiếp: EndTime + Relaxation
+                            slotStartTime = slotStartTime.AddMinutes(dto.Duration + dto.RelaxationTime);
                             continue;
                         }
 
@@ -289,21 +289,13 @@ namespace GESS.Api.Controllers
 
                         assignedInThisDay = true;
 
-                        // Sang slot tiếp theo
-                        slotStartTime = slotStartTime.AddMinutes(slotDuration);
+                        // Sang slot tiếp theo: EndTime + RelaxationTime
+                        slotStartTime = slotEndTime.AddMinutes(dto.RelaxationTime);
                     }
                 }
 
-                // Nếu trong ngày này không xếp được sinh viên nào → chuyển sang ngày tiếp theo
-                if (!assignedInThisDay)
-                {
-                    currentDay = currentDay.AddDays(1);
-                }
-                else
-                {
-                    // Nếu đã lấp đầy tất cả slot trong ngày → cũng sang ngày mới
-                    currentDay = currentDay.AddDays(1);
-                }
+                // Sang ngày tiếp theo
+                currentDay = currentDay.AddDays(1);
             }
 
             return result;
