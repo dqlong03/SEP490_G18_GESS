@@ -750,18 +750,28 @@ namespace GESS.Repository.Implement
         {
             var examDate = slotStart.Date;
 
+            // Lấy tất cả ca thi trong ngày đó cho phòng này
             var examSlotRooms = _context.ExamSlotRooms
                 .Include(e => e.ExamSlot)
-                .Where(e => e.RoomId == roomId)
-                .ToList(); 
+                .Where(e => e.RoomId == roomId && e.ExamDate.Date == examDate)
+                .ToList();
 
-            return !examSlotRooms.Any(e =>
+            foreach (var e in examSlotRooms)
             {
-                var start = examDate + e.ExamSlot.StartTime;
-                var end = examDate + e.ExamSlot.EndTime;
-                return start < slotEnd && end > slotStart;
-            });
+                var start = e.ExamDate.Add(e.ExamSlot.StartTime);
+                var end = e.ExamDate.Add(e.ExamSlot.EndTime);
+
+                // Kiểm tra overlap: (start < slotEnd && end > slotStart)
+                if (start < slotEnd && end > slotStart)
+                {
+                    return false; // Đã có ca trùng
+                }
+            }
+
+            return true; // Chưa có ca nào trùng
         }
+
+
 
         public async Task<ExamSlotCheck?> IsTeacherAvailableAsync(ExamSlotCheck examSlotCheck)
         {
