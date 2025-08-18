@@ -97,23 +97,27 @@ namespace GESS.Api.Controllers
             int? subjectId = null,
             int? chapterId = null,
             bool? isPublic = null,
-            int? levelId = null,
+            int? levelId = null, int? semesterId = null, int? year = null,
             string? questionType = null, // "multiple" hoặc "essay" hoặc null
             int pageNumber = 1,
-            int pageSize = 10,
+            int pageSize = 10
+            , 
             Guid? teacherId=null)
         {
             try
             {
-                var (data, totalCount) = await _practiceQuestionService.GetAllQuestionsAsync(
-                    majorId, subjectId, chapterId, isPublic, levelId, questionType, pageNumber, pageSize,teacherId);
+                var (data, totalCount, totalMulti,  totalPrac) = await _practiceQuestionService.GetAllQuestionsAsync(
+                    majorId, subjectId, chapterId, isPublic, levelId, semesterId, year, questionType, pageNumber, pageSize,teacherId);
 
                 int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
 
                 return Ok(new
                 {
                     TotalPages = totalPages,
-                    Questions = data
+                    Questions = data,
+                    TotalCount = totalCount,
+                    TotalMulti= totalMulti,
+                    TotalPrac= totalPrac
                 });
             }
             catch (Exception ex)

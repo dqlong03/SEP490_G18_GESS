@@ -30,8 +30,6 @@ namespace GESS.Service.practicequestion
         }
 
 
-
-
         // API lấy danh sách môn học theo CategoryExamId
         // GESS.Service.subject/SubjectService.cs
         public async Task<IEnumerable<SubjectDTO>> GetSubjectsByCategoryExamIdAsync(int categoryExamId)
@@ -41,10 +39,10 @@ namespace GESS.Service.practicequestion
 
 
         // API lấy danh sách câu hỏi trắc nghiệm và tự luận
-        public async Task<(IEnumerable<QuestionBankListDTO> Data, int TotalCount)> GetAllQuestionsAsync(
-        int? majorId, int? subjectId, int? chapterId, bool? isPublic, int? levelId, string? questionType, int pageNumber, int pageSize, Guid? teacherId)
+        public async Task<(IEnumerable<QuestionBankListDTO> Data, int TotalCount, int TotalMulti, int TotalPrac)> GetAllQuestionsAsync(
+        int? majorId, int? subjectId, int? chapterId, bool? isPublic, int? levelId,int? semesterId, int? year, string? questionType, int pageNumber, int pageSize, Guid? teacherId)
         {
-            return await _unitOfWork.PracticeQuestionsRepository.GetAllQuestionsAsync(majorId, subjectId, chapterId, isPublic, levelId, questionType, pageNumber, pageSize,teacherId);
+            return await _unitOfWork.PracticeQuestionsRepository.GetAllQuestionsAsync(majorId, subjectId, chapterId, isPublic, levelId, semesterId, year, questionType, pageNumber, pageSize,teacherId);
         }
 
         public async Task<(IEnumerable<PracticeQuestionExamPaperDTO> Data, int TotalCount)> GetPracticeQuestionsAsync(

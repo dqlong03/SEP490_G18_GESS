@@ -20,8 +20,8 @@ namespace GESS.Model.Exam
         //Thêm ngày thi cho multiexam và practiceexam
 
         //public DateTime StartDay { get; set; }
-        //public DateTime EndDay { get; set; }
-        public DateTime? ExamDate { get; set; }
+        public string CategoryExamName { get; set; }
+        public string? ExamDate { get; set; }
         public string? RoomName { get; set; }
         public string? ExamSlotName { get; set; }
         public TimeSpan StartTime { get; set; }

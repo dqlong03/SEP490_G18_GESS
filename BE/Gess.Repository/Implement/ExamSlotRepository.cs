@@ -369,6 +369,13 @@ namespace GESS.Repository.Implement
             {
                 examSlot.Status = "Đã kết thúc";
             }
+            else if (examSlot.Status == "Đã kết thúc")
+            {
+                if (examType == "Practice")
+                {
+                    examSlot.Status = "Đang chấm thi";
+                }
+            }
             else
             {
                 return false;
