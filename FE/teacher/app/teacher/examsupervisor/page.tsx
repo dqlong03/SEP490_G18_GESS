@@ -272,10 +272,12 @@ export default function ExamSchedulePage() {
         setExamSchedules([]);
         return;
       }
-      const fromDate = selectedWeek.value;
-      const d = new Date(selectedWeek.value);
-      d.setDate(d.getDate() + 8);
-      const toDate = d.toISOString().slice(0, 10);
+     const d = new Date(selectedWeek.value);
+      d.setDate(d.getDate() + 1);
+      const fromDate = d.toISOString().slice(0, 10);
+    
+      d.setDate(d.getDate() + 7);
+      const toDate = d.toISOString().slice(0, 10);  
 
       try {
         const response = await fetch(
@@ -594,6 +596,13 @@ export default function ExamSchedulePage() {
             </div>
             <h3 className="text-xl font-semibold text-gray-800 mb-2">Không có dữ liệu</h3>
             <p className="text-gray-600">Không có dữ liệu tuần để hiển thị lịch coi thi</p>
+          </div>
+        )}
+
+        {/* Thông báo nếu không có ca thi nào cho tuần hiện tại */}
+        {weekDates.length > 0 && examSchedules.length === 0 && (
+          <div className="bg-gray-50 border border-blue-200 rounded-xl p-12 mt-6 text-center text-red-700 font-medium">
+            Không có ca thi nào cho tuần hiện tại.
           </div>
         )}
 

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Select from 'react-select';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { getUserIdFromToken } from "@/utils/tokenUtils";
@@ -17,10 +16,8 @@ import {
   XCircle,
   ChevronLeft,
   ChevronRight,
-  Search,
-  Shield,
   Award,
-  Target
+  GraduationCap
 } from 'lucide-react';
 
 const TEACHER_ID = getUserIdFromToken();
@@ -54,7 +51,7 @@ type Teacher = {
 export default function SetRolePage() {
   // State
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState<any>(null);
+  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [teachersInSubject, setTeachersInSubject] = useState<Teacher[]>([]);
   const [teachersInMajor, setTeachersInMajor] = useState<Teacher[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -69,11 +66,7 @@ export default function SetRolePage() {
       .then(data => {
         setSubjects(data);
         if (data && data.length > 0) {
-          setSelectedSubject({
-            value: data[0].subjectId,
-            label: data[0].subjectName,
-            ...data[0],
-          });
+          setSelectedSubject(data[0]);
         }
       })
       .catch(() => toast.error('Không lấy được danh sách môn học'));
@@ -189,12 +182,11 @@ export default function SetRolePage() {
     return teachersInSubject.some(t => t.teacherId === teacherId);
   };
 
-  // Subject options for react-select
-  const subjectOptions = subjects.map(s => ({
-    value: s.subjectId,
-    label: s.subjectName,
-    ...s,
-  }));
+  // Handle subject selection
+  const handleSubjectSelect = (subject: Subject) => {
+    setSelectedSubject(subject);
+    setPage(1);
+  };
 
   // Khi đóng modal, fetch lại danh sách giáo viên trong môn học
   const handleCloseModal = () => {
@@ -223,9 +215,229 @@ export default function SetRolePage() {
           </div>
         </div>
 
-        {/* Statistics */}
-        {teachersInSubject.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Subject Cards */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+              <BookOpen className="w-5 h-5 mr-2 text-blue-600" />
+              Chọn môn học
+            </h3>
+            
+            {selectedSubject && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddModal(true);
+                  fetchTeachersInMajor();
+                }}
+                className="flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Thêm giáo viên</span>
+              </button>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            {subjects.map(subject => (
+              <div
+                key={subject.subjectId}
+                onClick={() => handleSubjectSelect(subject)}
+                className={`cursor-pointer p-4 rounded-lg border-2 transition-all duration-200 transform hover:scale-105 text-center ${
+                  selectedSubject?.subjectId === subject.subjectId
+                    ? 'border-blue-500 bg-blue-50 shadow-lg'
+                    : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md'
+                }`}
+              >
+                <h4 className={`font-medium text-sm ${
+                  selectedSubject?.subjectId === subject.subjectId
+                    ? 'text-blue-900'
+                    : 'text-gray-900'
+                }`}>
+                  {subject.subjectName}
+                </h4>
+                
+                {selectedSubject?.subjectId === subject.subjectId && (
+                  <div className="mt-2 flex items-center justify-center">
+                    <CheckCircle className="w-4 h-4 text-blue-600" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          
+          {subjects.length === 0 && (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <BookOpen className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">Chưa có môn học nào</h3>
+              <p className="text-gray-600">Không tìm thấy môn học nào được phân công</p>
+            </div>
+          )}
+        </div>
+
+        {/* Teachers Table */}
+        {selectedSubject && (
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                  <Users className="w-5 h-5 mr-2 text-blue-600" />
+                  Danh sách giáo viên môn:  {selectedSubject.subjectName} ({teachersInSubject.length})
+                </h3>
+              </div>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã GV</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Họ tên</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Điện thoại</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Tạo đề</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Chấm bài</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={8} className="px-6 py-8 text-center">
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                          <span className="text-gray-500 font-medium">Đang tải...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : teachersInSubject.length > 0 ? (
+                    teachersInSubject.map((teacher, idx) => (
+                      <tr key={teacher.teacherId} className="hover:bg-gray-50 transition-colors duration-200">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {(page - 1) * PAGE_SIZE + idx + 1}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                              <Users className="w-4 h-4 text-blue-600" />
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">{teacher.code}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {teacher.fullname}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {teacher.phoneNumber}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {teacher.email}
+                        </td>
+                        
+                        {/* Toggle tạo đề */}
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <button
+                            type="button"
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                              teacher.isCreateExam ? 'bg-blue-600' : 'bg-gray-300'
+                            }`}
+                            onClick={() => handleToggleCreateExam(teacher)}
+                            aria-pressed={teacher.isCreateExam}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${
+                                teacher.isCreateExam ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                        </td>
+                        
+                        {/* Toggle chấm bài */}
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <button
+                            type="button"
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+                              teacher.isGraded ? 'bg-green-600' : 'bg-gray-300'
+                            }`}
+                            onClick={() => handleToggleGradeExam(teacher)}
+                            aria-pressed={teacher.isGraded}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${
+                                teacher.isGraded ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                        </td>
+                        
+                        {/* Xóa */}
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <button
+                            className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                            onClick={() => handleRemoveTeacher(teacher.teacherId)}
+                            title="Xóa giáo viên"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={8} className="px-6 py-12 text-center">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Users className="w-8 h-8 text-gray-400" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-800 mb-2">Chưa có giáo viên nào</h3>
+                        <p className="text-gray-600">Thêm giáo viên vào môn học để bắt đầu phân quyền</p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {selectedSubject && totalPages > 1 && (
+          <div className="mt-6 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="flex items-center space-x-1 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 transition-colors duration-200"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span>Trước</span>
+              </button>
+              
+              <span className="px-4 py-2 text-sm font-medium text-gray-700">
+                Trang {page} / {totalPages}
+              </span>
+              
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="flex items-center space-x-1 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 transition-colors duration-200"
+              >
+                <span>Sau</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="text-sm text-gray-600">
+              Hiển thị {teachersInSubject.length} kết quả
+            </div>
+          </div>
+        )}
+
+        {/* Statistics - Moved to bottom */}
+        {selectedSubject && teachersInSubject.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -264,203 +476,14 @@ export default function SetRolePage() {
           </div>
         )}
 
-        {/* Controls */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center">
-            <BookOpen className="w-5 h-5 mr-2 text-blue-600" />
-            Chọn môn học và quản lý
-          </h3>
-          
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
-            <div className="flex-1 min-w-80">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Môn học</label>
-              <Select
-                options={subjectOptions}
-                value={selectedSubject ? subjectOptions.find(s => s.value === selectedSubject.subjectId) : null}
-                onChange={option => { setSelectedSubject(option); setPage(1); }}
-                placeholder="Chọn môn học để quản lý"
-                isSearchable
-                styles={{
-                  control: (provided) => ({
-                    ...provided,
-                    minHeight: '44px',
-                    borderColor: '#d1d5db',
-                    '&:hover': { borderColor: '#3b82f6' }
-                  }),
-                  menu: (provided) => ({ ...provided, zIndex: 20 }),
-                }}
-              />
+        {/* Placeholder when no subject selected */}
+        {!selectedSubject && subjects.length > 0 && (
+          <div className="bg-white rounded-xl shadow-lg p-12 text-center">
+            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <BookOpen className="w-10 h-10 text-blue-600" />
             </div>
-            
-            <button
-              type="button"
-              onClick={() => {
-                if (!selectedSubject) {
-                  toast.warning('Vui lòng chọn môn học trước!');
-                  return;
-                }
-                setShowAddModal(true);
-                fetchTeachersInMajor();
-              }}
-              className="flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>Thêm giáo viên</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Teachers Table */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-              <Users className="w-5 h-5 mr-2 text-blue-600" />
-              Danh sách giáo viên ({teachersInSubject.length})
-            </h3>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã GV</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Họ tên</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Điện thoại</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Tạo đề</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Chấm bài</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {loading ? (
-                  <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center">
-                      <div className="flex items-center justify-center space-x-2">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                        <span className="text-gray-500 font-medium">Đang tải...</span>
-                      </div>
-                    </td>
-                  </tr>
-                ) : teachersInSubject.length > 0 ? (
-                  teachersInSubject.map((teacher, idx) => (
-                    <tr key={teacher.teacherId} className="hover:bg-gray-50 transition-colors duration-200">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {(page - 1) * PAGE_SIZE + idx + 1}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                            <Users className="w-4 h-4 text-blue-600" />
-                          </div>
-                          <span className="text-sm font-medium text-gray-900">{teacher.code}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {teacher.fullname}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {teacher.phoneNumber}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {teacher.email}
-                      </td>
-                      
-                      {/* Toggle tạo đề */}
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <button
-                          type="button"
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                            teacher.isCreateExam ? 'bg-blue-600' : 'bg-gray-300'
-                          }`}
-                          onClick={() => handleToggleCreateExam(teacher)}
-                          aria-pressed={teacher.isCreateExam}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${
-                              teacher.isCreateExam ? 'translate-x-6' : 'translate-x-1'
-                            }`}
-                          />
-                        </button>
-                      </td>
-                      
-                      {/* Toggle chấm bài */}
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <button
-                          type="button"
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
-                            teacher.isGraded ? 'bg-green-600' : 'bg-gray-300'
-                          }`}
-                          onClick={() => handleToggleGradeExam(teacher)}
-                          aria-pressed={teacher.isGraded}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${
-                              teacher.isGraded ? 'translate-x-6' : 'translate-x-1'
-                            }`}
-                          />
-                        </button>
-                      </td>
-                      
-                      {/* Xóa */}
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <button
-                          className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors duration-200"
-                          onClick={() => handleRemoveTeacher(teacher.teacherId)}
-                          title="Xóa giáo viên"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center">
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Users className="w-8 h-8 text-gray-400" />
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-800 mb-2">Chưa có giáo viên nào</h3>
-                      <p className="text-gray-600">Thêm giáo viên vào môn học để bắt đầu phân quyền</p>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="mt-6 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="flex items-center space-x-1 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 transition-colors duration-200"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span>Trước</span>
-              </button>
-              
-              <span className="px-4 py-2 text-sm font-medium text-gray-700">
-                Trang {page} / {totalPages}
-              </span>
-              
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="flex items-center space-x-1 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 transition-colors duration-200"
-              >
-                <span>Sau</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-            
-            <div className="text-sm text-gray-600">
-              Hiển thị {teachersInSubject.length} kết quả
-            </div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">Chọn môn học để bắt đầu</h3>
+            <p className="text-gray-600">Vui lòng chọn một môn học ở trên để xem và quản lý danh sách giáo viên</p>
           </div>
         )}
       </div>

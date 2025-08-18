@@ -292,10 +292,10 @@ export default function CreateFinalExamPaperPage() {
 
   // Thêm các hàm xử lý tiêu chí chấm
   const addCriterion = () => {
-    if (manualCriteria.length >= 3) {
-      alert('Chỉ được phép tối đa 3 tiêu chí chấm điểm!');
-      return;
-    }
+    // if (manualCriteria.length >= 3) {
+    //   alert('Chỉ được phép tối đa 3 tiêu chí chấm điểm!');
+    //   return;
+    // }
     setManualCriteria([
       ...manualCriteria,
       { criterionName: '', weightPercent: 0, description: '' }
@@ -602,16 +602,16 @@ export default function CreateFinalExamPaperPage() {
                       type="button"
                       onClick={addCriterion}
                       className="flex items-center space-x-1 px-3 py-1 bg-green-100 hover:bg-green-200 text-green-800 rounded-lg text-sm font-medium transition-colors"
-                      disabled={manualCriteria.length >= 3}
-                      title={manualCriteria.length >= 3 ? "Chỉ được phép tối đa 3 tiêu chí" : ""}
-                    >
+                    //   disabled={manualCriteria.length >= 3}
+                    //   title={manualCriteria.length >= 3 ? "Chỉ được phép tối đa 3 tiêu chí" : ""}
+                     >
                       <Plus className="w-4 h-4" />
                       <span>Thêm tiêu chí</span>
                     </button>
                   </div>
                   
                   {/* Warning message when having more than 3 criteria */}
-                  {manualCriteria.length > 3 && (
+                  {/* {manualCriteria.length > 3 && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                       <div className="flex items-center space-x-2">
                         <AlertCircle className="w-5 h-5 text-red-600" />
@@ -620,7 +620,7 @@ export default function CreateFinalExamPaperPage() {
                         </span>
                       </div>
                     </div>
-                  )}
+                  )} */}
                   
                   <div className="space-y-4">
                     {manualCriteria.map((criterion, index) => (
