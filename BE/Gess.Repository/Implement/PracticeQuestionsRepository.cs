@@ -86,7 +86,7 @@ namespace GESS.Repository.Implement
 
         // API lấy danh sách câu hỏi trắc nghiệm và tự luận
         public async Task<(IEnumerable<QuestionBankListDTO> Data, int TotalCount, int TotalMulti, int TotalPrac)> GetAllQuestionsAsync(
-    int? majorId, int? subjectId, int? chapterId, bool? isPublic, int? levelId, string? questionType, int pageNumber, int pageSize, Guid? teacherId)
+    int? majorId, int? subjectId, int? chapterId, bool? isPublic, int? levelId, int? semesterId, int? year, string? questionType, int pageNumber, int pageSize, Guid? teacherId)
         {
             // Lấy danh sách chapterId theo majorId hoặc subjectId nếu có
             List<int> chapterIds = null;
@@ -163,7 +163,14 @@ namespace GESS.Repository.Implement
                     multipleQuery = multipleQuery.Where(q => q.IsPublic == true);
                 }
             }
-
+            if (year.HasValue)
+            {
+                multipleQuery = multipleQuery.Where(q => q.CreateAt.Year == year);
+            }
+            if (semesterId.HasValue)
+            {
+                multipleQuery = multipleQuery.Where(q => q.SemesterId == semesterId);
+            }
             // Truy vấn entity PracticeQuestion - thêm điều kiện IsActive = true
             var essayQuery = _context.PracticeQuestions
                 .Include(q => q.LevelQuestion)
@@ -210,7 +217,14 @@ namespace GESS.Repository.Implement
                     essayQuery = essayQuery.Where(q => q.IsPublic == true);
                 }
             }
-
+            if (year.HasValue)
+            {
+                essayQuery = essayQuery.Where(q => q.CreateAt.Year == year);
+            }
+            if (semesterId.HasValue)
+            {
+                essayQuery = essayQuery.Where(q => q.SemesterId == semesterId);
+            }
             // Lấy dữ liệu entity ra memory (giữ nguyên logic), sau đó đếm riêng từng loại
             var multipleList = await multipleQuery.ToListAsync();
             var essayList = await essayQuery.ToListAsync();

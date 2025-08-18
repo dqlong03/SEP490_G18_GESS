@@ -14,7 +14,7 @@ namespace GESS.Repository.Interface
     {
 
         Task<(IEnumerable<QuestionBankListDTO> Data, int TotalCount, int TotalMulti, int TotalPrac)> GetAllQuestionsAsync(
-       int? majorId, int? subjectId, int? chapterId, bool? isPublic, int? levelId, string? questionType, int pageNumber, int pageSize, Guid? teacherId);
+       int? majorId, int? subjectId, int? chapterId, bool? isPublic, int? levelId, int? semesterId, int? year, string? questionType, int pageNumber, int pageSize, Guid? teacherId);
 
 
         Task<(IEnumerable<PracticeQuestionExamPaperDTO> Data, int TotalCount)> GetPracticeQuestionsAsync(
