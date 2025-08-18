@@ -105,7 +105,7 @@ namespace GESS.Api.Controllers
         {
             try
             {
-                var (data, totalCount) = await _practiceQuestionService.GetAllQuestionsAsync(
+                var (data, totalCount, totalMulti,  totalPrac) = await _practiceQuestionService.GetAllQuestionsAsync(
                     majorId, subjectId, chapterId, isPublic, levelId, questionType, pageNumber, pageSize,teacherId);
 
                 int totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
@@ -113,7 +113,10 @@ namespace GESS.Api.Controllers
                 return Ok(new
                 {
                     TotalPages = totalPages,
-                    Questions = data
+                    Questions = data,
+                    TotalCount = totalCount,
+                    TotalMulti= totalMulti,
+                    TotalPrac= totalPrac
                 });
             }
             catch (Exception ex)

@@ -13,7 +13,7 @@ namespace GESS.Service.practicequestion
 {
     public interface IPracticeQuestionService : IBaseService<PracticeQuestion>
     {
-        Task<(IEnumerable<QuestionBankListDTO> Data, int TotalCount)> GetAllQuestionsAsync(
+        Task<(IEnumerable<QuestionBankListDTO> Data, int TotalCount, int TotalMulti, int TotalPrac)> GetAllQuestionsAsync(
         int? majorId, int? subjectId, int? chapterId, bool? isPublic, int? levelId, string? questionType, int pageNumber, int pageSize, Guid? teacherId);
 
         Task<(IEnumerable<PracticeQuestionExamPaperDTO> Data, int TotalCount)> GetPracticeQuestionsAsync(
