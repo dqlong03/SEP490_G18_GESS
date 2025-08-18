@@ -21,6 +21,11 @@ namespace GESS.Service.examSchedule
             _unitOfWork = unitOfWork;
         }
 
+        public async Task<bool> ChangeExamStatusBySlotRoomIdAsync(int examSlotRoomId, string status)
+        {
+            return await _unitOfWork.ExamScheduleRepository.ChangeExamStatusBySlotRoomIdAsync(examSlotRoomId, status);
+        }
+
         public async Task<bool> CheckInStudentAsync(int examSlotId, Guid studentId)
         {            
             return await _unitOfWork.ExamScheduleRepository.CheckInStudentAsync(examSlotId, studentId);

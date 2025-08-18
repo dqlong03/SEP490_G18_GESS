@@ -14,6 +14,7 @@ namespace GESS.Service
 {
     public interface IClassService : IBaseService<Class>
     {
+        Task<int?> GetSemesterIdByClassIdAsync(int classId);
         Task<int?> GetSubjectIdByClassIdAsync(int classId);
         Task<IEnumerable<StudentInClassDTO>> GetStudentsByClassIdAsync(int classId);
         Task<IEnumerable<GradeComponentDTO>> GetGradeComponentsByClassIdAsync(int classId);
@@ -28,11 +29,7 @@ namespace GESS.Service
         Task<int> CountPageAsync(string? name = null, int? subjectId = null, int? semesterId = null, int pageSize = 5);
         Task<int> CountPageByTeacherAsync(Guid teacherId, string? name = null, int? subjectId = null, int? semesterId = null, int pageSize = 5, int? year = null);
         Task AddStudentsToClassAsync(AddStudentsToClassRequest request);
-
-        //
         Task<IEnumerable<StudentExamScoreDTO>> GetStudentScoresByExamAsync(int examId, int examType);
-
-        //
         Task<IEnumerable<SubjectListDTO>> GetSubjectsByTeacherIdAsync(Guid teacherId);
 
     }

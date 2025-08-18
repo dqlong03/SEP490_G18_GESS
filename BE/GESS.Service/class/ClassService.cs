@@ -22,8 +22,13 @@ namespace GESS.Service
             _unitOfWork = unitOfWork;
         }
 
+        public async Task<int?> GetSemesterIdByClassIdAsync(int classId)
+        {
+            return await _unitOfWork.ClassRepository.GetSemesterIdByClassIdAsync(classId);
+        }
 
-        //
+
+        
         public async Task<IEnumerable<StudentExamScoreDTO>> GetStudentScoresByExamAsync(int examId, int examType)
         {
             return await _unitOfWork.ClassRepository.GetStudentScoresByExamAsync(examId, examType);

@@ -23,5 +23,7 @@ namespace GESS.Service.examSchedule
         Task<bool> MidTermCheckInStudentAsync(int examId, Guid studentId, int examType);
         Task<string> RefreshExamCodeAsync(int examSlotId);
         Task<string> RefreshMidTermExamCodeAsync(int examId, int examType);
+        Task<bool> ChangeExamStatusBySlotRoomIdAsync(int examSlotRoomId, string status);
+
     }
 }

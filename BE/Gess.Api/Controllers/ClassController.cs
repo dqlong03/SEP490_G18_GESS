@@ -19,7 +19,17 @@ namespace GESS.Api.Controllers
         }
 
 
-        //
+      
+        //API hiển thị semester id theo class id
+        [HttpGet("{classId}/semester-id")]
+        public async Task<IActionResult> GetSemesterIdByClassId(int classId)
+        {
+            var semesterId = await _classService.GetSemesterIdByClassIdAsync(classId);
+            if (semesterId == null)
+                return NotFound("Class not found");
+            return Ok(semesterId);
+        }
+
         [HttpGet("exam-scores")]
         public async Task<IActionResult> GetStudentScoresByExam([FromQuery] int examId, [FromQuery] int examType)
         {

@@ -24,8 +24,15 @@ namespace GESS.Repository.Implement
         }
 
 
+        //Lấy semesterId theo classId
+        public async Task<int?> GetSemesterIdByClassIdAsync(int classId)
+        {
+            return await _context.Classes
+                .Where(c => c.ClassId == classId)
+                .Select(c => (int?)c.SemesterId)
+                .FirstOrDefaultAsync();
+        }
 
-        //
         public async Task<IEnumerable<StudentExamScoreDTO>> GetStudentScoresByExamAsync(int examId, int examType)
         {
             if (examType == 1)
@@ -63,10 +70,6 @@ namespace GESS.Repository.Implement
                 return new List<StudentExamScoreDTO>();
             }
         }
-
-
-
-
 
 
         //Lấy subjectId theo classId
