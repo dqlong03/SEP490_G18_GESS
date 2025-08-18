@@ -85,8 +85,8 @@ namespace GESS.Repository.Implement
 
 
         // API lấy danh sách câu hỏi trắc nghiệm và tự luận
-        public async Task<(IEnumerable<QuestionBankListDTO> Data, int TotalCount)> GetAllQuestionsAsync(
-            int? majorId, int? subjectId, int? chapterId, bool? isPublic, int? levelId, string? questionType, int pageNumber, int pageSize, Guid? teacherId)
+        public async Task<(IEnumerable<QuestionBankListDTO> Data, int TotalCount, int TotalMulti, int TotalPrac)> GetAllQuestionsAsync(
+    int? majorId, int? subjectId, int? chapterId, bool? isPublic, int? levelId, int? semesterId, int? year, string? questionType, int pageNumber, int pageSize, Guid? teacherId)
         {
             // Lấy danh sách chapterId theo majorId hoặc subjectId nếu có
             List<int> chapterIds = null;
@@ -122,7 +122,7 @@ namespace GESS.Repository.Implement
                 .Include(q => q.LevelQuestion)
                 .Include(q => q.Chapter)
                 .Include(q => q.MultiAnswers)
-                .Where(q => q.IsActive == true) // Chỉ lấy câu hỏi đang hoạt động
+                .Where(q => q.IsActive == true)
                 .Where(q =>
                     (chapterId != null && q.ChapterId == chapterId) ||
                     (chapterId == null && chapterIds != null && chapterIds.Contains(q.ChapterId)) ||
@@ -138,43 +138,45 @@ namespace GESS.Repository.Implement
             {
                 if (isPublic.Value)
                 {
-                    // Chỉ lấy câu hỏi public
                     multipleQuery = multipleQuery.Where(q => q.IsPublic == true);
                 }
                 else
                 {
-                    // Chỉ lấy câu hỏi private của giáo viên này
                     if (teacherId.HasValue)
                     {
                         multipleQuery = multipleQuery.Where(q => q.IsPublic == false && q.CreatedBy == teacherId.Value);
                     }
                     else
                     {
-                        // Nếu không có teacherId thì không lấy câu hỏi private nào
                         multipleQuery = multipleQuery.Where(q => false);
                     }
                 }
             }
             else
             {
-                // isPublic = null: Lấy tất cả public + private của giáo viên này
                 if (teacherId.HasValue)
                 {
                     multipleQuery = multipleQuery.Where(q => q.IsPublic == true || (q.IsPublic == false && q.CreatedBy == teacherId.Value));
                 }
                 else
                 {
-                    // Nếu không có teacherId thì chỉ lấy public
                     multipleQuery = multipleQuery.Where(q => q.IsPublic == true);
                 }
             }
-
+            if (year.HasValue)
+            {
+                multipleQuery = multipleQuery.Where(q => q.CreateAt.Year == year);
+            }
+            if (semesterId.HasValue)
+            {
+                multipleQuery = multipleQuery.Where(q => q.SemesterId == semesterId);
+            }
             // Truy vấn entity PracticeQuestion - thêm điều kiện IsActive = true
             var essayQuery = _context.PracticeQuestions
                 .Include(q => q.LevelQuestion)
                 .Include(q => q.Chapter)
                 .Include(q => q.PracticeAnswer)
-                .Where(q => q.IsActive == true) // Chỉ lấy câu hỏi đang hoạt động
+                .Where(q => q.IsActive == true)
                 .Where(q =>
                     (chapterId != null && q.ChapterId == chapterId) ||
                     (chapterId == null && chapterIds != null && chapterIds.Contains(q.ChapterId)) ||
@@ -190,41 +192,48 @@ namespace GESS.Repository.Implement
             {
                 if (isPublic.Value)
                 {
-                    // Chỉ lấy câu hỏi public
                     essayQuery = essayQuery.Where(q => q.IsPublic == true);
                 }
                 else
                 {
-                    // Chỉ lấy câu hỏi private của giáo viên này
                     if (teacherId.HasValue)
                     {
                         essayQuery = essayQuery.Where(q => q.IsPublic == false && q.CreatedBy == teacherId.Value);
                     }
                     else
                     {
-                        // Nếu không có teacherId thì không lấy câu hỏi private nào
                         essayQuery = essayQuery.Where(q => false);
                     }
                 }
             }
             else
             {
-                // isPublic = null: Lấy tất cả public + private của giáo viên này
                 if (teacherId.HasValue)
                 {
                     essayQuery = essayQuery.Where(q => q.IsPublic == true || (q.IsPublic == false && q.CreatedBy == teacherId.Value));
                 }
                 else
                 {
-                    // Nếu không có teacherId thì chỉ lấy public
                     essayQuery = essayQuery.Where(q => q.IsPublic == true);
                 }
             }
-
-            // Lấy dữ liệu entity ra memory, sau đó chuyển sang DTO và hợp nhất
+            if (year.HasValue)
+            {
+                essayQuery = essayQuery.Where(q => q.CreateAt.Year == year);
+            }
+            if (semesterId.HasValue)
+            {
+                essayQuery = essayQuery.Where(q => q.SemesterId == semesterId);
+            }
+            // Lấy dữ liệu entity ra memory (giữ nguyên logic), sau đó đếm riêng từng loại
             var multipleList = await multipleQuery.ToListAsync();
             var essayList = await essayQuery.ToListAsync();
 
+            // Tổng theo từng loại (đã áp dụng mọi filter ở trên)
+            var totalMulti = multipleList.Count;
+            var totalPrac = essayList.Count;
+
+            // Map sang DTO và hợp nhất (giữ nguyên)
             var allQuestions = multipleList
                 .Select(q => new QuestionBankListDTO
                 {
@@ -233,7 +242,7 @@ namespace GESS.Repository.Implement
                     QuestionType = "Trắc nghiệm",
                     Level = q.LevelQuestion?.LevelQuestionName,
                     Chapter = q.Chapter?.ChapterName,
-                    IsPublic = q.IsPublic, // Thêm IsPublic cho MultiQuestion
+                    IsPublic = q.IsPublic,
                     Answers = q.MultiAnswers?.Select(a => new AnswerDTO
                     {
                         AnswerId = a.AnswerId,
@@ -249,33 +258,31 @@ namespace GESS.Repository.Implement
                         QuestionType = "Tự luận",
                         Level = q.LevelQuestion?.LevelQuestionName,
                         Chapter = q.Chapter?.ChapterName,
-                        IsPublic = q.IsPublic, // Thêm IsPublic cho PracticeQuestion
+                        IsPublic = q.IsPublic,
                         Answers = q.PracticeAnswer != null
                             ? new List<AnswerDTO>
                             {
-                new AnswerDTO
-                {
-                    AnswerId = q.PracticeAnswer.AnswerId,
-                    Content = q.PracticeAnswer.AnswerContent,
-                    IsCorrect = true
-                }
+                        new AnswerDTO
+                        {
+                            AnswerId = q.PracticeAnswer.AnswerId,
+                            Content = q.PracticeAnswer.AnswerContent,
+                            IsCorrect = true
+                        }
                             }
                             : new List<AnswerDTO>()
                     })
                 )
                 .OrderBy(q => q.QuestionId);
 
-            var totalCount = allQuestions.Count();
+            var totalCount = allQuestions.Count(); 
+
             var data = allQuestions
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
 
-            return (data, totalCount);
+            return (data, totalCount, totalMulti, totalPrac);
         }
-
-
-
 
 
 

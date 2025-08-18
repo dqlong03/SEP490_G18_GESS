@@ -91,7 +91,10 @@ namespace GESS.Api.Controllers
             {
                 return NotFound($"No exam slot room found with ID {examSlotRoomId}.");
             }
-            examSlotRoom.Status = status;
+            examSlotRoom.Status = status;   
+
+           //var updateExamStatus = await _examScheduleService.ChangeExamStatusBySlotRoomIdAsync(examSlotRoomId, status==1?"Đang mở ca":"Đã đóng ca");
+
             var isUpdated = await _examScheduleService.UpdateAsync(examSlotRoom);
             if (!isUpdated)
             {

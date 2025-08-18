@@ -22,5 +22,7 @@ namespace GESS.Repository.Interface
         Task<bool> MidTermCheckInStudentAsync(int examId, Guid studentId, int examType);
         Task<bool> RefreshExamCodeAsync(int examSlotId, string codeStart);
         Task<bool> RefreshMidTermExamCodeAsync(int examId, int examType, string codeStart);
+        Task<bool> ChangeExamStatusBySlotRoomIdAsync(int examSlotRoomId, string status);
+
     }
 }

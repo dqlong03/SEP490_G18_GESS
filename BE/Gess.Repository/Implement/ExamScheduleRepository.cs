@@ -22,6 +22,55 @@ namespace GESS.Repository.Implement
             _context = context;
         }
 
+
+        public async Task<bool> ChangeExamStatusBySlotRoomIdAsync(int examSlotRoomId, string status)
+        {
+            var examSlotRoom = await _context.ExamSlotRooms
+                .FirstOrDefaultAsync(e => e.ExamSlotRoomId == examSlotRoomId);
+
+            if (examSlotRoom == null)
+            {
+                return false;
+            }
+
+            if (examSlotRoom.MultiOrPractice == "Multiple")
+            {
+                var multiExam = await _context.MultiExams
+                    .FirstOrDefaultAsync(m => m.MultiExamId == examSlotRoom.MultiExamId);
+
+                if (multiExam != null)
+                {
+                    multiExam.Status = status;
+
+                    // Trắc nghiệm sau khi đóng ca chuyển trạng thái bài là đã chấm luôn
+                    if (status.Equals(GESS.Common.PredefinedStatusAllExam.CLOSED_EXAM, StringComparison.OrdinalIgnoreCase))
+                    {
+                        multiExam.IsGraded = 1;
+                    }
+
+                    _context.MultiExams.Update(multiExam);
+                    await _context.SaveChangesAsync();
+                    return true;
+                }
+            }
+            else if (examSlotRoom.MultiOrPractice == "Practice")
+            {
+                var practiceExam = await _context.PracticeExams
+                    .FirstOrDefaultAsync(p => p.PracExamId == examSlotRoom.PracticeExamId);
+
+                if (practiceExam != null)
+                {
+                    practiceExam.Status = status;
+                    _context.PracticeExams.Update(practiceExam);
+                    await _context.SaveChangesAsync();
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+
         public async Task<bool> CheckInStudentAsync(int examSlotId, Guid studentId)
         {
             var checkIn = _context.StudentExamSlotRoom
