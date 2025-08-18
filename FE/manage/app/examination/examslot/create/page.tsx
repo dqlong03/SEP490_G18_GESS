@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import Select from "react-select";
 import * as XLSX from 'xlsx';
 import { useRouter } from 'next/navigation';
+import CustomTimePicker from "@/components/examination/CustomTimePicker"; // hoặc đường dẫn phù hợp
 
 function Popup({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
   if (!open) return null;
@@ -37,8 +38,8 @@ const ExamSlotCreatePage = () => {
   const [studentList, setStudentList] = useState<any[]>([]);
   const [date, setDate] = useState("");
   const [duration, setDuration] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [startTime, setStartTime] = useState<string>("");
+const [endTime, setEndTime] = useState<string>("");
   const [breakTime, setBreakTime] = useState("");
   const [createdSlots, setCreatedSlots] = useState<any[]>([]);
   const [studentFileName, setStudentFileName] = useState<string>('');
@@ -556,24 +557,14 @@ const ExamSlotCreatePage = () => {
             </div>
             {/* Row 3: 4 fields */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Giờ bắt đầu</label>
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={e => setStartTime(e.target.value)}
-                  className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Giờ kết thúc</label>
-                <input
-                  type="time"
-                  value={endTime}
-                  onChange={e => setEndTime(e.target.value)}
-                  className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                />
-              </div>
+             <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">Giờ bắt đầu</label>
+                  <CustomTimePicker value={startTime} onChange={val => setStartTime(val)} />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">Giờ kết thúc</label>
+                  <CustomTimePicker value={endTime} onChange={val => setEndTime(val)} />
+                </div>
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700">Thời lượng (phút)</label>
                 <input
@@ -873,25 +864,39 @@ const ExamSlotCreatePage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {createdSlots.map((slot, idx) => (
-                    <tr key={idx} className="hover:bg-blue-50 transition-colors duration-200">
-                      <td className="py-4 px-6 text-sm font-medium text-gray-900">{slot.stt}</td>
-                      <td className="py-4 px-6 text-sm text-gray-700">{slot.slotName}</td>
-                      <td className="py-4 px-6 text-sm text-gray-700">{slot.date}</td>
-                      <td className="py-4 px-6 text-sm text-gray-700">{slot.startTime}</td>
-                      <td className="py-4 px-6 text-sm text-gray-700">{slot.endTime}</td>
-                      <td className="py-4 px-6 text-sm text-gray-700">{slot.rooms}</td>
-                      <td className="py-4 px-6">
-                        <button
-                          onClick={() => handleViewStudents(slot.students)}
-                          className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
-                        >
-                          Xem ({slot.students.length})
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
+  {createdSlots.flatMap((slot, idx) =>
+    slot.originalData.rooms.map((room: any, roomIdx: number) => (
+      <tr key={`${idx}-${room.roomId}`} className="hover:bg-blue-50 transition-colors duration-200">
+        <td className="py-4 px-6 text-sm font-medium text-gray-900">
+          {slot.stt}
+        </td>
+        <td className="py-4 px-6 text-sm text-gray-700">
+          {slot.slotName}
+        </td>
+        <td className="py-4 px-6 text-sm text-gray-700">
+          {slot.date}
+        </td>
+        <td className="py-4 px-6 text-sm text-gray-700">
+          {slot.startTime}
+        </td>
+        <td className="py-4 px-6 text-sm text-gray-700">
+          {slot.endTime}
+        </td>
+        <td className="py-4 px-6 text-sm text-gray-700">
+          {rooms.find(r => r.roomId === slot.originalData.rooms[roomIdx].roomId)?.roomName || `Phòng ${slot.originalData.rooms[roomIdx].roomId}`}
+        </td>
+        <td className="py-4 px-6">
+          <button
+            onClick={() => handleViewStudents(room.students)}
+            className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
+          >
+            Xem ({room.students.length})
+          </button>
+        </td>
+      </tr>
+    ))
+  )}
+</tbody>
               </table>
             </div>
             <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">

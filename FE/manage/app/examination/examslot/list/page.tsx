@@ -5,6 +5,8 @@ import Select from 'react-select';
 import * as XLSX from 'xlsx';
 
 import ExcelJS from 'exceljs';
+import { formatTimeHHmm } from "@/utils/formatDate";
+
 
 import {
   Calendar,
@@ -112,6 +114,9 @@ interface TeacherExcelRow {
   fullName: string;
   email: string;
   majorName: string;
+  phoneNumber: string;
+  dateOfBirth: string;
+  gender: string;
 }
 
 interface TeacherCheck {
@@ -390,6 +395,8 @@ export default function ExamSlotListPage() {
     setSelectedMajor(option);
     setSelectedSubject(null);
     setSubjects([]);
+    setCurrentPage(1); // reset về trang 1
+
     if (option?.value) {
       fetchSubjectsByMajor(parseInt(option.value));
     }
@@ -474,14 +481,30 @@ const handleDownloadTeacherTemplate = async () => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('DanhSachGV');
 
-  // Header
-  worksheet.addRow(['Mã GV', 'Họ tên', 'Email', 'Ngành']);
-  worksheet.addRow(['GV001', 'Nguyễn Văn A', 'gv001@example.com', majors[0]?.majorName || '']);
-  worksheet.addRow(['GV002', 'Trần Thị B', 'gv002@example.com', majors[1]?.majorName || majors[0]?.majorName || '']);
+  // Header: Thêm các trường mới
+  worksheet.addRow(['Mã GV', 'Họ tên', 'Email', 'Số điện thoại', 'Ngày sinh', 'Giới tính', 'Ngành']);
+  worksheet.addRow([
+    'GV001',
+    'Nguyễn Văn A',
+    'gv001@example.com',
+    '0912345678',
+    '1990-01-01',
+    'Nam',
+    majors[0]?.majorName || ''
+  ]);
+  worksheet.addRow([
+    'GV002',
+    'Trần Thị B',
+    'gv002@example.com',
+    '0987654321',
+    '1992-02-02',
+    'Nữ',
+    majors[1]?.majorName || majors[0]?.majorName || ''
+  ]);
 
-  // Tạo dropdown cho cột D (Ngành) ở 2 dòng mẫu
+  // Tạo dropdown cho cột Ngành (cột 7) ở 2 dòng mẫu
   const majorNames = majors.map(m => m.majorName);
-  worksheet.getColumn(4).eachCell((cell, rowNumber) => {
+  worksheet.getColumn(7).eachCell((cell, rowNumber) => {
     if (rowNumber > 1 && rowNumber <= 3) { // Dòng 2 và 3
       cell.dataValidation = {
         type: 'list',
@@ -490,6 +513,20 @@ const handleDownloadTeacherTemplate = async () => {
         showErrorMessage: true,
         errorTitle: 'Lỗi',
         error: 'Vui lòng chọn ngành từ danh sách!'
+      };
+    }
+  });
+
+  // Tạo dropdown cho cột Giới tính (cột 6) ở 2 dòng mẫu
+  worksheet.getColumn(6).eachCell((cell, rowNumber) => {
+    if (rowNumber > 1 && rowNumber <= 3) {
+      cell.dataValidation = {
+        type: 'list',
+        allowBlank: false,
+        formulae: [`"Nam,Nữ"`],
+        showErrorMessage: true,
+        errorTitle: 'Lỗi',
+        error: 'Vui lòng chọn giới tính Nam hoặc Nữ!'
       };
     }
   });
@@ -531,7 +568,9 @@ const handleDownloadTeacherTemplate = async () => {
       return;
     }
     const header = json[0];
-    const requiredHeader = ['Mã GV', 'Họ tên', 'Email', 'Ngành'];
+    const requiredHeader = [
+      'Mã GV', 'Họ tên', 'Email', 'Số điện thoại', 'Ngày sinh', 'Giới tính', 'Ngành'
+    ];
     const isHeaderValid = requiredHeader.every((h, idx) => header[idx] === h);
     if (!isHeaderValid) {
       setTeacherErrorMsg('File mẫu không đúng định dạng hoặc thiếu trường thông tin!');
@@ -542,13 +581,16 @@ const handleDownloadTeacherTemplate = async () => {
     const dataArr: TeacherExcelRow[] = [];
     for (let i = 1; i < json.length; i++) {
       const row = json[i];
-      if (row.length < 4 || row.some((cell: string, idx: number) => cell === '')) {
+      if (
+        row.length < 7 ||
+        row.some((cell: string, idx: number) => cell === '')
+      ) {
         setTeacherErrorMsg(`Dòng ${i + 1} thiếu thông tin. Vui lòng điền đầy đủ tất cả trường!`);
         setTeacherFileName('');
         resetInput();
         return;
       }
-      const [code, fullName, email, majorName] = row;
+      const [code, fullName, email, phoneNumber, dateOfBirth, gender, majorName] = row;
       const foundMajor = majors.find(m => m.majorName === majorName);
       if (!foundMajor) {
         setTeacherErrorMsg(`Ngành "${majorName}" ở dòng ${i + 1} không tồn tại. Vui lòng tải lên file khác!`);
@@ -556,7 +598,20 @@ const handleDownloadTeacherTemplate = async () => {
         resetInput();
         return;
       }
-      dataArr.push({ code, fullName, email, majorName });
+      if (gender !== 'Nam' && gender !== 'Nữ') {
+        setTeacherErrorMsg(`Giới tính ở dòng ${i + 1} phải là "Nam" hoặc "Nữ"!`);
+        setTeacherFileName('');
+        resetInput();
+        return;
+      }
+      // Validate ngày sinh (yyyy-mm-dd)
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) {
+        setTeacherErrorMsg(`Ngày sinh ở dòng ${i + 1} phải có định dạng yyyy-mm-dd!`);
+        setTeacherFileName('');
+        resetInput();
+        return;
+      }
+      dataArr.push({ code, fullName, email, phoneNumber, dateOfBirth, gender, majorName });
     }
     setTeacherFileName(file.name);
     setTeacherExcelRows(dataArr);
@@ -567,6 +622,9 @@ const handleDownloadTeacherTemplate = async () => {
         code: row.code,
         fullname: row.fullName,
         email: row.email,
+        phoneNumber: row.phoneNumber,
+        dateOfBirth: row.dateOfBirth,
+        gender: row.gender === 'Nam',
         majorName: row.majorName,
       }));
 
@@ -574,13 +632,13 @@ const handleDownloadTeacherTemplate = async () => {
         code: row.code,
         fullname: row.fullname,
         email: row.email,
-        majorName: row.majorName,
-        userName: "string",
-        phoneNumber: "string",
-        dateOfBirth: "2025-08-17T07:17:00.631Z",
-        gender: true,
+        phoneNumber: row.phoneNumber,
+        dateOfBirth: row.dateOfBirth,
+        gender: row.gender,
+        userName: row.email,
         isActive: true,
-        password: "string",
+        password: "Password123!",
+        majorName: row.majorName,
         majorId: majorOptions.find(m => m.label === row.majorName)?.value || 0,
         hireDate: "2025-08-17T07:17:00.631Z",
         subjectId: 1
@@ -801,6 +859,48 @@ const handleDownloadTeacherTemplate = async () => {
   );
 };
 
+// Môn học
+const handleSubjectChange = (option: SelectOption | null) => {
+  setSelectedSubject(option);
+  setCurrentPage(1);
+};
+
+// Học kỳ
+const handleSemesterChange = (option: SelectOption | null) => {
+  setSelectedSemester(option);
+  setCurrentPage(1);
+};
+
+// Năm học
+const handleYearChange = (option: SelectOption | null) => {
+  setSelectedYear(option);
+  setCurrentPage(1);
+};
+
+// Trạng thái
+const handleStatusChange = (option: SelectOption | null) => {
+  setSelectedStatus(option);
+  setCurrentPage(1);
+};
+
+// Loại bài thi
+const handleExamTypeChange = (option: SelectOption | null) => {
+  setSelectedExamType(option);
+  setCurrentPage(1);
+};
+
+// Từ ngày
+const handleFromDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  setFromDate(e.target.value);
+  setCurrentPage(1);
+};
+
+// Đến ngày
+const handleToDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  setToDate(e.target.value);
+  setCurrentPage(1);
+};
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 pl-4 pr-4">
       <div className="max-w-full py-8">
@@ -854,7 +954,7 @@ const handleDownloadTeacherTemplate = async () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Môn học</label>
                 <Select
                   value={selectedSubject}
-                  onChange={setSelectedSubject}
+                 onChange={handleSubjectChange}
                   options={subjectOptions}
                   placeholder="Chọn môn học"
                   styles={customSelectStyles}
@@ -868,7 +968,7 @@ const handleDownloadTeacherTemplate = async () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Học kỳ</label>
                 <Select
                   value={selectedSemester}
-                  onChange={setSelectedSemester}
+                    onChange={handleSemesterChange}
                   options={semesterOptions}
                   placeholder="Chọn học kỳ"
                   styles={customSelectStyles}
@@ -881,7 +981,7 @@ const handleDownloadTeacherTemplate = async () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Năm học</label>
                 <Select
                   value={selectedYear}
-                  onChange={setSelectedYear}
+                    onChange={handleYearChange}
                   options={yearOptions}
                   placeholder="Chọn năm học"
                   styles={customSelectStyles}
@@ -897,7 +997,8 @@ const handleDownloadTeacherTemplate = async () => {
                   <input
                     type="date"
                     value={fromDate}
-                    onChange={(e) => setFromDate(e.target.value)}
+                    //onChange={(e) => setFromDate(e.target.value)}
+                      onChange={handleFromDateChange}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white"
                   />
                 </div>
@@ -910,7 +1011,8 @@ const handleDownloadTeacherTemplate = async () => {
                   <input
                     type="date"
                     value={toDate}
-                    onChange={(e) => setToDate(e.target.value)}
+                   // onChange={(e) => setToDate(e.target.value)}
+                   onChange={handleToDateChange}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white"
                   />
                 </div>
@@ -920,7 +1022,7 @@ const handleDownloadTeacherTemplate = async () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Trạng thái</label>
                 <Select
                   value={selectedStatus}
-                  onChange={setSelectedStatus}
+                 onChange={handleStatusChange}
                   options={statusSelectOptions}
                   placeholder="Chọn trạng thái"
                   styles={customSelectStyles}
@@ -933,7 +1035,7 @@ const handleDownloadTeacherTemplate = async () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Loại bài thi</label>
                 <Select
                   value={selectedExamType}
-                  onChange={setSelectedExamType}
+                  onChange={handleExamTypeChange}
                   options={examTypeOptions}
                   placeholder="Chọn loại bài thi"
                   styles={customSelectStyles}
@@ -1174,7 +1276,7 @@ const handleDownloadTeacherTemplate = async () => {
         </div>
         <div>
           <span className="text-sm font-medium text-gray-500">Thời gian:</span>
-          <p className="font-semibold text-gray-900">{selectedExamSlot.startTime} - {selectedExamSlot.endTime}</p>
+          <p className="font-semibold text-gray-900">{formatTimeHHmm(selectedExamSlot.startTime)} - {formatTimeHHmm(selectedExamSlot.endTime)}</p>
         </div>
         <div>
           <span className="text-sm font-medium text-gray-500">Tên bài thi:</span>
