@@ -207,13 +207,13 @@ namespace GESS.Repository.Implement
                 return new List<ExamListOfStudentResponse>();
 
             // Lấy danh sách PracExamHistory PENDING_EXAM
-            var pracExamHistories = await _context.PracExamHistories
+            var pracExamHistories = await _context.PracticeExamHistories
                 .Where(peh => peh.StudentId == request.StudentId)
-                .Include(peh => peh.PracExam)
+                .Include(peh => peh.PracticeExam)
                     .ThenInclude(pe => pe.CategoryExam)
-                .Include(peh => peh.PracExam)
+                .Include(peh => peh.PracticeExam)
                     .ThenInclude(pe => pe.Semester)
-                .Include(peh => peh.PracExam)
+                .Include(peh => peh.PracticeExam)
                     .ThenInclude(pe => pe.Subject)
                 .Include(peh => peh.ExamSlotRoom)
                     .ThenInclude(esr => esr.ExamSlot)
@@ -231,7 +231,7 @@ namespace GESS.Repository.Implement
                 {
                     // kiểm tra trạng thái từ PracExam
                     bool isOpen = string.Equals(
-                        peh.PracExam?.Status?.Trim(),
+                        peh.PracticeExam?.Status?.Trim(),
                         "Đang mở ca",
                         StringComparison.OrdinalIgnoreCase
                     );
@@ -241,14 +241,14 @@ namespace GESS.Repository.Implement
                         result.Add(new ExamListOfStudentResponse
                         {
                             ExamId = peh.PracExamId,
-                            ExamName = peh.PracExam?.PracExamName,
-                            SubjectName = peh.PracExam?.Subject?.SubjectName,
-                            CategoryExamName = peh.PracExam?.CategoryExam?.CategoryExamName,
+                            ExamName = peh.PracticeExam?.PracExamName,
+                            SubjectName = peh.PracticeExam?.Subject?.SubjectName,
+                            CategoryExamName = peh.PracticeExam?.CategoryExam?.CategoryExamName,
                             Status = peh.StatusExam,
-                            Duration = peh.PracExam?.Duration ?? 0,
-                            ExamDate = (peh.PracExam?.StartDay?.ToString("dd/MM/yyyy") ?? "")
+                            Duration = peh.PracticeExam?.Duration ?? 0,
+                            ExamDate = (peh.PracticeExam?.StartDay?.ToString("dd/MM/yyyy") ?? "")
                                         + " - " +
-                                       (peh.PracExam?.EndDay?.ToString("dd/MM/yyyy") ?? "")
+                                       (peh.PracticeExam?.EndDay?.ToString("dd/MM/yyyy") ?? "")
                         });
                     }
                 }
@@ -260,16 +260,16 @@ namespace GESS.Repository.Implement
                         result.Add(new ExamListOfStudentResponse
                         {
                             ExamId = peh.PracExamId,
-                            ExamName = peh.PracExam?.PracExamName,
+                            ExamName = peh.PracticeExam?.PracExamName,
                             ExamSlotName = peh.ExamSlotRoom.ExamSlot?.SlotName,
-                            SubjectName = peh.PracExam?.Subject?.SubjectName,
-                            CategoryExamName = peh.PracExam?.CategoryExam?.CategoryExamName,
+                            SubjectName = peh.PracticeExam?.Subject?.SubjectName,
+                            CategoryExamName = peh.PracticeExam?.CategoryExam?.CategoryExamName,
                             Status = peh.StatusExam,
                             RoomName = peh.ExamSlotRoom.Room?.RoomName,
-                            ExamDate = peh.ExamSlotRoom.ExamDate?.ToString("dd/MM/yyyy"),
-                            Duration = peh.PracExam?.Duration ?? 0,
-                            StartTime = peh.ExamSlotRoom.ExamSlot?.StartTime,
-                            EndTime = peh.ExamSlotRoom.ExamSlot?.EndTime
+                            ExamDate = peh.ExamSlotRoom.ExamDate.ToString("dd/MM/yyyy"),
+                            Duration = peh.PracticeExam?.Duration ?? 0,
+                            StartTime = peh.ExamSlotRoom.ExamSlot.StartTime,
+                            EndTime = peh.ExamSlotRoom.ExamSlot.EndTime
                         });
                     }
                 }
