@@ -30,8 +30,6 @@ namespace GESS.Service.practicequestion
         }
 
 
-
-
         // API lấy danh sách môn học theo CategoryExamId
         // GESS.Service.subject/SubjectService.cs
         public async Task<IEnumerable<SubjectDTO>> GetSubjectsByCategoryExamIdAsync(int categoryExamId)

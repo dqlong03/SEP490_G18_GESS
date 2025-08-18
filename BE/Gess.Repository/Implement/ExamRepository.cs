@@ -136,11 +136,12 @@ namespace GESS.Repository.Implement
                 .Include(meh => meh.MultiExam)
                     .ThenInclude(me => me.Subject)
                 .Include(meh => meh.ExamSlotRoom)
-                    .ThenInclude(esr => esr.ExamSlot)   
+                    .ThenInclude(esr => esr.ExamSlot)
                 .Include(meh => meh.ExamSlotRoom)
-                    .ThenInclude(esr => esr.Room)      
+                    .ThenInclude(esr => esr.Room)
                 .Where(meh => meh.StatusExam.ToLower().Trim()
-                             == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM.ToLower().Trim())
+                             == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM.ToLower().Trim()|| meh.StatusExam.ToLower().Trim()
+                             == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM.ToLower().Trim())
                 .ToListAsync();
 
             var result = new List<ExamListOfStudentResponse>();
@@ -219,8 +220,9 @@ namespace GESS.Repository.Implement
                     .ThenInclude(esr => esr.ExamSlot)
                 .Include(peh => peh.ExamSlotRoom)
                     .ThenInclude(esr => esr.Room)
-                .Where(peh => peh.StatusExam.ToLower().Trim()
-                              == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM.ToLower().Trim())
+                .Where(meh => meh.StatusExam.ToLower().Trim()
+                             == PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM.ToLower().Trim() || meh.StatusExam.ToLower().Trim()
+                             == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM.ToLower().Trim())
                 .ToListAsync();
 
             var result = new List<ExamListOfStudentResponse>();
