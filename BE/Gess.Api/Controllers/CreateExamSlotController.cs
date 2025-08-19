@@ -161,6 +161,12 @@ namespace GESS.Api.Controllers
 
                 // EndTime chỉ = StartTime + Duration (KHÔNG cộng RelaxationTime)
                 DateTime slotEndTime = slotStartTime.AddMinutes(dto.Duration);
+                if (slotEndTime >= slotEndTimeInDay)
+                {
+                    currentDay = currentDay.AddDays(1);
+                    slotStartTime = currentDay.Add(dto.StartTimeInDay.ToLocalTime().TimeOfDay);
+                    slotEndTimeInDay = currentDay.Add(dto.EndTimeInDay.ToLocalTime().TimeOfDay);
+                }
 
                 // Danh sách phòng trống cho slot này
                 var availableRooms = dto.rooms
