@@ -643,6 +643,11 @@ namespace GESS.Test
             throw new NotImplementedException();
         }
 
+        public Task<bool> ChangeExamStatusBySlotRoomIdAsync(int examSlotRoomId, string status)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<bool> CheckInStudentAsync(int examSlotId, Guid studentId)
         {
             throw new NotImplementedException();

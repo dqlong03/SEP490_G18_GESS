@@ -41,7 +41,8 @@ namespace GESS.Repository.Implement
                 {
                     return false; // ExamSlot đã có bài thi nhiều lựa chọn
                 }
-                examSlot.Status = "Chưa mở ca";
+
+
                 examSlot.MultiExamId = examId;
                 //Get multiple exam 
                 var multipleExam = await _context.MultiExams
@@ -52,6 +53,8 @@ namespace GESS.Repository.Implement
                 }
                 multipleExam.Duration = (int)(examSlot.EndTime - examSlot.StartTime).TotalMinutes;
                 _context.MultiExams.Update(multipleExam);
+
+                examSlot.Status = "Chưa mở ca";
                 _context.SaveChanges();
             }
             else if (examType == "Practice")
@@ -60,7 +63,7 @@ namespace GESS.Repository.Implement
                 {
                     return false; // ExamSlot đã có bài thi thực hành
                 }
-                examSlot.Status = "Chưa mở ca";
+               
                 examSlot.PracticeExamId = examId;
                 //Get practice exam
                 var practiceExam = await _context.PracticeExams
@@ -71,6 +74,8 @@ namespace GESS.Repository.Implement
                 }
                 practiceExam.Duration = (int)(examSlot.EndTime - examSlot.StartTime).TotalMinutes;
                 _context.PracticeExams.Update(practiceExam);
+
+                examSlot.Status = "Chưa mở ca";
                 _context.SaveChanges();
             }
             else
@@ -586,8 +591,8 @@ namespace GESS.Repository.Implement
             {
                 examSlots = examSlots.Where(es => es.ExamDate <= filterRequest.ToDate.Value);
             }
-            examSlots.OrderBy(examSlots => examSlots.SubjectId)
-                .ThenBy(examSlots => examSlots.ExamDate);
+            examSlots.OrderBy(examSlots => examSlots.ExamDate)
+                .ThenBy(examSlots => examSlots.SubjectId);
             var examSlotList = await examSlots
                 .Include(es => es.Subject)
                 .Select(es => new ExamSlotResponse
@@ -762,7 +767,7 @@ namespace GESS.Repository.Implement
                 .Include(e => e.ExamSlot)
                 .Where(e => e.RoomId == roomId && e.ExamDate.Date == examDate)
                 .ToList();
-
+            bool isAvailable = true;
             foreach (var e in examSlotRooms)
             {
                 var start = e.ExamDate.Add(e.ExamSlot.StartTime);
@@ -771,11 +776,12 @@ namespace GESS.Repository.Implement
                 // Kiểm tra overlap: (start < slotEnd && end > slotStart)
                 if (start < slotEnd && end > slotStart)
                 {
-                    return false; // Đã có ca trùng
+                    isAvailable = false;
+                    break;
                 }
             }
 
-            return true; // Chưa có ca nào trùng
+            return isAvailable;
         }
 
 
@@ -830,7 +836,7 @@ namespace GESS.Repository.Implement
                     StartTime = item.StartTime.ToLocalTime().TimeOfDay,
                     EndTime = item.EndTime.ToLocalTime().TimeOfDay,
                     SlotName = item.SlotName,
-                    ExamDate = item.Date,
+                    ExamDate = item.Date.ToLocalTime().Date,
                     MultiOrPractice = item.MultiOrPractice,
                     Status = string.IsNullOrEmpty(item.Status) ? "Chưa gán bài thi" : item.Status,
                     SubjectId = item.SubjectId,
@@ -847,7 +853,7 @@ namespace GESS.Repository.Implement
                     SemesterId = item.SemesterId,
                     SubjectId = item.SubjectId,
                     MultiOrPractice = item.MultiOrPractice,
-                    ExamDate = item.Date,
+                    ExamDate = item.Date.ToLocalTime().Date,
                     IsGraded = 0,
                     Status = 0
                 }).ToList();

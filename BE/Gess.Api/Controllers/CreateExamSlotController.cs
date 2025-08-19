@@ -142,9 +142,9 @@ namespace GESS.Api.Controllers
             var remainingStudents = new Queue<StudentAddDto>(dto.students);
 
             // Thời gian bắt đầu
-            DateTime currentDay = dto.StartDate.Date;
-            DateTime slotStartTime = currentDay.Add(dto.StartTimeInDay.TimeOfDay);
-            DateTime slotEndTimeInDay = currentDay.Add(dto.EndTimeInDay.TimeOfDay);
+            DateTime currentDay = dto.StartDate.ToLocalTime().Date;
+            DateTime slotStartTime = currentDay.Add(dto.StartTimeInDay.ToLocalTime().TimeOfDay);
+            DateTime slotEndTimeInDay = currentDay.Add(dto.EndTimeInDay.ToLocalTime().TimeOfDay);
 
             int slotCounter = 1; // Để đặt tên slot
 
@@ -155,8 +155,8 @@ namespace GESS.Api.Controllers
                 if (slotStartTime >= slotEndTimeInDay)
                 {
                     currentDay = currentDay.AddDays(1);
-                    slotStartTime = currentDay.Add(dto.StartTimeInDay.TimeOfDay);
-                    slotEndTimeInDay = currentDay.Add(dto.EndTimeInDay.TimeOfDay);
+                    slotStartTime = currentDay.Add(dto.StartTimeInDay.ToLocalTime().TimeOfDay);
+                    slotEndTimeInDay = currentDay.Add(dto.EndTimeInDay.ToLocalTime().TimeOfDay);
                 }
 
                 // EndTime chỉ = StartTime + Duration (KHÔNG cộng RelaxationTime)
@@ -226,7 +226,7 @@ namespace GESS.Api.Controllers
             var remainingStudents = new Queue<StudentAddDto>(dto.students);
 
             int slotCounter = 1;
-            DateTime currentDay = dto.StartDate.Date;
+            DateTime currentDay = dto.StartDate.ToLocalTime().Date;
 
             // Sắp xếp phòng theo capacity giảm dần
             var sortedRooms = dto.rooms.OrderByDescending(r => r.Capacity).ToList();
@@ -239,8 +239,8 @@ namespace GESS.Api.Controllers
                 foreach (var room in sortedRooms)
                 {
                     // Lặp qua tất cả slot trong ngày
-                    DateTime slotStartTime = currentDay.Add(dto.StartTimeInDay.TimeOfDay);
-                    DateTime slotEndTimeInDay = currentDay.Add(dto.EndTimeInDay.TimeOfDay);
+                    DateTime slotStartTime = currentDay.Add(dto.StartTimeInDay.ToLocalTime().TimeOfDay);
+                    DateTime slotEndTimeInDay = currentDay.Add(dto.EndTimeInDay.ToLocalTime().TimeOfDay);
 
                     while (slotStartTime < slotEndTimeInDay && remainingStudents.Any())
                     {

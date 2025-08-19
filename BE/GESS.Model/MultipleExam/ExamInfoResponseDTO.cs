@@ -23,6 +23,7 @@ namespace GESS.Model.MultipleExam
     public class MultiQuestionDetailDTO
     {
         public int MultiQuestionId { get; set; }
+        public int QuestionOrder { get; set; }
         public string Content { get; set; }
         public string UrlImg { get; set; }
         public int ChapterId { get; set; }
