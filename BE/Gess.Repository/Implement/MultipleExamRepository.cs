@@ -538,6 +538,7 @@ namespace GESS.Repository.Implement
                 .Select(q => new MultiQuestionDetailDTO
                 {
                     MultiQuestionId = q.MultiQuestionId,
+                    QuestionOrder = q.QuestionOrder,
                     Content = q.MultiQuestion.Content,
                     UrlImg = q.MultiQuestion.UrlImg,
                     ChapterId = q.MultiQuestion.ChapterId,
@@ -741,6 +742,7 @@ namespace GESS.Repository.Implement
                     .Select(q => new MultiQuestionDetailDTO
                     {
                         MultiQuestionId = q.MultiQuestionId,
+                        QuestionOrder = q.QuestionOrder,
                         Content = q.MultiQuestion.Content,
                         UrlImg = q.MultiQuestion.UrlImg,
                         ChapterId = q.MultiQuestion.ChapterId,
