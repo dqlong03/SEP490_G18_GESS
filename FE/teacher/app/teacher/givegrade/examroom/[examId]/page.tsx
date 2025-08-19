@@ -135,6 +135,22 @@ export default function ExamGradingDetailPage({ params }: PageProps) {
 
   const { total, graded, percentage } = getProgressStats();
 
+
+  const handleOpenConfirm = () => {
+    if (!examInfo || !examInfo.students) {
+      alert('Không có dữ liệu phòng thi để xác nhận.');
+      return;
+    }
+    const totalStudents = examInfo.students.length;
+    const gradedCount = examInfo.students.filter(s => s.isGraded === 1).length;
+    if (gradedCount !== totalStudents) {
+      alert(`Còn ${totalStudents - gradedCount} bài chưa chấm. Vui lòng chấm hết trước khi xác nhận.`);
+      return;
+    }
+    setShowConfirmModal(true);
+  };
+
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -374,7 +390,8 @@ export default function ExamGradingDetailPage({ params }: PageProps) {
               
               {action !== 'edit' && (
                 <button
-                  onClick={() => setShowConfirmModal(true)}
+                  onClick={handleOpenConfirm}
+                  disabled={graded !== total}
                   className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

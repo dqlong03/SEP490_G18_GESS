@@ -27,7 +27,8 @@ import {
   Lock,
   Copy,
   X,
-  Shield
+  Shield,
+  Calendar
 } from 'lucide-react';
 
 // Dropdown static
@@ -49,6 +50,17 @@ const publicOptions = [
 
 const pageSize = 10;
 
+// Generate years from current year back 20 years
+const generateYearOptions = () => {
+  const currentYear = new Date().getFullYear();
+  const years = [];
+  for (let i = 0; i < 20; i++) {
+    const year = currentYear - i;
+    years.push({ value: year, label: year.toString() });
+  }
+  return years;
+};
+
 // Types
 interface SimilarQuestion {
   questionID: number;
@@ -60,6 +72,19 @@ interface SimilarityGroup {
   questions: SimilarQuestion[];
 }
 
+interface Semester {
+  semesterId: number;
+  semesterName: string;
+}
+
+interface QuestionResponse {
+  totalPages: number;
+  questions: any[];
+  totalCount: number;
+  totalMulti: number;
+  totalPrac: number;
+}
+
 export default function QuestionBankPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -68,6 +93,7 @@ export default function QuestionBankPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [chapters, setChapters] = useState<any[]>([]);
+  const [semesters, setSemesters] = useState<any[]>([]);
 
   const [selectedPublic, setSelectedPublic] = useState<any>(null);
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
@@ -75,6 +101,8 @@ export default function QuestionBankPage() {
   const [selectedType, setSelectedType] = useState<any>(null);
   const [selectedLevel, setSelectedLevel] = useState<any>(null);
   const [selectedChapter, setSelectedChapter] = useState<any>(null);
+  const [selectedSemester, setSelectedSemester] = useState<any>(null);
+  const [selectedYear, setSelectedYear] = useState<any>(null);
 
   const teacherId = getUserIdFromToken()||null;
 
@@ -90,12 +118,17 @@ export default function QuestionBankPage() {
   const [duplicateGroups, setDuplicateGroups] = useState<SimilarityGroup[]>([]);
   const [deletingQuestionId, setDeletingQuestionId] = useState<number | null>(null);
 
+  // Year options
+  const yearOptions = generateYearOptions();
+
   // Lấy filter từ URL nếu có
   const initialChapterId = searchParams.get('chapterId');
   const initialCategoryExamId = searchParams.get('categoryExamId');
   const initialSubjectId = searchParams.get('subjectId');
   const initialType = searchParams.get('questionType');
   const initialLevel = searchParams.get('levelId');
+  const initialSemesterId = searchParams.get('semesterId');
+  const initialYear = searchParams.get('year');
 
   // Khi danh sách filter thay đổi, tự động set filter nếu có giá trị truyền vào từ URL
   useEffect(() => {
@@ -132,6 +165,18 @@ export default function QuestionBankPage() {
       if (found) setSelectedLevel(found);
     }
   }, [initialLevel, selectedLevel]);
+  useEffect(() => {
+    if (semesters.length > 0 && initialSemesterId && !selectedSemester) {
+      const found = semesters.find(s => String(s.value) === String(initialSemesterId));
+      if (found) setSelectedSemester(found);
+    }
+  }, [semesters, initialSemesterId, selectedSemester]);
+  useEffect(() => {
+    if (yearOptions.length > 0 && initialYear && !selectedYear) {
+      const found = yearOptions.find(y => String(y.value) === String(initialYear));
+      if (found) setSelectedYear(found);
+    }
+  }, [yearOptions, initialYear, selectedYear]);
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -140,6 +185,8 @@ export default function QuestionBankPage() {
   const [questions, setQuestions] = useState<any[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [totalQuestions, setTotalQuestions] = useState(0);
+  const [totalMultiple, setTotalMultiple] = useState(0);
+  const [totalEssay, setTotalEssay] = useState(0);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -147,6 +194,14 @@ export default function QuestionBankPage() {
       .then(res => res.json())
       .then(data => setCategories(data.map((c: any) => ({ value: c.categoryExamId, label: c.categoryExamName }))))
       .catch(() => setCategories([]));
+  }, []);
+
+  // Fetch semesters on mount
+  useEffect(() => {
+    fetch('https://localhost:7074/api/Semesters')
+      .then(res => res.json())
+      .then(data => setSemesters(data.map((s: Semester) => ({ value: s.semesterId, label: s.semesterName }))))
+      .catch(() => setSemesters([]));
   }, []);
 
   // Fetch subjects when category changes
@@ -189,6 +244,8 @@ export default function QuestionBankPage() {
     if (selectedType) params.append('questionType', selectedType.value);
     if (selectedLevel) params.append('levelId', selectedLevel.value);
     if (selectedChapter) params.append('chapterId', selectedChapter.value);
+    if (selectedSemester) params.append('semesterId', selectedSemester.value);
+    if (selectedYear) params.append('year', selectedYear.value);
     if (selectedPublic) {
       params.append('isPublic', selectedPublic.value === 'public' ? 'true' : 'false');
       if (teacherId && selectedPublic.value === "private") params.append('teacherId', teacherId.toString());
@@ -198,24 +255,28 @@ export default function QuestionBankPage() {
 
     fetch(`https://localhost:7074/api/PracticeQuestion/all-questions?${params.toString()}`)
       .then(res => res.json())
-      .then(data => {
+      .then((data: QuestionResponse) => {
         setQuestions(data.questions || []);
         setTotalPages(data.totalPages || 1);
-        setTotalQuestions(data.totalQuestions || 0);
+        setTotalQuestions(data.totalCount || 0);
+        setTotalMultiple(data.totalMulti || 0);
+        setTotalEssay(data.totalPrac || 0);
       })
       .catch(() => {
         setQuestions([]);
         setTotalPages(1);
         setTotalQuestions(0);
+        setTotalMultiple(0);
+        setTotalEssay(0);
       })
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     fetchQuestions();
-  }, [selectedCategory, selectedSubject, selectedType, selectedLevel, selectedChapter, selectedPublic, page]);
+  }, [selectedCategory, selectedSubject, selectedType, selectedLevel, selectedChapter, selectedSemester, selectedYear, selectedPublic, page]);
 
-  // Kiểm tra trùng lặp
+  // Kiểm tra trùng lặp (không truyền semester và year)
   const handleCheckDuplicates = async () => {
     if (!selectedPublic || !selectedCategory || !selectedSubject || !selectedType || !selectedLevel || !selectedChapter) {
       alert('Vui lòng chọn đầy đủ tất cả các bộ lọc trước khi kiểm tra trùng lặp!');
@@ -225,7 +286,7 @@ export default function QuestionBankPage() {
     setCheckingDuplicates(true);
     
     try {
-      // Lấy tất cả câu hỏi với filter hiện tại (không phân trang)
+      // Lấy tất cả câu hỏi với filter hiện tại (không bao gồm semester và year)
       const params = new URLSearchParams();
       if (selectedCategory) params.append('headId', selectedCategory.value);
       if (selectedSubject) params.append('subjectId', selectedSubject.value);
@@ -327,10 +388,10 @@ export default function QuestionBankPage() {
     }
   };
 
-  // Tạo câu hỏi: truyền toàn bộ filter sang trang tạo
+  // Tạo câu hỏi: truyền toàn bộ filter sang trang tạo (bao gồm semester và year)
   const handleCreateQuestion = (type: 'multiple' | 'essay') => {
-    if (!selectedChapter || !selectedCategory) {
-      alert('Vui lòng chọn đầu điểm và chương trước khi tạo câu hỏi!');
+    if (!selectedChapter || !selectedCategory || !selectedSemester || !selectedYear) {
+      alert('Vui lòng chọn đầu điểm, chương, kỳ học và năm trước khi tạo câu hỏi!');
       return;
     }
     const params = new URLSearchParams();
@@ -345,6 +406,11 @@ export default function QuestionBankPage() {
       params.append('chapterId', selectedChapter.value);
       params.append('chapterName', selectedChapter.label);
     }
+    if (selectedSemester) {
+      params.append('semesterId', selectedSemester.value);
+      params.append('semesterName', selectedSemester.label);
+    }
+    if (selectedYear) params.append('year', selectedYear.value);
 
     if (type === 'multiple') {
       router.push(`/teacher/questionbank/createmulquestion?${params.toString()}`);
@@ -362,7 +428,10 @@ export default function QuestionBankPage() {
     setSelectedType(null);
     setSelectedLevel(null);
     setSelectedChapter(null);
+    setSelectedSemester(null);
+    setSelectedYear(null);
     setPage(1);
+    router.replace('/teacher/questionbank');
   };
 
   // Đáp án ký tự
@@ -457,7 +526,7 @@ export default function QuestionBankPage() {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -474,9 +543,7 @@ export default function QuestionBankPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Trắc nghiệm</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {questions.filter(q => q.questionType === 'Trắc nghiệm').length}
-                </p>
+                <p className="text-2xl font-bold text-blue-600">{totalMultiple}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                 <CheckCircle className="w-6 h-6 text-blue-600" />
@@ -488,24 +555,10 @@ export default function QuestionBankPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Tự luận</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {questions.filter(q => q.questionType === 'Tự luận').length}
-                </p>
+                <p className="text-2xl font-bold text-green-600">{totalEssay}</p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                 <FileText className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Đầu điểm</p>
-                <p className="text-2xl font-bold text-purple-600">{categories.length}</p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Target className="w-6 h-6 text-purple-600" />
               </div>
             </div>
           </div>
@@ -535,7 +588,7 @@ export default function QuestionBankPage() {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Public <span className="text-red-500">*</span>
@@ -624,7 +677,9 @@ export default function QuestionBankPage() {
                 }}
               />
             </div>
-            
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Độ khó <span className="text-red-500">*</span>
@@ -664,6 +719,50 @@ export default function QuestionBankPage() {
                     ...provided,
                     minHeight: '44px',
                     borderColor: selectedChapter ? '#d1d5db' : '#f87171',
+                    '&:hover': { borderColor: '#3b82f6' }
+                  })
+                }}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Kỳ học
+              </label>
+              <Select
+                options={semesters}
+                value={selectedSemester}
+                onChange={option => { setSelectedSemester(option); setPage(1); }}
+                placeholder="Chọn kỳ học"
+                isClearable
+                isSearchable={false}
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    minHeight: '44px',
+                    borderColor: '#d1d5db',
+                    '&:hover': { borderColor: '#3b82f6' }
+                  })
+                }}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Năm
+              </label>
+              <Select
+                options={yearOptions}
+                value={selectedYear}
+                onChange={option => { setSelectedYear(option); setPage(1); }}
+                placeholder="Chọn năm"
+                isClearable
+                isSearchable={false}
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    minHeight: '44px',
+                    borderColor: '#d1d5db',
                     '&:hover': { borderColor: '#3b82f6' }
                   })
                 }}

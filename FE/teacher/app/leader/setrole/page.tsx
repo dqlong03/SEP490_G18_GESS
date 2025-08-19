@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState,useCallback } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { getUserIdFromToken } from "@/utils/tokenUtils";
@@ -17,11 +17,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Award,
-  GraduationCap
+  GraduationCap,
+  Search
 } from 'lucide-react';
 
 const TEACHER_ID = getUserIdFromToken();
 const PAGE_SIZE = 10;
+const SUBJECTS_PER_PAGE = 6;
 
 type Subject = {
   subjectId: number;
@@ -51,13 +53,33 @@ type Teacher = {
 export default function SetRolePage() {
   // State
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [filteredSubjects, setFilteredSubjects] = useState<Subject[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentSubjectPage, setCurrentSubjectPage] = useState(0);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [teachersInSubject, setTeachersInSubject] = useState<Teacher[]>([]);
   const [teachersInMajor, setTeachersInMajor] = useState<Teacher[]>([]);
+  const [filteredTeachersInMajor, setFilteredTeachersInMajor] = useState<Teacher[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
+  
+  // Search states
+  const [searchTeacherInSubject, setSearchTeacherInSubject] = useState('');
+  const [searchTeacherInMajor, setSearchTeacherInMajor] = useState('');
+  const [debouncedSearchTeacher, setDebouncedSearchTeacher] = useState('');
+
+
+
+    // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTeacher(searchTeacherInSubject);
+    }, 1000); // Chờ 500ms sau khi user ngừng gõ
+
+    return () => clearTimeout(timer);
+  }, [searchTeacherInSubject]);
 
   // Fetch subjects
   useEffect(() => {
@@ -65,6 +87,7 @@ export default function SetRolePage() {
       .then(res => res.json())
       .then(data => {
         setSubjects(data);
+        setFilteredSubjects(data);
         if (data && data.length > 0) {
           setSelectedSubject(data[0]);
         }
@@ -72,14 +95,62 @@ export default function SetRolePage() {
       .catch(() => toast.error('Không lấy được danh sách môn học'));
   }, []);
 
-  // Fetch teachers in subject
-  const fetchTeachersInSubject = () => {
+  // Filter subjects based on search term
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredSubjects(subjects);
+    } else {
+      setFilteredSubjects(
+        subjects.filter(subject =>
+          subject.subjectName.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+    }
+    setCurrentSubjectPage(0);
+  }, [searchTerm, subjects]);
+
+  // Filter teachers in major (frontend filter)
+  useEffect(() => {
+    if (searchTeacherInMajor.trim() === '') {
+      setFilteredTeachersInMajor(teachersInMajor);
+    } else {
+      setFilteredTeachersInMajor(
+        teachersInMajor.filter(teacher =>
+          teacher.code.toLowerCase().includes(searchTeacherInMajor.toLowerCase()) ||
+          teacher.fullname.toLowerCase().includes(searchTeacherInMajor.toLowerCase())
+        )
+      );
+    }
+  }, [searchTeacherInMajor, teachersInMajor]);
+
+  // Calculate pagination for subjects
+  const totalSubjectPages = Math.ceil(filteredSubjects.length / SUBJECTS_PER_PAGE);
+  const currentSubjects = filteredSubjects.slice(
+    currentSubjectPage * SUBJECTS_PER_PAGE,
+    (currentSubjectPage + 1) * SUBJECTS_PER_PAGE
+  );
+
+  // Navigation functions for subject carousel
+  const handlePreviousSubjects = () => {
+    setCurrentSubjectPage(prev => Math.max(0, prev - 1));
+  };
+
+  const handleNextSubjects = () => {
+    setCurrentSubjectPage(prev => Math.min(totalSubjectPages - 1, prev + 1));
+  };
+
+  // Fetch teachers in subject (with search)
+ // Fetch teachers in subject (with debounced search)
+  const fetchTeachersInSubject = useCallback(() => {
     if (!selectedSubject) {
       setTeachersInSubject([]);
       return;
     }
     setLoading(true);
-    fetch(`https://localhost:7074/api/AssignGradeCreateExam/GetAllTeacherHaveSubject?subjectId=${selectedSubject.subjectId}&pageNumber=${page}&pageSize=${PAGE_SIZE}`)
+    
+    const searchParam = debouncedSearchTeacher.trim() ? `&textSearch=${encodeURIComponent(debouncedSearchTeacher)}` : '';
+    
+    fetch(`https://localhost:7074/api/AssignGradeCreateExam/GetAllTeacherHaveSubject?subjectId=${selectedSubject.subjectId}&pageNumber=${page}&pageSize=${PAGE_SIZE}${searchParam}`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
@@ -90,26 +161,38 @@ export default function SetRolePage() {
       })
       .catch(() => {
         setTeachersInSubject([]);
-        toast.error('Không lấy được danh sách giáo viên trong môn học');
       })
       .finally(() => setLoading(false));
     
-    fetch(`https://localhost:7074/api/AssignGradeCreateExam/CountPageNumberTeacherHaveSubject?subjectId=${selectedSubject.subjectId}&pageSize=${PAGE_SIZE}`)
+    fetch(`https://localhost:7074/api/AssignGradeCreateExam/CountPageNumberTeacherHaveSubject?subjectId=${selectedSubject.subjectId}&pageSize=${PAGE_SIZE}${searchParam}`)
       .then(res => res.json())
       .then(data => setTotalPages(data))
       .catch(() => setTotalPages(1));
-  };
+  }, [selectedSubject, page, debouncedSearchTeacher]);
 
   useEffect(() => {
     fetchTeachersInSubject();
-    // eslint-disable-next-line
-  }, [selectedSubject, page]);
+  }, [fetchTeachersInSubject]);
 
-  // Fetch teachers in major (for add modal)
+  // Reset page when debounced search changes
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearchTeacher]);
+
+
+  // Reset page when search changes
+  useEffect(() => {
+    setPage(1);
+  }, [searchTeacherInSubject]);
+
+  // Fetch teachers in major (for add modal) - no pagination
   const fetchTeachersInMajor = () => {
     fetch(`https://localhost:7074/api/AssignGradeCreateExam/GetAllTeacherInMajor?teacherId=${TEACHER_ID}`)
       .then(res => res.json())
-      .then(data => setTeachersInMajor(data))
+      .then(data => {
+        setTeachersInMajor(data);
+        setFilteredTeachersInMajor(data);
+      })
       .catch(() => toast.error('Không lấy được danh sách giáo viên trong ngành'));
   };
 
@@ -159,24 +242,6 @@ export default function SetRolePage() {
     }
   };
 
-  // Toggle role grade exam
-  const handleToggleGradeExam = async (teacher: Teacher) => {
-    if (!selectedSubject) return;
-    try {
-      await fetch(`https://localhost:7074/api/AssignGradeCreateExam/AssignRoleGradeExam?teacherId=${teacher.teacherId}&subjectId=${selectedSubject.subjectId}`, { method: 'POST' });
-      toast.success('Đã cập nhật quyền chấm bài!');
-      setTeachersInSubject(prev =>
-        prev.map(t =>
-          t.teacherId === teacher.teacherId
-            ? { ...t, isGraded: !t.isGraded }
-            : t
-        )
-      );
-    } catch {
-      toast.error('Có lỗi xảy ra khi cập nhật quyền!');
-    }
-  };
-
   // Check if teacher is already in subject
   const isTeacherInSubject = (teacherId: string) => {
     return teachersInSubject.some(t => t.teacherId === teacherId);
@@ -186,11 +251,13 @@ export default function SetRolePage() {
   const handleSubjectSelect = (subject: Subject) => {
     setSelectedSubject(subject);
     setPage(1);
+    setSearchTeacherInSubject('');
   };
 
   // Khi đóng modal, fetch lại danh sách giáo viên trong môn học
   const handleCloseModal = () => {
     setShowAddModal(false);
+    setSearchTeacherInMajor('');
     setTimeout(() => {
       fetchTeachersInSubject();
     }, 300);
@@ -215,7 +282,7 @@ export default function SetRolePage() {
           </div>
         </div>
 
-        {/* Subject Cards */}
+        {/* Subject Selection */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-800 flex items-center">
@@ -237,42 +304,113 @@ export default function SetRolePage() {
               </button>
             )}
           </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-            {subjects.map(subject => (
-              <div
-                key={subject.subjectId}
-                onClick={() => handleSubjectSelect(subject)}
-                className={`cursor-pointer p-4 rounded-lg border-2 transition-all duration-200 transform hover:scale-105 text-center ${
-                  selectedSubject?.subjectId === subject.subjectId
-                    ? 'border-blue-500 bg-blue-50 shadow-lg'
-                    : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md'
-                }`}
-              >
-                <h4 className={`font-medium text-sm ${
-                  selectedSubject?.subjectId === subject.subjectId
-                    ? 'text-blue-900'
-                    : 'text-gray-900'
-                }`}>
-                  {subject.subjectName}
-                </h4>
-                
-                {selectedSubject?.subjectId === subject.subjectId && (
-                  <div className="mt-2 flex items-center justify-center">
-                    <CheckCircle className="w-4 h-4 text-blue-600" />
-                  </div>
-                )}
-              </div>
-            ))}
+
+          {/* Search Bar */}
+          <div className="mb-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Tìm kiếm môn học..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+              />
+            </div>
           </div>
-          
-          {subjects.length === 0 && (
+
+          {/* Subject Carousel */}
+          {filteredSubjects.length > 0 ? (
+            <div className="relative">
+              <div className="flex items-center space-x-4">
+                {/* Previous Button */}
+                <button
+                  onClick={handlePreviousSubjects}
+                  disabled={currentSubjectPage === 0}
+                  className="flex-shrink-0 p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 transition-colors duration-200"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+
+                {/* Subject Cards */}
+                <div className="flex-1 grid grid-cols-6 gap-4">
+                  {currentSubjects.map(subject => (
+                    <div
+                      key={subject.subjectId}
+                      onClick={() => handleSubjectSelect(subject)}
+                      className={`cursor-pointer p-4 rounded-lg border-2 transition-all duration-200 transform hover:scale-105 text-center ${
+                        selectedSubject?.subjectId === subject.subjectId
+                          ? 'border-blue-500 bg-blue-50 shadow-lg'
+                          : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md'
+                      }`}
+                    >
+                      <h4 className={`font-medium text-sm ${
+                        selectedSubject?.subjectId === subject.subjectId
+                          ? 'text-blue-900'
+                          : 'text-gray-900'
+                      }`}>
+                        {subject.subjectName}
+                      </h4>
+                      
+                      {selectedSubject?.subjectId === subject.subjectId && (
+                        <div className="mt-2 flex items-center justify-center">
+                          <CheckCircle className="w-4 h-4 text-blue-600" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  {/* Fill empty slots if less than 6 subjects */}
+                  {currentSubjects.length < SUBJECTS_PER_PAGE && (
+                    <>
+                      {Array.from({ length: SUBJECTS_PER_PAGE - currentSubjects.length }).map((_, index) => (
+                        <div key={`empty-${index}`} className="p-4 border-2 border-dashed border-gray-200 rounded-lg opacity-50">
+                          <div className="h-8"></div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+
+                {/* Next Button */}
+                <button
+                  onClick={handleNextSubjects}
+                  disabled={currentSubjectPage >= totalSubjectPages - 1}
+                  className="flex-shrink-0 p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 transition-colors duration-200"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Pagination Indicator */}
+              {totalSubjectPages > 1 && (
+                <div className="flex items-center justify-center mt-4 space-x-2">
+                  {Array.from({ length: totalSubjectPages }).map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentSubjectPage(index)}
+                      className={`w-2 h-2 rounded-full transition-colors duration-200 ${
+                        index === currentSubjectPage ? 'bg-blue-600' : 'bg-gray-300'
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
             <div className="text-center py-8">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <BookOpen className="w-8 h-8 text-gray-400" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">Chưa có môn học nào</h3>
-              <p className="text-gray-600">Không tìm thấy môn học nào được phân công</p>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                {searchTerm ? 'Không tìm thấy môn học' : 'Chưa có môn học nào'}
+              </h3>
+              <p className="text-gray-600">
+                {searchTerm 
+                  ? `Không có môn học nào chứa từ khóa "${searchTerm}"`
+                  : 'Không tìm thấy môn học nào được phân công'
+                }
+              </p>
             </div>
           )}
         </div>
@@ -281,11 +419,23 @@ export default function SetRolePage() {
         {selectedSubject && (
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-800 flex items-center">
                   <Users className="w-5 h-5 mr-2 text-blue-600" />
-                  Danh sách giáo viên môn:  {selectedSubject.subjectName} ({teachersInSubject.length})
+                  Danh sách giáo viên môn: {selectedSubject.subjectName} ({teachersInSubject.length})
                 </h3>
+              </div>
+              
+              {/* Search teachers in subject */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Tìm giáo viên trong môn (mã GV hoặc tên)..."
+                  value={searchTeacherInSubject}
+                  onChange={(e) => setSearchTeacherInSubject(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                />
               </div>
             </div>
             
@@ -299,14 +449,13 @@ export default function SetRolePage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Điện thoại</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Tạo đề</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Chấm bài</th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {loading ? (
                     <tr>
-                      <td colSpan={8} className="px-6 py-8 text-center">
+                      <td colSpan={7} className="px-6 py-8 text-center">
                         <div className="flex items-center justify-center space-x-2">
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                           <span className="text-gray-500 font-medium">Đang tải...</span>
@@ -355,24 +504,6 @@ export default function SetRolePage() {
                           </button>
                         </td>
                         
-                        {/* Toggle chấm bài */}
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <button
-                            type="button"
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
-                              teacher.isGraded ? 'bg-green-600' : 'bg-gray-300'
-                            }`}
-                            onClick={() => handleToggleGradeExam(teacher)}
-                            aria-pressed={teacher.isGraded}
-                          >
-                            <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${
-                                teacher.isGraded ? 'translate-x-6' : 'translate-x-1'
-                              }`}
-                            />
-                          </button>
-                        </td>
-                        
                         {/* Xóa */}
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                           <button
@@ -387,12 +518,19 @@ export default function SetRolePage() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={8} className="px-6 py-12 text-center">
+                      <td colSpan={7} className="px-6 py-12 text-center">
                         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                           <Users className="w-8 h-8 text-gray-400" />
                         </div>
-                        <h3 className="text-lg font-semibold text-gray-800 mb-2">Chưa có giáo viên nào</h3>
-                        <p className="text-gray-600">Thêm giáo viên vào môn học để bắt đầu phân quyền</p>
+                        <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                          {searchTeacherInSubject ? 'Không tìm thấy giáo viên' : 'Chưa có giáo viên nào'}
+                        </h3>
+                        <p className="text-gray-600">
+                          {searchTeacherInSubject 
+                            ? `Không có giáo viên nào chứa từ khóa "${searchTeacherInSubject}"`
+                            : 'Thêm giáo viên vào môn học để bắt đầu phân quyền'
+                          }
+                        </p>
                       </td>
                     </tr>
                   )}
@@ -491,7 +629,7 @@ export default function SetRolePage() {
       {/* Modal thêm giáo viên */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
@@ -519,10 +657,24 @@ export default function SetRolePage() {
               </div>
             </div>
             
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
-              <div className="overflow-x-auto">
+            <div className="p-6">
+              {/* Search teachers in major */}
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    placeholder="Tìm giáo viên (mã GV hoặc tên)..."
+                    value={searchTeacherInMajor}
+                    onChange={(e) => setSearchTeacherInMajor(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                  />
+                </div>
+              </div>
+              
+              <div className="overflow-y-auto max-h-[50vh]">
                 <table className="w-full">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-50 sticky top-0">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã GV</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Họ tên</th>
@@ -533,8 +685,8 @@ export default function SetRolePage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {teachersInMajor.length > 0 ? (
-                      teachersInMajor.map(teacher => {
+                    {filteredTeachersInMajor.length > 0 ? (
+                      filteredTeachersInMajor.map(teacher => {
                         const alreadyInSubject = isTeacherInSubject(teacher.teacherId);
                         return (
                           <tr key={teacher.teacherId} className={`transition-colors duration-200 ${alreadyInSubject ? 'bg-gray-50' : 'hover:bg-gray-50'}`}>
@@ -591,8 +743,15 @@ export default function SetRolePage() {
                           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Users className="w-8 h-8 text-gray-400" />
                           </div>
-                          <h3 className="text-lg font-semibold text-gray-800 mb-2">Không có giáo viên nào</h3>
-                          <p className="text-gray-600">Không tìm thấy giáo viên nào trong ngành</p>
+                          <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                            {searchTeacherInMajor ? 'Không tìm thấy giáo viên' : 'Không có giáo viên nào'}
+                          </h3>
+                          <p className="text-gray-600">
+                            {searchTeacherInMajor 
+                              ? `Không có giáo viên nào chứa từ khóa "${searchTeacherInMajor}"`
+                              : 'Không tìm thấy giáo viên nào trong ngành'
+                            }
+                          </p>
                         </td>
                       </tr>
                     )}
