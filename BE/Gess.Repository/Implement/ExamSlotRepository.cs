@@ -830,7 +830,7 @@ namespace GESS.Repository.Implement
                     StartTime = item.StartTime.ToLocalTime().TimeOfDay,
                     EndTime = item.EndTime.ToLocalTime().TimeOfDay,
                     SlotName = item.SlotName,
-                    ExamDate = item.Date,
+                    ExamDate = item.Date.ToLocalTime().Date,
                     MultiOrPractice = item.MultiOrPractice,
                     Status = string.IsNullOrEmpty(item.Status) ? "Chưa gán bài thi" : item.Status,
                     SubjectId = item.SubjectId,
@@ -847,7 +847,7 @@ namespace GESS.Repository.Implement
                     SemesterId = item.SemesterId,
                     SubjectId = item.SubjectId,
                     MultiOrPractice = item.MultiOrPractice,
-                    ExamDate = item.Date,
+                    ExamDate = item.Date.ToLocalTime().Date,
                     IsGraded = 0,
                     Status = 0
                 }).ToList();
