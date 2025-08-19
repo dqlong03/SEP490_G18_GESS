@@ -24,7 +24,7 @@ import {
   Sparkles,
   FileSpreadsheet,
   CheckCircle,
-  PenTool
+  PenTool,Calendar
 } from 'lucide-react';
 
 const difficulties = [
@@ -54,6 +54,8 @@ export default function CreateEssayQuestionPage() {
   const categoryExamId = Number(searchParams.get('categoryExamId'));
   const chapterName = searchParams.get('chapterName') || '';
   const subjectName = searchParams.get('subjectName') || '';
+  const semesterName = searchParams.get('semesterName') || '';
+  const year = searchParams.get('year') || '';
 
   const [questions, setQuestions] = useState<EssayQuestion[]>([]);
   const [fileName, setFileName] = useState<string>('');
@@ -130,59 +132,104 @@ export default function CreateEssayQuestionPage() {
 
   // Import file
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImportError('');
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const json: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-      if (json.length < 2) {
-        setImportError('File phải có ít nhất 1 dòng dữ liệu.');
+  const file = e.target.files?.[0];
+  if (!file) return;
+  setImportError('');
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const json: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+    // Validate header
+    const expectedHeader = [
+      'Nội dung', 'Độ khó',
+      'Tiêu chí 1 - Tên', 'Tiêu chí 1 - Mô tả', 'Tiêu chí 1 - Phần trăm',
+      'Tiêu chí 2 - Tên', 'Tiêu chí 2 - Mô tả', 'Tiêu chí 2 - Phần trăm',
+      'Tiêu chí 3 - Tên', 'Tiêu chí 3 - Mô tả', 'Tiêu chí 3 - Phần trăm',
+      'Tiêu chí 4 - Tên', 'Tiêu chí 4 - Mô tả', 'Tiêu chí 4 - Phần trăm',
+      'Tiêu chí 5 - Tên', 'Tiêu chí 5 - Mô tả', 'Tiêu chí 5 - Phần trăm'
+    ];
+    const fileHeader = json[0]?.map((h: any) => (h || '').toString().trim());
+    const isHeaderValid = expectedHeader.every((h, idx) => fileHeader[idx] === h);
+
+    if (!isHeaderValid) {
+      setImportError('File không đúng định dạng mẫu. Vui lòng tải file mẫu và nhập đúng các cột!');
+      setFileName('');
+      return;
+    }
+
+    if (json.length < 2) {
+      setImportError('File phải có ít nhất 1 dòng dữ liệu.');
+      setFileName('');
+      return;
+    }
+
+    const dataArr: EssayQuestion[] = [];
+    for (let i = 1; i < json.length; i++) {
+      const row = json[i];
+      // Validate: Nội dung và độ khó phải có
+      if (row.length < 2 || !row[0] || !row[1]) {
+        setImportError(`Dòng ${i + 1}: Thiếu nội dung hoặc độ khó!`);
         setFileName('');
         return;
       }
-      
-      const dataArr: EssayQuestion[] = [];
-      for (let i = 1; i < json.length; i++) {
-        const row = json[i];
-        if (row.length < 2 || !row[0]) continue;
-        
-        const criteria: Criterion[] = [];
-        // Duyệt qua 5 nhóm tiêu chí (mỗi nhóm 3 cột: tên, mô tả, phần trăm)
-        for (let j = 0; j < 5; j++) {
-          const nameIndex = 2 + j * 3;
-          const descIndex = 3 + j * 3;
-          const weightIndex = 4 + j * 3;
-          
-          if (row[nameIndex] && row[nameIndex].trim()) {
-            criteria.push({
-              criterionName: row[nameIndex].trim(),
-              description: row[descIndex] ? row[descIndex].trim() : '',
-              weightPercent: Number(row[weightIndex]) || 0
-            });
+      // Validate: Độ khó phải là 1, 2 hoặc 3
+      if (![1, 2, 3].includes(Number(row[1]))) {
+        setImportError(`Dòng ${i + 1}: Độ khó phải là 1 (Dễ), 2 (Trung bình), hoặc 3 (Khó)!`);
+        setFileName('');
+        return;
+      }
+      const criteria: Criterion[] = [];
+      // Duyệt qua 5 nhóm tiêu chí (mỗi nhóm 3 cột: tên, mô tả, phần trăm)
+      for (let j = 0; j < 5; j++) {
+        const nameIndex = 2 + j * 3;
+        const descIndex = 3 + j * 3;
+        const weightIndex = 4 + j * 3;
+        // Nếu có tên tiêu chí thì validate các trường còn lại
+        if (row[nameIndex] && row[nameIndex].trim()) {
+          // Validate: Phần trăm phải là số và từ 1-100
+          const weight = Number(row[weightIndex]);
+          if (isNaN(weight) || weight < 1 || weight > 100) {
+            setImportError(`Dòng ${i + 1}: Phần trăm tiêu chí "${row[nameIndex]}" phải là số từ 1 đến 100!`);
+            setFileName('');
+            return;
           }
-        }
-        
-        if (criteria.length > 0) {
-          dataArr.push({
-            id: Date.now() + i,
-            content: row[0],
-            criteria: criteria,
-            difficulty: Number(row[1]) || 1,
-            isPublic: true,
+          criteria.push({
+            criterionName: row[nameIndex].trim(),
+            description: row[descIndex] ? row[descIndex].trim() : '',
+            weightPercent: weight
           });
         }
       }
-      setQuestions([...questions, ...dataArr]);
-      setFileName(file.name);
-      setImportError('');
-    };
-    reader.readAsArrayBuffer(file);
+      // Validate: Phải có ít nhất 1 tiêu chí
+      if (criteria.length === 0) {
+        setImportError(`Dòng ${i + 1}: Phải có ít nhất 1 tiêu chí chấm!`);
+        setFileName('');
+        return;
+      }
+      // Validate: Tổng phần trăm tiêu chí phải bằng 100
+      const totalWeight = criteria.reduce((sum, c) => sum + c.weightPercent, 0);
+      if (totalWeight !== 100) {
+        setImportError(`Dòng ${i + 1}: Tổng phần trăm các tiêu chí phải bằng 100% (hiện tại: ${totalWeight}%)!`);
+        setFileName('');
+        return;
+      }
+      dataArr.push({
+        id: Date.now() + i,
+        content: row[0],
+        criteria: criteria,
+        difficulty: Number(row[1]) || 1,
+        isPublic: true,
+      });
+    }
+    setQuestions([...questions, ...dataArr]);
+    setFileName(file.name);
+    setImportError('');
   };
-
+  reader.readAsArrayBuffer(file);
+};
   // Thêm tiêu chí mới cho form thủ công
   const addCriterion = () => {
     // if (manualQ.criteria.length >= 3) {
@@ -333,7 +380,6 @@ export default function CreateEssayQuestionPage() {
       }));
       setQuestions(prev => [...prev, ...newQuestions]);
       setShowAIGen(false);
-      setAILink('');
       setAINum(2);
       setAILevel('dễ');
       
@@ -344,7 +390,7 @@ export default function CreateEssayQuestionPage() {
       
       alert(`Đã tạo thành công ${newQuestions.length} câu hỏi bằng AI!`);
     } catch (err: any) {
-      alert('Lỗi tạo câu hỏi bằng AI: ' + err.message);
+      alert('Lỗi tạo câu hỏi bằng AI: ' + "\nKiểm tra lại link tài liệu(đã được chia sẻ editable) và đã có nội dung");
     }
     setAILoading(false);
   };
@@ -461,6 +507,13 @@ export default function CreateEssayQuestionPage() {
                         <span>Chương: {chapterName}</span>
                       </div>
                     )}
+
+                      {semesterName && (
+                                      <div className="flex items-center space-x-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-lg text-sm font-medium">
+                                        <Calendar className="w-4 h-4" />
+                                        <span>{semesterName}</span>
+                                      </div>
+                                    )}
                   </div>
                 )}
               </div>
@@ -478,7 +531,7 @@ export default function CreateEssayQuestionPage() {
 
         {/* Statistics */}
         {questions.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -501,6 +554,20 @@ export default function CreateEssayQuestionPage() {
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                   <Award className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+            </div>
+
+             <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Câu trung bình</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {questions.filter(q => q.difficulty === 2).length}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Award className="w-6 h-6 text-orange-600" />
                 </div>
               </div>
             </div>
@@ -724,7 +791,7 @@ export default function CreateEssayQuestionPage() {
                         onChange={() => setManualQ({ ...manualQ, isPublic: true })}
                         className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                       />
-                      <span className="ml-2 text-sm text-gray-700">Public</span>
+                      <span className="ml-2 text-sm text-gray-700">Chung</span>
                     </label>
                     <label className="flex items-center">
                       <input
@@ -734,7 +801,7 @@ export default function CreateEssayQuestionPage() {
                         onChange={() => setManualQ({ ...manualQ, isPublic: false })}
                         className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                       />
-                      <span className="ml-2 text-sm text-gray-700">Private</span>
+                      <span className="ml-2 text-sm text-gray-700">Cá nhân</span>
                     </label>
                   </div>
                 </div>
@@ -804,17 +871,7 @@ export default function CreateEssayQuestionPage() {
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
                           />
                         </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Phần trăm (%)</label>
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={criterion.weightPercent}
-                            onChange={e => updateCriterion(index, 'weightPercent', Number(e.target.value))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
-                          />
-                        </div>
+                       
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Mô tả</label>
                           <input
@@ -825,6 +882,19 @@ export default function CreateEssayQuestionPage() {
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
                           />
                         </div>
+
+                         <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Phần trăm (%)</label>
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={criterion.weightPercent}
+                            onChange={e => updateCriterion(index, 'weightPercent', Number(e.target.value))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
+                          />
+                        </div>
+
                       </div>
                     </div>
                   ))}
@@ -901,7 +971,7 @@ export default function CreateEssayQuestionPage() {
                               onChange={() => handleEditQuestion(idx, 'isPublic', true)}
                               className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                             />
-                            <span className="ml-2 text-sm text-gray-700">Public</span>
+                            <span className="ml-2 text-sm text-gray-700">Chung</span>
                           </label>
                           <label className="flex items-center">
                             <input
@@ -911,7 +981,7 @@ export default function CreateEssayQuestionPage() {
                               onChange={() => handleEditQuestion(idx, 'isPublic', false)}
                               className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                             />
-                            <span className="ml-2 text-sm text-gray-700">Private</span>
+                            <span className="ml-2 text-sm text-gray-700">Cá nhân</span>
                           </label>
                         </div>
                       </div>
@@ -982,6 +1052,18 @@ export default function CreateEssayQuestionPage() {
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
                                 />
                               </div>
+                              
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Mô tả</label>
+                                <input
+                                  type="text"
+                                  value={criterion.description}
+                                  onChange={e => updateQuestionCriterion(idx, critIdx, 'description', e.target.value)}
+                                  placeholder="Mô tả tiêu chí"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
+                                />
+                              </div>
+
                               <div>
                                 <label className="block text-xs font-medium text-gray-600 mb-1">Phần trăm (%)</label>
                                 <input
@@ -993,16 +1075,7 @@ export default function CreateEssayQuestionPage() {
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
                                 />
                               </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Mô tả</label>
-                                <input
-                                  type="text"
-                                  value={criterion.description}
-                                  onChange={e => updateQuestionCriterion(idx, critIdx, 'description', e.target.value)}
-                                  placeholder="Mô tả tiêu chí"
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
-                                />
-                              </div>
+
                             </div>
                           </div>
                         ))}
@@ -1041,7 +1114,7 @@ export default function CreateEssayQuestionPage() {
         )}
 
         {/* Empty State */}
-        {questions.length === 0 && (
+        {/* {questions.length === 0 && (
           <div className="bg-white rounded-xl shadow-lg p-12 text-center">
             <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <PenTool className="w-12 h-12 text-gray-400" />
@@ -1065,7 +1138,7 @@ export default function CreateEssayQuestionPage() {
               </button>
             </div>
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );

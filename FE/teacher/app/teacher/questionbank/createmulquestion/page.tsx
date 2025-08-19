@@ -23,7 +23,7 @@ import {
   Target,
   Hash,
   Sparkles,
-  FileSpreadsheet, Copy,
+  FileSpreadsheet, Copy,Calendar
 } from 'lucide-react';
 
 type Answer = { text: string; isTrue: boolean };
@@ -48,13 +48,15 @@ export default function CreateMCQQuestionPage() {
   const [fileName, setFileName] = useState<string>('');
   const [importError, setImportError] = useState<string>('');
   const [levels, setLevels] = useState<Option[]>(defaultDifficulties);
-  const [semesterId, setSemesterId] = useState<number | null>(null);
 
   const searchParams = useSearchParams();
   const chapterId = Number(searchParams.get('chapterId'));
   const categoryExamId = Number(searchParams.get('categoryExamId'));
   const chapterName = searchParams.get('chapterName') || '';
   const subjectName = searchParams.get('subjectName') || '';
+  const semesterName = searchParams.get('semesterName') || '';
+  const semesterId = Number(searchParams.get('semesterId'));
+
 
   const [duplicateIds, setDuplicateIds] = useState<number[]>([]);
 
@@ -150,13 +152,7 @@ export default function CreateMCQQuestionPage() {
       .then(res => res.json())
       .then(data => setLevels(data.map((l: any) => ({ value: l.levelQuestionId, label: l.levelQuestionName }))))
       .catch(() => setLevels(defaultDifficulties));
-    fetch('https://localhost:7074/api/MultipleQuestion/GetCurrentSemester')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) setSemesterId(data[0].semesterId);
-        else if (data.semesterId) setSemesterId(data.semesterId);
-      })
-      .catch(() => setSemesterId(null));
+    
   }, []);
 
   // Tải file mẫu
@@ -227,7 +223,7 @@ export default function CreateMCQQuestionPage() {
           answers.push({ text: row[j], isTrue: row[j + 1] === true || row[j + 1] === 'TRUE' || row[j + 1] === true });
         }
         dataArr.push({
-          id: Date.now() + i,
+          id:  Math.floor(10000 + Math.random() * 90000),
           content: row[0],
           answers,
           difficulty: Number(row[12]) || 1,
@@ -376,7 +372,7 @@ export default function CreateMCQQuestionPage() {
         }
         
         return {
-          id: Date.now() + idx,
+          id:  Math.floor(10000 + Math.random() * 90000),
           content: q.content || '',
           answers,
           difficulty: difficulty,
@@ -386,7 +382,6 @@ export default function CreateMCQQuestionPage() {
       
       setQuestions(prev => [...prev, ...newQuestions]);
       setShowAIGen(false);
-      setAILink('');
       setAILevels({ easy: 0, medium: 0, hard: 0 });
       
       // Auto scroll to questions list after AI generation
@@ -396,7 +391,7 @@ export default function CreateMCQQuestionPage() {
       
       alert(`Đã tạo thành công ${newQuestions.length} câu hỏi bằng AI!`);
     } catch (err: any) {
-      alert('Lỗi tạo câu hỏi bằng AI: ' + err.message);
+      alert('Lỗi tạo câu hỏi bằng AI: ' + "\nKiểm tra lại link tài liệu(đã được chia sẻ editable) và đã có nội dung");
     }
     setAILoading(false);
   };
@@ -554,6 +549,13 @@ export default function CreateMCQQuestionPage() {
                         <span>Chương: {chapterName}</span>
                       </div>
                     )}
+
+                   {semesterName && (
+                  <div className="flex items-center space-x-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-lg text-sm font-medium">
+                    <Calendar className="w-4 h-4" />
+                    <span>{semesterName}</span>
+                  </div>
+                )}
                   </div>
                 )}
               </div>
@@ -597,6 +599,20 @@ export default function CreateMCQQuestionPage() {
                 </div>
               </div>
             </div>
+
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-gray-600">Câu trung bình</p>
+                              <p className="text-2xl font-bold text-green-600">
+                                {questions.filter(q => q.difficulty === 2).length}
+                              </p>
+                            </div>
+                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                              <Award className="w-6 h-6 text-orange-600" />
+                            </div>
+                          </div>
+                        </div>
             
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex items-center justify-between">
@@ -890,7 +906,7 @@ export default function CreateMCQQuestionPage() {
                         onChange={() => setManualQ({ ...manualQ, isPublic: true })}
                         className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                       />
-                      <span className="ml-2 text-sm text-gray-700">Public</span>
+                      <span className="ml-2 text-sm text-gray-700">Chung</span>
                     </label>
                     <label className="flex items-center">
                       <input
@@ -900,7 +916,7 @@ export default function CreateMCQQuestionPage() {
                         onChange={() => setManualQ({ ...manualQ, isPublic: false })}
                         className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                       />
-                      <span className="ml-2 text-sm text-gray-700">Private</span>
+                      <span className="ml-2 text-sm text-gray-700">Cá nhân</span>
                     </label>
                   </div>
                 </div>
@@ -1074,7 +1090,7 @@ export default function CreateMCQQuestionPage() {
                             onChange={() => handleEditQuestion(idx, 'isPublic', true)}
                             className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                           />
-                          <span className="ml-2 text-sm text-gray-700">Public</span>
+                          <span className="ml-2 text-sm text-gray-700">Chung</span>
                         </label>
                         <label className="flex items-center">
                           <input
@@ -1084,7 +1100,7 @@ export default function CreateMCQQuestionPage() {
                             onChange={() => handleEditQuestion(idx, 'isPublic', false)}
                             className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                           />
-                          <span className="ml-2 text-sm text-gray-700">Private</span>
+                          <span className="ml-2 text-sm text-gray-700">Cá nhân</span>
                         </label>
                       </div>
                     </div>
@@ -1152,7 +1168,7 @@ export default function CreateMCQQuestionPage() {
         )}
 
         {/* Empty State */}
-        {questions.length === 0 && (
+        {/* {questions.length === 0 && (
           <div className="bg-white rounded-xl shadow-lg p-12 text-center">
             <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <FileText className="w-12 h-12 text-gray-400" />
@@ -1176,7 +1192,7 @@ export default function CreateMCQQuestionPage() {
               </button>
             </div>
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );
