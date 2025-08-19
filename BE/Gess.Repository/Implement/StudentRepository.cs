@@ -489,24 +489,52 @@ namespace GESS.Repository.Implement
             else
             {
                 // Trả về năm và kỳ nó truyền vào 
-                // Truy vấn môn học dựa trên semesterId và year
-                return await _context.Subjects
-                    .Where(s => s.Classes.Any(c => c.SemesterId == semesterId
-                        && c.ClassStudents.Any(cs => cs.Student.StudentId == userId)
-                        && (c.MultiExams.Any(me => me.MultiExamHistories.Any(meh => meh.Student.StudentId == userId && meh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM && me.CreateAt.Year == year))
-                            || c.PracticeExams.Any(pe => pe.PracticeExamHistories.Any(peh => peh.Student.StudentId == userId && peh.StatusExam == PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM && pe.CreateAt.Year == year)))))
-                    .Select(s => new AllSubjectBySemesterOfStudentDTOResponse
+                // Lấy môn học từ history (cả giữa kỳ và cuối kỳ)
+                var subjectsFromMultiExams = await _context.MultiExamHistories
+                    .Where(meh => meh.Student.StudentId == userId && meh.MultiExam.SemesterId == semesterId)
+                    .Select(meh => new AllSubjectBySemesterOfStudentDTOResponse
                     {
-                        Id = s.SubjectId,
-                        Code = s.Course,
+                        Id = meh.MultiExam.Subject.SubjectId,
+                        Code = meh.MultiExam.Subject.Course,
                         Year = year.Value,
                         SemesterId = semesterId.Value,
-                        Name = s.SubjectName,
-                        IsDeleted = !s.Classes.Any(c => c.Semester.IsActive)
+                        Name = meh.MultiExam.Subject.SubjectName,
+                        IsDeleted = !meh.MultiExam.Subject.Classes.Any(c => c.Semester.IsActive)
                     })
                     .ToListAsync();
+
+                var subjectsFromPracticeExams = await _context.PracticeExamHistories
+                    .Where(peh => peh.Student.StudentId == userId && peh.PracticeExam.SemesterId == semesterId)
+                    .Select(peh => new AllSubjectBySemesterOfStudentDTOResponse
+                    {
+                        Id = peh.PracticeExam.Subject.SubjectId,
+                        Code = peh.PracticeExam.Subject.Course,
+                        Year = year.Value,
+                        SemesterId = semesterId.Value,
+                        Name = peh.PracticeExam.Subject.SubjectName,
+                        IsDeleted = !peh.PracticeExam.Subject.Classes.Any(c => c.Semester.IsActive)
+                    })
+                    .ToListAsync();
+
+                return subjectsFromMultiExams.Union(subjectsFromPracticeExams, new SubjectComparer()).ToList();
             }
         
+        }
+        // Helper class để so sánh Subject
+        private class SubjectComparer : IEqualityComparer<AllSubjectBySemesterOfStudentDTOResponse>
+        {
+            public bool Equals(AllSubjectBySemesterOfStudentDTOResponse x, AllSubjectBySemesterOfStudentDTOResponse y)
+            {
+                if (ReferenceEquals(x, y)) return true;
+                if (ReferenceEquals(x, null)) return false;
+                if (ReferenceEquals(y, null)) return false;
+                return x.Id == y.Id;
+            }
+
+            public int GetHashCode(AllSubjectBySemesterOfStudentDTOResponse obj)
+            {
+                return obj.Id.GetHashCode();
+            }
         }
 
     }
