@@ -918,7 +918,7 @@ const handleToDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         </div>
 
         {/* Error Message */}
-        {error && (
+        {/* {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-red-500" />
             <span className="text-red-700">{error}</span>
@@ -929,7 +929,7 @@ const handleToDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
               <X className="w-4 h-4" />
             </button>
           </div>
-        )}
+        )} */}
 
         {/* Main Content Card */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
