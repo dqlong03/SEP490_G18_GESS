@@ -586,8 +586,8 @@ namespace GESS.Repository.Implement
             {
                 examSlots = examSlots.Where(es => es.ExamDate <= filterRequest.ToDate.Value);
             }
-            examSlots.OrderBy(examSlots => examSlots.SubjectId)
-                .ThenBy(examSlots => examSlots.ExamDate);
+            examSlots.OrderBy(examSlots => examSlots.ExamDate)
+                .ThenBy(examSlots => examSlots.SubjectId);
             var examSlotList = await examSlots
                 .Include(es => es.Subject)
                 .Select(es => new ExamSlotResponse
@@ -762,7 +762,7 @@ namespace GESS.Repository.Implement
                 .Include(e => e.ExamSlot)
                 .Where(e => e.RoomId == roomId && e.ExamDate.Date == examDate)
                 .ToList();
-
+            bool isAvailable = true;
             foreach (var e in examSlotRooms)
             {
                 var start = e.ExamDate.Add(e.ExamSlot.StartTime);
@@ -771,11 +771,12 @@ namespace GESS.Repository.Implement
                 // Kiểm tra overlap: (start < slotEnd && end > slotStart)
                 if (start < slotEnd && end > slotStart)
                 {
-                    return false; // Đã có ca trùng
+                    isAvailable = false;
+                    break;
                 }
             }
 
-            return true; // Chưa có ca nào trùng
+            return isAvailable;
         }
 
 
