@@ -306,22 +306,46 @@ namespace GESS.Repository.Implement
                 throw new Exception("Tên bài thi không đúng.");
             }
 
-            // 2. Validate Code and Status
+            // 2. Validate Code
             if (!string.Equals(exam.CodeStart?.Trim(), code?.Trim(), StringComparison.OrdinalIgnoreCase))
             {
                 throw new Exception("Mã thi không đúng.");
             }
 
-            if (!string.Equals(exam.Status?.Trim(), PredefinedStatusAllExam.OPENING_EXAM, StringComparison.OrdinalIgnoreCase))
+            // 3. Validate trạng thái theo loại kỳ thi
+            bool isMidterm = IsMidtermExam(exam.CategoryExam.CategoryExamName);
+            StudentExamSlotRoom studentExamSlotRoom = null;
+            if (isMidterm)
             {
-                throw new Exception("Bài thi chưa được mở.");
+                // Giữa kỳ: kiểm tra qua MultiExam.Status
+                if (!string.Equals(exam.Status?.Trim(), PredefinedStatusAllExam.OPENING_EXAM, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new Exception("Bài thi chưa được mở.");
+                }
+            }
+            else
+            {
+                // Cuối kỳ: kiểm tra qua ExamSlotRoom.Status (0: chưa mở, 1: đang mở, 2: đã đóng)
+                studentExamSlotRoom = await _context.StudentExamSlotRoom
+                    .Include(s => s.ExamSlotRoom)
+                    .FirstOrDefaultAsync(s => s.StudentId == studentId &&
+                                             s.ExamSlotRoom.MultiExamId == exam.MultiExamId);
+
+                if (studentExamSlotRoom == null)
+                {
+                    throw new Exception("Sinh viên không thuộc phòng/ca nào của bài thi này.");
+                }
+
+                if (studentExamSlotRoom.ExamSlotRoom.Status != 1)
+                {
+                    throw new Exception("Bài thi chưa được mở.");
+                }
             }
 
-            // 3. VALIDATE KHUNG THỜI GIAN CHO KỲ THI GIỮA KỲ
+            // 4. VALIDATE KHUNG THỜI GIAN CHO KỲ THI GIỮA KỲ
             await ValidateExamTimeFrame(exam);
 
-            // 4. Validate eligibility: Giữa kỳ (theo lớp) / Cuối kỳ (theo phòng/ca)
-            bool isMidterm = IsMidtermExam(exam.CategoryExam.CategoryExamName);
+            // 5. Validate eligibility: Giữa kỳ (theo lớp) / Cuối kỳ (theo phòng/ca)
             
             // Lấy danh sách sinh viên theo loại kỳ thi
             List<Guid> studentIds;
@@ -335,17 +359,6 @@ namespace GESS.Repository.Implement
             }
             else // Cuối kỳ
             {
-                // Tìm ExamSlotRoom mà sinh viên này thuộc về thông qua bảng StudentExamSlotRoom
-                var studentExamSlotRoom = await _context.StudentExamSlotRoom
-                    .Include(s => s.ExamSlotRoom)
-                    .FirstOrDefaultAsync(s => s.StudentId == studentId && 
-                                            s.ExamSlotRoom.MultiExamId == exam.MultiExamId);
-
-                if (studentExamSlotRoom == null)
-                {
-                    throw new Exception("Sinh viên không thuộc phòng/ca nào của bài thi này.");
-                }
-
                 var examSlotRoomId = studentExamSlotRoom.ExamSlotRoomId;
                 studentIds = await _context.StudentExamSlotRoom
                     .Where(esr => esr.ExamSlotRoomId == examSlotRoomId)
