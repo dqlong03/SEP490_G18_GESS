@@ -63,9 +63,9 @@ export default function CreateMCQExamPage() {
 
   useEffect(() => {
     setTeacherId(getUserIdFromToken() || "");
-    fetch(`${API_URL}/api/Semesters/CurrentSemester`)
+    fetch(`${API_URL}/api/Class/${classId}/semester-id`)
       .then(res => res.json())
-      .then(data => setSemesterId(data[0]?.semesterId));
+      .then(data => setSemesterId(data));
     fetch(`${API_URL}/api/Class/${classId}/grade-components`)
       .then(res => res.json())
       .then(data => setGradeComponents(data.map((g: any) => ({

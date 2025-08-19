@@ -185,10 +185,10 @@ export default function CreateEssayQuestionPage() {
 
   // Thêm tiêu chí mới cho form thủ công
   const addCriterion = () => {
-    if (manualQ.criteria.length >= 3) {
-      alert('Chỉ được phép tối đa 3 tiêu chí chấm điểm!');
-      return;
-    }
+    // if (manualQ.criteria.length >= 3) {
+    //   alert('Chỉ được phép tối đa 3 tiêu chí chấm điểm!');
+    //   return;
+    // }
     setManualQ({
       ...manualQ,
       criteria: [...manualQ.criteria, { criterionName: '', weightPercent: 0, description: '' }]
@@ -211,10 +211,10 @@ export default function CreateEssayQuestionPage() {
   // Thêm/xóa tiêu chí cho câu hỏi trong danh sách
   const addCriterionToQuestion = (questionIdx: number) => {
     const newQuestions = [...questions];
-    if (newQuestions[questionIdx].criteria.length >= 3) {
-      alert('Chỉ được phép tối đa 3 tiêu chí chấm điểm!');
-      return;
-    }
+    // if (newQuestions[questionIdx].criteria.length >= 3) {
+    //   alert('Chỉ được phép tối đa 3 tiêu chí chấm điểm!');
+    //   return;
+    // }
     newQuestions[questionIdx].criteria.push({
       criterionName: '',
       weightPercent: 0,
@@ -758,8 +758,8 @@ export default function CreateEssayQuestionPage() {
                     type="button"
                     onClick={addCriterion}
                     className="flex items-center space-x-1 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg text-sm font-medium transition-colors"
-                    disabled={manualQ.criteria.length >= 3}
-                    title={manualQ.criteria.length >= 3 ? "Chỉ được phép tối đa 3 tiêu chí" : ""}
+                    // disabled={manualQ.criteria.length >= 3}
+                    // title={manualQ.criteria.length >= 3 ? "Chỉ được phép tối đa 3 tiêu chí" : ""}
                   >
                     <Plus className="w-4 h-4" />
                     <span>Thêm tiêu chí</span>
@@ -767,7 +767,7 @@ export default function CreateEssayQuestionPage() {
                 </div>
                 
                 {/* Warning message when having more than 3 criteria */}
-                {manualQ.criteria.length > 3 && (
+                {/* {manualQ.criteria.length > 3 && (
                   <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                     <div className="flex items-center space-x-2">
                       <AlertCircle className="w-5 h-5 text-red-600" />
@@ -776,7 +776,7 @@ export default function CreateEssayQuestionPage() {
                       </span>
                     </div>
                   </div>
-                )}
+                )} */}
                 
                 <div className="space-y-4">
                   {manualQ.criteria.map((criterion, index) => (
@@ -935,8 +935,8 @@ export default function CreateEssayQuestionPage() {
                           type="button"
                           onClick={() => addCriterionToQuestion(idx)}
                           className="flex items-center space-x-1 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg text-sm font-medium transition-colors"
-                          disabled={q.criteria.length >= 3}
-                          title={q.criteria.length >= 3 ? "Chỉ được phép tối đa 3 tiêu chí" : ""}
+                          // disabled={q.criteria.length >= 3}
+                          // title={q.criteria.length >= 3 ? "Chỉ được phép tối đa 3 tiêu chí" : ""}
                         >
                           <Plus className="w-4 h-4" />
                           <span>Thêm tiêu chí</span>
@@ -944,7 +944,7 @@ export default function CreateEssayQuestionPage() {
                       </div>
                       
                       {/* Warning message when having more than 3 criteria */}
-                      {q.criteria.length > 3 && (
+                      {/* {q.criteria.length > 3 && (
                         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                           <div className="flex items-center space-x-2">
                             <AlertCircle className="w-5 h-5 text-red-600" />
@@ -954,7 +954,7 @@ export default function CreateEssayQuestionPage() {
                           </div>
                         </div>
                       )}
-                      
+                       */}
                       <div className="space-y-3">
                         {q.criteria.map((criterion, critIdx) => (
                           <div key={critIdx} className="bg-gray-50 rounded-lg p-4">

@@ -323,11 +323,31 @@ namespace GESS.Repository.Implement
             if (exam == null)
                 throw new Exception("Tên bài thi hoặc mã thi không đúng.");
 
-            if (exam.Status.ToLower().Trim() != PredefinedStatusAllExam.OPENING_EXAM.ToLower().Trim())
-                throw new Exception("Bài thi chưa được mở.");
-
-            // 2. VALIDATION: Kiểm tra time frame cho thi giữa kỳ
+            // 2. Validate trạng thái theo loại kỳ thi
             bool isMidtermExam = IsMidtermExam(exam.CategoryExam.CategoryExamName);
+            StudentExamSlotRoom studentExamSlotRoom = null;
+            if (isMidtermExam)
+            {
+                // Giữa kỳ: kiểm tra qua PracticeExam.Status
+                if (!string.Equals(exam.Status?.Trim(), PredefinedStatusAllExam.OPENING_EXAM, StringComparison.OrdinalIgnoreCase))
+                    throw new Exception("Bài thi chưa được mở.");
+            }
+            else
+            {
+                // Cuối kỳ: kiểm tra qua ExamSlotRoom.Status (0: chưa mở, 1: đang mở, 2: đã đóng)
+                studentExamSlotRoom = await _context.StudentExamSlotRoom
+                    .Include(s => s.ExamSlotRoom)
+                    .FirstOrDefaultAsync(s => s.StudentId == request.StudentId &&
+                                              s.ExamSlotRoom.PracticeExamId == exam.PracExamId);
+
+                if (studentExamSlotRoom == null)
+                    throw new Exception("Sinh viên không thuộc phòng/ca nào của bài thi này.");
+
+                if (studentExamSlotRoom.ExamSlotRoom.Status != 1)
+                    throw new Exception("Bài thi chưa được mở.");
+            }
+
+            // 3. VALIDATION: Kiểm tra time frame cho thi giữa kỳ
             
             if (isMidtermExam)
             {
@@ -351,7 +371,7 @@ namespace GESS.Repository.Implement
                 Console.WriteLine($"[DEBUG] Not a practice midterm exam ({exam.CategoryExam.CategoryExamName}), skipping time frame validation.");
             }
 
-            // 3. Lấy danh sách sinh viên và validate
+            // 4. Lấy danh sách sinh viên và validate
             List<Guid> studentIds;  
             if (exam.ClassId !=  null) // Giữa kỳ
             {
@@ -363,17 +383,6 @@ namespace GESS.Repository.Implement
             }
             else // Cuối kỳ
             {
-                // Tìm ExamSlotRoom mà sinh viên này thuộc về thông qua bảng StudentExamSlotRoom
-                var studentExamSlotRoom = await _context.StudentExamSlotRoom
-                    .Include(s => s.ExamSlotRoom)
-                    .FirstOrDefaultAsync(s => s.StudentId == request.StudentId && 
-                                            s.ExamSlotRoom.PracticeExamId == exam.PracExamId);
-
-                if (studentExamSlotRoom == null)
-                {
-                    throw new Exception("Sinh viên không thuộc phòng/ca nào của bài thi này.");
-                }
-
                 var examSlotRoomId = studentExamSlotRoom.ExamSlotRoomId;
                 studentIds = await _context.StudentExamSlotRoom
                     .Where(s => s.ExamSlotRoomId == examSlotRoomId)
@@ -799,57 +808,7 @@ namespace GESS.Repository.Implement
                 $"EndTime: {history.EndTime:yyyy-MM-dd HH:mm:ss}");
         }
 
-        // Debug method: Kiểm tra dữ liệu trong QuestionPracExam
-        public async Task<string> DebugQuestionPracExamData(Guid pracExamHistoryId)
-        {
-            var result = new StringBuilder();
-            result.AppendLine($"=== DEBUG QuestionPracExam for HistoryId: {pracExamHistoryId} ===");
-            
-            var questionPracExams = await _context.QuestionPracExams
-                .Where(q => q.PracExamHistoryId == pracExamHistoryId)
-                .Join(_context.PracticeTestQuestions,
-                      qpe => qpe.PracticeQuestionId,
-                      ptq => ptq.PracticeQuestionId,
-                      (qpe, ptq) => new { qpe, ptq })
-                .OrderBy(x => x.ptq.QuestionOrder)
-                .ToListAsync();
-                
-            result.AppendLine($"Total QuestionPracExam records: {questionPracExams.Count}");
-            result.AppendLine();
-            
-            foreach (var item in questionPracExams)
-            {
-                result.AppendLine($"QuestionOrder: {item.ptq.QuestionOrder}");
-                result.AppendLine($"PracticeQuestionId: {item.qpe.PracticeQuestionId}");
-                result.AppendLine($"Answer: {item.qpe.Answer?.Substring(0, Math.Min(100, item.qpe.Answer?.Length ?? 0))}...");
-                result.AppendLine($"Score: {item.qpe.Score}");
-                result.AppendLine("---");
-            }
-            
-            return result.ToString();
-        }
-
-        // Debug method: Kiểm tra cấu trúc PracticeTestQuestion cho paper
-        public async Task<string> DebugPracticeTestQuestions(int pracExamPaperId)
-        {
-            var result = new StringBuilder();
-            result.AppendLine($"=== DEBUG PracticeTestQuestions for PaperId: {pracExamPaperId} ===");
-            
-            var questions = await _context.PracticeTestQuestions
-                .Where(q => q.PracExamPaperId == pracExamPaperId)
-                .OrderBy(q => q.QuestionOrder)
-                .ToListAsync();
-                
-            result.AppendLine($"Total questions: {questions.Count}");
-            result.AppendLine();
-            
-            foreach (var q in questions)
-            {
-                result.AppendLine($"QuestionOrder: {q.QuestionOrder}, PracticeQuestionId: {q.PracticeQuestionId}, Score: {q.Score}");
-            }
-            
-            return result.ToString();
-        }
+       
     }
     
     

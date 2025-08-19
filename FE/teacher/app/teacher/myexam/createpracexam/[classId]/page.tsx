@@ -74,6 +74,7 @@ export default function CreateEssayExamPage() {
   const [selectedStudents, setSelectedStudents] = useState<any[]>([]);
   const [gradeComponents, setGradeComponents] = useState<any[]>([]);
   const [selectedGradeComponent, setSelectedGradeComponent] = useState<any>(null);
+  const [semesterId, setSemesterId] = useState<number | null>(null);
 
   // Đề thi
   const [showExamPopup, setShowExamPopup] = useState(false);
@@ -106,6 +107,9 @@ export default function CreateEssayExamPage() {
   // Lấy danh sách sinh viên, đầu điểm, subjectId, semesters, years
   useEffect(() => {
     if (!classId) return;
+     fetch(`${API_URL}/api/Class/${classId}/semester-id`)
+      .then(res => res.json())
+      .then(data => setSemesterId(data));
     fetch(`${API_URL}/api/Class/${classId}/students`)
       .then(res => res.json())
       .then(data => setStudents(data || []));
@@ -288,7 +292,6 @@ export default function CreateEssayExamPage() {
     try {
       const teacherId = getUserIdFromToken();
       if (!subjectId) throw new Error('Không lấy được subjectId');
-      if (!selectedSemester) throw new Error('Vui lòng chọn kỳ');
       if (!selectedGradeComponent) throw new Error('Vui lòng chọn đầu điểm');
       if (!examName || !startDate || !endDate || !duration || !selectedExams.length || !selectedStudents.length) {
         throw new Error('Vui lòng nhập đầy đủ thông tin');
@@ -307,7 +310,7 @@ export default function CreateEssayExamPage() {
         subjectId: subjectId,
         status: "Chưa thi",
         classId: classId,
-        semesterId: selectedSemester.value,
+        semesterId: semesterId,
         practiceExamPaperDTO: selectedExams.map(e => ({
           pracExamPaperId: e.pracExamPaperId,
           pracExamPaperName: e.pracExamPaperName,
@@ -361,12 +364,8 @@ export default function CreateEssayExamPage() {
 
   // Hàm chuyển trang tạo đề thi mới, bắt buộc chọn kỳ
   const handleCreateNewExamPaper = useCallback(() => {
-    if (!selectedSemester) {
-      alert('Vui lòng chọn học kỳ trước khi tạo đề thi mới!');
-      return;
-    }
-    router.push(`/teacher/myexampaper/createexampaper/${classId}?semesterId=${selectedSemester.value}`);
-  }, [router, classId, selectedSemester]);
+    router.push(`/teacher/myexampaper/createexampaper/${classId}?semesterId=${semesterId}`);
+  }, [router, classId, semesterId]);
 
   // Hàm parse answerContent thành các ý (nếu là JSON)
   interface GradingCriterion {
@@ -495,7 +494,7 @@ export default function CreateEssayExamPage() {
                 />
               </div>
               
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Học kỳ <span className="text-red-500">*</span>
                 </label>
@@ -507,7 +506,7 @@ export default function CreateEssayExamPage() {
                   styles={selectStyles}
                   noOptionsMessage={() => 'Không có dữ liệu'}
                 />
-              </div>
+              </div> */}
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
