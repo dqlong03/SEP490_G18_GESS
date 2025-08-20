@@ -222,7 +222,7 @@ namespace GESS.Api.Controllers
                     SubjectId = dto.subjectId,
                     Status = "Chưa gán bài thi",
                     MultiOrPractice = dto.ExamType == 1 ? "Multiple" : "Practice",
-                    SlotName = $"{dto.slotName}_{slotCounter++}",
+                    SlotName = $"Ca {slotCounter++}:" +" {dto.slotName}",
                     SemesterId = dto.semesterId,
                     Date = currentDay,
                     StartTime = slotStartTime,

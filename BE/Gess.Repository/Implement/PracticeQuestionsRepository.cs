@@ -242,6 +242,7 @@ namespace GESS.Repository.Implement
                     QuestionType = "Trắc nghiệm",
                     Level = q.LevelQuestion?.LevelQuestionName,
                     Chapter = q.Chapter?.ChapterName,
+                    CreateAt = q.CreateAt,
                     IsPublic = q.IsPublic,
                     Answers = q.MultiAnswers?.Select(a => new AnswerDTO
                     {
@@ -258,6 +259,7 @@ namespace GESS.Repository.Implement
                         QuestionType = "Tự luận",
                         Level = q.LevelQuestion?.LevelQuestionName,
                         Chapter = q.Chapter?.ChapterName,
+                        CreateAt = q.CreateAt,
                         IsPublic = q.IsPublic,
                         Answers = q.PracticeAnswer != null
                             ? new List<AnswerDTO>
@@ -272,7 +274,7 @@ namespace GESS.Repository.Implement
                             : new List<AnswerDTO>()
                     })
                 )
-                .OrderBy(q => q.QuestionId);
+                .OrderByDescending(q => q.CreateAt);
 
             var totalCount = allQuestions.Count(); 
 

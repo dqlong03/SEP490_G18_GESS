@@ -13,6 +13,7 @@ namespace GESS.Model.PracticeQuestionDTO
         public string QuestionType { get; set; } // "Trắc nghiệm" hoặc "Tự luận"
         public string Level { get; set; }
         public string Chapter { get; set; }
+        public DateTime CreateAt { get; set; }
         public bool IsPublic { get; set; }
         public List<AnswerDTO> Answers { get; set; }
     }
