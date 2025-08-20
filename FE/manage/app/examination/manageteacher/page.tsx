@@ -1,6 +1,7 @@
 'use client';
 
 import { useTeachers } from '@/hooks/examination/manageTeacherHook';
+import { Suspense } from "react";
 
 export default function TeacherManagementPage() {
   const {
@@ -23,6 +24,7 @@ export default function TeacherManagementPage() {
     setForm,
   } = useTeachers();
   return (
+    <Suspense fallback={<div>Loading...</div>}>
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
       <div className="container mx-auto px-6 py-8">
         {/* Header Section */}
@@ -391,5 +393,6 @@ export default function TeacherManagementPage() {
         }
       `}</style>
     </div>
+    </Suspense >
   );
 }

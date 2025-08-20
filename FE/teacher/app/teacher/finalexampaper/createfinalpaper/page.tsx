@@ -153,7 +153,7 @@ export default function CreateFinalExamPaperPage() {
       semesterId: String(selectedSemester?.semesterId || ''),
       page: String(page),
       pageSize: '10',
-      ...(searchContent && { content: searchContent }),
+      ...(searchContent && { textSearch: searchContent }),
       ...(selectedLevel && { levelId: String(selectedLevel.value) }),
       ...(selectedChapter && { chapterId: String(selectedChapter.chapterId) }),
     });

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { Suspense } from "react";
 
 const API = "https://localhost:7074/api/Semesters";
 const SEMESTER_OPTIONS = [2, 3, 4];
@@ -119,6 +120,7 @@ export default function SemesterSetup() {
   }
 
   return (
+    <Suspense fallback={<div>Loading...</div>}>
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
       <ToastContainer />
       <div className="container mx-auto px-6 py-8">
@@ -237,5 +239,6 @@ export default function SemesterSetup() {
         </div>
       </div>
     </div>
+    </Suspense>
   );
 }

@@ -1,27 +1,26 @@
-# 🟦 BASE STAGE – Build Next.js
-FROM node:18-alpine AS build
+# Build stage
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy source code
+COPY package*.json ./
+RUN npm ci
+
 COPY . .
-
-# Cài dependencies
-RUN npm install
-
-# Build ứng dụng
 RUN npm run build
 
-# 🟩 RUNTIME STAGE – Serve bằng next start
-FROM node:18-alpine
+# Production stage
+FROM node:18-alpine AS runner
 
 WORKDIR /app
 
-# Copy từ stage build
-COPY --from=build /app ./
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
 EXPOSE 3000
 
-# Chạy ứng dụng
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-CMD ["npm", "start"]
+CMD ["node", "server.js"]

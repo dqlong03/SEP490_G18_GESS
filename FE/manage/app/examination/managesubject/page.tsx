@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { useSubjects } from '@/hooks/examination/manageSubjectHook';
 
+import { Suspense } from "react";
+
 export default function SubjectManager() {
   const {
     subjects,
@@ -47,6 +49,7 @@ export default function SubjectManager() {
   } = useSubjects();
 
   return (
+    <Suspense fallback={<div>Loading...</div>}>
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <div className="container mx-auto px-6 py-8">
         {/* Header Section */}
@@ -495,5 +498,6 @@ export default function SubjectManager() {
         }
       `}</style>
     </div>
+    </Suspense>
   );
 }

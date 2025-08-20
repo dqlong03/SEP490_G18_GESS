@@ -14,6 +14,7 @@ import {
   X
 } from 'lucide-react';
 import { useTrainingProgramSubjects } from '@/hooks/examination/subjectHook';
+import { Suspense } from "react";
 
 export default function TrainingProgramSubjectManager() {
   const {
@@ -33,6 +34,7 @@ export default function TrainingProgramSubjectManager() {
     handleSearch,
   } = useTrainingProgramSubjects();
   return (
+    <Suspense fallback={<div>Loading...</div>}>
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <div className="container mx-auto px-6 py-8">
         {/* Header Section */}
@@ -277,5 +279,6 @@ export default function TrainingProgramSubjectManager() {
         }
       `}</style>
     </div>
+    </Suspense>
   );
 }

@@ -8,6 +8,8 @@ import { create } from "zustand";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 import useSWR, { mutate } from "swr";
 
+import { Suspense } from "react";
+
 interface Chapter {
   id: number;
   chapterName: string;
@@ -172,6 +174,7 @@ export default function ChapterManagement() {
   };
 
   return (
+    <Suspense fallback={<div>Loading...</div>}>
     <div className="p-6 min-h-screen bg-gray-100">
       <ToastContainer />
 
@@ -360,5 +363,6 @@ export default function ChapterManagement() {
         </div>
       )}
     </div>
+    </Suspense>
   );
 }

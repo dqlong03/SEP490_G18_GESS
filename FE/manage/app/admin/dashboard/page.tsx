@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation'; // Import useRouter for navigation
 import { Pie, Bar } from 'react-chartjs-2'; // Import chart components
 import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement, BarElement, CategoryScale, LinearScale } from 'chart.js'; // Required chart.js components
-
+import { Suspense } from "react";
 ChartJS.register(Title, Tooltip, Legend, ArcElement, BarElement, CategoryScale, LinearScale); // Register chart.js components
 
 // Fake data (Student statistics, Classrooms, Departments, Courses, Teachers, Students, Examiners)
@@ -79,6 +79,7 @@ export default function Dashboard() {
   const router = useRouter();
 
   return (
+    <Suspense fallback={<div>Loading...</div>}>
     <div className="flex flex-col h-screen bg-gray-100">
       {/* Main Content */}
       <div className="flex-1 p-6">
@@ -118,5 +119,6 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+    </Suspense>
   );
 }

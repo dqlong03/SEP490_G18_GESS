@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 
 import ExcelJS from 'exceljs';
 import { formatTimeHHmm } from "@/utils/formatDate";
+import { Suspense } from "react";
 
 
 import {
@@ -406,7 +407,21 @@ export default function ExamSlotListPage() {
     if (examSlot.status === 'Chưa gán bài thi') {
       if (selectedSemester?.value && selectedSubject?.value && selectedYear?.value) {
         await fetchExams(selectedSemester.value, selectedSubject.value, examSlot.examType, selectedYear.value);
-        setSelectedExamSlot({ ...examSlot } as ExamSlotDetail);
+        // setSelectedExamSlot({ ...examSlot } as ExamSlotDetail);
+        setSelectedExamSlot({
+            examSlotId: examSlot.examSlotId,
+            slotName: examSlot.slotName,
+            status: examSlot.status,
+            examType: examSlot.examType,
+            subjectId: examSlot.subjectId,
+            subjectName: examSlot.subjectName,
+            examDate: examSlot.examDate,
+            startTime: '',
+            endTime: '',
+            examName: null,
+            semesterName: examSlot.semesterName,
+            examSlotRoomDetails: []
+          });
         setShowExamModal(true);
       } else {
         alert('Vui lòng chọn học kỳ, môn học và năm để xem danh sách bài thi');
@@ -466,9 +481,16 @@ export default function ExamSlotListPage() {
       const newDropdowns = { ...prev, [roomId]: teacher };
       // Remove teacher from other rooms' dropdowns if selected
       if (teacher) {
+        // Object.keys(newDropdowns).forEach(key => {
+        //   if (parseInt(key) !== roomId && newDropdowns[key]?.teacherId === teacher.teacherId) {
+        //     newDropdowns[key] = null;
+        //   }
+        // });
+
         Object.keys(newDropdowns).forEach(key => {
-          if (parseInt(key) !== roomId && newDropdowns[key]?.teacherId === teacher.teacherId) {
-            newDropdowns[key] = null;
+          const numKey = Number(key);
+          if (numKey !== roomId && newDropdowns[numKey]?.teacherId === teacher.teacherId) {
+            newDropdowns[numKey] = null;
           }
         });
       }
@@ -902,6 +924,7 @@ const handleToDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 };
 
   return (
+    <Suspense fallback={<div>Loading...</div>}>
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 pl-4 pr-4">
       <div className="max-w-full py-8">
         {/* Header Section */}
@@ -1568,5 +1591,6 @@ const handleToDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         )}
       </div>
     </div>
+    </Suspense>
   );
 }
