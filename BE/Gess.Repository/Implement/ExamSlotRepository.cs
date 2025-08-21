@@ -592,7 +592,7 @@ namespace GESS.Repository.Implement
                 examSlots = examSlots.Where(es => es.ExamDate <= filterRequest.ToDate.Value);
             }
             examSlots.OrderByDescending(examSlots => examSlots.ExamDate)
-                .ThenBy(examSlots => examSlots.SubjectId);
+                .ThenBy(examSlots => examSlots.SlotName);
             var examSlotList = await examSlots
                 .Include(es => es.Subject)
                 .Select(es => new ExamSlotResponse
