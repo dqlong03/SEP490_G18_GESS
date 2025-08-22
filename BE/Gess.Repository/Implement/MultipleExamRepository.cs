@@ -241,7 +241,7 @@ namespace GESS.Repository.Implement
                 SemesterId = multipleExamCreateDto.SemesterId,
                 TeacherId = multipleExamCreateDto.TeacherId,
                 CreateAt = multipleExamCreateDto.CreateAt,
-                IsPublish = multipleExamCreateDto.IsPublish,
+                IsPublish = multipleExamCreateDto.IsPublish==null?null:multipleExamCreateDto.IsPublish,
                 ClassId = multipleExamCreateDto.ClassId,
                 CodeStart = Guid.NewGuid().ToString().Substring(0, 5).ToUpper(),
                 Status = Common.PredefinedStatusAllExam.ONHOLD_EXAM,
