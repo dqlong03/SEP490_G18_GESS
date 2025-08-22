@@ -153,7 +153,7 @@ export default function CreateFinalExamPaperPage() {
       semesterId: String(selectedSemester?.semesterId || ''),
       page: String(page),
       pageSize: '10',
-      ...(searchContent && { content: searchContent }),
+      ...(searchContent && { textSearch: searchContent }),
       ...(selectedLevel && { levelId: String(selectedLevel.value) }),
       ...(selectedChapter && { chapterId: String(selectedChapter.chapterId) }),
     });
@@ -1067,7 +1067,7 @@ export default function CreateFinalExamPaperPage() {
                     className="flex items-center space-x-2 px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200"
                   >
                     <X className="w-4 h-4" />
-                    <span>Hủy</span>
+                    <span>Đóng</span>
                   </button>
                   <button
                     type="button"

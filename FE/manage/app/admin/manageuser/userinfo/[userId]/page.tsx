@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useUserInfo } from "@hooks/admin/userInfoHook";
 import UserInfoForm from "@components/admin/manageuser/UserInfoForm";
 import React from "react";
+import { Suspense } from "react";
 
 export default function UserInformationPage() {
   const params = useParams();
@@ -18,11 +19,13 @@ export default function UserInformationPage() {
   };
 
   return (
+     <Suspense fallback={<div>Loading...</div>}>
     <UserInfoForm
       userData={userData}
       loading={loading}
       handleChange={handleChange}
       handleSubmit={onSubmit}
     />
+    </Suspense>
   );
 }

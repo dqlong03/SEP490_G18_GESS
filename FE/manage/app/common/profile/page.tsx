@@ -1,7 +1,7 @@
 'use client';
 
 import { useProfile } from '@/hooks/common/profileHook';
-
+import { Suspense } from "react";
 export default function ProfilePage() {
   const {
     user,
@@ -33,6 +33,7 @@ export default function ProfilePage() {
   );
 
   return (
+    <Suspense fallback={<div>Loading...</div>}>
     <div className="max-w-2xl mx-auto mt-10 p-10 bg-white rounded-xl shadow-lg">
       <h1 className="text-3xl font-bold mb-8 text-black opacity-80 text-left">Thông tin cá nhân</h1>
       {!editMode ? (
@@ -190,5 +191,6 @@ export default function ProfilePage() {
         </form>
       )}
     </div>
+    </Suspense>
   );
 }

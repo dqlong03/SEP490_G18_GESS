@@ -8,6 +8,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { create } from "zustand";
 import { X } from "lucide-react";
 
+import { Suspense } from "react";
 // DTO cho POST (thêm mới)
 
 // DTO cho GET/PUT (hiển thị và cập nhật)
@@ -255,6 +256,7 @@ function ScoreManagement() {
   };
 
   return (
+    <Suspense fallback={<div>Loading...</div>}>
     <div className="p-6 min-h-screen bg-gray-100">
       <ToastContainer position="top-right" autoClose={3000} />
       <div className="max-w-6xl mx-auto">
@@ -407,6 +409,7 @@ function ScoreManagement() {
         )}
       </div>
     </div>
+    </Suspense>
   );
 }
 

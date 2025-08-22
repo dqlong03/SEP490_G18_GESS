@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Users, BarChart3, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
 import "@styles/adminhomepage.css";
+import { Suspense } from "react";
 
 export default function AdminHomepage() {
   const [showPopup, setShowPopup] = useState(false);
@@ -13,6 +14,7 @@ export default function AdminHomepage() {
   };
 
   return (
+     <Suspense fallback={<div>Loading...</div>}>
     <>
       {/* Banner section */}
       <div className="relative h-[40vh] w-full overflow-hidden rounded-xl shadow-xl hover:shadow-3xl transition-shadow duration-300 fade-in">
@@ -89,5 +91,6 @@ export default function AdminHomepage() {
         </div>
       )}
     </>
+    </Suspense>
   );
 }

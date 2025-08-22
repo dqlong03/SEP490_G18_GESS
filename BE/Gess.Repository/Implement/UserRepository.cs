@@ -75,7 +75,7 @@ namespace GESS.Repository.Implement
         public async Task<User?> GetByCodeAndEmailAsync(string code, string email)
         {
             return await _context.Users
-                .FirstOrDefaultAsync(u => u.Code == code && u.Email == email);
+                .FirstOrDefaultAsync(u => u.Code == code || u.Email == email);
         }
 
         public Task<int> CountPageAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageSize)

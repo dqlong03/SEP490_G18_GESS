@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { useGoogleLogin } from '@react-oauth/google';
 import '@/styles/login.css';
 import Link from 'next/link'; // Đảm bảo đã import Link
+import { Suspense } from "react";
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -24,6 +25,8 @@ export default function LoginPage() {
   });
 
   return (
+    <Suspense fallback={<div>Loading...</div>}>
+
     <div className="min-h-screen flex items-center justify-center bg-gray-50 relative">
       {/* Icon và tên trường học ở góc trái khi màn hình lớn */}
       <div className="school-info absolute top-4 left-4 flex items-center space-x-2 lg:flex hidden">
@@ -122,5 +125,6 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+    </Suspense >
   );
 }

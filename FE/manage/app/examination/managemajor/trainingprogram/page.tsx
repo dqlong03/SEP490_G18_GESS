@@ -17,6 +17,8 @@ import {
   FileText
 } from 'lucide-react';
 import { useTrainingPrograms } from '@hooks/examination/trainningProgramHook';
+import { Suspense } from "react";
+
 
 export default function TrainingProgramManager() {
   const {
@@ -47,6 +49,7 @@ export default function TrainingProgramManager() {
     handleRowClick,
   } = useTrainingPrograms();
   return (
+      <Suspense fallback={<div>Loading...</div>}>
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <div className="container mx-auto px-6 py-8">
         {/* Header Section */}
@@ -510,5 +513,7 @@ export default function TrainingProgramManager() {
         }
       `}</style>
     </div>
+    </Suspense>
   );
+
 }

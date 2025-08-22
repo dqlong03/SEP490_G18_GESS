@@ -5,6 +5,7 @@
 import { useRoomManager } from "@/hooks/examination/manageRoomHook";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { Suspense } from "react";
 export default function RoomManager() {
   const {
     rooms,
@@ -34,6 +35,7 @@ export default function RoomManager() {
     setOpenMenuId,
   } = useRoomManager();
   return (
+    <Suspense fallback={<div>Loading...</div>}>
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
       <ToastContainer />
       <div className="container mx-auto px-6 py-8">
@@ -404,5 +406,6 @@ export default function RoomManager() {
         }
       `}</style>
     </div>
+    </Suspense>
   );
 }

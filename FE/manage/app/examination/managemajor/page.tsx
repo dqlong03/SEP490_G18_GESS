@@ -17,6 +17,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import { useMajors } from '@/hooks/examination/manageMajorHook';
+import { Suspense } from "react";
 
 export default function MajorManager() {
   const {
@@ -47,6 +48,7 @@ export default function MajorManager() {
     handleRowClick,
   } = useMajors();
   return (
+    <Suspense fallback={<div>Loading...</div>}>
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <div className="container mx-auto px-6 py-8">
         {/* Header Section */}
@@ -523,5 +525,6 @@ export default function MajorManager() {
         }
       `}</style>
     </div>
+    </Suspense>
   );
 }

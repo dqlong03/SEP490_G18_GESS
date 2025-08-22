@@ -4,6 +4,7 @@ import Select from "react-select";
 import * as XLSX from 'xlsx';
 import { useRouter } from 'next/navigation';
 import CustomTimePicker from "@/components/examination/CustomTimePicker"; // hoặc đường dẫn phù hợp
+import { Suspense } from "react";
 
 function Popup({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
   if (!open) return null;
@@ -428,6 +429,7 @@ const [endTime, setEndTime] = useState<string>("");
   };
 
   return (
+     <Suspense fallback={<div>Loading...</div>}>
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <div className="container mx-auto px-6 py-8">
         {/* Header Section */}
@@ -1094,6 +1096,7 @@ const [endTime, setEndTime] = useState<string>("");
         }
       `}</style>
     </div>
+    </Suspense>
   );
 };
 

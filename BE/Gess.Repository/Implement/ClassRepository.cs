@@ -405,9 +405,7 @@ namespace GESS.Repository.Implement
             {
                 var lowered = name.ToLower();
                 query = query.Where(c =>
-                    c.ClassName.ToLower().Contains(lowered) ||
-                    (c.Subject != null && c.Subject.SubjectName.ToLower().Contains(lowered)) ||
-                    (c.Semester != null && c.Semester.SemesterName.ToLower().Contains(lowered))
+                    c.ClassName.ToLower().Contains(lowered)
                 );
             }
 
