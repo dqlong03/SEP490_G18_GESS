@@ -185,12 +185,6 @@ Ràng buộc:
                 if (rawList == null)
                     return BadRequest("Không thể parse kết quả thành danh sách câu hỏi.");
 
-                // ❗ Kiểm tra đúng-chính-xác số lượng
-                if (rawList.Count != totalRequired)
-                {
-                    return BadRequest($"Số lượng câu hỏi AI trả về ({rawList.Count}) không khớp yêu cầu ({totalRequired}). Vui lòng thử lại.");
-                }
-
                 var questions = new List<GeneratedQuestion>();
 
                 foreach (var item in rawList)
@@ -406,24 +400,6 @@ Ràng buộc:
             {
                 return BadRequest("Lỗi phân tích kết quả trả về: " + ex.Message + "\nOutput:\n" + output);
             }
-        }
-
-        private bool IsSpecOfType(object specTypeValue, string desiredTypeName)
-        {
-            if (specTypeValue == null) return false;
-            var s = specTypeValue.ToString()?.Trim();
-            if (string.IsNullOrEmpty(s)) return false;
-
-            // Chấp nhận số 1/2/3
-            if (int.TryParse(s, out var n))
-            {
-                return (n == 1 && desiredTypeName.Equals("SelectOne", StringComparison.OrdinalIgnoreCase))
-                    || (n == 2 && desiredTypeName.Equals("MultipleChoice", StringComparison.OrdinalIgnoreCase))
-                    || (n == 3 && desiredTypeName.Equals("TrueFalse", StringComparison.OrdinalIgnoreCase));
-            }
-
-            // Hoặc tên trực tiếp
-            return desiredTypeName.Equals(s, StringComparison.OrdinalIgnoreCase);
         }
 
         private async Task<string> GetMaterialContentAsync(string link)
