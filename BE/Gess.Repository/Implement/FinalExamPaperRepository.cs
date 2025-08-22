@@ -70,7 +70,7 @@ namespace GESS.Repository.Implement
                     CategoryExamId = 2,//Mac dinh la cuoi ky
                     LevelQuestionId = levelId,
                     SemesterId = finalExamPaperCreateDto.SemesterId,
-                    CreateAt = DateTime.UtcNow,
+                    CreateAt = DateTime.Now,
                     CreatedBy = finalExamPaperCreateDto.TeacherId,
                     IsPublic = true
                 };
@@ -98,7 +98,7 @@ namespace GESS.Repository.Implement
             {
                 PracExamPaperName = finalExamPaperCreateDto.ExamName,
                 NumberQuestion = finalExamPaperCreateDto.TotalQuestion,
-                CreateAt = DateTime.UtcNow,
+                CreateAt = DateTime.Now,
                 TeacherId = finalExamPaperCreateDto.TeacherId,
                 CategoryExamId = 2,
                 SubjectId = finalExamPaperCreateDto.SubjectId,

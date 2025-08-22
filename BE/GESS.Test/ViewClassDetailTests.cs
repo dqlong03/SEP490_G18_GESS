@@ -41,7 +41,7 @@ namespace GESS.Test
             var teacher = new Teacher
             {
                 TeacherId = Guid.NewGuid(),
-                HireDate = DateTime.UtcNow,
+                HireDate = DateTime.Now,
                 MajorId = 1
             };
             _context.Teachers.Add(teacher);
@@ -51,7 +51,7 @@ namespace GESS.Test
             {
                 MajorId = 1,
                 MajorName = "Công nghệ thông tin",
-                StartDate = DateTime.UtcNow,
+                StartDate = DateTime.Now,
                 IsActive = true
             };
             _context.Majors.Add(major);
@@ -97,8 +97,8 @@ namespace GESS.Test
                 TwoFactorEnabled = false,
                 LockoutEnabled = false,
                 AccessFailedCount = 0,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
                 IsActive = true
             };
             var user2 = new User
@@ -113,8 +113,8 @@ namespace GESS.Test
                 TwoFactorEnabled = false,
                 LockoutEnabled = false,
                 AccessFailedCount = 0,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
                 IsActive = true
             };
             _context.Users.AddRange(user1, user2);
@@ -124,14 +124,14 @@ namespace GESS.Test
             {
                 StudentId = Guid.NewGuid(),
                 UserId = user1.Id,
-                EnrollDate = DateTime.UtcNow,
+                EnrollDate = DateTime.Now,
                 AvatarURL = "avatar1.jpg"
             };
             var student2 = new Student
             {
                 StudentId = Guid.NewGuid(),
                 UserId = user2.Id,
-                EnrollDate = DateTime.UtcNow,
+                EnrollDate = DateTime.Now,
                 AvatarURL = "avatar2.jpg"
             };
             _context.Students.AddRange(student1, student2);
@@ -147,7 +147,7 @@ namespace GESS.Test
                 Subject = subject,
                 SemesterId = 1,
                 Semester = semester,
-                CreatedDate = DateTime.UtcNow
+                CreatedDate = DateTime.Now
             };
             _context.Classes.Add(classEntity);
 
@@ -178,8 +178,8 @@ namespace GESS.Test
                 CategoryExam = categoryExam,
                 ClassId = 1,
                 Class = classEntity,
-                StartDay = DateTime.UtcNow.AddDays(7),
-                EndDay = DateTime.UtcNow.AddDays(8),
+                StartDay = DateTime.Now.AddDays(7),
+                EndDay = DateTime.Now.AddDays(8),
                 Duration = 60,
                 NumberQuestion = 20,
                 IsPublish = true,
@@ -197,8 +197,8 @@ namespace GESS.Test
                 CategoryExam = categoryExam,
                 ClassId = 1,
                 Class = classEntity,
-                StartDay = DateTime.UtcNow.AddDays(14),
-                EndDay = DateTime.UtcNow.AddDays(15),
+                StartDay = DateTime.Now.AddDays(14),
+                EndDay = DateTime.Now.AddDays(15),
                 Duration = 120,
                 Status = "Chưa chấm"
             };
@@ -268,7 +268,7 @@ namespace GESS.Test
                 TeacherId = _context.Teachers.First().TeacherId,
                 SubjectId = 1,
                 SemesterId = 1,
-                CreatedDate = DateTime.UtcNow
+                CreatedDate = DateTime.Now
             };
             _context.Classes.Add(emptyClass);
             await _context.SaveChangesAsync();
@@ -292,7 +292,7 @@ namespace GESS.Test
                 TeacherId = _context.Teachers.First().TeacherId,
                 SubjectId = 1,
                 SemesterId = 1,
-                CreatedDate = DateTime.UtcNow
+                CreatedDate = DateTime.Now
             };
             _context.Classes.Add(noExamClass);
             await _context.SaveChangesAsync();

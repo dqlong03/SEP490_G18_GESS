@@ -55,8 +55,8 @@ namespace GESS.Service.authservice
                         EmailConfirmed = true,
                         Fullname = payload.GivenName,
                         IsActive = true,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now
                     };
                     var result = await _userManager.CreateAsync(user);
                     if (!result.Succeeded)
@@ -113,8 +113,8 @@ namespace GESS.Service.authservice
                 {
                     Id = Guid.NewGuid(),
                     Token = Guid.NewGuid().ToString(),
-                    IssuedAt = DateTime.UtcNow,
-                    ExpiresAt = DateTime.UtcNow.AddDays(30),
+                    IssuedAt = DateTime.Now,
+                    ExpiresAt = DateTime.Now.AddDays(30),
                     IsRevoked = false,
                     UserId = user.Id
                 };
@@ -212,8 +212,8 @@ namespace GESS.Service.authservice
             {
                 Id = Guid.NewGuid(),
                 Token = Guid.NewGuid().ToString(),
-                IssuedAt = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddDays(30),
+                IssuedAt = DateTime.Now,
+                ExpiresAt = DateTime.Now.AddDays(30),
                 IsRevoked = false,
                 UserId = user.Id
             };
@@ -236,7 +236,7 @@ namespace GESS.Service.authservice
             }
 
             var storedToken = await _unitOfWork.RefreshTokenRepository.GetByTokenAsync(refreshToken);
-            if (storedToken == null || storedToken.ExpiresAt < DateTime.UtcNow || storedToken.IsRevoked)
+            if (storedToken == null || storedToken.ExpiresAt < DateTime.Now || storedToken.IsRevoked)
             {
                 return new LoginResult { Success = false, ErrorMessage = "Refresh token không hợp lệ hoặc đã hết hạn" };
             }
@@ -262,8 +262,8 @@ namespace GESS.Service.authservice
             {
                 Id = Guid.NewGuid(),
                 Token = Guid.NewGuid().ToString(),
-                IssuedAt = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddDays(30),
+                IssuedAt = DateTime.Now,
+                ExpiresAt = DateTime.Now.AddDays(30),
                 IsRevoked = false,
                 UserId = storedToken.UserId
             };
@@ -368,8 +368,8 @@ namespace GESS.Service.authservice
                 {
                     Id = Guid.NewGuid(),
                     Token = Guid.NewGuid().ToString(),
-                    IssuedAt = DateTime.UtcNow,
-                    ExpiresAt = DateTime.UtcNow.AddDays(30),
+                    IssuedAt = DateTime.Now,
+                    ExpiresAt = DateTime.Now.AddDays(30),
                     IsRevoked = false,
                     UserId = user.Id
                 };

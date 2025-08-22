@@ -59,8 +59,8 @@ namespace GESS.Test
                 TwoFactorEnabled = false,
                 LockoutEnabled = false,
                 AccessFailedCount = 0,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
                 IsActive = true
             };
             // User cho sinh viên
@@ -76,8 +76,8 @@ namespace GESS.Test
                 TwoFactorEnabled = false,
                 LockoutEnabled = false,
                 AccessFailedCount = 0,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
                 IsActive = true
             };
             // Major
@@ -92,7 +92,7 @@ namespace GESS.Test
                 TeacherId = Guid.NewGuid(),
                 UserId = teacherUser.Id,
                 User = teacherUser,
-                HireDate = DateTime.UtcNow.AddYears(-2),
+                HireDate = DateTime.Now.AddYears(-2),
                 IsHeadOfDepartment = false,
                 IsExamManager = false,
                 MajorId = 1
@@ -103,7 +103,7 @@ namespace GESS.Test
                 StudentId = Guid.NewGuid(),
                 UserId = studentUser.Id,
                 User = studentUser,
-                EnrollDate = DateTime.UtcNow.AddYears(-1),
+                EnrollDate = DateTime.Now.AddYears(-1),
                 AvatarURL = "https://example.com/avatar.jpg"
             };
             // Subject
@@ -136,7 +136,7 @@ namespace GESS.Test
                 TeacherId = teacher.TeacherId,
                 SubjectId = 1,
                 SemesterId = 1,
-                CreatedDate = DateTime.UtcNow
+                CreatedDate = DateTime.Now
             };
             // PracticeExamPaper
             var examPaper = new PracticeExamPaper

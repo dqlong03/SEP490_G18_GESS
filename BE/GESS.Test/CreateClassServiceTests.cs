@@ -80,8 +80,8 @@ namespace GESS.Test
                     TwoFactorEnabled = false,
                     LockoutEnabled = true,
                     AccessFailedCount = 0,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now,
                     IsActive = true
                 }
             };
@@ -187,7 +187,7 @@ namespace GESS.Test
                 TeacherId = _context.Teachers.First().TeacherId,
                 SubjectId = 1,
                 SemesterId = 1,
-                CreatedDate = DateTime.UtcNow
+                CreatedDate = DateTime.Now
             };
             _context.Classes.Add(existingClass);
             await _context.SaveChangesAsync();
@@ -319,8 +319,8 @@ namespace GESS.Test
                 TwoFactorEnabled = false,
                 LockoutEnabled = true,
                 AccessFailedCount = 0,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
                 IsActive = true
             };
             _context.Users.Add(existingUser);
@@ -330,7 +330,7 @@ namespace GESS.Test
                 StudentId = Guid.NewGuid(),
                 UserId = existingUser.Id,
                 User = existingUser,
-                EnrollDate = DateTime.UtcNow,
+                EnrollDate = DateTime.Now,
                 AvatarURL = "avatar.jpg"
             };
             _context.Students.Add(existingStudent);

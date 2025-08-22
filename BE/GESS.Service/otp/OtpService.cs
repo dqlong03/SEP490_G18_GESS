@@ -32,7 +32,7 @@ namespace GESS.Service.otp
                 return false;
             }
             string otp = GenerateOtp();
-            DateTime expiryTime = DateTime.UtcNow.AddMinutes(5);
+            DateTime expiryTime = DateTime.Now.AddMinutes(5);
 
             try
             {
@@ -60,7 +60,7 @@ namespace GESS.Service.otp
 
             if (_memoryCache.TryGetValue(verifyOtpDTO.Email, out OtpDTO otpModel))
             {
-                if (otpModel.ExpiryTime >= DateTime.UtcNow && otpModel.Otp == verifyOtpDTO.Otp)
+                if (otpModel.ExpiryTime >= DateTime.Now && otpModel.Otp == verifyOtpDTO.Otp)
                 {
                     _memoryCache.Remove(verifyOtpDTO.Email); // Xóa OTP sau khi xác minh
 

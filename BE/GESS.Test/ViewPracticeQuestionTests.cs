@@ -50,8 +50,8 @@ namespace GESS.Test
                 TwoFactorEnabled = false,
                 LockoutEnabled = false,
                 AccessFailedCount = 0,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
                 IsActive = true,
                 Fullname = "Test User"
             };
@@ -63,7 +63,7 @@ namespace GESS.Test
                 TeacherId = Guid.NewGuid(),
                 UserId = user.Id,
                 User = user,
-                HireDate = DateTime.UtcNow,
+                HireDate = DateTime.Now,
                 MajorId = 1
             };
             _context.Teachers.Add(teacher);
@@ -73,7 +73,7 @@ namespace GESS.Test
             {
                 MajorId = 1,
                 MajorName = "Công nghệ thông tin",
-                StartDate = DateTime.UtcNow,
+                StartDate = DateTime.Now,
                 IsActive = true
             };
             _context.Majors.Add(major);
@@ -117,7 +117,7 @@ namespace GESS.Test
                 Subject = subject,
                 SemesterId = semester.SemesterId,
                 Semester = semester,
-                CreatedDate = DateTime.UtcNow
+                CreatedDate = DateTime.Now
             };
             _context.Classes.Add(classEntity);
 
@@ -169,7 +169,7 @@ namespace GESS.Test
                 LevelQuestion = levelQuestion,
                 SemesterId = semester.SemesterId,
                 Semester = semester,
-                CreateAt = DateTime.UtcNow
+                CreateAt = DateTime.Now
             };
             _context.PracticeQuestions.Add(practiceQuestion1);
 
@@ -189,7 +189,7 @@ namespace GESS.Test
                 LevelQuestion = levelQuestion,
                 SemesterId = semester.SemesterId,
                 Semester = semester,
-                CreateAt = DateTime.UtcNow
+                CreateAt = DateTime.Now
             };
             _context.PracticeQuestions.Add(practiceQuestion2);
 
