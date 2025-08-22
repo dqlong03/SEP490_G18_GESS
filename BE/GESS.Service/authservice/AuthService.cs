@@ -194,6 +194,7 @@ namespace GESS.Service.authservice
             {
                 string claimRole = role switch
                 {
+                    "Quản trị viên" => "ADMIN",
                     "Khảo thí" => "EXAMINATION",
                     "Giáo viên" => "TEACHER",
                     "Sinh viên" => "STUDENT",
