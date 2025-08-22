@@ -77,13 +77,31 @@ namespace GESS.Api.Controllers
                 promptBuilder.AppendLine($"- {spec.NumberOfQuestions} câu hỏi mức độ '{spec.Difficulty}', loại '{spec.Type}'");
             }
 
+            // Ràng buộc cứng và schema (thêm trường Difficulty để bắt buộc phân nhóm)
+            promptBuilder.AppendLine();
+            promptBuilder.AppendLine($"BẮT BUỘC: PHẢI TRẢ VỀ CHÍNH XÁC {totalRequestedQuestions} PHẦN TỬ TRONG MỘT MẢNG JSON.");
+            promptBuilder.AppendLine("- Mỗi phần tử phải có các trường (chính xác):");
+            promptBuilder.AppendLine("  * \"Content\": string");
+            promptBuilder.AppendLine($"  * \"Type\": \"{chosenType}\"");
+            promptBuilder.AppendLine("  * \"Difficulty\": một trong các giá trị (chuẩn): 'dễ', 'trung bình', 'khó' (viết đúng không dấu khác nhau).");
+            promptBuilder.AppendLine("  * \"Answers\": mảng gồm các object { \"Text\": string, \"IsTrue\": boolean }.");
+            promptBuilder.AppendLine("- PHẢI phân phối số lượng theo chính xác các Specifications đã liệt kê ở trên (ví dụ: 5 dễ, 5 trung bình, 5 khó nếu đó là yêu cầu).");
+            promptBuilder.AppendLine("- TRẢ VỀ CHỈ một mảng JSON hợp lệ (không kèm bất kỳ chú giải, văn bản mô tả, hay code fence ngoài JSON). Nếu model dùng ```json ...```, bạn chỉ lấy phần JSON bên trong.");
+            promptBuilder.AppendLine("- Mỗi câu SelectOne phải có đúng 4 đáp án và đúng 1 đáp án có IsTrue = true.");
+            promptBuilder.AppendLine("- Mỗi câu MultipleChoice (nếu dùng) có thể có nhiều đáp án đúng.");
+            promptBuilder.AppendLine("- Mỗi câu TrueFalse phải có đúng 2 đáp án: 'True' và 'False', chỉ một trong hai có IsTrue = true.");
+            promptBuilder.AppendLine($"- TUYỆT ĐỐI: trả về một mảng có độ dài đúng = {totalRequestedQuestions}. Không thừa, không thiếu.");
+            promptBuilder.AppendLine();
+            promptBuilder.AppendLine("Lưu ý: dùng tiếng Việt cho trường 'Difficulty' (dễ, trung bình, khó).");
+
             if (chosenType.Equals("SelectOne", StringComparison.OrdinalIgnoreCase))
             {
                 promptBuilder.AppendLine(@"
-Định dạng đầu ra: một mảng JSON gồm các phần tử có cấu trúc sau (chỉ kiểu SelectOne, đúng 1 đáp án):
+Định dạng đầu ra ví dụ (mỗi phần tử phải giống schema sau):
 {
   ""Content"": ""Nội dung câu hỏi?"",
   ""Type"": ""SelectOne"",
+  ""Difficulty"": ""dễ"",
   ""Answers"": [
     { ""Text"": ""Đáp án A"", ""IsTrue"": false },
     { ""Text"": ""Đáp án B"", ""IsTrue"": true },
@@ -92,19 +110,16 @@ namespace GESS.Api.Controllers
   ]
 }
 
-Yêu cầu thêm:
-- Chỉ tạo kiểu ""SelectOne"".
-- Mỗi câu hỏi có đúng 1 đáp án ""IsTrue = true"".
-- Số lượng câu hỏi và độ khó đúng theo Specifications.
-- Trả về CHỈ JSON hợp lệ, không thêm lời bình. Nếu có code block ```json ...```, chỉ trả phần JSON bên trong.");
+TRẢ VỀ CHỈ MẢNG JSON.");
             }
             else if (chosenType.Equals("MultipleChoice", StringComparison.OrdinalIgnoreCase))
             {
                 promptBuilder.AppendLine(@"
-Định dạng đầu ra: một mảng JSON gồm các phần tử có cấu trúc sau (chỉ kiểu MultipleChoice, có thể nhiều đáp án đúng):
+Định dạng đầu ra ví dụ (mỗi phần tử phải giống schema sau):
 {
   ""Content"": ""Nội dung câu hỏi?"",
   ""Type"": ""MultipleChoice"",
+  ""Difficulty"": ""trung bình"",
   ""Answers"": [
     { ""Text"": ""A"", ""IsTrue"": true },
     { ""Text"": ""B"", ""IsTrue"": true },
@@ -113,41 +128,38 @@ Yêu cầu thêm:
   ]
 }
 
-Yêu cầu thêm:
-- Chỉ tạo kiểu ""MultipleChoice"".
-- Có thể có nhiều hơn một đáp án đúng (IsTrue = true).
-- Số lượng câu hỏi và độ khó đúng theo Specifications.
-- Trả về CHỈ JSON hợp lệ, không thêm lời bình. Nếu có code block ```json ...```, chỉ trả phần JSON bên trong.");
+TRẢ VỀ CHỈ MẢNG JSON.");
             }
             else // TrueFalse
             {
                 promptBuilder.AppendLine(@"
-Định dạng đầu ra: một mảng JSON gồm các phần tử có cấu trúc sau (chỉ kiểu TrueFalse):
+Định dạng đầu ra ví dụ (mỗi phần tử phải giống schema sau):
 {
   ""Content"": ""Câu hỏi True/False?"",
   ""Type"": ""TrueFalse"",
+  ""Difficulty"": ""khó"",
   ""Answers"": [
     { ""Text"": ""True"",  ""IsTrue"": false },
     { ""Text"": ""False"", ""IsTrue"": true }
   ]
 }
 
-Yêu cầu thêm:
-- Chỉ tạo kiểu ""TrueFalse"".
-- Luôn có đúng 2 đáp án: ""True"" và ""False"", và chỉ 1 đáp án có IsTrue = true.
-- Số lượng câu hỏi và độ khó đúng theo Specifications.
-- Trả về CHỈ JSON hợp lệ, không thêm lời bình. Nếu có code block ```json ...```, chỉ trả phần JSON bên trong.");
+TRẢ VỀ CHỈ MẢNG JSON.");
             }
 
             var prompt = promptBuilder.ToString();
 
+            // Gửi body với system message nghiêm ngặt, temperature = 0, tăng max_tokens để tránh bị cắt
             var body = new
             {
                 model = "gpt-4o-mini",
                 messages = new[]
                 {
+            new { role = "system", content = "You are a strict JSON-only response generator. Do not output any text except the exact JSON array requested by the user. Follow all schema and count constraints exactly." },
             new { role = "user", content = prompt }
-        }
+        },
+                temperature = 0.0,
+                max_tokens = 3000
             };
 
             var jsonPayload = JsonConvert.SerializeObject(body);
