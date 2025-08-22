@@ -105,7 +105,7 @@ Ràng buộc:
 - Không thêm mô tả/tiêu đề/số thứ tự ngoài mảng JSON.
 - Trả về CHỈ JSON hợp lệ; nếu có code block ```json ...```, chỉ trả phần JSON bên trong.");
             }
-            else 
+            else
             {
                 promptBuilder.AppendLine($@"
 Định dạng đầu ra: MỘT MẢNG JSON gồm CHÍNH XÁC {totalRequired} phần tử. Mỗi phần tử:
@@ -130,7 +130,7 @@ Ràng buộc:
             using var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
-            var body = new
+            var initialBody = new
             {
                 model = "gpt-4o-mini",
                 messages = new[]
@@ -139,7 +139,7 @@ Ràng buộc:
         }
             };
 
-            var jsonPayload = JsonConvert.SerializeObject(body);
+            var jsonPayload = JsonConvert.SerializeObject(initialBody);
             var response = await httpClient.PostAsync("https://api.openai.com/v1/chat/completions",
                 new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
 
@@ -167,28 +167,131 @@ Ràng buộc:
 
             try
             {
-                var cleanedOutput = output.Trim();
-                if (cleanedOutput.Contains("```"))
+                // Helper: extract JSON inside code block nếu có
+                string ExtractJsonFromString(string s)
                 {
-                    var codeBlocks = Regex.Matches(cleanedOutput, "```(?:json)?\\s*([\\s\\S]*?)\\s*```");
-                    if (codeBlocks.Count > 0)
+                    var t = s?.Trim() ?? string.Empty;
+                    if (t.Contains("```"))
                     {
-                        cleanedOutput = codeBlocks[0].Groups[1].Value.Trim();
+                        var codeBlocks = Regex.Matches(t, "```(?:json)?\\s*([\\s\\S]*?)\\s*```");
+                        if (codeBlocks.Count > 0)
+                        {
+                            return codeBlocks[0].Groups[1].Value.Trim();
+                        }
+                    }
+                    return t;
+                }
+
+                // Helper: cố gắng deserialize thành List<Dictionary<string, object>>
+                List<Dictionary<string, object>> TryDeserializeList(string s)
+                {
+                    try
+                    {
+                        return JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(s);
+                    }
+                    catch
+                    {
+                        return null;
                     }
                 }
 
-                var rawList = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(cleanedOutput);
-                if (rawList == null)
-                    return BadRequest("Không thể parse kết quả thành danh sách câu hỏi.");
+                // Lần parse đầu
+                var cleanedOutput = ExtractJsonFromString(output);
 
-                if (rawList.Count < totalRequired)
+                // cumulative list of parsed items (unique by Content if possible)
+                var cumulativeList = new List<Dictionary<string, object>>();
+                var maxAttempts = 3; // lần thử bổ sung (bao gồm lần gọi ban đầu xem như attempt 1)
+                var attempt = 0;
+                string currentRaw = cleanedOutput;
+
+                while (attempt < maxAttempts && cumulativeList.Count < totalRequired)
                 {
-                    return BadRequest($"Lỗi AI chỉ sinh ra {rawList.Count} câu, ít hơn yêu cầu ({totalRequired}). Vui lòng thử lại.");
+                    attempt++;
+
+                    var parsed = TryDeserializeList(currentRaw);
+                    if (parsed != null && parsed.Count > 0)
+                    {
+                        foreach (var item in parsed)
+                        {
+                            // lấy field Content để khử trùng
+                            string contentVal = string.Empty;
+                            if (item.TryGetValue("Content", out var cobj) && cobj != null)
+                                contentVal = cobj.ToString().Trim();
+
+                            // if content empty, still add (to avoid infinite skip) but try avoid exact duplicates
+                            bool duplicate = cumulativeList.Any(existing =>
+                                existing.TryGetValue("Content", out var exC) && (exC?.ToString().Trim() ?? "") == contentVal);
+
+                            if (!duplicate)
+                            {
+                                cumulativeList.Add(item);
+                                if (cumulativeList.Count >= totalRequired) break;
+                            }
+                        }
+                    }
+
+                    if (cumulativeList.Count >= totalRequired) break;
+
+                    // nếu chưa đủ và vẫn còn lượt thử, gọi AI thêm để bổ sung
+                    if (attempt >= maxAttempts) break;
+
+                    var missing = totalRequired - cumulativeList.Count;
+
+                    // Chuẩn bị danh sách nội dung đã có để yêu cầu AI không lặp lại
+                    var existingContentsPreview = string.Join("\n", cumulativeList
+                        .Select(d => d.TryGetValue("Content", out var cc) ? (cc?.ToString().Replace("\n", " ").Trim() ?? "") : "")
+                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                        .Take(30)
+                        .ToList());
+
+                    var followUpPromptBuilder = new StringBuilder();
+                    followUpPromptBuilder.AppendLine($"Bạn đã từng trả về một (một phần) mảng JSON theo định dạng đã thống nhất (Type = {expectedTypeName}).");
+                    followUpPromptBuilder.AppendLine($"Hiện tại tôi cần thêm **CHÍNH XÁC {missing}** câu nữa để đạt tổng {totalRequired} câu.");
+                    followUpPromptBuilder.AppendLine("Yêu cầu CHÍNH: **CHỈ** trả về một mảng JSON gồm CHÍNH XÁC số phần tử vừa yêu cầu (không thêm văn bản, không thêm tiêu đề hoặc ghi chú).");
+                    followUpPromptBuilder.AppendLine("Không được lặp lại các câu đã có. Dưới đây là tóm tắt các câu đã có (hãy tránh lặp lại):");
+                    followUpPromptBuilder.AppendLine(existingContentsPreview);
+                    followUpPromptBuilder.AppendLine($"Vui lòng đảm bảo mỗi phần tử có các trường đúng như trước: Content, Type, Answers, Text, IsTrue. CHỈ tạo Type = {expectedTypeName}.");
+                    followUpPromptBuilder.AppendLine($"Nếu trả về trong code block ```json ...```, chỉ gửi phần JSON bên trong. Chỉ trả về đúng một mảng JSON có đúng {missing} phần tử.");
+
+                    var followUpBody = new
+                    {
+                        model = "gpt-4o-mini",
+                        messages = new[]
+                        {
+                    new { role = "user", content = followUpPromptBuilder.ToString() }
                 }
-                if (rawList.Count > totalRequired)
+                    };
+
+                    var followUpJson = JsonConvert.SerializeObject(followUpBody);
+                    var followResp = await httpClient.PostAsync("https://api.openai.com/v1/chat/completions",
+                        new StringContent(followUpJson, Encoding.UTF8, "application/json"));
+
+                    var followRespString = await followResp.Content.ReadAsStringAsync();
+                    if (!followResp.IsSuccessStatusCode)
+                    {
+                        return BadRequest("Lỗi khi gọi OpenAI (lần bổ sung): " + followRespString);
+                    }
+
+                    dynamic followResult = JsonConvert.DeserializeObject(followRespString);
+                    string followOutput = followResult?.choices?[0]?.message?.content;
+                    if (string.IsNullOrWhiteSpace(followOutput))
+                    {
+                        // không có nội dung trả về từ lần bổ sung -> dừng
+                        break;
+                    }
+
+                    currentRaw = ExtractJsonFromString(followOutput);
+                    // vòng while sẽ parse currentRaw ở đầu vòng lặp tiếp theo và ghép vào cumulativeList
+                }
+
+                // Sau vòng lặp, kiểm tra lại
+                if (cumulativeList.Count < totalRequired)
                 {
-                    rawList = rawList.Take(totalRequired).ToList();
+                    return BadRequest($"Lỗi AI không sinh đủ câu sau {maxAttempts} lần thử (chỉ sinh được {cumulativeList.Count} / {totalRequired}). Vui lòng thử lại.");
                 }
+
+                // Lấy đúng số lượng required (nếu thừa)
+                var rawList = cumulativeList.Take(totalRequired).ToList();
 
                 var questions = new List<GeneratedQuestion>();
 
