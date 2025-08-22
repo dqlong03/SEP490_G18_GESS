@@ -52,7 +52,7 @@ namespace GESS.Repository.Implement
                 ClassId = exam.ClassId??0,
                 CategoryExamId = exam.CategoryExamId,
                 SemesterId = exam.SemesterId,
-                IsPublish = exam.IsPublish,
+                IsPublish = exam.IsPublish ?? false,
                 NoQuestionInChapterDTO = exam.NoQuestionInChapters?.Select(n => new NoQuestionInChapterDTO
                 {
                     NumberQuestion = n.NumberQuestion,
@@ -593,14 +593,14 @@ namespace GESS.Repository.Implement
             try
             {
                 Console.WriteLine($"[DEBUG] GenerateRandomQuestions - START for ExamHistoryId: {examHistoryId}");
-                
+
                 // BƯỚC 1: XÓA TẤT CẢ câu hỏi cũ trước (Clean slate approach)
                 var existingQuestions = await _context.QuestionMultiExams
                     .Where(q => q.MultiExamHistoryId == examHistoryId)
                     .ToListAsync();
-                
+
                 Console.WriteLine($"[DEBUG] Found {existingQuestions.Count} existing questions to remove");
-                
+
                 if (existingQuestions.Any())
                 {
                     _context.QuestionMultiExams.RemoveRange(existingQuestions);
@@ -620,7 +620,7 @@ namespace GESS.Repository.Implement
                 {
                     // Đây là bài thi cuối kỳ - lấy câu hỏi từ bảng FinalExam
                     Console.WriteLine($"[DEBUG] Final exam detected. Found {finalExamQuestions.Count} predefined questions in FinalExam table");
-                    
+
                     // Kiểm tra số lượng câu hỏi có khớp với yêu cầu không
                     if (finalExamQuestions.Count != exam.NumberQuestion)
                     {
@@ -628,21 +628,21 @@ namespace GESS.Repository.Implement
                                           $"Yêu cầu: {exam.NumberQuestion} câu, " +
                                           $"Có trong FinalExam: {finalExamQuestions.Count} câu.");
                     }
-                    
+
                     // Kiểm tra xem các câu hỏi có tồn tại và có trạng thái phù hợp không
                     var validQuestions = await _context.MultiQuestions
-                        .Where(q => finalExamQuestions.Contains(q.MultiQuestionId) && 
+                        .Where(q => finalExamQuestions.Contains(q.MultiQuestionId) &&
                                    q.IsActive == true)
                         .Select(q => q.MultiQuestionId)
                         .ToListAsync();
-                    
+
                     if (validQuestions.Count != finalExamQuestions.Count)
                     {
                         throw new Exception($"Một số câu hỏi trong bài thi cuối kỳ không tồn tại hoặc không hoạt động. " +
                                           $"Cần: {finalExamQuestions.Count} câu, " +
                                           $"Hợp lệ: {validQuestions.Count} câu.");
                     }
-                    
+
                     newQuestionIds = finalExamQuestions;
                     Console.WriteLine($"[DEBUG] Using {newQuestionIds.Count} predefined questions from FinalExam table");
                 }
@@ -650,7 +650,7 @@ namespace GESS.Repository.Implement
                 {
                     // Đây là bài thi giữa kỳ - random câu hỏi từ question bank
                     Console.WriteLine($"[DEBUG] Midterm exam detected. Generating random questions from question bank");
-                    
+
                     var random = new Random();
                     var usedQuestionIds = new HashSet<int>();
 
@@ -660,26 +660,67 @@ namespace GESS.Repository.Implement
                     {
                         Console.WriteLine($"[DEBUG] Chapter {chapterConfig.ChapterId}, Level {chapterConfig.LevelQuestionId}, Need {chapterConfig.NumberQuestion} questions");
 
-                        var availableQuestions = await _context.MultiQuestions
-                            .Where(q => q.ChapterId == chapterConfig.ChapterId &&
-                                        q.LevelQuestionId == chapterConfig.LevelQuestionId &&
-                                        q.IsPublic == true &&
-                                        q.IsActive == true &&
-                                        !usedQuestionIds.Contains(q.MultiQuestionId))
-                            .Select(q => q.MultiQuestionId)
-                            .ToListAsync();
-
-                        Console.WriteLine($"[DEBUG] Available questions for Chapter {chapterConfig.ChapterId}: {availableQuestions.Count} questions");
-
-                        if (availableQuestions.Count < chapterConfig.NumberQuestion)
+                        // Lấy câu hỏi theo bank teacher chọn
+                        List<int> availableQuestionIds = new List<int>();
+                        
+                        if (exam.IsPublish.HasValue && exam.IsPublish.Value == true)
                         {
-                            throw new Exception($"Không đủ câu hỏi cho chương {chapterConfig.ChapterId}. " +
-                                              $"Cần {chapterConfig.NumberQuestion} câu, chỉ có {availableQuestions.Count} câu khả dụng.");
+                            // Teacher chọn bank chung - chỉ lấy IsPublic = true
+                            availableQuestionIds = await _context.MultiQuestions
+                                .Where(q => q.ChapterId == chapterConfig.ChapterId &&
+                                            q.LevelQuestionId == chapterConfig.LevelQuestionId &&
+                                            q.IsActive == true &&
+                                            q.IsPublic == true &&
+                                            !usedQuestionIds.Contains(q.MultiQuestionId))
+                                .Select(q => q.MultiQuestionId)
+                                .ToListAsync();
+                            
+                            Console.WriteLine($"[DEBUG] Teacher chọn bank chung - Available questions: {availableQuestionIds.Count}");
+                        }
+                        else if (exam.IsPublish.HasValue && exam.IsPublish.Value == false)
+                        {
+                            // Teacher chọn bank riêng - chỉ lấy IsPublic = false
+                            availableQuestionIds = await _context.MultiQuestions
+                                .Where(q => q.ChapterId == chapterConfig.ChapterId &&
+                                            q.LevelQuestionId == chapterConfig.LevelQuestionId &&
+                                            q.IsActive == true &&
+                                            q.IsPublic == false &&
+                                            !usedQuestionIds.Contains(q.MultiQuestionId))
+                                .Select(q => q.MultiQuestionId)
+                                .ToListAsync();
+                            
+                            Console.WriteLine($"[DEBUG] Teacher chọn bank riêng - Available questions: {availableQuestionIds.Count}");
+                        }
+                        else
+                        {
+                            // Teacher chọn cả 2 bank - lấy cả IsPublic = true và false
+                            availableQuestionIds = await _context.MultiQuestions
+                                .Where(q => q.ChapterId == chapterConfig.ChapterId &&
+                                            q.LevelQuestionId == chapterConfig.LevelQuestionId &&
+                                            q.IsActive == true &&
+                                            !usedQuestionIds.Contains(q.MultiQuestionId))
+                                .Select(q => q.MultiQuestionId)
+                                .ToListAsync();
+                            
+                            Console.WriteLine($"[DEBUG] Teacher chọn cả 2 bank - Available questions: {availableQuestionIds.Count}");
                         }
 
-                        var selectedQuestionIds = availableQuestions
+                        // Kiểm tra đủ câu hỏi
+                        if (availableQuestionIds.Count < chapterConfig.NumberQuestion)
+                        {
+                            string bankType = exam.IsPublish.HasValue && exam.IsPublish.Value ? "bank chung" : 
+                                            exam.IsPublish.HasValue && !exam.IsPublish.Value ? "bank riêng" : "cả 2 bank";
+                            throw new Exception($"Không đủ câu hỏi cho chương {chapterConfig.ChapterId} từ {bankType}. " +
+                                              $"Cần {chapterConfig.NumberQuestion} câu, chỉ có {availableQuestionIds.Count} câu khả dụng.");
+                        }
+
+                        // Random câu hỏi theo yêu cầu
+                        var selectedQuestionIds = availableQuestionIds
                             .OrderBy(id => random.Next())
-                            .Take(chapterConfig.NumberQuestion);
+                            .Take(chapterConfig.NumberQuestion)
+                            .ToList();
+
+                        Console.WriteLine($"[DEBUG] Selected questions for Chapter {chapterConfig.ChapterId}: [{string.Join(", ", selectedQuestionIds)}]");
 
                         Console.WriteLine($"[DEBUG] Selected questions for Chapter {chapterConfig.ChapterId}: [{string.Join(", ", selectedQuestionIds)}]");
 
@@ -693,7 +734,7 @@ namespace GESS.Repository.Implement
                         }
                     }
                 }
-                
+
                 // Kiểm tra tổng số câu hỏi có khớp với yêu cầu không (cho bài thi giữa kỳ)
                 if (!finalExamQuestions.Any() && newQuestionIds.Count != exam.NumberQuestion)
                 {
@@ -701,19 +742,19 @@ namespace GESS.Repository.Implement
                                       $"Yêu cầu: {exam.NumberQuestion} câu, " +
                                       $"Đã random: {newQuestionIds.Count} câu.");
                 }
-                
+
                 Console.WriteLine($"[DEBUG] Final question count validation: Required={exam.NumberQuestion}, Actual={newQuestionIds.Count}");
-                
+
                 Console.WriteLine($"[DEBUG] Total new question IDs: [{string.Join(", ", newQuestionIds)}]");
 
                 // BƯỚC 3: Tạo tất cả câu hỏi mới với QuestionOrder liên tục (1, 2, 3, ...)
                 var questionsToAdd = new List<QuestionMultiExam>();
-                
+
                 for (int i = 0; i < newQuestionIds.Count; i++)
                 {
                     var questionId = newQuestionIds[i];
                     var newOrder = i + 1; // Đảm bảo QuestionOrder liên tục: 1, 2, 3, 4, 5...
-                    
+
                     questionsToAdd.Add(new QuestionMultiExam
                     {
                         MultiExamHistoryId = examHistoryId,
@@ -723,7 +764,7 @@ namespace GESS.Repository.Implement
                         Answer = ""
                     });
                 }
-                
+
                 Console.WriteLine($"[DEBUG] Creating {questionsToAdd.Count} new questions with orders: [{string.Join(", ", questionsToAdd.Select(q => q.QuestionOrder))}]");
 
                 // BƯỚC 4: Thêm tất cả câu hỏi mới
@@ -749,17 +790,17 @@ namespace GESS.Repository.Implement
                         LevelQuestionId = q.MultiQuestion.LevelQuestionId
                     })
                     .ToListAsync();
-                
+
                 // Verify QuestionOrder liên tục
                 var actualOrders = await _context.QuestionMultiExams
                     .Where(q => q.MultiExamHistoryId == examHistoryId)
                     .OrderBy(q => q.QuestionOrder)
                     .Select(q => q.QuestionOrder)
                     .ToListAsync();
-                    
+
                 Console.WriteLine($"[DEBUG] Final QuestionOrders: [{string.Join(", ", actualOrders)}]");
                 Console.WriteLine($"[DEBUG] GenerateRandomQuestions - END. Returning {result.Count} questions");
-                
+
                 return result;
             }
             catch (Exception ex)
@@ -769,6 +810,7 @@ namespace GESS.Repository.Implement
                 throw new Exception($"Lỗi khi tạo câu hỏi: {ex.Message}", ex);
             }
         }
+
 
         // Helper: Tự động đánh dấu bài thi không hoàn thành
         private async Task AutoMarkIncomplete(MultiExamHistory history)
