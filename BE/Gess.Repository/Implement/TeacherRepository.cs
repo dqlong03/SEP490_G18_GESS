@@ -115,8 +115,8 @@ namespace GESS.Repository.Implement
                     Gender = request.Gender,
                     IsActive = request.IsActive,
                     IsDeleted = false,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
                 };
 
                 var result = await _userManager.CreateAsync(user, "Abc123@"); 
@@ -144,7 +144,7 @@ namespace GESS.Repository.Implement
                 user.DateOfBirth = request.DateOfBirth ;
                 user.Gender = request.Gender;
                 user.IsActive = request.IsActive;
-                user.UpdatedAt = DateTime.UtcNow;
+                user.UpdatedAt = DateTime.Now;
 
                 var result = await _userManager.UpdateAsync(user);
                 if (!result.Succeeded)

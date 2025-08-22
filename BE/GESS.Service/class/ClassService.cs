@@ -87,7 +87,7 @@ namespace GESS.Service
                     TeacherId = classCreateDto.TeacherId,
                     SubjectId = classCreateDto.SubjectId,
                     SemesterId = classCreateDto.SemesterId,
-                    CreatedDate = DateTime.UtcNow,
+                    CreatedDate = DateTime.Now,
                     ClassStudents = new List<ClassStudent>()
                 };
 
@@ -132,8 +132,8 @@ namespace GESS.Service
                             Fullname = studentDto.FullName ?? "Không xác định",
                             Gender = studentDto.Gender ?? true,
                             DateOfBirth = studentDto.DateOfBirth,
-                            CreatedAt = DateTime.UtcNow,
-                            UpdatedAt = DateTime.UtcNow,
+                            CreatedAt = DateTime.Now,
+                            UpdatedAt = DateTime.Now,
                             IsActive = true,
                             IsDeleted = false,
                         };
@@ -181,7 +181,7 @@ namespace GESS.Service
                             StudentId = Guid.NewGuid(),
                             UserId = userId,
                             // CohortId = studentDto.CohortId ?? 1, // Sửa typo: CohirtId -> CohortId (đã sửa trong đoạn trước)
-                            EnrollDate = DateTime.UtcNow,
+                            EnrollDate = DateTime.Now,
                             AvatarURL = studentDto.Avartar // Giả sử có ảnh đại diện mặc định
                         };
                         _unitOfWork.StudentRepository.Create(newStudent);
@@ -289,8 +289,8 @@ namespace GESS.Service
                             Fullname = studentDto.FullName ?? "Không xác định",
                             Gender = studentDto.Gender ?? true,
                             DateOfBirth = studentDto.DateOfBirth,
-                            CreatedAt = DateTime.UtcNow,
-                            UpdatedAt = DateTime.UtcNow,
+                            CreatedAt = DateTime.Now,
+                            UpdatedAt = DateTime.Now,
                             IsActive = true,
                             IsDeleted = false
                         };
@@ -343,7 +343,7 @@ namespace GESS.Service
                             StudentId = Guid.NewGuid(),
                             UserId = userId,
                             // CohortId = studentDto.CohortId ?? 1,
-                            EnrollDate = DateTime.UtcNow
+                            EnrollDate = DateTime.Now
                         };
                         _unitOfWork.StudentRepository.Create(newStudent);
                         studentId = newStudent.StudentId;

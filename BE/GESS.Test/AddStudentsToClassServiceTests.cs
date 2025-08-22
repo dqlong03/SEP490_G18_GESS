@@ -80,8 +80,8 @@ namespace GESS.Test
                     TwoFactorEnabled = false,
                     LockoutEnabled = true,
                     AccessFailedCount = 0,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now,
                     IsActive = true
                 }
             };
@@ -115,7 +115,7 @@ namespace GESS.Test
                 TeacherId = teacher.TeacherId,
                 SubjectId = 1,
                 SemesterId = 1,
-                CreatedDate = DateTime.UtcNow,
+                CreatedDate = DateTime.Now,
                 ClassStudents = new List<ClassStudent>()
             };
             _context.Classes.Add(existingClass);

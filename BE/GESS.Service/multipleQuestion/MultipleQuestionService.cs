@@ -47,7 +47,7 @@ namespace GESS.Service.multipleQuestion
                 CategoryExamId = dto.CategoryExamId,
                 LevelQuestionId = dto.LevelQuestionId,
                 SemesterId = dto.SemesterId,
-                CreateAt = DateTime.UtcNow 
+                CreateAt = DateTime.Now 
             };
 
             await _unitOfWork.MultipleQuestionRepository.CreateAsync(multiple);

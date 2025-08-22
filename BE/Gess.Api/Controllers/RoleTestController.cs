@@ -214,8 +214,8 @@ namespace GESS.Api.Controllers
                         ExpiresSeconds = Constants.Expires / 1000.0,
                         SecretKeyLength = Constants.SecretKey?.Length ?? 0,
                         SecretKeyPrefix = Constants.SecretKey?.Substring(0, Math.Min(10, Constants.SecretKey?.Length ?? 0)) + "...",
-                        CurrentUtc = DateTime.UtcNow,
-                        SampleTokenExpiry = DateTime.UtcNow.AddMilliseconds(Constants.Expires)
+                        CurrentUtc = DateTime.Now,
+                        SampleTokenExpiry = DateTime.Now.AddMilliseconds(Constants.Expires)
                     },
                     Note = $"Token sẽ hết hạn sau {Constants.Expires}ms ({Constants.Expires / 1000.0} giây)"
                 });

@@ -15,7 +15,7 @@ namespace GESS.Auth
             try
             {
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Constants.SecretKey));
-                var expiryTime = DateTime.UtcNow.AddMinutes(Constants.Expires);
+                var expiryTime = DateTime.Now.AddMinutes(Constants.Expires);
                 
        
                 

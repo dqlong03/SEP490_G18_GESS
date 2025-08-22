@@ -101,7 +101,7 @@ namespace GESS.Service.users
                 throw new ConflictException("Email đã được sử dụng.");
             }
             // Validation: Kiểm tra ngày sinh hợp lệ
-            var currentDate = DateTime.UtcNow;
+            var currentDate = DateTime.Now;
             if (dto.DateOfBirth < currentDate)
             {
                 throw new Common.HandleException.ValidationException("Ngày sinh không được nhỏ hơn ngày hiện tại.");

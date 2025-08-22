@@ -53,8 +53,8 @@ namespace GESS.Test
                     TwoFactorEnabled = false,
                     LockoutEnabled = true,
                     AccessFailedCount = 0,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now,
                     IsActive = true
                 }
             };
@@ -116,7 +116,7 @@ namespace GESS.Test
                 TeacherId = teacher.TeacherId,
                 SubjectId = 1,
                 SemesterId = 1,
-                CreatedDate = DateTime.UtcNow
+                CreatedDate = DateTime.Now
             };
             _context.Classes.Add(classEntity);
 
@@ -136,11 +136,11 @@ namespace GESS.Test
                     TwoFactorEnabled = false,
                     LockoutEnabled = true,
                     AccessFailedCount = 0,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now,
                     IsActive = true
                 },
-                EnrollDate = DateTime.UtcNow,
+                EnrollDate = DateTime.Now,
                 AvatarURL = "https://example.com/avatar.jpg"
             };
             _context.Students.Add(student);
@@ -164,7 +164,7 @@ namespace GESS.Test
                     LevelQuestion = levelQuestion,
                     SemesterId = 1,
                     Semester = semester,
-                    CreateAt = DateTime.UtcNow
+                    CreateAt = DateTime.Now
                 };
                 _context.MultiQuestions.Add(multiQuestion);
 
@@ -399,7 +399,7 @@ namespace GESS.Test
                     CategoryExamId = 1,
                     LevelQuestionId = 1,
                     SemesterId = 1,
-                    CreateAt = DateTime.UtcNow
+                    CreateAt = DateTime.Now
                 };
                 _context.MultiQuestions.Add(multiQuestion);
             }
