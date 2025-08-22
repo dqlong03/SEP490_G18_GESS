@@ -2,7 +2,6 @@
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /src
 
-# Copy các file project và solution
 COPY *.sln ./
 COPY Gess.Api/*.csproj Gess.Api/
 COPY GESS.Auth/*.csproj GESS.Auth/
@@ -15,25 +14,28 @@ COPY GESS.Test/*.csproj GESS.Test/
 
 RUN dotnet restore
 
-# Copy toàn bộ source code vào build context
 COPY . .
 
 WORKDIR /src/Gess.Api
 
-# Build và publish ra thư mục /app/publish
 RUN dotnet publish -c Release -o /app/publish
 
-# Kiểm tra file sau khi publish
 RUN ls -l /app/publish
 
-# Stage 2: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:6.0 AS runtime
 WORKDIR /app
 
-# Copy file publish từ stage build sang runtime
+ENV TZ=Asia/Bangkok
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata \
+    && ln -snf /usr/share/zoneinfo/Asia/Bangkok /etc/localtime \
+    && echo "Asia/Bangkok" > /etc/timezone \
+    && dpkg-reconfigure -f noninteractive tzdata \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 COPY --from=build /app/publish .
 
-# Kiểm tra file trong thư mục runtime
 RUN ls -l /app
 
 ENTRYPOINT ["dotnet", "GESS.Api.dll"]
