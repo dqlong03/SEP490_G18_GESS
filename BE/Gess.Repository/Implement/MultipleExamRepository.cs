@@ -294,6 +294,8 @@ namespace GESS.Repository.Implement
             await CheckAndHandleTimeoutExams();
 
             // 1. Find exam by id
+            Console.WriteLine($"[DEBUG] Looking for exam - ID: {examId}, Code: {code}");
+            
             var exam = await _context.MultiExams
                 .Include(m => m.Class)
                 .Include(m => m.Subject)
@@ -301,9 +303,15 @@ namespace GESS.Repository.Implement
                 .Include(m => m.NoQuestionInChapters)
                 .SingleOrDefaultAsync(m => m.MultiExamId == examId && m.CodeStart == code);
 
+            Console.WriteLine($"[DEBUG] Exam found: {exam != null}");
+            if (exam != null)
+            {
+                Console.WriteLine($"[DEBUG] Exam details - ID: {exam.MultiExamId}, CodeStart: {exam.CodeStart}, IsPublish: {exam.IsPublish}");
+            }
+
             if (exam == null)
             {
-                throw new Exception("Tên bài thi không đúng.");
+                throw new Exception($"Không tìm thấy bài thi với ID: {examId} và Code: {code}");
             }
 
             // 2. Validate Code
@@ -426,7 +434,7 @@ namespace GESS.Repository.Implement
                 .Include(h => h.MultiExam)
                 .Where(h => h.StatusExam == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM && 
                            h.StartTime.HasValue &&
-                           DateTime.Now > h.StartTime.Value.AddMinutes(h.MultiExam.Duration))
+                            DateTime.Now > h.StartTime.Value.AddMinutes(h.MultiExam.Duration))
                 .ToListAsync();
                 
             foreach (var exam in timeoutExams)
@@ -439,7 +447,7 @@ namespace GESS.Repository.Implement
                 .Include(h => h.MultiExam)
                     .ThenInclude(m => m.CategoryExam)
                 .Where(h => h.StatusExam == PredefinedStatusExamInHistoryOfStudent.IN_PROGRESS_EXAM &&
-                           DateTime.Now > h.MultiExam.EndDay)
+                          DateTime.Now > h.MultiExam.EndDay)
                 .ToListAsync();
 
             foreach (var exam in midtermTimeoutExams)
