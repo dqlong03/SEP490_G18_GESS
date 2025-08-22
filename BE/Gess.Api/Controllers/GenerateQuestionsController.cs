@@ -39,230 +39,236 @@ namespace GESS.Api.Controllers
                 return BadRequest("Không thể lấy nội dung tài liệu từ link.");
             }
 
-            // Nhóm specs theo từng kiểu câu mong muốn, hỗ trợ cả 1/2/3 hoặc tên kiểu
-            var typeOrder = new[] { "SelectOne", "MultipleChoice", "TrueFalse" };
-            var specsByType = typeOrder.ToDictionary(
-                t => t,
-                t => request.Specifications.Where(s => IsSpecOfType(s?.Type, t)).ToList()
-            );
-
-            // Nếu người dùng vô tình gửi đủ cả 3 loại, ta sẽ chia ra tối đa 3 lần gọi – mỗi lần 1 loại
-            // Nếu chỉ gửi 1 loại, chỉ gọi 1 lần -> "mỗi lần tạo chỉ tạo 1 kiểu câu duy nhất"
-            using var httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
-
-            var allQuestions = new List<GeneratedQuestion>();
-
-            foreach (var typeName in typeOrder)
+            // ✅ Đảm bảo chỉ 1 loại câu hỏi cho mỗi lần tạo
+            var distinctTypes = request.Specifications.Select(s => s.Type).Distinct().ToList();
+            if (distinctTypes.Count != 1)
             {
-                var specsForThisType = specsByType[typeName];
-                if (specsForThisType == null || specsForThisType.Count == 0) continue;
+                return BadRequest("Mỗi lần tạo chỉ được phép 1 loại câu hỏi duy nhất. Vui lòng gửi Specifications cùng một Type.");
+            }
+            var expectedTypeEnum = distinctTypes[0];
+            var expectedTypeName = expectedTypeEnum.ToString();
 
-                // Xây prompt CHUYÊN BIỆT cho từng kiểu
-                var promptBuilder = new StringBuilder();
-                promptBuilder.AppendLine($"Bạn là một chuyên gia tạo đề kiểm tra. Hãy tạo các câu hỏi kiểm tra môn {request.SubjectName} dựa trên tài liệu sau:");
-                promptBuilder.AppendLine(materialContent);
-                promptBuilder.AppendLine("\nYêu cầu chi tiết cho kiểu câu duy nhất:");
-                foreach (var spec in specsForThisType)
-                {
-                    // Giữ nguyên cách mô tả thông tin từ Specifications
-                    promptBuilder.AppendLine($"- {spec.NumberOfQuestions} câu hỏi mức độ '{spec.Difficulty}', loại '{spec.Type}'");
-                }
+            // Tổng số câu yêu cầu (đúng chính xác không hơn không kém)
+            var totalRequired = request.Specifications.Sum(s => s.NumberOfQuestions);
+            if (totalRequired <= 0)
+            {
+                return BadRequest("Tổng số câu hỏi phải lớn hơn 0.");
+            }
 
-                // Chỉ mô tả đúng 1 format phù hợp với typeName
-                if (typeName.Equals("SelectOne", StringComparison.OrdinalIgnoreCase))
-                {
-                    promptBuilder.AppendLine(@"
-Định dạng đầu ra: một mảng JSON gồm các phần tử có cấu trúc sau (chỉ kiểu SelectOne, đúng 1 đáp án):
-{
+            // Prompt chuyên biệt cho đúng 1 loại
+            var promptBuilder = new StringBuilder();
+            promptBuilder.AppendLine($"Bạn là một chuyên gia tạo đề kiểm tra. Hãy tạo các câu hỏi kiểm tra môn {request.SubjectName} dựa trên tài liệu sau:");
+            promptBuilder.AppendLine(materialContent);
+            promptBuilder.AppendLine("\nYêu cầu chi tiết:");
+            foreach (var spec in request.Specifications)
+            {
+                promptBuilder.AppendLine($"- {spec.NumberOfQuestions} câu hỏi mức độ '{spec.Difficulty}', loại '{expectedTypeName}'");
+            }
+
+            if (expectedTypeEnum == QuestionType.SelectOne)
+            {
+                promptBuilder.AppendLine($@"
+Định dạng đầu ra: MỘT MẢNG JSON gồm CHÍNH XÁC {totalRequired} phần tử, mỗi phần tử:
+{{
   ""Content"": ""Nội dung câu hỏi?"",
   ""Type"": ""SelectOne"",
   ""Answers"": [
-    { ""Text"": ""Đáp án A"", ""IsTrue"": false },
-    { ""Text"": ""Đáp án B"", ""IsTrue"": true },
-    { ""Text"": ""Đáp án C"", ""IsTrue"": false },
-    { ""Text"": ""Đáp án D"", ""IsTrue"": false }
+    {{ ""Text"": ""Đáp án A"", ""IsTrue"": false }},
+    {{ ""Text"": ""Đáp án B"", ""IsTrue"": true }},
+    {{ ""Text"": ""Đáp án C"", ""IsTrue"": false }},
+    {{ ""Text"": ""Đáp án D"", ""IsTrue"": false }}
   ]
-}
-
-Yêu cầu thêm:
-- Chỉ tạo kiểu ""SelectOne"".
-- Mỗi câu hỏi có đúng 1 đáp án ""IsTrue = true"".
-- Số lượng câu hỏi và độ khó đúng theo Specifications.
-- Trả về CHỈ JSON hợp lệ, không thêm lời bình. Nếu có code block ```json ...```, chỉ trả phần JSON bên trong.");
-                }
-                else if (typeName.Equals("MultipleChoice", StringComparison.OrdinalIgnoreCase))
-                {
-                    promptBuilder.AppendLine(@"
-Định dạng đầu ra: một mảng JSON gồm các phần tử có cấu trúc sau (chỉ kiểu MultipleChoice, có thể nhiều đáp án đúng):
-{
+}}
+Ràng buộc:
+- CHỈ tạo kiểu ""SelectOne"".
+- Mỗi câu có ĐÚNG 1 đáp án IsTrue = true.
+- TỔNG SỐ PHẦN TỬ TRONG MẢNG = {totalRequired} (không thừa, không thiếu).
+- Nếu có nhiều độ khó thì phân bổ đúng tổng theo danh sách trên.
+- Trả về CHỈ JSON hợp lệ, KHÔNG thêm lời bình. Nếu có code block ```json ...```, chỉ trả phần JSON bên trong.");
+            }
+            else if (expectedTypeEnum == QuestionType.MultipleChoice)
+            {
+                promptBuilder.AppendLine($@"
+Định dạng đầu ra: MỘT MẢNG JSON gồm CHÍNH XÁC {totalRequired} phần tử, mỗi phần tử:
+{{
   ""Content"": ""Nội dung câu hỏi?"",
   ""Type"": ""MultipleChoice"",
   ""Answers"": [
-    { ""Text"": ""A"", ""IsTrue"": true },
-    { ""Text"": ""B"", ""IsTrue"": true },
-    { ""Text"": ""C"", ""IsTrue"": false },
-    { ""Text"": ""D"", ""IsTrue"": false }
+    {{ ""Text"": ""A"", ""IsTrue"": true }},
+    {{ ""Text"": ""B"", ""IsTrue"": true }},
+    {{ ""Text"": ""C"", ""IsTrue"": false }},
+    {{ ""Text"": ""D"", ""IsTrue"": false }}
   ]
-}
-
-Yêu cầu thêm:
-- Chỉ tạo kiểu ""MultipleChoice"".
-- Có thể có nhiều hơn một đáp án đúng (IsTrue = true).
-- Số lượng câu hỏi và độ khó đúng theo Specifications.
-- Trả về CHỈ JSON hợp lệ, không thêm lời bình. Nếu có code block ```json ...```, chỉ trả phần JSON bên trong.");
-                }
-                else // TrueFalse
-                {
-                    promptBuilder.AppendLine(@"
-Định dạng đầu ra: một mảng JSON gồm các phần tử có cấu trúc sau (chỉ kiểu TrueFalse):
-{
+}}
+Ràng buộc:
+- CHỈ tạo kiểu ""MultipleChoice"".
+- Có thể có NHIỀU hơn một đáp án IsTrue = true (ít nhất 1).
+- TỔNG SỐ PHẦN TỬ TRONG MẢNG = {totalRequired} (không thừa, không thiếu).
+- Nếu có nhiều độ khó thì phân bổ đúng tổng theo danh sách trên.
+- Trả về CHỈ JSON hợp lệ, KHÔNG thêm lời bình. Nếu có code block ```json ...```, chỉ trả phần JSON bên trong.");
+            }
+            else // TrueFalse
+            {
+                promptBuilder.AppendLine($@"
+Định dạng đầu ra: MỘT MẢNG JSON gồm CHÍNH XÁC {totalRequired} phần tử, mỗi phần tử:
+{{
   ""Content"": ""Câu hỏi True/False?"",
   ""Type"": ""TrueFalse"",
   ""Answers"": [
-    { ""Text"": ""True"",  ""IsTrue"": false },
-    { ""Text"": ""False"", ""IsTrue"": true }
+    {{ ""Text"": ""True"",  ""IsTrue"": false }},
+    {{ ""Text"": ""False"", ""IsTrue"": true }}
   ]
-}
-
-Yêu cầu thêm:
-- Chỉ tạo kiểu ""TrueFalse"".
-- Luôn có đúng 2 đáp án: ""True"" và ""False"", và chỉ 1 đáp án có IsTrue = true.
-- Số lượng câu hỏi và độ khó đúng theo Specifications.
-- Trả về CHỈ JSON hợp lệ, không thêm lời bình. Nếu có code block ```json ...```, chỉ trả phần JSON bên trong.");
-                }
-
-                var prompt = promptBuilder.ToString();
-
-                var body = new
-                {
-                    model = "gpt-4o-mini",
-                    messages = new[]
-                    {
-                new { role = "user", content = prompt }
-            }
-                };
-
-                var jsonPayload = JsonConvert.SerializeObject(body);
-                var response = await httpClient.PostAsync("https://api.openai.com/v1/chat/completions",
-                    new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
-
-                var responseString = await response.Content.ReadAsStringAsync();
-                if (!response.IsSuccessStatusCode)
-                {
-                    // Giữ nguyên hành vi fail-fast như cũ
-                    return BadRequest("Lỗi khi gọi OpenAI: " + responseString);
-                }
-
-                dynamic result;
-                try
-                {
-                    result = JsonConvert.DeserializeObject(responseString);
-                }
-                catch (Exception ex)
-                {
-                    return BadRequest("Không parse được response tổng: " + ex.Message);
-                }
-
-                string output = result?.choices?[0]?.message?.content;
-                if (string.IsNullOrWhiteSpace(output))
-                {
-                    return BadRequest("Không có nội dung trả về từ AI.");
-                }
-
-                // Parse kết quả của lần gọi này rồi cộng dồn
-                try
-                {
-                    var cleanedOutput = output.Trim();
-                    if (cleanedOutput.Contains("```"))
-                    {
-                        var codeBlocks = Regex.Matches(cleanedOutput, "```(?:json)?\\s*([\\s\\S]*?)\\s*```");
-                        if (codeBlocks.Count > 0)
-                        {
-                            cleanedOutput = codeBlocks[0].Groups[1].Value.Trim();
-                        }
-                    }
-
-                    var rawList = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(cleanedOutput);
-                    if (rawList == null)
-                        return BadRequest("Không thể parse kết quả thành danh sách câu hỏi.");
-
-                    foreach (var item in rawList)
-                    {
-                        if (!item.TryGetValue("Content", out var contentObj)) continue;
-
-                        var question = new GeneratedQuestion
-                        {
-                            Content = contentObj?.ToString() ?? string.Empty,
-                            Type = QuestionType.SelectOne // default fallback (giữ nguyên)
-                        };
-
-                        if (item.TryGetValue("Type", out var typeObj) &&
-                            Enum.TryParse<QuestionType>(typeObj.ToString(), true, out var parsedType))
-                        {
-                            question.Type = parsedType;
-                        }
-
-                        // Answers (giữ nguyên)
-                        if (item.TryGetValue("Answers", out var answersObj))
-                        {
-                            try
-                            {
-                                var answersJson = JsonConvert.SerializeObject(answersObj);
-                                question.Answers = JsonConvert.DeserializeObject<List<GeneratedAnswer>>(answersJson)
-                                                   ?? new List<GeneratedAnswer>();
-                            }
-                            catch
-                            {
-                                question.Answers = new List<GeneratedAnswer>();
-                            }
-                        }
-
-                        // Sửa lỗi TrueFalse nếu AI không theo format (giữ nguyên)
-                        if (question.Type == QuestionType.TrueFalse)
-                        {
-                            if (question.Answers == null || question.Answers.Count != 2 ||
-                                !question.Answers.Any(a => string.Equals(a.Text, "True", StringComparison.OrdinalIgnoreCase)) ||
-                                !question.Answers.Any(a => string.Equals(a.Text, "False", StringComparison.OrdinalIgnoreCase)))
-                            {
-                                if (item.TryGetValue("TrueFalseAnswer", out var tfAns))
-                                {
-                                    bool isTrue = false;
-                                    if (bool.TryParse(tfAns.ToString(), out var b)) isTrue = b;
-                                    else if (string.Equals(tfAns.ToString(), "True", StringComparison.OrdinalIgnoreCase)) isTrue = true;
-                                    question.Answers = new List<GeneratedAnswer>
-                            {
-                                new() { Text = "True", IsTrue = isTrue },
-                                new() { Text = "False", IsTrue = !isTrue }
-                            };
-                                }
-                                else
-                                {
-                                    question.Answers = new List<GeneratedAnswer>
-                            {
-                                new() { Text = "True", IsTrue = true },
-                                new() { Text = "False", IsTrue = false }
-                            };
-                                }
-                            }
-                        }
-
-                        allQuestions.Add(question);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // Vẫn trả thông báo lỗi kèm output để debug như trước
-                    return BadRequest("Lỗi phân tích kết quả: " + ex.Message + "\nOutput:\n" + output);
-                }
+}}
+Ràng buộc:
+- CHỈ tạo kiểu ""TrueFalse"".
+- Mỗi câu LUÔN có đúng 2 đáp án: ""True"" và ""False"", chỉ 1 đáp án IsTrue = true.
+- TỔNG SỐ PHẦN TỬ TRONG MẢNG = {totalRequired} (không thừa, không thiếu).
+- Nếu có nhiều độ khó thì phân bổ đúng tổng theo danh sách trên.
+- Trả về CHỈ JSON hợp lệ, KHÔNG thêm lời bình. Nếu có code block ```json ...```, chỉ trả phần JSON bên trong.");
             }
 
-            if (allQuestions.Count == 0)
+            var prompt = promptBuilder.ToString();
+
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+
+            var body = new
             {
-                return BadRequest("Không nhận được câu hỏi nào từ AI.");
+                model = "gpt-4o-mini",
+                messages = new[]
+                {
+            new { role = "user", content = prompt }
+        }
+            };
+
+            var jsonPayload = JsonConvert.SerializeObject(body);
+            var response = await httpClient.PostAsync("https://api.openai.com/v1/chat/completions",
+                new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
+
+            var responseString = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                return BadRequest("Lỗi khi gọi OpenAI: " + responseString);
             }
 
-            return Ok(allQuestions);
+            dynamic result;
+            try
+            {
+                result = JsonConvert.DeserializeObject(responseString);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("Không parse được response tổng: " + ex.Message);
+            }
+
+            string output = result?.choices?[0]?.message?.content;
+            if (string.IsNullOrWhiteSpace(output))
+            {
+                return BadRequest("Không có nội dung trả về từ AI.");
+            }
+
+            try
+            {
+                // Làm sạch output: bỏ code block nếu có
+                var cleanedOutput = output.Trim();
+                if (cleanedOutput.Contains("```"))
+                {
+                    var codeBlocks = Regex.Matches(cleanedOutput, "```(?:json)?\\s*([\\s\\S]*?)\\s*```");
+                    if (codeBlocks.Count > 0)
+                    {
+                        cleanedOutput = codeBlocks[0].Groups[1].Value.Trim();
+                    }
+                }
+
+                // Deserialize thành list
+                var rawList = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(cleanedOutput);
+                if (rawList == null)
+                    return BadRequest("Không thể parse kết quả thành danh sách câu hỏi.");
+
+                // ❗ Kiểm tra đúng-chính-xác số lượng
+                if (rawList.Count != totalRequired)
+                {
+                    return BadRequest($"Số lượng câu hỏi AI trả về ({rawList.Count}) không khớp yêu cầu ({totalRequired}). Vui lòng thử lại.");
+                }
+
+                var questions = new List<GeneratedQuestion>();
+
+                foreach (var item in rawList)
+                {
+                    if (!item.TryGetValue("Content", out var contentObj)) continue;
+
+                    var question = new GeneratedQuestion
+                    {
+                        Content = contentObj?.ToString() ?? string.Empty,
+                        // Fallback về đúng loại người dùng yêu cầu (đảm bảo duy nhất 1 loại)
+                        Type = expectedTypeEnum
+                    };
+
+                    // Nếu AI có trả "Type", verify phải trùng loại yêu cầu
+                    if (item.TryGetValue("Type", out var typeObj) &&
+                        Enum.TryParse<QuestionType>(typeObj?.ToString(), true, out var parsedType))
+                    {
+                        if (parsedType != expectedTypeEnum)
+                        {
+                            return BadRequest($"Phát hiện câu hỏi có Type='{parsedType}' khác với loại yêu cầu '{expectedTypeEnum}'. Vui lòng thử lại.");
+                        }
+                        question.Type = parsedType; // vẫn gán lại cho rõ ràng
+                    }
+
+                    // Answers (bắt buộc cho mọi loại)
+                    if (item.TryGetValue("Answers", out var answersObj))
+                    {
+                        try
+                        {
+                            var answersJson = JsonConvert.SerializeObject(answersObj);
+                            question.Answers = JsonConvert.DeserializeObject<List<GeneratedAnswer>>(answersJson)
+                                               ?? new List<GeneratedAnswer>();
+                        }
+                        catch
+                        {
+                            question.Answers = new List<GeneratedAnswer>();
+                        }
+                    }
+
+                    // Giữ logic sửa TrueFalse như trước
+                    if (question.Type == QuestionType.TrueFalse)
+                    {
+                        if (question.Answers == null || question.Answers.Count != 2 ||
+                            !question.Answers.Any(a => string.Equals(a.Text, "True", StringComparison.OrdinalIgnoreCase)) ||
+                            !question.Answers.Any(a => string.Equals(a.Text, "False", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            if (item.TryGetValue("TrueFalseAnswer", out var tfAns))
+                            {
+                                bool isTrue = false;
+                                if (bool.TryParse(tfAns.ToString(), out var b)) isTrue = b;
+                                else if (string.Equals(tfAns.ToString(), "True", StringComparison.OrdinalIgnoreCase)) isTrue = true;
+                                question.Answers = new List<GeneratedAnswer>
+                        {
+                            new() { Text = "True", IsTrue = isTrue },
+                            new() { Text = "False", IsTrue = !isTrue }
+                        };
+                            }
+                            else
+                            {
+                                question.Answers = new List<GeneratedAnswer>
+                        {
+                            new() { Text = "True", IsTrue = true },
+                            new() { Text = "False", IsTrue = false }
+                        };
+                            }
+                        }
+                    }
+
+                    questions.Add(question);
+                }
+
+                // Trả kết quả (đã bảo đảm đúng 1 loại & đúng số lượng)
+                return Ok(questions);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("Lỗi phân tích kết quả: " + ex.Message + "\nOutput:\n" + output);
+            }
         }
 
 
