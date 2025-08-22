@@ -52,7 +52,7 @@ namespace GESS.Repository.Implement
                 ClassId = exam.ClassId??0,
                 CategoryExamId = exam.CategoryExamId,
                 SemesterId = exam.SemesterId,
-                IsPublish = exam.IsPublish ?? false,
+                IsPublish = exam.IsPublish,
                 NoQuestionInChapterDTO = exam.NoQuestionInChapters?.Select(n => new NoQuestionInChapterDTO
                 {
                     NumberQuestion = n.NumberQuestion,
