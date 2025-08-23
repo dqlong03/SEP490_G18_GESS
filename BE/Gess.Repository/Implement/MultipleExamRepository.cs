@@ -212,6 +212,40 @@ namespace GESS.Repository.Implement
             return Task.CompletedTask;
         }
 
+        // Helper: Validate khung thời gian cho kỳ thi cuối kỳ
+        private Task ValidateFinalExamTimeFrame(ExamSlotRoom examSlotRoom)
+        {
+            DateTime currentTime = DateTime.Now;
+            DateTime examDate = examSlotRoom.ExamDate;
+
+            // Kiểm tra xem thời gian hiện tại có khớp với ExamDate không
+            // Cho phép sai số 1 phút để tránh vấn đề về timing
+            var timeDifference = Math.Abs((currentTime - examDate).TotalMinutes);
+            
+            if (timeDifference > 1)
+            {
+                if (examDate > currentTime)
+                {
+                    throw new Exception($"Bài thi cuối kỳ chưa được mở. " +
+                                      $"Thời gian thi: {examDate:dd/MM/yyyy HH:mm}. " +
+                                      $"Thời gian hiện tại: {currentTime:dd/MM/yyyy HH:mm}.");
+                }
+                else
+                {
+                    throw new Exception($"Bài thi cuối kỳ đã hết hạn. " +
+                                      $"Thời gian thi: {examDate:dd/MM/yyyy HH:mm}. " +
+                                      $"Thời gian hiện tại: {currentTime:dd/MM/yyyy HH:mm}.");
+                }
+            }
+
+            Console.WriteLine($"[DEBUG] Final exam time validation passed. " +
+                            $"ExamDate: {examDate:dd/MM/yyyy HH:mm}, " +
+                            $"Current: {currentTime:dd/MM/yyyy HH:mm}, " +
+                            $"Difference: {timeDifference:F1} minutes");
+
+            return Task.CompletedTask;
+        }
+
         // Helper: Kiểm tra có phải kỳ thi giữa kỳ không dựa vào tên danh mục
         private bool IsMidtermExam(string categoryExamName)
         {
@@ -350,8 +384,17 @@ namespace GESS.Repository.Implement
                 }
             }
 
-            // 4. VALIDATE KHUNG THỜI GIAN CHO KỲ THI GIỮA KỲ
-            await ValidateExamTimeFrame(exam);
+            // 4. VALIDATE KHUNG THỜI GIAN THEO LOẠI KỲ THI
+            if (isMidterm)
+            {
+                // Giữa kỳ: kiểm tra theo StartDay và EndDay của MultiExam
+                await ValidateExamTimeFrame(exam);
+            }
+            else
+            {
+                // Cuối kỳ: kiểm tra theo ExamDate trong ExamSlot
+                await ValidateFinalExamTimeFrame(studentExamSlotRoom.ExamSlotRoom);
+            }
 
             // 5. Validate eligibility: Giữa kỳ (theo lớp) / Cuối kỳ (theo phòng/ca)
             
