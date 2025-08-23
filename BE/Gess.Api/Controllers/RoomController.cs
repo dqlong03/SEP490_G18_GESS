@@ -94,7 +94,7 @@ namespace GESS.Api.Controllers
             try
             {
                 await _roomService.UpdateRoomAsync(id, dto);
-                return NoContent();
+                return Ok();
             }
             catch (KeyNotFoundException)
             {
