@@ -267,6 +267,7 @@ namespace GESS.Repository.Implement
                             ExamSlotName = peh.ExamSlotRoom.ExamSlot?.SlotName,
                             SubjectName = peh.PracticeExam?.Subject?.SubjectName,
                             CategoryExamName = peh.PracticeExam?.CategoryExam?.CategoryExamName,
+                            ExamSlotId = peh.ExamSlotRoom.ExamSlot?.ExamSlotId,
                             Status = peh.StatusExam,
                             RoomName = peh.ExamSlotRoom.Room?.RoomName,
                             ExamDate = peh.ExamSlotRoom.ExamDate.ToString("dd/MM/yyyy"),
