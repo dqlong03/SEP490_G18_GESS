@@ -18,6 +18,8 @@ namespace GESS.Repository.Interface
         Task DeleteTeacherAsync(Guid teacherId);
         Task<List<TeacherResponse>> SearchTeachersAsync(string keyword);
         Task<int> CountPageAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageSize);
+        Task<string> RestoreTeacher(Guid teacherId);
+        Task<string> AddTeacherListAsync(List<TeacherCreationRequest> list);
     }
 
 }

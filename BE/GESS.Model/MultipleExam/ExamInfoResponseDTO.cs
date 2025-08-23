@@ -16,6 +16,7 @@ namespace GESS.Model.MultipleExam
         public int Duration { get; set; }
         public DateTime? StartTime { get; set; }
         public string Message { get; set; }
+        public int? ExamSlotRoomId {  get; set; }
         public List<MultiQuestionDetailDTO> Questions { get; set; }
         public List<SavedAnswerDTO> SavedAnswers { get; set; } = new List<SavedAnswerDTO>();
     }

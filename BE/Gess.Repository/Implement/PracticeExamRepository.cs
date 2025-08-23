@@ -334,14 +334,18 @@ namespace GESS.Repository.Implement
             }
             else
             {
-                // Cuối kỳ: kiểm tra qua ExamSlotRoom.Status (0: chưa mở, 1: đang mở, 2: đã đóng)
+                // Cuối kỳ: kiểm tra qua ExamSlotRoomId từ request
+                if (request.ExamSlotRoomId == null)
+                    throw new Exception("Bài thi cuối kỳ cần chỉ định ExamSlotRoomId.");
+
                 studentExamSlotRoom = await _context.StudentExamSlotRoom
                     .Include(s => s.ExamSlotRoom)
                     .FirstOrDefaultAsync(s => s.StudentId == request.StudentId &&
+                                              s.ExamSlotRoomId == request.ExamSlotRoomId &&
                                               s.ExamSlotRoom.PracticeExamId == exam.PracExamId);
 
                 if (studentExamSlotRoom == null)
-                    throw new Exception("Sinh viên không thuộc phòng/ca nào của bài thi này.");
+                    throw new Exception("Sinh viên không thuộc phòng/ca thi này hoặc ExamSlotRoomId không đúng.");
 
                 if (studentExamSlotRoom.ExamSlotRoom.Status != 1)
                     throw new Exception("Bài thi chưa được mở.");
@@ -407,7 +411,7 @@ namespace GESS.Repository.Implement
 
             // 6. Lấy exam history và phân tích trạng thái
             var history = await _context.PracticeExamHistories
-                .FirstOrDefaultAsync(h => h.PracExamId == exam.PracExamId && h.StudentId == request.StudentId);
+                .FirstOrDefaultAsync(h => h.PracExamId == exam.PracExamId && h.StudentId == request.StudentId && h.ExamSlotRoomId == request.ExamSlotRoomId);
 
             if (history == null)
             {
@@ -583,6 +587,7 @@ namespace GESS.Repository.Implement
                 Duration = exam.Duration,
                 StartTime = history.StartTime, // QUAN TRỌNG: Trả về StartTime cho frontend
                 Message = message,
+                ExamSlotRoomId = history.ExamSlotRoomId,
                 Questions = questionDetails
             };
         }
@@ -661,14 +666,30 @@ namespace GESS.Repository.Implement
 
         public async Task<SubmitPracticeExamResponseDTO> SubmitPracticeExamAsync(SubmitPracticeExamRequest dto)
         {
-            var history = await _context.PracticeExamHistories
-                .Include(h => h.PracticeExam)
-                    .ThenInclude(e => e.Subject)
-                .Include(h => h.Student)
-                    .ThenInclude(s => s.User)
-                .Include(h => h.QuestionPracExams)
-                    .ThenInclude(q => q.PracticeQuestion)
-                .FirstOrDefaultAsync(h => h.PracExamHistoryId == dto.PracExamHistoryId);
+            var history = new PracticeExamHistory();
+            if (dto.ExamSlotRoomId != null)
+            {
+                history = await _context.PracticeExamHistories
+               .Include(h => h.PracticeExam)
+                   .ThenInclude(e => e.Subject)
+               .Include(h => h.Student)
+                   .ThenInclude(s => s.User)
+               .Include(h => h.QuestionPracExams)
+                   .ThenInclude(q => q.PracticeQuestion)
+               .FirstOrDefaultAsync(h => h.PracExamHistoryId == dto.PracExamHistoryId);
+            }
+            else
+            {
+                history = await _context.PracticeExamHistories
+               .Include(h => h.PracticeExam)
+                   .ThenInclude(e => e.Subject)
+               .Include(h => h.Student)
+                   .ThenInclude(s => s.User)
+               .Include(h => h.QuestionPracExams)
+                   .ThenInclude(q => q.PracticeQuestion)
+               .FirstOrDefaultAsync(h => h.PracExamHistoryId == dto.PracExamHistoryId && h.ExamSlotRoomId == dto.ExamSlotRoomId);
+            }
+            
 
             if (history == null)
                 throw new Exception("Không tìm thấy lịch sử bài thi.");
@@ -755,36 +776,32 @@ namespace GESS.Repository.Implement
             return currentTime >= startDay && currentTime <= endDay;
         }
 
-        // Helper: Validate khung thời gian cho kỳ thi tự luận cuối kỳ
+        // Helper: Validate chỉ check ngày cho kỳ thi tự luận cuối kỳ (không check thời gian)
         private Task ValidateFinalPracticeExamTimeFrame(ExamSlotRoom examSlotRoom)
         {
             DateTime currentTime = DateTime.Now;
             DateTime examDate = examSlotRoom.ExamDate;
 
-            // Kiểm tra xem thời gian hiện tại có khớp với ExamDate không
-            // Cho phép sai số 1 phút để tránh vấn đề về timing
-            var timeDifference = Math.Abs((currentTime - examDate).TotalMinutes);
-            
-            if (timeDifference > 1)
+            // Chỉ check ngày, không check thời gian
+            if (examDate.Date != currentTime.Date)
             {
-                if (examDate > currentTime)
+                if (examDate.Date > currentTime.Date)
                 {
                     throw new Exception($"Bài thi tự luận cuối kỳ chưa được mở. " +
-                                      $"Thời gian thi: {examDate:dd/MM/yyyy HH:mm}. " +
-                                      $"Thời gian hiện tại: {currentTime:dd/MM/yyyy HH:mm}.");
+                                      $"Ngày thi: {examDate:dd/MM/yyyy}. " +
+                                      $"Ngày hiện tại: {currentTime:dd/MM/yyyy}.");
                 }
                 else
                 {
                     throw new Exception($"Bài thi tự luận cuối kỳ đã hết hạn. " +
-                                      $"Thời gian thi: {examDate:dd/MM/yyyy HH:mm}. " +
-                                      $"Thời gian hiện tại: {currentTime:dd/MM/yyyy HH:mm}.");
+                                      $"Ngày thi: {examDate:dd/MM/yyyy}. " +
+                                      $"Ngày hiện tại: {currentTime:dd/MM/yyyy}.");
                 }
             }
 
-            Console.WriteLine($"[DEBUG] Final practice exam time validation passed. " +
-                            $"ExamDate: {examDate:dd/MM/yyyy HH:mm}, " +
-                            $"Current: {currentTime:dd/MM/yyyy HH:mm}, " +
-                            $"Difference: {timeDifference:F1} minutes");
+            Console.WriteLine($"[DEBUG] Final practice exam date validation passed. " +
+                            $"ExamDate: {examDate:dd/MM/yyyy}, " +
+                            $"Current: {currentTime:dd/MM/yyyy}");
 
             return Task.CompletedTask;
         }
