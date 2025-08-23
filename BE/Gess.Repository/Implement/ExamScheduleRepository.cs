@@ -275,7 +275,7 @@ namespace GESS.Repository.Implement
                 if (examSlotRoom.Result.MultiOrPractice == "Multiple")
                 {
                     var multiExamHistories = await _context.MultiExamHistories
-                        .Where(m => m.MultiExamId == examSlotRoom.Result.MultiExamId)
+                        .Where(m => m.ExamSlotRoomId == examSlotId)
                         .Select(m => new StudentCheckIn
                         {
                             Id = m.StudentId,
@@ -291,7 +291,7 @@ namespace GESS.Repository.Implement
                 else if (examSlotRoom.Result.MultiOrPractice == "Practice")
                 {
                     var practiceExamHistories = await _context.PracticeExamHistories
-                        .Where(p => p.PracExamId == examSlotRoom.Result.PracticeExamId)
+                        .Where(p => p.ExamSlotRoomId == examSlotId)
                         .Select(p => new StudentCheckIn
                         {
                             Id = p.StudentId,
