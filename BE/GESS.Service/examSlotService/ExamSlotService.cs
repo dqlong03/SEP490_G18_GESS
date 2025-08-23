@@ -47,6 +47,12 @@ namespace GESS.Service.examSlotService
             return examSlot;
         }
 
+        public async Task<IEnumerable<TeacherCheck>> CheckMajorSubject(ReqTeacherCheckSubjectMajor req)
+        {
+            var result = await _unitOfWork.ExamSlotRepository.CheckMajorSubjectAsync(req);
+            return result;
+        }
+
         public async Task<IEnumerable<TeacherCreationFinalRequest>> CheckTeacherExist(List<ExistTeacherDTO> teachers)
         {
             var teacherIds = await _unitOfWork.ExamSlotRepository.CheckTeacherExistAsync(teachers);

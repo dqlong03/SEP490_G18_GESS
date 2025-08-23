@@ -20,6 +20,7 @@ namespace GESS.Service.examSlotService
         Task<string> AddGradeTeacherToExamSlot(ExamSlotRoomListGrade gradeTeacherRequest);
         Task<string> AddTeacherToExamSlotRoom(ExamSlotRoomList examSlotRoomList);
         Task<bool> ChangeStatusExamSlot(int examSlotId, string examType);
+        Task<IEnumerable<TeacherCheck>> CheckMajorSubject(ReqTeacherCheckSubjectMajor teachers);
         Task <IEnumerable<TeacherCreationFinalRequest>>CheckTeacherExist(List<ExistTeacherDTO> teachers);
         Task <int> CountPageExamSlots(ExamSlotFilterRequest filterRequest, int pageSize);
         Task<IEnumerable<ExamDTO>> GetAllExams(int semesterId, int subjectId, string examType, int year);

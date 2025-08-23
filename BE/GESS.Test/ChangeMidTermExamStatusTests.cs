@@ -783,6 +783,11 @@ namespace GESS.Test
             throw new NotImplementedException();
         }
 
+        public Task<IEnumerable<Model.ExamSlotCreateDTO.TeacherCheck>> CheckMajorSubject(Model.ExamSlotCreateDTO.ReqTeacherCheckSubjectMajor teachers)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<IEnumerable<TeacherCreationFinalRequest>> CheckTeacherExist(List<ExistTeacherDTO> teachers)
         {
             throw new NotImplementedException();

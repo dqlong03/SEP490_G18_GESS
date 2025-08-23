@@ -164,5 +164,17 @@ namespace GESS.Api.Controllers
             }
             return Ok(result);
         }
+        //API to check exist protocol teacher or not
+        //API to check exist protocol teacher or not
+        [HttpPost("CheckMajorSubject")]
+        public async Task<IActionResult> CheckMajorSubject([FromBody] ReqTeacherCheckSubjectMajor req)
+        {
+            if (req.TeacherCheckSubjectMajors == null || !req.TeacherCheckSubjectMajors.Any())
+            {
+                return BadRequest("Invalid request data.");
+            }
+            var result = await _examSlotService.CheckMajorSubject(req);
+            return Ok(result);
+        }
     }
 }
