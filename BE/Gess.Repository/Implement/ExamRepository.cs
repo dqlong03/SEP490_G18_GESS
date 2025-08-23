@@ -184,6 +184,7 @@ namespace GESS.Repository.Implement
                             ExamId = meh.MultiExamId,
                             ExamName = meh.MultiExam?.MultiExamName,
                             ExamSlotName = meh.ExamSlotRoom.ExamSlot?.SlotName,
+                            ExamSlotId = meh.ExamSlotRoom.ExamSlot?.ExamSlotId,
                             SubjectName = meh.MultiExam?.Subject?.SubjectName,
                             CategoryExamName = meh.MultiExam?.CategoryExam?.CategoryExamName,
                             Status = meh.StatusExam,
