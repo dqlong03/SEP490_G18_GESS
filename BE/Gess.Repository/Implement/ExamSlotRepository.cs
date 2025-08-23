@@ -108,7 +108,7 @@ namespace GESS.Repository.Implement
                 {
                     //check xem sinh vien da ton tai trong MultiExamHistory chua
                     var existingMultiExamHistory = await _context.MultiExamHistories
-                        .FirstOrDefaultAsync(meh => meh.StudentId == studentExamSlotRoom.StudentId && meh.MultiExamId == examId);
+                        .FirstOrDefaultAsync(meh => meh.StudentId == studentExamSlotRoom.StudentId && meh.MultiExamId == examId&&meh.ExamSlotRoomId== studentExamSlotRoom.ExamSlotRoomId);
                     if (existingMultiExamHistory == null)
                     {
                         // Nếu chưa tồn tại, thêm mới
@@ -136,7 +136,7 @@ namespace GESS.Repository.Implement
                 {
                     //check xem sinh vien da ton tai trong MultiExamHistory chua
                     var existingPracExamHistory = await _context.PracticeExamHistories
-                        .FirstOrDefaultAsync(meh => meh.StudentId == studentExamSlotRoom.StudentId && meh.PracExamId == examId);
+                        .FirstOrDefaultAsync(meh => meh.StudentId == studentExamSlotRoom.StudentId && meh.PracExamId == examId && meh.ExamSlotRoomId == studentExamSlotRoom.ExamSlotRoomId);
                     if (existingPracExamHistory == null)
                     {
                         // Nếu chưa tồn tại, thêm mới
