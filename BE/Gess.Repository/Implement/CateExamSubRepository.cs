@@ -46,7 +46,7 @@ namespace GESS.Repository.Implement
         // ThaiNH_add_UpdateMark&UserProfile_Begin
         public async Task<IEnumerable<CategoryExamSubjectDTO>> GetAllCateExamSubBySubIdAsync(int subjectId)
         =>   await _context.CategoryExamSubjects
-        .Where(x => x.SubjectId == subjectId)
+        .Where(x => x.SubjectId == subjectId && !x.IsDelete)
         .Select(x => new CategoryExamSubjectDTO
         {
             CategoryExamId = x.CategoryExamId,
