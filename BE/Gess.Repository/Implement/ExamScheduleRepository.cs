@@ -84,7 +84,8 @@ namespace GESS.Repository.Implement
                     if (examSlotRoom.Result.MultiOrPractice == "Multiple")
                     {
                         var multiExamHistory = _context.MultiExamHistories
-                            .FirstOrDefaultAsync(m => m.MultiExamId == examSlotRoom.Result.MultiExamId && m.StudentId == studentId);
+                            .FirstOrDefaultAsync(m => m.MultiExamId == examSlotRoom.Result.MultiExamId && m.StudentId == studentId
+                          && m.ExamSlotRoomId == examSlotId);
                         if (multiExamHistory.Result != null)
                         {
                             if(multiExamHistory.Result.CheckIn)
@@ -100,7 +101,8 @@ namespace GESS.Repository.Implement
                     else if (examSlotRoom.Result.MultiOrPractice == "Practice")
                     {
                         var practiceExamHistory = _context.PracticeExamHistories
-                            .FirstOrDefaultAsync(p => p.PracExamId == examSlotRoom.Result.PracticeExamId && p.StudentId == studentId);
+                            .FirstOrDefaultAsync(p => p.PracExamId == examSlotRoom.Result.PracticeExamId && p.StudentId == studentId
+                            && p.ExamSlotRoomId == examSlotId);
                         if (practiceExamHistory.Result != null)
                             {
                             if (practiceExamHistory.Result.CheckIn)
@@ -268,11 +270,11 @@ namespace GESS.Repository.Implement
 
         public async Task<IEnumerable<StudentCheckIn>> GetStudentsByExamSlotIdAsync(int examSlotId)
         {
-            var examSlotRoom = _context.ExamSlotRooms
+            var examSlotRoom = await _context.ExamSlotRooms
                     .FirstOrDefaultAsync(e => e.ExamSlotRoomId == examSlotId);
             if (examSlotRoom != null)
             {
-                if (examSlotRoom.Result.MultiOrPractice == "Multiple")
+                if (examSlotRoom.MultiOrPractice == "Multiple")
                 {
                     var multiExamHistories = await _context.MultiExamHistories
                         .Where(m => m.ExamSlotRoomId == examSlotId)
@@ -288,7 +290,7 @@ namespace GESS.Repository.Implement
                         .ToListAsync();
                     return multiExamHistories;
                 }
-                else if (examSlotRoom.Result.MultiOrPractice == "Practice")
+                else if (examSlotRoom.MultiOrPractice == "Practice")
                 {
                     var practiceExamHistories = await _context.PracticeExamHistories
                         .Where(p => p.ExamSlotRoomId == examSlotId)
