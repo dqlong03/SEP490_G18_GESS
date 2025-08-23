@@ -347,10 +347,10 @@ namespace GESS.Repository.Implement
                     throw new Exception("Bài thi chưa được mở.");
             }
 
-            // 3. VALIDATION: Kiểm tra time frame cho thi giữa kỳ
-            
+            // 3. VALIDATION: Kiểm tra time frame theo loại kỳ thi
             if (isMidtermExam)
             {
+                // Giữa kỳ: kiểm tra theo StartDay và EndDay của PracticeExam
                 if (!ValidateExamTimeFrame(exam.StartDay, exam.EndDay))
                 {
                     Console.WriteLine($"[DEBUG] Practice midterm exam time validation failed. " +
@@ -368,7 +368,8 @@ namespace GESS.Repository.Implement
             }
             else
             {
-                Console.WriteLine($"[DEBUG] Not a practice midterm exam ({exam.CategoryExam.CategoryExamName}), skipping time frame validation.");
+                // Cuối kỳ: kiểm tra theo ExamDate trong ExamSlot
+                await ValidateFinalPracticeExamTimeFrame(studentExamSlotRoom.ExamSlotRoom);
             }
 
             // 4. Lấy danh sách sinh viên và validate
@@ -752,6 +753,40 @@ namespace GESS.Repository.Implement
         {
             var currentTime = DateTime.Now;
             return currentTime >= startDay && currentTime <= endDay;
+        }
+
+        // Helper: Validate khung thời gian cho kỳ thi tự luận cuối kỳ
+        private Task ValidateFinalPracticeExamTimeFrame(ExamSlotRoom examSlotRoom)
+        {
+            DateTime currentTime = DateTime.Now;
+            DateTime examDate = examSlotRoom.ExamDate;
+
+            // Kiểm tra xem thời gian hiện tại có khớp với ExamDate không
+            // Cho phép sai số 1 phút để tránh vấn đề về timing
+            var timeDifference = Math.Abs((currentTime - examDate).TotalMinutes);
+            
+            if (timeDifference > 1)
+            {
+                if (examDate > currentTime)
+                {
+                    throw new Exception($"Bài thi tự luận cuối kỳ chưa được mở. " +
+                                      $"Thời gian thi: {examDate:dd/MM/yyyy HH:mm}. " +
+                                      $"Thời gian hiện tại: {currentTime:dd/MM/yyyy HH:mm}.");
+                }
+                else
+                {
+                    throw new Exception($"Bài thi tự luận cuối kỳ đã hết hạn. " +
+                                      $"Thời gian thi: {examDate:dd/MM/yyyy HH:mm}. " +
+                                      $"Thời gian hiện tại: {currentTime:dd/MM/yyyy HH:mm}.");
+                }
+            }
+
+            Console.WriteLine($"[DEBUG] Final practice exam time validation passed. " +
+                            $"ExamDate: {examDate:dd/MM/yyyy HH:mm}, " +
+                            $"Current: {currentTime:dd/MM/yyyy HH:mm}, " +
+                            $"Difference: {timeDifference:F1} minutes");
+
+            return Task.CompletedTask;
         }
 
         // Helper method: Kiểm tra và xử lý timeout tự động
