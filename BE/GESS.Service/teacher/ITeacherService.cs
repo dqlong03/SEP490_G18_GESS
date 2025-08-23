@@ -18,7 +18,8 @@ namespace GESS.Service.teacher
         Task DeleteTeacherAsync(Guid teacherId);
         Task SendResetPasswordEmailAsync(Guid userId, string resetPasswordUrlBase);
         Task<List<TeacherResponse>> SearchTeachersAsync(string keyword);
-        Task<List<TeacherResponse>> ImportTeachersFromExcelAsync(IFormFile file);
+        Task <string>RestoreTeacher(Guid teacherId);
+        Task<string> AddTeacherListAsync(List<TeacherCreationRequest> list);
     }
 
 }

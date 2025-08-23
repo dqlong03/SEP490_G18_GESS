@@ -325,7 +325,7 @@ namespace GESS.Service
                             }
                         }
 
-                        await _unitOfWork.UserManager.AddToRoleAsync(newUser, "Sinh viên");
+                        await _unitOfWork.UserManager.AddToRoleAsync(newUser, "Học sinh");
                        
                     }
                     else
