@@ -14,6 +14,7 @@ namespace GESS.Model.PracticeExam
     public class SubmitPracticeExamRequest
     {
         public Guid PracExamHistoryId { get; set; }
+        public int? ExamSlotRoomId { get; set; }
         public List<SubmitPracticeExamAnswerDTO> Answers { get; set; }
     }
 }
