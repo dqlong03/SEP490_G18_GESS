@@ -16,7 +16,7 @@ namespace GESS.Model.Chapter
         [StringLength(500)]
         public string Description { get; set; }
         // ThaiNH_add_UpdateMark&UserProfile_Begin
-        public string Curriculum { get; set; }
+        public string? Course { get; set; }
         // ThaiNH_add_UpdateMark&UserProfile_End
 
         [Required]
