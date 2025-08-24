@@ -123,6 +123,10 @@ namespace GESS.Service
                             IsDeleted = false,
                             PasswordHash = passWordHash,
                             EmailConfirmed = true,
+                            NormalizedUserName = studentDto.Email.ToUpper(),
+                            NormalizedEmail = studentDto.Email.ToUpper(),
+                            ConcurrencyStamp = Guid.NewGuid().ToString(),
+                            SecurityStamp = Guid.NewGuid().ToString()
                         };
 
                         await _unitOfWork.UserRepository.CreateAsync(newUser);
@@ -275,7 +279,12 @@ namespace GESS.Service
                             CreatedAt = DateTime.Now,
                             UpdatedAt = DateTime.Now,
                             IsActive = true,
-                            IsDeleted = false
+                            IsDeleted = false,
+                            NormalizedUserName = studentDto.Email.ToUpper(),
+                            NormalizedEmail = studentDto.Email.ToUpper(),
+                            EmailConfirmed = true,
+                            ConcurrencyStamp = Guid.NewGuid().ToString(),
+                            SecurityStamp = Guid.NewGuid().ToString()
                         };
 
                         var passwordHash = _unitOfWork.UserManager.PasswordHasher.HashPassword(newUser, "Password123!");
