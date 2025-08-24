@@ -12,6 +12,7 @@ namespace GESS.Model.Chapter
         public string ChapterName { get; set; }
         public string SubjectName { get; set; }
         public string Description { get; set; }
+        public string? Course {  get; set; }
 
     }
 }
