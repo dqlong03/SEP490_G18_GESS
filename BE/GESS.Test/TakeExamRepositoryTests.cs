@@ -376,7 +376,7 @@ namespace GESS.Test
             await _context.SaveChangesAsync();
 
             // Act
-            var result = await _multipleExamRepository.CheckAndPrepareExamAsync(1, "MULTI123", _context.Students.First().StudentId);
+            var result = await _multipleExamRepository.CheckAndPrepareExamAsync(1, "MULTI123", _context.Students.First().StudentId, null);
 
             // Assert
             result.Should().NotBeNull();
@@ -417,7 +417,7 @@ namespace GESS.Test
 
             // Act & Assert
             var exception = Assert.ThrowsAsync<Exception>(
-                async () => await _multipleExamRepository.CheckAndPrepareExamAsync(1, "MULTI123", studentNotInClass));
+                async () => await _multipleExamRepository.CheckAndPrepareExamAsync(1, "MULTI123", studentNotInClass, null));
             
             exception.Message.Should().Contain("Bạn không thuộc lớp của bài thi này");
         }
@@ -479,14 +479,14 @@ namespace GESS.Test
         [Test]
         public async Task MultipleExam_Timeout_ThrowsException()
         {
-            // Arrange - Tạo multiple exam với thời gian đã hết
+            // Arrange
             var multipleExam = new MultiExam
             {
                 MultiExamId = 1,
                 MultiExamName = "Bài thi trắc nghiệm test",
                 Duration = 30,
                 StartDay = DateTime.Now.AddHours(-2),
-                EndDay = DateTime.Now.AddHours(-1), // Đã hết thời gian
+                EndDay = DateTime.Now.AddHours(-1), // đã hết hạn
                 Status = PredefinedStatusAllExam.OPENING_EXAM,
                 CodeStart = "MULTI123",
                 TeacherId = _context.Teachers.First().TeacherId,
@@ -499,13 +499,18 @@ namespace GESS.Test
             _context.MultiExams.Add(multipleExam);
             await _context.SaveChangesAsync();
 
-            // Act & Assert
+            var studentId = _context.Students.First().StudentId;
+
+            // Act + Assert
             var exception = Assert.ThrowsAsync<Exception>(
-                async () => await _multipleExamRepository.CheckAndPrepareExamAsync(1, "MULTI123", _context.Students.First().StudentId));
-            
-            exception.Message.Should().Contain("Bạn chưa được điểm danh");
+                async () => await _multipleExamRepository.CheckAndPrepareExamAsync(1, "MULTI123", studentId, null)
+            );
+
+            exception.Message.Should().Contain("Bài thi đã kết thúc");
         }
 
-        #endregion
+
     }
-} 
+
+    #endregion
+}

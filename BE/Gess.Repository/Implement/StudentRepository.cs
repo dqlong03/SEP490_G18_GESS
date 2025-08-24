@@ -357,7 +357,9 @@ namespace GESS.Repository.Implement
                     CategoryExamName = meh.MultiExam.CategoryExam.CategoryExamName,
                     Duration = meh.MultiExam.Duration,
                     SubmittedDateTime = meh.EndTime,
-                    Score = meh.Score ?? 0
+                    Score = meh.Score ?? 0,
+                    IsGrade = meh.IsGrade,
+                    
                 })
                 .ToListAsync();
 
@@ -374,7 +376,9 @@ namespace GESS.Repository.Implement
                     CategoryExamName = peh.PracticeExam.CategoryExam.CategoryExamName,
                     Duration = peh.PracticeExam.Duration,
                     SubmittedDateTime = peh.EndTime,
-                    Score = peh.Score ?? 0
+                    Score = peh.Score ?? 0,
+                    IsGrade = peh.IsGraded
+                    
                 })
                 .ToListAsync();
 
