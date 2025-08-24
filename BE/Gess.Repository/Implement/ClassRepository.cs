@@ -257,9 +257,9 @@ namespace GESS.Repository.Implement
             };
         }
 
-        public Task<bool> ClassExistsAsync(string className)
+        public async Task<bool> ClassExistsAsync(string className)
         {
-            var exists = _context.Classes.AnyAsync(c => c.ClassName == className);
+            var exists = await _context.Classes.AnyAsync(c => c.ClassName == className);
             return exists;
         }
 

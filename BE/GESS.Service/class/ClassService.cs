@@ -5,7 +5,9 @@ using GESS.Model.Class;
 using GESS.Model.GradeComponent;
 using GESS.Model.Student;
 using GESS.Model.Subject;
+using Microsoft.AspNet.Identity;
 using Microsoft.AspNetCore.Identity;
+using Org.BouncyCastle.Asn1.Ocsp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -105,24 +107,7 @@ namespace GESS.Service
 
                     if (existingUser == null)
                     {
-                        // Tạo user mới với mật khẩu ngẫu nhiên có ít nhất một ký tự đặc biệt
-                        var random = new Random();
-                        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-                        const string specialChars = "!@#$%^&*";
-                        var passwordLength = 12;
-
-                        // Tạo 9 ký tự cơ bản (chữ cái và số)
-                        var basePassword = new string(Enumerable.Repeat(chars, 9)
-                            .Select(s => s[random.Next(s.Length)]).ToArray());
-
-                        // Tạo 3 ký tự đặc biệt
-                        var specialPassword = new string(Enumerable.Repeat(specialChars, 3)
-                            .Select(s => s[random.Next(s.Length)]).ToArray());
-
-                        // Kết hợp và xáo trộn
-                        var randomPassword = basePassword + specialPassword;
-                        randomPassword = new string(randomPassword.OrderBy(x => random.Next()).ToArray());
-
+                        var passWordHash = _unitOfWork.UserManager.PasswordHasher.HashPassword(null, "Password123!");
                         var newUser = new User
                         {
                             Id = Guid.NewGuid(),
@@ -136,13 +121,12 @@ namespace GESS.Service
                             UpdatedAt = DateTime.Now,
                             IsActive = true,
                             IsDeleted = false,
+                            PasswordHash = passWordHash,
+                            EmailConfirmed = true,
                         };
 
-                        var result = await _unitOfWork.UserManager.CreateAsync(newUser, randomPassword);
-                        if (!result.Succeeded)
-                        {
-                            throw new Exception($"Không thể tạo người dùng: {string.Join(", ", result.Errors.Select(e => e.Description))}");
-                        }
+                        await _unitOfWork.UserRepository.CreateAsync(newUser);
+                        
                         userId = newUser.Id;
 
                         // Gán vai trò "Sinh viên" cho người dùng mới
@@ -180,9 +164,8 @@ namespace GESS.Service
                         {
                             StudentId = Guid.NewGuid(),
                             UserId = userId,
-                            // CohortId = studentDto.CohortId ?? 1, // Sửa typo: CohirtId -> CohortId (đã sửa trong đoạn trước)
                             EnrollDate = DateTime.Now,
-                            AvatarURL = studentDto.Avartar // Giả sử có ảnh đại diện mặc định
+                            AvatarURL = studentDto.Avartar
                         };
                         _unitOfWork.StudentRepository.Create(newStudent);
                         studentId = newStudent.StudentId;
@@ -295,12 +278,8 @@ namespace GESS.Service
                             IsDeleted = false
                         };
 
-                        // Tạo mật khẩu ngẫu nhiên
-                        var random = new Random();
-                        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
-                        var randomPassword = new string(Enumerable.Repeat(chars, 12)
-                            .Select(s => s[random.Next(s.Length)]).ToArray());
-                        var result = await _unitOfWork.UserManager.CreateAsync(newUser, randomPassword);
+                        var passwordHash = _unitOfWork.UserManager.PasswordHasher.HashPassword(newUser, "Password123!");
+                        var result = await _unitOfWork.UserManager.CreateAsync(newUser, passwordHash);
                         if (!result.Succeeded)
                         {
                             throw new Exception($"Không thể tạo người dùng: {string.Join(", ", result.Errors.Select(e => e.Description))}");
@@ -315,8 +294,8 @@ namespace GESS.Service
                             var role = new IdentityRole<Guid>
                             {
                                 Id = Guid.NewGuid(),
-                                Name = "Sinh viên",
-                                NormalizedName = "SINH VIÊN"
+                                Name = "Học sinh",
+                                NormalizedName = "STUDENT"
                             };
                             var roleResult = await _unitOfWork.RoleManager.CreateAsync(role);
                             if (!roleResult.Succeeded)
