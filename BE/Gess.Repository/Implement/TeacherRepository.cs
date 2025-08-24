@@ -94,7 +94,8 @@ namespace GESS.Repository.Implement
                 IsActive = teacher.User.IsActive,
                 HireDate = teacher.HireDate,
                 Code = teacher.User.Code,
-                MajorName = teacher.Major.MajorName
+                MajorName = teacher.Major.MajorName,
+                totalPage = totalPages
             }).ToList();
         }
 
