@@ -147,7 +147,7 @@ namespace GESS.Repository.Implement
                 .FirstOrDefaultAsync(m => m.MajorId == request.MajorId && m.IsActive);
             if (major == null)
             {
-                throw new Exception($"Chuyên ngành với tên '{request.MajorName}' không tồn tại hoặc không hoạt động.");
+                throw new Exception("False");
             }
 
             var teacher = new Teacher
@@ -337,7 +337,7 @@ namespace GESS.Repository.Implement
         {
             if (list == null || !list.Any())
             {
-                return "List of teachers cannot be empty.";
+                return "False";
             }
 
             // Kiểm tra trùng lặp
@@ -349,7 +349,7 @@ namespace GESS.Repository.Implement
                                            || u.Email == item.Email);
                 if (existingUser != null)
                 {
-                    return $"Teacher with UserName: {item.UserName}, Code: {item.Code} or Email: {item.Email} already exists.";
+                    return "False";
                 }
             }
 
@@ -367,10 +367,10 @@ namespace GESS.Repository.Implement
             catch
             {
                 await transaction.RollbackAsync();
-                throw;
+                return "False";
             }
 
-            return "Thành công";
+            return "True";
         }
     }
 
