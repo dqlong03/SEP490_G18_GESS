@@ -88,27 +88,27 @@ namespace GESS.Api.Controllers
         }
 
         // 🔹 PUT: api/Room/{id}
-        //[HttpPut("{id}")]
-        //public async Task<ActionResult> UpdateRoom(int id, [FromBody] UpdateRoomDTO dto)
-        //{
-        //    try
-        //    {
-        //        await _roomService.UpdateRoomAsync(id, dto);
-        //        return NoContent();
-        //    }
-        //    catch (KeyNotFoundException)
-        //    {
-        //        return NotFound("Không tìm thấy phòng cần cập nhật.");
-        //    }
-        //    catch (ArgumentException ex)
-        //    {
-        //        return Conflict(ex.Message);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest($"Lỗi khi cập nhật phòng: {ex.Message}");
-        //    }
-        //}
+        [HttpPut("{id}")]
+        public async Task<ActionResult> UpdateRoom(int id, [FromBody] UpdateRoomDTO dto)
+        {
+            try
+            {
+                await _roomService.UpdateRoomAsync(id, dto);
+                return Ok();
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound("Không tìm thấy phòng cần cập nhật.");
+            }
+            catch (ArgumentException ex)
+            {
+                return Conflict(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Lỗi khi cập nhật phòng: {ex.Message}");
+            }
+        }
 
     }
 }

@@ -59,8 +59,16 @@ namespace GESS.Repository.Implement
             return (int)Math.Ceiling((double)total / pageSize);
         }
 
-        public async Task<Room> GetByIdAsync(int id) =>
-            await _context.Rooms.FindAsync(id);
+        public async Task<Room> GetByIdAsync(int id)
+        {
+            var room = await _context.Rooms
+                .FirstOrDefaultAsync(r => r.RoomId == id);
+            if (room == null)
+            {
+                throw new KeyNotFoundException($"Room with ID {id} not found.");
+            }
+            return room;
+        }
 
         public async Task AddAsync(Room room)
         {

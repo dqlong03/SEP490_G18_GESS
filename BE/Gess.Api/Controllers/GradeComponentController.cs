@@ -19,6 +19,7 @@ namespace GESS.Api.Controllers
         }
 
         [HttpPost]
+        //[HttpPost("/create")]
         public async Task<IActionResult> CreateCateExamSub([FromBody] CategoryExamSubjectDTO dto)
         {
             if (!ModelState.IsValid)
@@ -31,7 +32,7 @@ namespace GESS.Api.Controllers
             }
 
             var result = await _service.CreateCateExamSubAsync(dto);
-            return CreatedAtAction(nameof(GetAllCateExamSubBySubIdAsync), new { categoryExamId = result.CategoryExamId, subjectId = result.SubjectId }, result);
+            return Ok(result);
         }
 
         [HttpGet("{subjectId}")]

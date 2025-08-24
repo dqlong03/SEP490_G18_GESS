@@ -81,7 +81,7 @@ namespace GESS.Model.MultipleExam
         public int SemesterId { get; set; }
         // Trạng thái công khai của kỳ thi (true = công khai, false = không công khai)
         [Column(TypeName = "BIT")]
-        public bool IsPublish { get; set; }
+        public bool? IsPublish { get; set; }
         [Required(ErrorMessage = "Danh sách cấu hình câu hỏi không được để trống!")]
         public ICollection<NoQuestionInChapterDTO> NoQuestionInChapterDTO { get; set; }
         

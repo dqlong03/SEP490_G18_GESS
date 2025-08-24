@@ -108,7 +108,7 @@ namespace GESS.Repository.Implement
                 {
                     //check xem sinh vien da ton tai trong MultiExamHistory chua
                     var existingMultiExamHistory = await _context.MultiExamHistories
-                        .FirstOrDefaultAsync(meh => meh.StudentId == studentExamSlotRoom.StudentId && meh.MultiExamId == examId);
+                        .FirstOrDefaultAsync(meh => meh.StudentId == studentExamSlotRoom.StudentId && meh.MultiExamId == examId&&meh.ExamSlotRoomId== studentExamSlotRoom.ExamSlotRoomId);
                     if (existingMultiExamHistory == null)
                     {
                         // Nếu chưa tồn tại, thêm mới
@@ -136,7 +136,7 @@ namespace GESS.Repository.Implement
                 {
                     //check xem sinh vien da ton tai trong MultiExamHistory chua
                     var existingPracExamHistory = await _context.PracticeExamHistories
-                        .FirstOrDefaultAsync(meh => meh.StudentId == studentExamSlotRoom.StudentId && meh.PracExamId == examId);
+                        .FirstOrDefaultAsync(meh => meh.StudentId == studentExamSlotRoom.StudentId && meh.PracExamId == examId && meh.ExamSlotRoomId == studentExamSlotRoom.ExamSlotRoomId);
                     if (existingPracExamHistory == null)
                     {
                         // Nếu chưa tồn tại, thêm mới
@@ -407,6 +407,81 @@ namespace GESS.Repository.Implement
             return true;
         }
 
+        public async Task<IEnumerable<TeacherCheck>> CheckMajorSubjectAsync(ReqTeacherCheckSubjectMajor req)
+        {
+            var result = new List<TeacherCheck>();
+
+            foreach (var item in req.TeacherCheckSubjectMajors)
+            {
+                var trainingProgram = await _context.TrainingPrograms
+                    .Where(tp => tp.MajorId == item.MajorId)
+                    .OrderByDescending(tp => tp.StartDate)
+                    .FirstOrDefaultAsync();
+
+                if (trainingProgram == null)
+                {
+                    result.Add(new TeacherCheck
+                    {
+                        TeacherId = item.TeacherId,
+                        TeacherName = item.TeacherName,
+                        IsChecked = false
+                    });
+                    continue; 
+                }
+
+                var isCheckMajor = await _context.SubjectTrainingPrograms
+                    .AnyAsync(stp => stp.TrainProId == trainingProgram.TrainProId && stp.SubjectId == req.SubjectId);
+
+                if (!isCheckMajor)
+                {
+                    result.Add(new TeacherCheck
+                    {
+                        TeacherId = item.TeacherId,
+                        TeacherName = item.TeacherName,
+                        IsChecked = false
+                    });
+                }
+                else
+                {
+                    result.Add(new TeacherCheck
+                    {
+                        TeacherId = item.TeacherId,
+                        TeacherName = item.TeacherName,
+                        IsChecked = true
+                    });
+
+                    var subjectTeacher = await _context.SubjectTeachers
+                        .FirstOrDefaultAsync(st => st.SubjectId == req.SubjectId && st.TeacherId == item.TeacherId);
+
+                    if (subjectTeacher == null)
+                    {
+                        subjectTeacher = new SubjectTeacher
+                        {
+                            SubjectId = req.SubjectId,
+                            TeacherId = item.TeacherId,
+                            IsActiveSubjectTeacher = true,
+                            IsCreateExamTeacher = true,
+                            IsGradeTeacher = true
+                        };
+                        _context.SubjectTeachers.Add(subjectTeacher);
+                    }
+                    else
+                    {
+                        subjectTeacher.IsGradeTeacher = true;
+                        subjectTeacher.IsCreateExamTeacher = true;
+                        subjectTeacher.IsActiveSubjectTeacher = true;
+                        _context.SubjectTeachers.Update(subjectTeacher);
+                    }
+
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            return result;
+        }
+
+
+
         public async Task<IEnumerable<TeacherCreationFinalRequest>> CheckTeacherExistAsync(List<ExistTeacherDTO> teachers)
         {
             var result = new List<TeacherCreationFinalRequest>();
@@ -591,8 +666,8 @@ namespace GESS.Repository.Implement
             {
                 examSlots = examSlots.Where(es => es.ExamDate <= filterRequest.ToDate.Value);
             }
-            examSlots.OrderBy(examSlots => examSlots.ExamDate)
-                .ThenBy(examSlots => examSlots.SubjectId);
+            examSlots.OrderByDescending(examSlots => examSlots.ExamDate)
+                .ThenBy(examSlots => examSlots.SlotName);
             var examSlotList = await examSlots
                 .Include(es => es.Subject)
                 .Select(es => new ExamSlotResponse

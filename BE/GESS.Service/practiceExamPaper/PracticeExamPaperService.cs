@@ -79,7 +79,7 @@ namespace GESS.Service.practiceExamPaper
             {
                 PracExamPaperName = practiceExamPaperCreate.PracExamPaperName,
                 NumberQuestion = practiceExamPaperCreate.QuestionScores?.Count ?? 0, 
-                CreateAt = DateTime.UtcNow,
+                CreateAt = DateTime.Now,
                 Status = practiceExamPaperCreate.Status,
                 TeacherId = teacherId,
                 CategoryExamId = practiceExamPaperCreate.CategoryExamId,

@@ -30,7 +30,7 @@ namespace GESS.Model.MultipleExam
         public int ClassId { get; set; }
         public int CategoryExamId { get; set; }
         public int SemesterId { get; set; }
-        public bool IsPublish { get; set; }
+        public bool? IsPublish { get; set; }
         public ICollection<NoQuestionInChapterDTO> NoQuestionInChapterDTO { get; set; }
         public ICollection<StudentExamDTO> StudentExamDTO { get; set; }
     }

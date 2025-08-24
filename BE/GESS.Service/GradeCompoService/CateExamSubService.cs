@@ -31,7 +31,7 @@ namespace GESS.Service.GradeCompoService
                 throw new ConflictException("Đầu điểm cho danh mục kỳ thi và môn học này đã tồn tại.");
             }
 
-            var categoryExamSubjects = await _unitOfWork.CateExamSubRepository.GetAllAsync(); // Await trước
+            var categoryExamSubjects = await _unitOfWork.CateExamSubRepository.GetAllCateExamSubBySubIdAsync(dto.SubjectId); // Await trước
             var totalGradeComponent = categoryExamSubjects.Sum(ces => ces.GradeComponent);
             if (totalGradeComponent + dto.GradeComponent > 100)
             {

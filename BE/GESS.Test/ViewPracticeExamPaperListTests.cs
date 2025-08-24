@@ -48,8 +48,8 @@ namespace GESS.Test
                 TwoFactorEnabled = false,
                 LockoutEnabled = false,
                 AccessFailedCount = 0,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
                 IsActive = true,
                 Fullname = "Test User"
             };
@@ -61,7 +61,7 @@ namespace GESS.Test
                 TeacherId = Guid.NewGuid(),
                 UserId = user.Id,
                 User = user,
-                HireDate = DateTime.UtcNow,
+                HireDate = DateTime.Now,
                 MajorId = 1
             };
             _context.Teachers.Add(teacher);
@@ -71,7 +71,7 @@ namespace GESS.Test
             {
                 MajorId = 1,
                 MajorName = "Công nghệ thông tin",
-                StartDate = DateTime.UtcNow,
+                StartDate = DateTime.Now,
                 IsActive = true
             };
             _context.Majors.Add(major);
@@ -129,7 +129,7 @@ namespace GESS.Test
                 PracExamPaperId = 1,
                 PracExamPaperName = "Đề thi lập trình web giữa kỳ",
                 NumberQuestion = 5,
-                CreateAt = DateTime.UtcNow.AddDays(-10),
+                CreateAt = DateTime.Now.AddDays(-10),
                 Status = "Published",
                 TeacherId = teacher.TeacherId,
                 CategoryExamId = categoryExam1.CategoryExamId,
@@ -145,7 +145,7 @@ namespace GESS.Test
                 PracExamPaperId = 2,
                 PracExamPaperName = "Đề thi cơ sở dữ liệu cuối kỳ",
                 NumberQuestion = 8,
-                CreateAt = DateTime.UtcNow.AddDays(-5),
+                CreateAt = DateTime.Now.AddDays(-5),
                 Status = "Draft",
                 TeacherId = teacher.TeacherId,
                 CategoryExamId = categoryExam2.CategoryExamId,
@@ -161,7 +161,7 @@ namespace GESS.Test
                 PracExamPaperId = 3,
                 PracExamPaperName = "Đề thi lập trình web cuối kỳ",
                 NumberQuestion = 6,
-                CreateAt = DateTime.UtcNow.AddDays(-2),
+                CreateAt = DateTime.Now.AddDays(-2),
                 Status = "Published",
                 TeacherId = teacher.TeacherId,
                 CategoryExamId = categoryExam2.CategoryExamId,
@@ -297,7 +297,7 @@ namespace GESS.Test
             var categoryId = 1; // Giữa kỳ
             var teacherId = _context.Teachers.First().TeacherId;
             var semesterId = 1; // Học kỳ 1
-            var year = DateTime.UtcNow.Year.ToString();
+            var year = DateTime.Now.Year.ToString();
 
             // Act
             var result = await _practiceExamPaperRepository.GetAllPracticeExamPapersAsync(
@@ -393,7 +393,7 @@ namespace GESS.Test
         public async Task GetAllPracticeExamPapersAsync_WithYearFilter_ReturnsCorrectResults()
         {
             // Arrange
-            var currentYear = DateTime.UtcNow.Year.ToString();
+            var currentYear = DateTime.Now.Year.ToString();
 
             // Act
             var result = await _practiceExamPaperRepository.GetAllPracticeExamPapersAsync(
@@ -467,7 +467,7 @@ namespace GESS.Test
                 PracExamPaperId = 999,
                 PracExamPaperName = "Test Exam with Null Nav",
                 NumberQuestion = 5,
-                CreateAt = DateTime.UtcNow,
+                CreateAt = DateTime.Now,
                 Status = "Published",
                 TeacherId = existingTeacher.TeacherId,
                 CategoryExamId = existingCategory.CategoryExamId,

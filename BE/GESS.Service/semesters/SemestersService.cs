@@ -23,7 +23,7 @@ namespace GESS.Service.semesters
         // Lấy danh sách học kỳ hiên tại
         public async Task<IEnumerable<SemesterResponse>> GetCurrentSemestersAsync()
         {
-            var currentDate = DateTime.UtcNow;
+            var currentDate = DateTime.Now;
 
             // ThaiNH_Modified_ManageSemester&ManageRoom_Begin
             var semesters = await _unitOfWork.SemesterRepository.GetAllChooseSemesterAsync();

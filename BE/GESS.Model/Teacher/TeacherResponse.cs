@@ -25,6 +25,7 @@ namespace GESS.Model.Teacher
         public DateTime HireDate { get; set; }
         public bool IsGraded { get; set; }
         public bool IsCreateExam { get; set; }
+        public int? totalPage { get; set; } = 0;
     }
     public class GradeTeacherResponse
     {

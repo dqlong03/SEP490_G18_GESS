@@ -14,6 +14,7 @@ namespace GESS.Model.PracticeExam
         public string SubjectName { get; set; }
         public string ExamCategoryName { get; set; }
         public int Duration { get; set; }
+        public int? ExamSlotRoomId { get; set; }
         public DateTime? StartTime { get; set; } // Để frontend tính thời gian còn lại
         public string Message { get; set; }
         public List<PracticeExamQuestionDetailDTO> Questions { get; set; }

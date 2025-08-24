@@ -36,7 +36,7 @@ namespace GESS.Service.multipleExam
         }
         public async Task<ExamInfoResponseDTO> CheckExamNameAndCodeMEAsync(CheckExamRequestDTO request)
         {
-            return await _unitOfWork.MultipleExamRepository.CheckAndPrepareExamAsync(request.ExamId, request.Code, request.StudentId);
+            return await _unitOfWork.MultipleExamRepository.CheckAndPrepareExamAsync(request.ExamId, request.Code, request.StudentId, request.ExamSlotRoomId);
         }
         public async Task<UpdateMultiExamProgressResponseDTO> UpdateProgressAsync(UpdateMultiExamProgressDTO dto)
         {

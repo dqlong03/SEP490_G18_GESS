@@ -9,6 +9,7 @@ namespace GESS.Model.MultipleExam
     public class UpdateMultiExamProgressDTO
     {
         public Guid MultiExamHistoryId { get; set; }
+        public int? ExamSlotRoomId { get; set; }
         public List<UpdateAnswerDTO> Answers { get; set; }
     }
 

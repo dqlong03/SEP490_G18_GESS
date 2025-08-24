@@ -71,7 +71,7 @@ namespace GESS.Entity.Entities
 
         // Trạng thái công khai của kỳ thi (true = công khai, false = không công khai)
         [Column(TypeName = "BIT")]
-        public bool IsPublish { get; set; }
+        public bool? IsPublish { get; set; }
 
 
         // Danh sách chương (chapter) được thi trong kỳ thi này (qua bảng trung gian NoQuestionInChapter)

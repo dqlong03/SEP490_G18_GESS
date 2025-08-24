@@ -52,4 +52,16 @@ namespace GESS.Model.ExamSlotCreateDTO
         public string TeacherName { get; set; }
         public bool IsChecked { get; set; }
     }
+    public class TeacherCheckSubjectMajor
+    {
+        public Guid TeacherId { get; set; }
+        public string TeacherName { get; set; }
+        public int MajorId { get; set; }
+    }
+    public class ReqTeacherCheckSubjectMajor
+    {
+        public int SubjectId { get; set; }
+        public List<TeacherCheckSubjectMajor> TeacherCheckSubjectMajors { get; set; }
+    }
+
 }

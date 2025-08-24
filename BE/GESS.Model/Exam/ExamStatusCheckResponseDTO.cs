@@ -18,6 +18,7 @@ namespace GESS.Model.Exam
     {
         public List<int> ExamIds { get; set; } = new List<int>();
         public string? ExamType { get; set; } // "Multi", "Practice", hoặc null để check cả 2
+        public int? ExamSlotRoomId { get; set; } // Cần thiết cho bài thi cuối kỳ để xác định chính xác ca thi
     }
 
     public class ExamStatusCheckListResponseDTO

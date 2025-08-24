@@ -257,9 +257,9 @@ namespace GESS.Repository.Implement
             };
         }
 
-        public Task<bool> ClassExistsAsync(string className)
+        public async Task<bool> ClassExistsAsync(string className)
         {
-            var exists = _context.Classes.AnyAsync(c => c.ClassName == className);
+            var exists = await _context.Classes.AnyAsync(c => c.ClassName == className);
             return exists;
         }
 
@@ -405,9 +405,7 @@ namespace GESS.Repository.Implement
             {
                 var lowered = name.ToLower();
                 query = query.Where(c =>
-                    c.ClassName.ToLower().Contains(lowered) ||
-                    (c.Subject != null && c.Subject.SubjectName.ToLower().Contains(lowered)) ||
-                    (c.Semester != null && c.Semester.SemesterName.ToLower().Contains(lowered))
+                    c.ClassName.ToLower().Contains(lowered)
                 );
             }
 

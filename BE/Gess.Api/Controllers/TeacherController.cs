@@ -30,14 +30,12 @@ namespace GESS.Api.Controllers
             return Ok(teachers);
         }
 
-
-        [HttpPost]
-        public async Task<IActionResult> AddTeacher([FromBody] TeacherCreationRequest request)
+        [HttpPost("Restore")]
+        public async Task<IActionResult> RestoreTeacher([FromBody] Guid teacherId)
         {
-            var teacher = await _teacherService.AddTeacherAsync(request);
-            return CreatedAtAction(nameof(GetTeacherById), new { teacherId = teacher.TeacherId }, teacher);
+            var message = await _teacherService.RestoreTeacher(teacherId);
+            return Ok(new { Message = message });
         }
-
         [HttpPut("{teacherId}")]
         public async Task<IActionResult> UpdateTeacher(Guid teacherId, [FromBody] TeacherUpdateRequest request)
         {
@@ -59,19 +57,24 @@ namespace GESS.Api.Controllers
             return Ok(teachers);
         }
 
-
-        [HttpPost("import")]
-        public async Task<IActionResult> ImportTeachers(IFormFile file)
+        //API add teacher list 
+        [HttpPost("AddList")]
+        public async Task<IActionResult> AddTeacherList(List<TeacherCreationRequest> list)
         {
+            if (list == null || !list.Any())
+            {
+                return BadRequest("List of teachers cannot be empty.");
+            }
             try
             {
-                var teachers = await _teacherService.ImportTeachersFromExcelAsync(file);
-                return Ok(new { Count = teachers.Count, Teachers = teachers });
+                var teachers = await _teacherService.AddTeacherListAsync(list);
+                return Ok(teachers);
             }
             catch (Exception ex)
             {
-                return BadRequest($"Lỗi khi xử lý file: {ex.Message}");
+                return BadRequest($"Error processing file: {ex.Message}");
             }
         }
+
     }
 }

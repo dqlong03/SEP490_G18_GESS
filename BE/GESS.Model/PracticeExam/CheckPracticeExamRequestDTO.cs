@@ -11,5 +11,6 @@ namespace GESS.Model.PracticeExam
         public int ExamId { get; set; }
         public string Code { get; set; }
         public Guid StudentId { get; set; }
+        public int? ExamSlotRoomId { get; set; } // Nullable: chỉ cần cho bài thi cuối kỳ
     }
 }

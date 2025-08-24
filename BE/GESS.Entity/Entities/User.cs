@@ -13,8 +13,8 @@ namespace GESS.Entity.Entities
     {
         [Column(TypeName = "BIT")]
         public bool IsDeleted { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
         // ThaiNH_Modified_UserProfile_Begin
         [Required]

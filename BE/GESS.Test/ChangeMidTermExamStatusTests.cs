@@ -90,8 +90,8 @@ namespace GESS.Test
                 TwoFactorEnabled = false,
                 LockoutEnabled = false,
                 AccessFailedCount = 0,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
                 IsActive = true
             };
             _context.Users.Add(teacherUser);
@@ -779,6 +779,11 @@ namespace GESS.Test
         }
 
         public Task<bool> ChangeStatusExamSlot(int examSlotId, string examType)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<Model.ExamSlotCreateDTO.TeacherCheck>> CheckMajorSubject(Model.ExamSlotCreateDTO.ReqTeacherCheckSubjectMajor teachers)
         {
             throw new NotImplementedException();
         }

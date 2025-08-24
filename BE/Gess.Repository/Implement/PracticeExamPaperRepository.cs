@@ -57,7 +57,7 @@ namespace GESS.Repository.Implement
                     CategoryExamId = request.CategoryExamId,
                     LevelQuestionId = levelId,
                     SemesterId = request.SemesterId,
-                    CreateAt = DateTime.UtcNow,
+                    CreateAt = DateTime.Now,
                     CreatedBy = request.TeacherId,
                     IsPublic = true
                 };
@@ -84,7 +84,7 @@ namespace GESS.Repository.Implement
             {
                 PracExamPaperName = request.ExamName,
                 NumberQuestion = request.TotalQuestion,
-                CreateAt = DateTime.UtcNow,
+                CreateAt = DateTime.Now,
                 TeacherId = request.TeacherId,
                 CategoryExamId = request.CategoryExamId,
                 SubjectId = subjectId,

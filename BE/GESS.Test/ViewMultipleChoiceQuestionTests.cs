@@ -50,8 +50,8 @@ namespace GESS.Test
                 TwoFactorEnabled = false,
                 LockoutEnabled = false,
                 AccessFailedCount = 0,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
                 IsActive = true,
                 Fullname = "Test User"
             };
@@ -63,7 +63,7 @@ namespace GESS.Test
                 TeacherId = Guid.NewGuid(),
                 UserId = user.Id,
                 User = user,
-                HireDate = DateTime.UtcNow,
+                HireDate = DateTime.Now,
                 MajorId = 1
             };
             _context.Teachers.Add(teacher);
@@ -74,7 +74,7 @@ namespace GESS.Test
                 StudentId = Guid.NewGuid(),
                 UserId = user.Id,
                 User = user,
-                EnrollDate = DateTime.UtcNow,
+                EnrollDate = DateTime.Now,
                 AvatarURL = "default-avatar.jpg"
             };
             _context.Students.Add(student);
@@ -84,7 +84,7 @@ namespace GESS.Test
             {
                 MajorId = 1,
                 MajorName = "Công nghệ thông tin",
-                StartDate = DateTime.UtcNow,
+                StartDate = DateTime.Now,
                 IsActive = true
             };
             _context.Majors.Add(major);
@@ -128,7 +128,7 @@ namespace GESS.Test
                 Subject = subject,
                 SemesterId = semester.SemesterId,
                 Semester = semester,
-                CreatedDate = DateTime.UtcNow
+                CreatedDate = DateTime.Now
             };
             _context.Classes.Add(classEntity);
 
@@ -169,7 +169,7 @@ namespace GESS.Test
                 LevelQuestion = levelQuestion,
                 SemesterId = semester.SemesterId,
                 Semester = semester,
-                CreateAt = DateTime.UtcNow
+                CreateAt = DateTime.Now
             };
             _context.MultiQuestions.Add(multiQuestion1);
 
@@ -189,7 +189,7 @@ namespace GESS.Test
                 LevelQuestion = levelQuestion,
                 SemesterId = semester.SemesterId,
                 Semester = semester,
-                CreateAt = DateTime.UtcNow
+                CreateAt = DateTime.Now
             };
             _context.MultiQuestions.Add(multiQuestion2);
 
@@ -255,8 +255,8 @@ namespace GESS.Test
                 MultiExamId = 1,
                 MultiExamName = "Bài thi giữa kỳ",
                 NumberQuestion = 2,
-                StartDay = DateTime.UtcNow.AddDays(-1),
-                EndDay = DateTime.UtcNow.AddDays(1),
+                StartDay = DateTime.Now.AddDays(-1),
+                EndDay = DateTime.Now.AddDays(1),
                 Duration = 60,
                 Status = "Active",
                 CodeStart = "123456",
@@ -270,7 +270,7 @@ namespace GESS.Test
                 Semester = semester,
                 ClassId = classEntity.ClassId,
                 Class = classEntity,
-                CreateAt = DateTime.UtcNow,
+                CreateAt = DateTime.Now,
                 IsPublish = true
             };
             _context.MultiExams.Add(multiExam);
@@ -279,7 +279,7 @@ namespace GESS.Test
             var multiExamHistory = new MultiExamHistory
             {
                 ExamHistoryId = Guid.NewGuid(),
-                StartTime = DateTime.UtcNow,
+                StartTime = DateTime.Now,
                 EndTime = null,
                 Score = null,
                 CheckIn = true,
@@ -362,8 +362,8 @@ namespace GESS.Test
                 MultiExamId = 2,
                 MultiExamName = "Bài thi không có câu hỏi",
                 NumberQuestion = 0,
-                StartDay = DateTime.UtcNow.AddDays(-1),
-                EndDay = DateTime.UtcNow.AddDays(1),
+                StartDay = DateTime.Now.AddDays(-1),
+                EndDay = DateTime.Now.AddDays(1),
                 Duration = 60,
                 Status = "Active",
                 CodeStart = "654321",
@@ -377,7 +377,7 @@ namespace GESS.Test
                 Semester = _context.Semesters.First(),
                 ClassId = _context.Classes.First().ClassId,
                 Class = _context.Classes.First(),
-                CreateAt = DateTime.UtcNow,
+                CreateAt = DateTime.Now,
                 IsPublish = true
             };
             _context.MultiExams.Add(newMultiExam);

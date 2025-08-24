@@ -78,7 +78,7 @@ namespace GESS.Service.practicequestion
                     LevelQuestionId = dto.LevelQuestionId,
                     SemesterId = dto.SemesterId,
                     ChapterId = chapterId,
-                    CreateAt = DateTime.UtcNow
+                    CreateAt = DateTime.Now
                 };
 
                 await _unitOfWork.PracticeQuestionsRepository.CreateAsync(practiceQuestion);

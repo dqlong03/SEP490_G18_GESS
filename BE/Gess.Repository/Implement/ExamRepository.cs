@@ -184,6 +184,7 @@ namespace GESS.Repository.Implement
                             ExamId = meh.MultiExamId,
                             ExamName = meh.MultiExam?.MultiExamName,
                             ExamSlotName = meh.ExamSlotRoom.ExamSlot?.SlotName,
+                            ExamSlotRoomId = meh.ExamSlotRoom.ExamSlotRoomId,
                             SubjectName = meh.MultiExam?.Subject?.SubjectName,
                             CategoryExamName = meh.MultiExam?.CategoryExam?.CategoryExamName,
                             Status = meh.StatusExam,
@@ -266,6 +267,8 @@ namespace GESS.Repository.Implement
                             ExamSlotName = peh.ExamSlotRoom.ExamSlot?.SlotName,
                             SubjectName = peh.PracticeExam?.Subject?.SubjectName,
                             CategoryExamName = peh.PracticeExam?.CategoryExam?.CategoryExamName,
+                            ExamSlotRoomId = peh.ExamSlotRoom.ExamSlotRoomId,
+
                             Status = peh.StatusExam,
                             RoomName = peh.ExamSlotRoom.Room?.RoomName,
                             ExamDate = peh.ExamSlotRoom.ExamDate.ToString("dd/MM/yyyy"),
@@ -303,7 +306,7 @@ namespace GESS.Repository.Implement
                     {
                         // Bài thi cuối kỳ - check status từ ExamSlotRoom
                         var examSlotRoom = await _context.ExamSlotRooms
-                            .Where(esr => esr.MultiExamId == exam.MultiExamId)
+                            .Where(esr => esr.MultiExamId == exam.MultiExamId && esr.ExamSlotRoomId == request.ExamSlotRoomId)
                             .FirstOrDefaultAsync();
                         
                         if (examSlotRoom != null)
@@ -348,7 +351,7 @@ namespace GESS.Repository.Implement
                     {
                         // Bài thi cuối kỳ - check status từ ExamSlotRoom
                         var examSlotRoom = await _context.ExamSlotRooms
-                            .Where(esr => esr.PracticeExamId == exam.PracExamId)
+                            .Where(esr => esr.PracticeExamId == exam.PracExamId && esr.ExamSlotRoomId == request.ExamSlotRoomId)
                             .FirstOrDefaultAsync();
                         
                         if (examSlotRoom != null)
