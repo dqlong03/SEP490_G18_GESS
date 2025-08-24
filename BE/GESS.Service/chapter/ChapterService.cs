@@ -96,7 +96,7 @@ namespace GESS.Service.chapter
             chapter.ChapterName = chapterUpdateDTO.ChapterName;
             chapter.Description = chapterUpdateDTO.Description;
             chapter.SubjectId = chapterUpdateDTO.SubjectId;
-            chapter.Course = chapterUpdateDTO.Curriculum;
+            chapter.Course = chapterUpdateDTO.Course;
             _unitOfWork.ChapterRepository.Update(chapter);
             await _unitOfWork.SaveChangesAsync();
 
