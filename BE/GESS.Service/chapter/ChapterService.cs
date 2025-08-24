@@ -130,7 +130,7 @@ namespace GESS.Service.chapter
                 Id = chapter.ChapterId,
                 ChapterName = chapter.ChapterName,
                 // ThaiNH_add_UpdateMark&UserProfile_Begin
-                Curriculum = chapter.Course,
+                Course = chapter.Course,
                 // ThaiNH_add_UpdateMark&UserProfile_End
                 Description = chapter.Description,
             }).ToList();
