@@ -14,5 +14,6 @@ namespace GESS.Model.Exam
         public int Duration { get; set; }
         public DateTime? SubmittedDateTime { get; set; }
         public double Score { get; set; }
+        public bool IsGrade { get; set; }
     }
 }
