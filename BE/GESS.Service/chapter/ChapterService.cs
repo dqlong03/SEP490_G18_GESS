@@ -31,6 +31,7 @@ namespace GESS.Service.chapter
                 ChapterName = chapterCreateDto.ChapterName,
                 Description = chapterCreateDto.Description,
                 //Course = chapterCreateDto.Curriculum,
+                Course = chapterCreateDto.Course,
                 SubjectId = subjectId
             };
 
@@ -80,6 +81,7 @@ namespace GESS.Service.chapter
                 Id = chapter.ChapterId,
                 ChapterName = chapter.ChapterName,
                 Description = chapter.Description,
+                Course = chapter.Course,
                 SubjectName = chapter.Subject?.SubjectName ?? "N/A"
             };
         }
@@ -94,7 +96,7 @@ namespace GESS.Service.chapter
             chapter.ChapterName = chapterUpdateDTO.ChapterName;
             chapter.Description = chapterUpdateDTO.Description;
             chapter.SubjectId = chapterUpdateDTO.SubjectId;
-
+            chapter.Course = chapterUpdateDTO.Curriculum;
             _unitOfWork.ChapterRepository.Update(chapter);
             await _unitOfWork.SaveChangesAsync();
 
