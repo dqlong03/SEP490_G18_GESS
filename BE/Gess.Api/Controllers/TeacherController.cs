@@ -30,13 +30,6 @@ namespace GESS.Api.Controllers
             return Ok(teachers);
         }
 
-
-        [HttpPost]
-        public async Task<IActionResult> AddTeacher([FromBody] TeacherCreationRequest request)
-        {
-            var teacher = await _teacherService.AddTeacherAsync(request);
-            return CreatedAtAction(nameof(GetTeacherById), new { teacherId = teacher.TeacherId }, teacher);
-        }
         [HttpPost("Restore")]
         public async Task<IActionResult> RestoreTeacher([FromBody] Guid teacherId)
         {

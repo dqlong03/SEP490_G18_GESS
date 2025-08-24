@@ -98,16 +98,9 @@ namespace GESS.Repository.Implement
             }).ToList();
         }
 
-        public async Task<TeacherResponse> AddTeacherAsync(TeacherCreationRequest request)
+        public async Task<TeacherResponse> AddTeacherAsync(TeacherCreationRequest request, bool saveChanges = true)
         {
-           var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.UserName == request.UserName || u.Code == request.Code || u.Email == request.Email);
-            if (user != null)
-            {
-                throw new Exception($"User đã tồn tại: {request.UserName} / {request.Code} / {request.Email}");
-            }
-            // Tạo mới User 
-            user = new User
+            var user = new User
             {
                 UserName = request.UserName,
                 Email = request.Email,
@@ -119,18 +112,18 @@ namespace GESS.Repository.Implement
                 IsActive = request.IsActive,
                 IsDeleted = false,
                 CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now
+                UpdatedAt = DateTime.Now,
+                NormalizedEmail = request.Email.ToUpper(),
+                NormalizedUserName = request.UserName.ToUpper(),
             };
 
-            await _context.AddAsync(user);
-            await _context.SaveChangesAsync();
+            await _context.Users.AddAsync(user);
 
-            //Lay role Giao vien
             var teacherRole = await _context.Roles
                 .FirstOrDefaultAsync(r => r.Name == PredefinedRole.TEACHER_ROLE);
-             if (teacherRole == null)
+
+            if (teacherRole == null)
             {
-                //Tao role ten Giao vien
                 teacherRole = new IdentityRole<Guid>
                 {
                     Name = "Giáo viên",
@@ -138,58 +131,49 @@ namespace GESS.Repository.Implement
                     Id = Guid.NewGuid()
                 };
                 await _context.Roles.AddAsync(teacherRole);
-                await _context.SaveChangesAsync();
-
             }
-            //Theem User vào role Giao vien
+
             var userRole = new IdentityUserRole<Guid>
             {
                 UserId = user.Id,
                 RoleId = teacherRole.Id
             };
-
             _context.UserRoles.Add(userRole);
-            await _context.SaveChangesAsync();
 
-            // Tìm MajorId dựa trên MajorName
             var major = await _context.Majors
-                .FirstOrDefaultAsync(m => m.MajorId==request.MajorId && m.IsActive);
+                .FirstOrDefaultAsync(m => m.MajorId == request.MajorId && m.IsActive);
             if (major == null)
             {
                 throw new Exception($"Chuyên ngành với tên '{request.MajorName}' không tồn tại hoặc không hoạt động.");
             }
 
-            // Tạo teacher với MajorId hợp lệ
             var teacher = new Teacher
             {
                 UserId = user.Id,
                 MajorId = major.MajorId,
-                HireDate = request.HireDate 
+                HireDate = request.HireDate
             };
-
             await _context.Teachers.AddAsync(teacher);
-            await _context.SaveChangesAsync();
 
-            // Lấy lại teacher vừa thêm để trả về response
-            var entity = await _context.Teachers
-                .Include(t => t.User)
-                .Include(m => m.Major)
-                .FirstOrDefaultAsync(t => t.TeacherId == teacher.TeacherId);
+            if (saveChanges)
+            {
+                await _context.SaveChangesAsync();
+            }
 
             return new TeacherResponse
             {
-                TeacherId = entity.TeacherId,
-                UserName = entity.User.UserName,
-                Email = entity.User.Email,
-                PhoneNumber = entity.User.PhoneNumber,
-                DateOfBirth = entity.User.DateOfBirth,
-                Fullname = entity.User.Fullname,
-                Gender = entity.User.Gender,
-                IsActive = entity.User.IsActive,
-                Code = entity.User.Code,
-                HireDate = entity.HireDate,
-                MajorId = entity.MajorId,
-                MajorName = entity.Major.MajorName
+                TeacherId = teacher.TeacherId,
+                UserName = user.UserName,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
+                DateOfBirth = user.DateOfBirth,
+                Fullname = user.Fullname,
+                Gender = user.Gender,
+                IsActive = user.IsActive,
+                Code = user.Code,
+                HireDate = teacher.HireDate,
+                MajorId = teacher.MajorId,
+                MajorName = major.MajorName
             };
         }
 
@@ -352,20 +336,38 @@ namespace GESS.Repository.Implement
             {
                 return "List of teachers cannot be empty.";
             }
-            //Kiem tra co trung lap thi tra ve loi
+
+            // Kiểm tra trùng lặp
             foreach (var item in list)
             {
                 var existingUser = await _context.Users
-                    .FirstOrDefaultAsync(u => u.UserName == item.UserName || u.Code == item.Code || u.Email == item.Email);
+                    .FirstOrDefaultAsync(u => u.UserName == item.UserName
+                                           || u.Code == item.Code
+                                           || u.Email == item.Email);
                 if (existingUser != null)
                 {
                     return $"Teacher with UserName: {item.UserName}, Code: {item.Code} or Email: {item.Email} already exists.";
                 }
             }
-            //Tao moi danh sach User
-            await Task.WhenAll(list.Select(item => AddTeacherAsync(item)));
 
-            return "Thanh cong";
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                foreach (var item in list)
+                {
+                    await AddTeacherAsync(item, saveChanges: false);
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+
+            return "Thành công";
         }
     }
 

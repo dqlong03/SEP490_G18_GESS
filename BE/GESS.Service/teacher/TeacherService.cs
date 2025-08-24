@@ -41,12 +41,6 @@ namespace GESS.Service.teacher
             return await _unitOfWork.TeacherRepository.GetAllTeachersAsync(active, name, fromDate, toDate, pageNumber, pageSize);
         }
 
-        public async Task<TeacherResponse> AddTeacherAsync(TeacherCreationRequest request)
-        {
-            return await _unitOfWork.TeacherRepository.AddTeacherAsync(request);
-
-
-        }
 
         public async Task<TeacherResponse> UpdateTeacherAsync(Guid teacherId, TeacherUpdateRequest request)
         {

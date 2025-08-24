@@ -13,7 +13,6 @@ namespace GESS.Service.teacher
         Task<TeacherResponse> GetTeacherByIdAsync(Guid teacherId);
         Task<int> CountPageAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageSize);
         Task<List<TeacherResponse>> GetAllTeachersAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageNumber, int pageSize);
-        Task<TeacherResponse> AddTeacherAsync(TeacherCreationRequest request);
         Task<TeacherResponse> UpdateTeacherAsync(Guid teacherId, TeacherUpdateRequest request);
         Task DeleteTeacherAsync(Guid teacherId);
         Task SendResetPasswordEmailAsync(Guid userId, string resetPasswordUrlBase);
