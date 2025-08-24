@@ -252,7 +252,7 @@ export default function ExamSchedulePage() {
   const [examSchedules, setExamSchedules] = useState<ApiExamSchedule[]>([]);
   const [updatingStatus, setUpdatingStatus] = useState<number | null>(null);
   const router = useRouter();
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://localhost:7074";
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://localhost:7074";
 
 
   useEffect(() => {

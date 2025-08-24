@@ -354,32 +354,38 @@ export default function TeacherManagementPage() {
   };
 
   // Save imported teachers
-  const handleSaveImportedTeachers = async () => {
-    setImportError('');
-    setImportSuccess('');
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/Teacher/AddList`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(importedTeachers),
-      });
-      // if (!res.ok) throw new Error('Failed to add teachers');
-      const result = await res.json();
-      if (result !== true) showToast("error",'Một số giáo viên đã tồn tại hoặc lỗi dữ liệu!');
+ const handleSaveImportedTeachers = async () => {
+  setImportError('');
+  setImportSuccess('');
+  setLoading(true);
+  try {
+    const payload = importedTeachers.map(t => ({
+      ...t,
+      majorName: majors.find(m => m.majorId === t.majorId)?.majorName || ''
+    }));
+    const res = await fetch(`${API_BASE}/Teacher/AddList`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const text = await res.text();
+    if (text.trim() === "false") {
+      showToast("error", "Một số giáo viên đã tồn tại hoặc lỗi dữ liệu!");
+    } else {
       setImportSuccess('Thêm danh sách giáo viên thành công!');
       showSuccess('Thêm danh sách giáo viên thành công!');
       setShowImportDiv(false);
       setImportedTeachers([]);
       fetchTeachers(1, search);
       setCurrentPage(1);
-    } catch (err: any) {
-      setImportError(err.message || 'Lỗi thêm danh sách giáo viên');
-      showError(err.message || 'Lỗi thêm danh sách giáo viên');
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (err: any) {
+    setImportError(err.message || 'Lỗi thêm danh sách giáo viên');
+    showError(err.message || 'Lỗi thêm danh sách giáo viên');
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Close popup
   const closePopup = () => {
@@ -485,6 +491,7 @@ export default function TeacherManagementPage() {
                       <th className="px-3 py-2 border text-xs font-semibold text-gray-700">Họ và tên</th>
                       <th className="px-3 py-2 border text-xs font-semibold text-gray-700">Ngày sinh</th>
                       <th className="px-3 py-2 border text-xs font-semibold text-gray-700">Giới tính</th>
+                      <th className="px-3 py-2 border text-xs font-semibold text-gray-700">Mã GV</th>
                       <th className="px-3 py-2 border text-xs font-semibold text-gray-700">Ngành</th>
                     </tr>
                   </thead>
@@ -529,6 +536,13 @@ export default function TeacherManagementPage() {
                             <option value="Nam">Nam</option>
                             <option value="Nữ">Nữ</option>
                           </select>
+                        </td>
+                        <td className="border px-2 py-1">
+                          <input 
+                            value={row.code} 
+                            onChange={e => handleEditImported(idx, 'code', e.target.value)} 
+                            className="w-20 border rounded px-1 text-xs" 
+                          />
                         </td>
                         <td className="border px-2 py-1">
                           <select 

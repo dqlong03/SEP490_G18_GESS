@@ -408,25 +408,25 @@ export const useExamSlotCreate = () => {
     const rows = [
       [
         "https://randomuser.me/api/portraits/men/1.jpg",
-        "SV001",
-        "sv001@example.com",
+        "HE173114",
+        "kienlvhe173114@fpt.edu.vn",
         "Nam",
         "2002-01-01",
         "Nguyễn Văn A",
       ],
-      [
-        "https://randomuser.me/api/portraits/women/2.jpg",
-        "SV002",
-        "sv002@example.com",
-        "Nữ",
-        "2002-02-02",
-        "Trần Thị B",
-      ],
+      // [
+      //   "https://randomuser.me/api/portraits/women/2.jpg",
+      //   "SV002",
+      //   "sv002@example.com",
+      //   "Nữ",
+      //   "2002-02-02",
+      //   "Trần Thị B",
+      // ],
     ];
     const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "DanhSach");
-    XLSX.writeFile(wb, "mau_sinh_vien.xlsx");
+    XLSX.writeFile(wb, "mau_sinh_vien_tao_ca_thi.xlsx");
   };
 
   const handleStudentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -497,14 +497,14 @@ export const useExamSlotCreate = () => {
           return;
         }
 
-        if (!isValidDate(dob)) {
-          setStudentErrorMsg(
-            `Ngày sinh không hợp lệ ở dòng ${i + 1}: ${dob} (Định dạng: YYYY-MM-DD)`
-          );
-          setStudentFileName("");
-          resetInput();
-          return;
-        }
+        // if (!isValidDate(dob)) {
+        //   setStudentErrorMsg(
+        //     `Ngày sinh không hợp lệ ở dòng ${i + 1}: ${dob} (Định dạng: YYYY-MM-DD)`
+        //   );
+        //   setStudentFileName("");
+        //   resetInput();
+        //   return;
+        // }
 
         dataArr.push({
           id: Date.now() + i,
