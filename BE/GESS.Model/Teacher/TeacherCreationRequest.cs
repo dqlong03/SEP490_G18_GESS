@@ -26,7 +26,7 @@ namespace GESS.Model.Teacher
         public string Fullname { get; set; }
         public bool Gender { get; set; }
         public bool IsActive { get; set; } = true;
-        public string? Password { get; set; }
+        public string? Password { get; set; } = "Password123!";
 
         [Required(ErrorMessage = "Mã giáo viên không được bỏ trống")]
         public string Code { get; set; }

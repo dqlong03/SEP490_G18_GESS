@@ -115,6 +115,8 @@ namespace GESS.Repository.Implement
                 UpdatedAt = DateTime.Now,
                 NormalizedEmail = request.Email.ToUpper(),
                 NormalizedUserName = request.UserName.ToUpper(),
+                EmailConfirmed = true,
+                PasswordHash = _userManager.PasswordHasher.HashPassword(null, request.Password ?? "Password123!")    
             };
 
             await _context.Users.AddAsync(user);
