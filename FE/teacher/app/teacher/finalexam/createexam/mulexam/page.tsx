@@ -19,8 +19,9 @@ import {
   Target,
   BarChart3
 } from 'lucide-react';
+import { showToast } from "@/utils/toastUtils";
 
-const API_URL = "https://localhost:7074";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://localhost:7074";
 
 type Subject = {
   subjectId: number;
@@ -218,13 +219,13 @@ export default function CreateFinalMultipleExamPage() {
       });
       
       if (res.ok) {
-        alert("Tạo bài kiểm tra thành công!");
+        showToast("success", "Tạo bài kiểm tra thành công!");
         router.push("/teacher/finalexam");
       } else {
-        alert("Tạo bài kiểm tra thất bại!");
+        showToast("error", "Tạo bài kiểm tra thất bại!");
       }
     } catch (error) {
-      alert("Có lỗi xảy ra khi tạo bài kiểm tra!");
+      showToast("error", "Có lỗi xảy ra khi tạo bài kiểm tra!");
     } finally {
       setIsSubmitting(false);
     }
@@ -572,7 +573,7 @@ export default function CreateFinalMultipleExamPage() {
 
         {/* Chapter Selection Modal */}
         {showChapterPopup && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[100vh] overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">

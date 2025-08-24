@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense, useState } from 'react';
 import { 
   Search, 
   Filter, 
@@ -12,15 +13,17 @@ import {
   GraduationCap,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Trash2,
   Target,
   FileText
 } from 'lucide-react';
 import { useTrainingPrograms } from '@hooks/examination/trainningProgramHook';
-import { Suspense } from "react";
 
-
-export default function TrainingProgramManager() {
+function TrainingProgramContent() {
+  const [guideOpen, setGuideOpen] = useState(false);
+  
   const {
     programs,
     loading,
@@ -30,6 +33,7 @@ export default function TrainingProgramManager() {
     showPopup,
     pageNumber,
     totalPages,
+    totalCount,
     searchName,
     setSearchName,
     searchFromDate,
@@ -41,7 +45,7 @@ export default function TrainingProgramManager() {
     handleSubmit,
     handleEdit,
     handleDelete,
-    handleSearch,
+    handleDateSearch,
     closePopup,
     setShowPopup,
     setEditingId,
@@ -49,20 +53,38 @@ export default function TrainingProgramManager() {
     handleRowClick,
   } = useTrainingPrograms();
   return (
-      <Suspense fallback={<div>Loading...</div>}>
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+     
+    <div className="min-h-screen bg-white">
       <div className="container mx-auto px-6 py-8">
         {/* Header Section */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
-              <GraduationCap className="w-6 h-6 text-white" />
+            <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+              <GraduationCap className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Quản lý chương trình đào tạo
-            </h1>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                Quản lý chương trình đào tạo
+              </h1>
+              <p className="text-gray-600 text-sm mt-1">Quản lý các chương trình đào tạo và môn học liên quan</p>
+            </div>
           </div>
-          <p className="text-gray-600 ml-11">Quản lý các chương trình đào tạo và môn học liên quan</p>
+          
+          {/* Hướng dẫn sử dụng */}
+          <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <BookOpen className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-blue-800 mb-1">💡 Hướng dẫn sử dụng</h4>
+                <p className="text-sm text-blue-700">
+                  Nhấn 2 lần vào bất kỳ dòng nào trong bảng để xem chi tiết chương trình đào tạo của ngành học đó.
+                  Tìm kiếm sẽ tự động thực hiện sau khi bạn dừng gõ.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {error && (
@@ -76,13 +98,13 @@ export default function TrainingProgramManager() {
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
           {/* Search and Action Bar */}
           <div className="p-6 bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200">
-            <form onSubmit={handleSearch} className="flex flex-wrap gap-4 items-center">
+            <div className="flex flex-wrap gap-4 items-center">
               <div className="flex-1 min-w-72">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type="text"
-                    placeholder="Tìm kiếm theo tên chương trình..."
+                    placeholder="Tìm kiếm"
                     value={searchName}
                     onChange={e => setSearchName(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white"
@@ -97,7 +119,10 @@ export default function TrainingProgramManager() {
                     type="date"
                     placeholder="Từ ngày"
                     value={searchFromDate}
-                    onChange={e => setSearchFromDate(e.target.value)}
+                    onChange={e => {
+                      setSearchFromDate(e.target.value);
+                      handleDateSearch();
+                    }}
                     className="pl-9 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white text-sm"
                   />
                 </div>
@@ -108,18 +133,13 @@ export default function TrainingProgramManager() {
                     type="date"
                     placeholder="Đến ngày"
                     value={searchToDate}
-                    onChange={e => setSearchToDate(e.target.value)}
+                    onChange={e => {
+                      setSearchToDate(e.target.value);
+                      handleDateSearch();
+                    }}
                     className="pl-9 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white text-sm"
                   />
                 </div>
-                
-                <button 
-                  type="submit" 
-                  className="flex items-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-sm"
-                >
-                  <Search className="w-4 h-4" />
-                  Tìm kiếm
-                </button>
                 
                 <button
                   type="button"
@@ -148,7 +168,7 @@ export default function TrainingProgramManager() {
                   Thêm mới
                 </button>
               </div>
-            </form>
+            </div>
           </div>          {/* Popup Add/Edit */}
           {showPopup && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn">
@@ -301,7 +321,7 @@ export default function TrainingProgramManager() {
                       <th className="text-left py-4 px-6 font-semibold text-gray-700">
                         <div className="flex items-center gap-2">
                           <Target className="w-4 h-4" />
-                          ID
+                          STT
                         </div>
                       </th>
                       <th className="text-left py-4 px-6 font-semibold text-gray-700">
@@ -341,7 +361,7 @@ export default function TrainingProgramManager() {
                       >
                         <td className="py-4 px-6">
                           <span className="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 rounded-lg font-medium text-sm">
-                            {program.trainingProgramId}
+                            {index + 1}
                           </span>
                         </td>
                         <td className="py-4 px-6">
@@ -361,7 +381,7 @@ export default function TrainingProgramManager() {
                           <div className="flex items-center justify-center gap-2">
                             <Calendar className="w-4 h-4 text-orange-600" />
                             <span className="text-gray-700">
-                              {program.endDate ? program.endDate.substring(0, 10) : 'Không giới hạn'}
+                              {program.endDate ? program.endDate.substring(0, 10) : '-'}
                             </span>
                           </div>
                         </td>
@@ -383,6 +403,7 @@ export default function TrainingProgramManager() {
                               <Edit3 className="w-3.5 h-3.5" />
                               Sửa
                             </button>
+                            {/* Hiển thị nút xóa cho tất cả chương trình vì không có field isActive */}
                             <button
                               onClick={e => { 
                                 e.stopPropagation(); 
@@ -411,9 +432,9 @@ export default function TrainingProgramManager() {
               <div className="text-sm text-gray-700">
                 Hiển thị <span className="font-medium">{(pageNumber - 1) * 10 + 1}</span> đến{' '}
                 <span className="font-medium">
-                  {Math.min(pageNumber * 10, programs.length)}
+                  {Math.min(pageNumber * 10, (pageNumber - 1) * 10 + programs.length)}
                 </span>{' '}
-                của <span className="font-medium">{programs.length}</span> kết quả
+                của <span className="font-medium">{totalCount}</span> kết quả
               </div>
               
               <div className="flex items-center gap-2">
@@ -467,19 +488,6 @@ export default function TrainingProgramManager() {
             </div>
           </div>
         )}
-
-        {/* Info Hint */}
-        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-start gap-3">
-            <BookOpen className="w-5 h-5 text-blue-600 mt-0.5" />
-            <div>
-              <h4 className="text-sm font-semibold text-blue-800 mb-1">Hướng dẫn sử dụng</h4>
-              <p className="text-sm text-blue-700">
-                Nhấn vào bất kỳ dòng nào trong bảng để xem chi tiết môn học trong chương trình đào tạo đó.
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Custom Animations */}
@@ -513,7 +521,21 @@ export default function TrainingProgramManager() {
         }
       `}</style>
     </div>
+ 
+  );
+}
+
+export default function TrainingProgramManager() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải...</p>
+        </div>
+      </div>
+    }>
+      <TrainingProgramContent />
     </Suspense>
   );
-
 }

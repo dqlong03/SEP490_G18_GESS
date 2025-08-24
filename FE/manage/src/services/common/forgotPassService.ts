@@ -4,7 +4,7 @@ export async function sendOtp(
   email: string
 ): Promise<{ success: boolean; message?: string }> {
   try {
-    const res = await fetch(`${API_BASE}/Otp/send`, {
+    const res = await fetch(`${API_BASE}/api/Otp/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),

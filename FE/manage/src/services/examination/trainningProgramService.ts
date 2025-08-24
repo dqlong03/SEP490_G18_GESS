@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL + "/TrainingProgram";
+const API_URL = process.env.NEXT_PUBLIC_API_URL + "/api/TrainingProgram";
 
 export type TrainingProgram = {
   trainingProgramId: number;
@@ -24,7 +24,12 @@ export async function fetchPrograms(
     if (v !== undefined && v !== "") searchParams.append(k, String(v));
   });
   const res = await fetch(`${API_URL}/${majorId}?${searchParams.toString()}`);
-  if (!res.ok) throw new Error("Failed to fetch training programs");
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(
+      errorData?.message || "Lỗi khi tải danh sách chương trình đào tạo"
+    );
+  }
   return res.json();
 }
 
@@ -39,7 +44,12 @@ export async function countPrograms(
   const res = await fetch(
     `${API_URL}/count/${majorId}?${searchParams.toString()}`
   );
-  if (!res.ok) throw new Error("Failed to count training programs");
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(
+      errorData?.message || "Lỗi khi đếm số lượng chương trình đào tạo"
+    );
+  }
   return res.json();
 }
 
@@ -55,7 +65,10 @@ export async function createProgram(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(dataToSend),
   });
-  if (!res.ok) throw new Error("Failed to add training program");
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(errorData?.message || "Lỗi khi thêm chương trình đào tạo");
+  }
 }
 
 export async function updateProgram(id: number, form: TrainingProgramForm) {
@@ -67,10 +80,18 @@ export async function updateProgram(id: number, form: TrainingProgramForm) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(dataToSend),
   });
-  if (!res.ok) throw new Error("Failed to update training program");
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(
+      errorData?.message || "Lỗi khi cập nhật chương trình đào tạo"
+    );
+  }
 }
 
 export async function deleteProgram(id: number) {
   const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-  if (!res.ok) throw new Error("Failed to delete training program");
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(errorData?.message || "Lỗi khi xóa chương trình đào tạo");
+  }
 }

@@ -6,7 +6,7 @@ import {
   updateUser,
   User,
   UserEditFields,
-} from "@services/common/profileService";
+} from "@/services/common/profileService";
 import { getUserIdFromToken } from "@/utils/tokenUtils";
 
 export function useProfile() {

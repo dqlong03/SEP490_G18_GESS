@@ -7,7 +7,6 @@ import { Suspense } from "react";
 export default function VerifyPage() {
   const { otp, error, loading, handleChange, handleFocus, handleSubmit } = useOtpVerify();
   return (
-     <Suspense fallback={<div>Loading...</div>}>
     <OtpVerifyForm
       otp={otp}
       error={error}
@@ -16,6 +15,5 @@ export default function VerifyPage() {
       handleFocus={handleFocus}
       handleSubmit={handleSubmit}
     />
-    </Suspense>
   );
 }

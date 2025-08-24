@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, FormEvent, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import { showToast } from "@/utils/toastUtils";
 import {
   Subject,
   fetchSubjectsInProgram,
@@ -25,6 +26,7 @@ export function useTrainingProgramSubjects() {
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(
     null
   );
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const fetchSubjects = async () => {
     setLoading(true);
@@ -38,7 +40,9 @@ export function useTrainingProgramSubjects() {
       const data = await fetchSubjectsInProgram(trainingProgramId, params);
       setSubjects(data);
     } catch (err: any) {
+      // Don't show toast for search errors, just set empty state
       setError(err.message);
+      setSubjects([]);
     }
     setLoading(false);
   };
@@ -51,10 +55,33 @@ export function useTrainingProgramSubjects() {
   };
 
   useEffect(() => {
-    fetchSubjects();
     fetchAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageNumber, searchName, trainingProgramId]);
+  }, [trainingProgramId]);
+
+  useEffect(() => {
+    fetchSubjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageNumber, trainingProgramId]);
+
+  // Debounced search for searchName
+  useEffect(() => {
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    const timeout = setTimeout(() => {
+      setPageNumber(1);
+      fetchSubjects();
+    }, 800); // 800ms delay
+
+    setSearchTimeout(timeout);
+
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchName]);
 
   const handleAddSubject = async (e: FormEvent) => {
     e.preventDefault();
@@ -64,21 +91,24 @@ export function useTrainingProgramSubjects() {
     try {
       await addSubjectToProgram(trainingProgramId, selectedSubjectId);
       setSelectedSubjectId(null);
+      showToast("success", "Thêm môn học vào chương trình thành công");
       fetchSubjects();
     } catch (err: any) {
+      showToast("error", err.message || "Có lỗi xảy ra khi thêm môn học");
       setError(err.message);
     }
     setLoading(false);
   };
 
   const handleDelete = async (subjectId: number) => {
-    if (!confirm("Bạn có chắc muốn xóa môn học này khỏi chương trình?")) return;
     setLoading(true);
     setError(null);
     try {
       await removeSubjectFromProgram(trainingProgramId, subjectId);
+      showToast("success", "Xóa môn học khỏi chương trình thành công");
       fetchSubjects();
     } catch (err: any) {
+      showToast("error", err.message || "Có lỗi xảy ra khi xóa môn học");
       setError(err.message);
     }
     setLoading(false);
@@ -86,6 +116,11 @@ export function useTrainingProgramSubjects() {
 
   const handleSearch = (e: FormEvent) => {
     e.preventDefault();
+    setPageNumber(1);
+    fetchSubjects();
+  };
+
+  const handleDateSearch = () => {
     setPageNumber(1);
     fetchSubjects();
   };
@@ -105,5 +140,6 @@ export function useTrainingProgramSubjects() {
     handleAddSubject,
     handleDelete,
     handleSearch,
+    handleDateSearch,
   };
 }

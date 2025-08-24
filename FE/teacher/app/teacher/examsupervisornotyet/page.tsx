@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { getUserIdFromToken } from "@/utils/tokenUtils";
 import {
   Calendar,
   Clock,
@@ -16,225 +15,46 @@ import {
   AlertTriangle,
   CheckCircle2
 } from 'lucide-react';
+import { useExamSupervisorNotYet } from '../../../src/hooks/teacher/useExamSupervisorNotYet';
 
-// Kiểu dữ liệu ca thi
-type ApiExamSchedule = {
-  examSlotRoomId: number;
-  examSlotId: number;
-  roomName: string;
-  subjectName: string;
-  examDate: string;
-  startTime: string;
-  endTime: string;
-  status: number; // 0: chưa điểm danh, 1: đang thi, 2: đã thi
-  examSlotStatus: string; // Trạng thái gán bài thi
-};
+// Loading component
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center py-12">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    <span className="ml-3 text-gray-600">Đang tải lịch thi...</span>
+  </div>
+);
 
-// Hàm lấy thông tin trạng thái từ status, kiểm tra ngày và examSlotStatus
-function getStatusInfo(status: number, isToday: boolean, examSlotStatus: string) {
-  const isNotAssigned = examSlotStatus === "Chưa gán bài thi";
-  const isNotOpened = examSlotStatus === "Chưa mở ca";
-  const isDisabled = !isToday && (status === 0 || status === 1) || isNotAssigned || isNotOpened;
-
-  if (isNotOpened) {
-    return {
-      label: 'Chưa mở ca',
-      color: 'gray',
-      buttonColor: 'bg-gray-400 cursor-not-allowed',
-      icon: Lock,
-      buttonText: 'Chưa mở ca',
-      disabled: true
-    };
-  }
-  if (isNotAssigned) {
-    return {
-      label: 'Chưa gán bài thi',
-      color: 'red',
-      buttonColor: 'bg-red-400 cursor-not-allowed',
-      icon: AlertTriangle,
-      buttonText: 'Chưa gán bài thi',
-      disabled: true
-    };
-  }
-  switch (status) {
-    case 0:
-      return {
-        label: 'Chưa điểm danh',
-        color: isDisabled ? 'gray' : 'blue',
-        buttonColor: isDisabled ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700',
-        icon: isDisabled ? Lock : UserCheck,
-        buttonText: isDisabled ? 'Chưa đến ngày thi' : 'Điểm danh',
-        disabled: isDisabled
-      };
-    case 1:
-      return {
-        label: 'Đang thi',
-        color: isDisabled ? 'gray' : 'orange',
-        buttonColor: isDisabled ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700',
-        icon: isDisabled ? Lock : Play,
-        buttonText: isDisabled ? 'Chưa đến ngày thi' : 'Đang diễn ra',
-        disabled: isDisabled
-      };
-    case 2:
-      return {
-        label: 'Đã thi',
-        color: 'green',
-        buttonColor: 'bg-green-600 hover:bg-green-700',
-        icon: Eye,
-        buttonText: 'Xem lịch sử',
-        disabled: false
-      };
-    default:
-      return {
-        label: 'Không xác định',
-        color: 'gray',
-        buttonColor: 'bg-gray-600 hover:bg-gray-700',
-        icon: Clock,
-        buttonText: 'Không xác định',
-        disabled: false
-      };
-  }
-}
-
-// Format time từ TimeSpan string (HH:mm:ss)
-function formatTimeFromTimeSpan(timeSpan: string): string {
-  if (!timeSpan) return "";
-  const [hours, minutes] = timeSpan.split(':');
-  return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
-}
-
-// Kiểm tra xem ngày thi có trùng với ngày hiện tại không
-function isExamDateToday(examDate: string): boolean {
-  const today = new Date();
-  const examDay = new Date(examDate);
-  return today.getFullYear() === examDay.getFullYear() &&
-    today.getMonth() === examDay.getMonth() &&
-    today.getDate() === examDay.getDate();
-}
-
-// Format ngày
-function formatDate(dateStr: string) {
-  const d = new Date(dateStr);
-  return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getFullYear()}`;
-}
-
-export default function ExamSupervisorNotYetPage() {
-  const [examSchedules, setExamSchedules] = useState<ApiExamSchedule[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [updatingStatus, setUpdatingStatus] = useState<number | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>(() => {
-    const today = new Date();
-    return today.toISOString().slice(0, 10);
-  });
+// Main content component
+const ExamSupervisorNotYetContent = () => {
   const router = useRouter();
+  const {
+    examSchedules,
+    loading,
+    updatingStatus,
+    selectedDate,
+    quickDateButtons,
+    statistics,
+    handleDateChange,
+    handleQuickDateSelect,
+    handleExamAction,
+    getStatusInfo,
+    formatTimeFromTimeSpan,
+    formatDate,
+    isExamDateToday
+  } = useExamSupervisorNotYet();
 
-  // Fetch lịch thi theo ngày được chọn
-  const fetchExamSchedules = (date: string) => {
-    const teacherId = getUserIdFromToken();
-    if (!teacherId) {
-      setExamSchedules([]);
-      setLoading(false);
-      return;
-    }
-
-
-        // Tạo Date object từ string
-    const currentDate = new Date(date);
-    // Tạo ngày hôm qua
-    const date1 = new Date(currentDate);
-    date1.setDate(date1.getDate());
-    const yesterdayString = date1.toISOString().slice(0, 10);
-    
-    // Tạo ngày mai
-    const date2 = new Date(currentDate);
-    date2.setDate(date2.getDate() + 1);
-    const tomorrowString = date2.toISOString().slice(0, 10);
-
-    setLoading(true);
-    fetch(
-      `https://localhost:7074/api/ExamSchedule/teacher/${teacherId}?fromDate=${yesterdayString}&toDate=${tomorrowString}`
-    )
-      .then((res) => res.json())
-      .then((data) => {
-        const schedules = Array.isArray(data) ? data : [];
-        // Sắp xếp theo thời gian bắt đầu
-        schedules.sort((a, b) => {
-          const tA = formatTimeFromTimeSpan(a.startTime);
-          const tB = formatTimeFromTimeSpan(b.startTime);
-          return tA.localeCompare(tB);
-        });
-        setExamSchedules(schedules);
-      })
-      .catch(() => setExamSchedules([]))
-      .finally(() => setLoading(false));
-  };
-
-  // Fetch lịch thi khi component mount hoặc ngày thay đổi
-  useEffect(() => {
-    fetchExamSchedules(selectedDate);
-  }, [selectedDate]);
-
-  // Xử lý click nút theo status
-  const handleExamAction = async (exam: ApiExamSchedule) => {
-    const isToday = isExamDateToday(exam.examDate);
-    const statusInfo = getStatusInfo(exam.status, isToday, exam.examSlotStatus);
-
-    if (statusInfo.disabled) return;
-
-    if (exam.status === 0) {
-      setUpdatingStatus(exam.examSlotRoomId);
-      try {
-        const response = await fetch(
-          `https://localhost:7074/api/ExamSchedule/changestatus?examSlotRoomId=${exam.examSlotRoomId}&status=1`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        if (response.ok) {
-          setExamSchedules(prev =>
-            prev.map(e =>
-              e.examSlotRoomId === exam.examSlotRoomId
-                ? { ...e, status: 1 }
-                : e
-            )
-          );
-          router.push(`/teacher/examsupervisor/attendancechecking?examId=${exam.examSlotRoomId}`);
-        } else {
-          alert("Không thể cập nhật trạng thái ca thi. Vui lòng thử lại.");
-        }
-      } catch (error) {
-        alert("Có lỗi xảy ra khi cập nhật trạng thái ca thi. Vui lòng thử lại.");
-      } finally {
-        setUpdatingStatus(null);
-      }
-    } else if (exam.status === 1) {
-      router.push(`/teacher/examsupervisor/attendancechecking?examId=${exam.examSlotRoomId}`);
-    } else if (exam.status === 2) {
-      router.push(`/teacher/examsupervisor/attendancechecking?examId=${exam.examSlotRoomId}&view=true`);
-    }
-  };
-
-  // Xử lý khi thay đổi ngày
-  const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSelectedDate(event.target.value);
-  };
-
-  // Nút nhanh chọn ngày
-  const getQuickDateButtons = () => {
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-
-    return [
-      { label: 'Hôm qua', date: yesterday.toISOString().slice(0, 10) },
-      { label: 'Hôm nay', date: today.toISOString().slice(0, 10) },
-      { label: 'Ngày mai', date: tomorrow.toISOString().slice(0, 10) }
-    ];
+  // Get icon component from string name
+  const getIconComponent = (iconName: string) => {
+    const iconMap: { [key: string]: any } = {
+      Clock,
+      UserCheck,
+      Play,
+      Eye,
+      AlertTriangle,
+      Lock
+    };
+    return iconMap[iconName] || Clock;
   };
 
   return (
@@ -290,10 +110,10 @@ export default function ExamSupervisorNotYetPage() {
                 Chọn nhanh
               </label>
               <div className="flex space-x-3">
-                {getQuickDateButtons().map((button) => (
+                {quickDateButtons.map((button) => (
                   <button
                     key={button.label}
-                    onClick={() => setSelectedDate(button.date)}
+                    onClick={() => handleQuickDateSelect(button.date)}
                     className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors duration-200 ${
                       selectedDate === button.date
                         ? 'bg-blue-600 text-white shadow-lg'
@@ -315,7 +135,7 @@ export default function ExamSupervisorNotYetPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Tổng ca thi</p>
-                  <p className="text-2xl font-bold text-blue-600">{examSchedules.length}</p>
+                  <p className="text-2xl font-bold text-blue-600">{statistics.total}</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                   <BookOpen className="w-6 h-6 text-blue-600" />
@@ -326,9 +146,7 @@ export default function ExamSupervisorNotYetPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Chưa gán bài thi</p>
-                  <p className="text-2xl font-bold text-red-600">
-                    {examSchedules.filter(e => e.examSlotStatus === "Chưa gán bài thi").length}
-                  </p>
+                  <p className="text-2xl font-bold text-red-600">{statistics.notAssigned}</p>
                 </div>
                 <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
                   <AlertTriangle className="w-6 h-6 text-red-600" />
@@ -339,9 +157,7 @@ export default function ExamSupervisorNotYetPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Chưa điểm danh</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {examSchedules.filter(e => e.status === 0 && e.examSlotStatus !== "Chưa gán bài thi").length}
-                  </p>
+                  <p className="text-2xl font-bold text-blue-600">{statistics.notAttended}</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                   <UserCheck className="w-6 h-6 text-blue-600" />
@@ -352,9 +168,7 @@ export default function ExamSupervisorNotYetPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Đang thi</p>
-                  <p className="text-2xl font-bold text-orange-600">
-                    {examSchedules.filter(e => e.status === 1).length}
-                  </p>
+                  <p className="text-2xl font-bold text-orange-600">{statistics.inProgress}</p>
                 </div>
                 <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                   <Play className="w-6 h-6 text-orange-600" />
@@ -373,10 +187,7 @@ export default function ExamSupervisorNotYetPage() {
             </h3>
           </div>
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-gray-600">Đang tải lịch thi...</span>
-            </div>
+            <LoadingSpinner />
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -412,7 +223,7 @@ export default function ExamSupervisorNotYetPage() {
                   {examSchedules.length > 0 ? examSchedules.map((exam, index) => {
                     const isToday = isExamDateToday(exam.examDate);
                     const statusInfo = getStatusInfo(exam.status, isToday, exam.examSlotStatus);
-                    const StatusIcon = statusInfo.icon;
+                    const StatusIcon = getIconComponent(statusInfo.icon);
                     const isUpdating = updatingStatus === exam.examSlotRoomId;
 
                     return (
@@ -507,5 +318,14 @@ export default function ExamSupervisorNotYetPage() {
         </div>
       </div>
     </div>
+  );
+};
+
+// Main component with Suspense wrapper
+export default function ExamSupervisorNotYetPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <ExamSupervisorNotYetContent />
+    </Suspense>
   );
 }

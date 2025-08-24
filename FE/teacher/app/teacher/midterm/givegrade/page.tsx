@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { getUserIdFromToken } from '@utils/tokenUtils';
+import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { 
   ChevronLeft, 
   Users, 
@@ -15,90 +14,31 @@ import {
   FileText,
   AlertCircle
 } from 'lucide-react';
+import { useMidtermGrading } from '@/hooks/teacher/useMidtermGrading';
 
-type StudentGradingDTO = {
-  id: string;
-  code: string;
-  fullName: string;
-  isGraded: number;
-  score: number | null;
-};
-
-export default function MidtermGradingPage() {
-  const router = useRouter();
+function MidtermGradingContent() {
   const searchParams = useSearchParams();
   const classId = searchParams.get('classId');
   const examId = searchParams.get('examId');
   const examType = searchParams.get('examType');
-  const teacherId = getUserIdFromToken();
 
-  const [students, setStudents] = useState<StudentGradingDTO[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    // State
+    students,
+    loading,
+    totalStudents,
+    gradedStudents,
+    ungradedStudents,
+    averageScore,
 
-  useEffect(() => {
-    if (!teacherId || !examId || !classId || !examType) return;
-    setLoading(true);
-    fetch(
-      `https://localhost:7074/api/GradeScheduleMidTerm/teacher/${teacherId}/exam/${examId}/students?classID=${classId}&ExamType=${examType}`
-    )
-      .then(res => res.json())
-      .then(data => setStudents(Array.isArray(data) ? data : []))
-      .catch(() => setStudents([]))
-      .finally(() => setLoading(false));
-  }, [teacherId, examId, classId, examType]);
-
-  // Statistics
-  const totalStudents = students.length;
-  const gradedStudents = students.filter(s => s.isGraded === 1).length;
-  const ungradedStudents = totalStudents - gradedStudents;
-  const averageScore = gradedStudents > 0 
-    ? (students.filter(s => s.isGraded === 1).reduce((sum, s) => sum + (s.score || 0), 0) / gradedStudents).toFixed(1)
-    : 0;
-
-  // Chuyển sang trang chấm bài cho sinh viên
-  const handleGradeStudent = (studentId: string) => {
-    router.push(
-      `/teacher/midterm/givegrade/examofstudent?studentId=${studentId}&examId=${examId}&classId=${classId}&examType=${examType}`
-    );
-  };
-
-  const handleConfirm = async () => {
-    if (ungradedStudents > 0) {
-      const confirmed = window.confirm(
-        `Còn ${ungradedStudents} sinh viên chưa được chấm bài. Bạn có chắc chắn muốn hoàn thành chấm bài?`
-      );
-      if (!confirmed) return;
-    }
-
-    try {
-      const pracExamId = examId;
-      if (!pracExamId) {
-        alert('Không tìm thấy mã ca thi (pracExamId)!');
-        return;
-      }
-      const res = await fetch(
-        `https://localhost:7074/api/GradeScheduleMidTerm/practice-exam/${pracExamId}/mark-graded`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-      if (!res.ok) {
-        const msg = await res.text();
-        alert(msg || 'Không thể cập nhật trạng thái chấm bài!');
-      } else {
-        alert('Đã chuyển trạng thái chấm bài thành công!');
-        router.back();
-      }
-    } catch (err) {
-      alert('Lỗi khi cập nhật trạng thái chấm bài!');
-    }
-  };
-
-  // Quay lại
-  const handleBack = () => {
-    router.back();
-  };
+    // Functions
+    handleGradeStudent,
+    handleConfirm,
+    handleBack,
+    getProgressPercentage,
+    getStatusBadgeProps,
+    getActionButtonProps,
+  } = useMidtermGrading(classId, examId, examType);
 
   if (loading) {
     return (
@@ -193,13 +133,13 @@ export default function MidtermGradingPage() {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold text-gray-800">Tiến độ chấm bài</h3>
             <span className="text-sm font-medium text-gray-600">
-              {gradedStudents}/{totalStudents} ({totalStudents > 0 ? Math.round((gradedStudents / totalStudents) * 100) : 0}%)
+              {gradedStudents}/{totalStudents} ({getProgressPercentage()}%)
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-3">
             <div 
               className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-300"
-              style={{ width: `${totalStudents > 0 ? (gradedStudents / totalStudents) * 100 : 0}%` }}
+              style={{ width: `${getProgressPercentage()}%` }}
             ></div>
           </div>
         </div>
@@ -226,63 +166,69 @@ export default function MidtermGradingPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {students.length > 0 ? students.map((student, idx) => (
-                  <tr key={student.id} className="hover:bg-blue-50 transition-colors duration-200">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{idx + 1}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
-                          {student.fullName.charAt(0).toUpperCase()}
+                {students.length > 0 ? students.map((student, idx) => {
+                  const statusProps = getStatusBadgeProps(student.isGraded);
+                  const actionProps = getActionButtonProps(student);
+                  
+                  return (
+                    <tr key={student.id} className="hover:bg-blue-50 transition-colors duration-200">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{idx + 1}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+                            {student.fullName.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="text-sm font-medium text-gray-900">{student.fullName}</div>
                         </div>
-                        <div className="text-sm font-medium text-gray-900">{student.fullName}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className="text-sm font-mono text-gray-900 bg-gray-100 px-2 py-1 rounded">
-                        {student.code}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      {student.isGraded === 1 ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          <CheckCircle className="w-3 h-3 mr-1" />
-                          Đã chấm
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <span className="text-sm font-mono text-gray-900 bg-gray-100 px-2 py-1 rounded">
+                          {student.code}
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                          <Clock className="w-3 h-3 mr-1" />
-                          Chưa chấm
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <span className={statusProps.className}>
+                          {statusProps.icon === "CheckCircle" ? (
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                          ) : (
+                            <Clock className="w-3 h-3 mr-1" />
+                          )}
+                          {statusProps.text}
                         </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      {student.isGraded === 1 ? (
-                        <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-blue-100 text-blue-800">
-                          <Award className="w-4 h-4 mr-1" />
-                          {student.score}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400 text-sm">-</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      {student.isGraded === 0 ? (
-                        <button
-                          onClick={() => handleGradeStudent(student.id)}
-                          className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          Chấm bài
-                        </button>
-                      ) : (
-                        <span className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-500 rounded-lg text-sm">
-                          <UserCheck className="w-4 h-4 mr-1" />
-                          Hoàn thành
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                )) : (
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        {student.isGraded === 1 ? (
+                          <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-blue-100 text-blue-800">
+                            <Award className="w-4 h-4 mr-1" />
+                            {student.score}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-sm">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        {actionProps.onClick ? (
+                          <button
+                            onClick={actionProps.onClick}
+                            className={actionProps.className}
+                          >
+                            {actionProps.icon === "Eye" ? (
+                              <Eye className="w-4 h-4 mr-1" />
+                            ) : (
+                              <UserCheck className="w-4 h-4 mr-1" />
+                            )}
+                            {actionProps.text}
+                          </button>
+                        ) : (
+                          <span className={actionProps.className}>
+                            <UserCheck className="w-4 h-4 mr-1" />
+                            {actionProps.text}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                }) : (
                   <tr>
                     <td colSpan={6} className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center">
@@ -343,5 +289,25 @@ export default function MidtermGradingPage() {
         )}
       </div>
     </div>
+  );
+}
+
+// Loading component
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Đang tải trang chấm điểm...</p>
+      </div>
+    </div>
+  );
+}
+
+export default function MidtermGradingPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <MidtermGradingContent />
+    </Suspense>
   );
 }

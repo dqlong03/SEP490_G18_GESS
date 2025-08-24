@@ -1,354 +1,113 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState } from "react";
-import Select from "react-select";
-import { getUserIdFromToken } from "@/utils/tokenUtils";
-import { useParams, useRouter } from 'next/navigation';
+import { Suspense } from 'react';
+import Select from 'react-select';
 import { 
   CalendarDays, 
   Clock, 
   Users, 
-  FileText, 
-  Plus, 
-  Search,
   Trash2,
   Save,
   X,
   ChevronLeft,
   Settings,
   BookOpen,
-  Target,
   GraduationCap,
   CheckCircle2,
   AlertCircle,
   Hash,
-  Star,
   BarChart3,
   Database
 } from 'lucide-react';
+import { useCreateMCQExam } from '@/hooks/teacher/useCreateMCQExam';
 
-const API_URL = "https://localhost:7074";
+interface CreateMCQExamContentProps {
+  classId: number;
+}
 
-export default function CreateMCQExamPage() {
-  const params = useParams();
-  const router = useRouter();
-  const classId = Number(params.classId);
+function CreateMCQExamContent({ classId }: CreateMCQExamContentProps) {
+  const {
+    // State
+    examName,
+    duration,
+    startDate,
+    endDate,
+    gradeComponents,
+    selectedGradeComponent,
+    chapters,
+    showChapterPopup,
+    chapterChecks,
+    selectedChapters,
+    chapterQuestions,
+    students,
+    showStudentPopup,
+    studentChecks,
+    selectedStudents,
+    questionInput,
+    isPublic,
+    questionBankType,
+    isSubmitting,
+    loading,
+    error,
+    totalQuestions,
 
-  // State
-  const [examName, setExamName] = useState("");
-  const [duration, setDuration] = useState<number>(60);
-  const [startDate, setStartDate] = useState(""); 
-  const [endDate, setEndDate] = useState("");     
-  const [gradeComponents, setGradeComponents] = useState<any[]>([]);
-  const [selectedGradeComponent, setSelectedGradeComponent] = useState<any>(null);
-  const [chapters, setChapters] = useState<any[]>([]);
-  const [showChapterPopup, setShowChapterPopup] = useState(false);
-  const [chapterChecks, setChapterChecks] = useState<Record<number, boolean>>({});
-  const [selectedChapters, setSelectedChapters] = useState<any[]>([]);
-  const [chapterQuestions, setChapterQuestions] = useState<Record<
-    number,
-    { easy: number; medium: number; hard: number; max: { easy: number; medium: number; hard: number } }
-  >>({});
-  const [students, setStudents] = useState<any[]>([]);
-  const [showStudentPopup, setShowStudentPopup] = useState(false);
-  const [studentChecks, setStudentChecks] = useState<Record<string, boolean>>({});
-  const [selectedStudents, setSelectedStudents] = useState<any[]>([]);
-  const [semesterId, setSemesterId] = useState<number | null>(null);
-  const [teacherId, setTeacherId] = useState<string>("");
-  const [subjectId, setSubjectId] = useState<number | null>(null);
-  const [questionInput, setQuestionInput] = useState<number>(0);
-  const [isPublic, setIsPublic] = useState(true);
-  const [questionBankType, setQuestionBankType] = useState<"all" | "common" | "private">("all");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+    // Setters
+    setExamName,
+    setDuration,
+    setStartDate,
+    setEndDate,
+    setSelectedGradeComponent,
+    setShowChapterPopup,
+    setChapterChecks,
+    setShowStudentPopup,
+    setQuestionInput,
+    setIsPublic,
+    setQuestionBankType,
 
-  useEffect(() => {
-    setTeacherId(getUserIdFromToken() || "");
-    fetch(`${API_URL}/api/Class/${classId}/semester-id`)
-      .then(res => res.json())
-      .then(data => setSemesterId(data));
-    fetch(`${API_URL}/api/Class/${classId}/grade-components`)
-      .then(res => res.json())
-      .then(data => setGradeComponents(data.map((g: any) => ({
-        value: g.categoryExamId,
-        label: g.categoryExamName
-      }))));
-    fetch(`${API_URL}/api/Class/${classId}/chapters`)
-      .then(res => res.json())
-      .then(data => setChapters(data));
-    fetch(`${API_URL}/api/Class/${classId}/students`)
-      .then(res => res.json())
-      .then(data => setStudents(data));
-    fetch(`${API_URL}/api/Class/${classId}/subject-id`)
-      .then(res => res.json())
-      .then(data => setSubjectId(data));
-  }, [classId]);
+    // Functions
+    handleSaveChapters,
+    handleRemoveChapter,
+    handleChangeQuestionCount,
+    handleCheckAllChapters,
+    handleUncheckAllChapters,
+    handleOpenStudentPopup,
+    handleCheckStudent,
+    handleCheckAllStudents,
+    handleUncheckAllStudents,
+    handleConfirmStudents,
+    handleSave,
+    handleBack,
+    selectStyles,
+  } = useCreateMCQExam(classId);
 
-  const fetchQuestionCount = async (
-    chapterId: number,
-    level: "easy" | "medium" | "hard"
-  ) => {
-    const levelId = level === "easy" ? 1 : level === "medium" ? 2 : 3;
-    let url = `${API_URL}/api/MultipleExam/question-count?chapterId=${chapterId}&levelId=${levelId}`;
-    if (questionBankType === "common") {
-      url += "&isPublic=true";
-    } else if (questionBankType === "private") {
-      url += "&isPublic=false";
-      const teacherId = getUserIdFromToken();
-      if (teacherId) {
-        url += `&teacherId=${teacherId}`;
-      }
-    }
-    const res = await fetch(url);
-    return await res.json();
-  };
-
-  const handleSaveChapters = async () => {
-    const chaptersSelected = chapters.filter((chap) => chapterChecks[chap.chapterId]);
-    const newChapterQuestions: Record<number, any> = { ...chapterQuestions };
-    for (const chap of chaptersSelected) {
-      if (!newChapterQuestions[chap.chapterId]) {
-        const easy = await fetchQuestionCount(chap.chapterId, "easy");
-        const medium = await fetchQuestionCount(chap.chapterId, "medium");
-        const hard = await fetchQuestionCount(chap.chapterId, "hard");
-        newChapterQuestions[chap.chapterId] = {
-          easy: 0,
-          medium: 0,
-          hard: 0,
-          max: { easy, medium, hard },
-        };
-      }
-    }
-    setSelectedChapters([
-      ...selectedChapters,
-      ...chaptersSelected.filter(
-        (chap) => !selectedChapters.some((selected) => selected.chapterId === chap.chapterId)
-      ),
-    ]);
-    setChapterQuestions(newChapterQuestions);
-    setShowChapterPopup(false);
-  };
-
-  const handleRemoveChapter = (id: number) => {
-    setSelectedChapters((prev) => prev.filter((c) => c.chapterId !== id));
-    setChapterQuestions((prev) => {
-      const newQ = { ...prev };
-      delete newQ[id];
-      return newQ;
-    });
-    setChapterChecks((prev) => ({
-      ...prev,
-      [id]: false,
-    }));
-  };
-
-  const handleChangeQuestionCount = (
-    chapterId: number,
-    type: "easy" | "medium" | "hard",
-    value: number
-  ) => {
-    setChapterQuestions((prev) => ({
-      ...prev,
-      [chapterId]: {
-        ...prev[chapterId],
-        [type]: Math.max(0, Math.min(value, prev[chapterId].max[type])),
-        max: prev[chapterId].max,
-      },
-    }));
-  };
-
-  const totalQuestions = Object.values(chapterQuestions).reduce(
-    (sum, q) => sum + (q.easy || 0) + (q.medium || 0) + (q.hard || 0),
-    0
-  );
-
-  const handleOpenStudentPopup = () => {
-    setShowStudentPopup(true);
-  };
-
-  const handleCheckStudent = (id: string, checked: boolean) => {
-    setStudentChecks((prev) => ({ ...prev, [id]: checked }));
-  };
-
-  const handleCheckAllStudents = () => {
-    const allChecked: Record<string, boolean> = {};
-    students.forEach((sv: any) => {
-      allChecked[sv.studentId] = true;
-    });
-    setStudentChecks(allChecked);
-  };
-
-  const handleUncheckAllStudents = () => {
-    setStudentChecks({});
-  };
-
-  const handleConfirmStudents = () => {
-    setSelectedStudents(
-      students.filter((sv) => studentChecks[sv.studentId])
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Đang tải dữ liệu lớp học...</p>
+        </div>
+      </div>
     );
-    setShowStudentPopup(false);
-  };
+  }
 
-  const handleCheckAllChapters = () => {
-    const allChecked: Record<number, boolean> = {};
-    chapters
-      .filter(
-        (chap) =>
-          !selectedChapters.some(
-            (selected) => selected.chapterId === chap.chapterId
-          )
-      )
-      .forEach((chap: any) => {
-        allChecked[chap.chapterId] = true;
-      });
-    setChapterChecks(allChecked);
-  };
-
-  const handleUncheckAllChapters = () => {
-    setChapterChecks({});
-  };
-
-  const buildNoQuestionInChapterDTO = () => {
-    const arr: { numberQuestion: number; chapterId: number; levelQuestionId: number }[] = [];
-    selectedChapters.forEach((chap: any) => {
-      if (chapterQuestions[chap.chapterId]?.easy > 0) {
-        arr.push({
-          numberQuestion: chapterQuestions[chap.chapterId].easy,
-          chapterId: chap.chapterId,
-          levelQuestionId: 1,
-        });
-      }
-      if (chapterQuestions[chap.chapterId]?.medium > 0) {
-        arr.push({
-          numberQuestion: chapterQuestions[chap.chapterId].medium,
-          chapterId: chap.chapterId,
-          levelQuestionId: 2,
-        });
-      }
-      if (chapterQuestions[chap.chapterId]?.hard > 0) {
-        arr.push({
-          numberQuestion: chapterQuestions[chap.chapterId].hard,
-          chapterId: chap.chapterId,
-          levelQuestionId: 3,
-        });
-      }
-    });
-    return arr;
-  };
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!examName || !selectedGradeComponent || !startDate || !endDate || !duration || !semesterId || !teacherId) {
-      alert("Vui lòng nhập đầy đủ thông tin bắt buộc!");
-      return;
-    }
-    if (selectedStudents.length === 0) {
-      alert("Vui lòng chọn ít nhất 1 sinh viên!");
-      return;
-    }
-    if (questionInput > 0 && totalQuestions !== questionInput) {
-      alert("Tổng số câu đã chọn phải bằng số câu hỏi yêu cầu!");
-      return;
-    }
-
-    setIsSubmitting(true);
-    const payload = {
-      MultiExamName: examName,
-      NumberQuestion: totalQuestions,
-      Duration: duration,
-      StartDay: startDate,
-      EndDay: endDate,
-      CreateAt: new Date().toISOString(),
-      teacherId,
-      subjectId,
-      classId,
-      categoryExamId: selectedGradeComponent.value,
-      semesterId,
-      isPublish: isPublic,
-      questionBankType,
-      noQuestionInChapterDTO: buildNoQuestionInChapterDTO(),
-      studentExamDTO: selectedStudents.map((sv: any) => ({
-        studentId: sv.studentId
-      })),
-    };
-    
-    try {
-      const res = await fetch(`${API_URL}/api/MultipleExam/create`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        alert("Tạo bài kiểm tra thành công!");
-        router.push(`/teacher/myclass/classdetail/${classId.toString()}`);
-      } else {
-        alert("Tạo bài kiểm tra thất bại!");
-      }
-    } catch (error) {
-      alert("Có lỗi xảy ra khi tạo bài kiểm tra!");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const updateChapterMaxQuestions = async () => {
-    const newChapterQuestions: Record<number, any> = { ...chapterQuestions };
-    for (const chap of selectedChapters) {
-      const easy = await fetchQuestionCount(chap.chapterId, "easy");
-      const medium = await fetchQuestionCount(chap.chapterId, "medium");
-      const hard = await fetchQuestionCount(chap.chapterId, "hard");
-      newChapterQuestions[chap.chapterId] = {
-        ...newChapterQuestions[chap.chapterId],
-        max: { easy, medium, hard },
-        easy: Math.min(newChapterQuestions[chap.chapterId]?.easy ?? 0, easy),
-        medium: Math.min(newChapterQuestions[chap.chapterId]?.medium ?? 0, medium),
-        hard: Math.min(newChapterQuestions[chap.chapterId]?.hard ?? 0, hard),
-      };
-    }
-    setChapterQuestions(newChapterQuestions);
-  };
-
-  useEffect(() => {
-    if (selectedChapters.length > 0) {
-      updateChapterMaxQuestions();
-    }
-  }, [selectedChapters, questionBankType]);
-
-  // Custom styles cho react-select
-  const selectStyles = {
-    control: (provided: any, state: any) => ({
-      ...provided,
-      minHeight: '48px',
-      borderColor: state.isFocused ? '#3b82f6' : '#d1d5db',
-      borderRadius: '8px',
-      boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-      '&:hover': {
-        borderColor: '#3b82f6'
-      }
-    }),
-    menu: (provided: any) => ({
-      ...provided,
-      zIndex: 20,
-      borderRadius: '8px',
-      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-    }),
-    option: (provided: any, state: any) => ({
-      ...provided,
-      backgroundColor: state.isSelected ? '#3b82f6' : state.isFocused ? '#eff6ff' : 'white',
-      color: state.isSelected ? 'white' : '#374151',
-      '&:hover': {
-        backgroundColor: state.isSelected ? '#3b82f6' : '#eff6ff'
-      }
-    })
-  };
-
-  const getLevelColor = (level: string) => {
-    const colors = {
-      easy: 'text-green-600 bg-green-50',
-      medium: 'text-yellow-600 bg-yellow-50',
-      hard: 'text-red-600 bg-red-50'
-    };
-    return colors[level as keyof typeof colors] || 'text-gray-600 bg-gray-50';
-  };
+  // if (error) {
+  //   return (
+  //     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+  //       <div className="text-center">
+  //         <div className="text-red-500 text-xl mb-4">❌</div>
+  //         <p className="text-red-600 text-lg font-medium">Có lỗi xảy ra</p>
+  //         <p className="text-gray-600 mt-2">{error}</p>
+  //         <button
+  //           onClick={handleBack}
+  //           className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+  //         >
+  //           Quay lại
+  //         </button>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -367,7 +126,7 @@ export default function CreateMCQExamPage() {
             </div>
             
             <button
-              onClick={() => router.back()}
+              onClick={handleBack}
               className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 font-medium text-gray-700"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -375,6 +134,16 @@ export default function CreateMCQExamPage() {
             </button>
           </div>
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex">
+              <AlertCircle className="w-5 h-5 text-red-400 mr-2 mt-0.5" />
+              <div className="text-red-700">{error}</div>
+            </div>
+          </div>
+        )}
 
         {/* Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -550,7 +319,7 @@ export default function CreateMCQExamPage() {
                 </div>
               </div>
               
-              <div className="flex items-end">
+              {/* <div className="flex items-end">
                 <label className="flex items-center space-x-3 cursor-pointer">
                   <input
                     type="checkbox"
@@ -560,7 +329,7 @@ export default function CreateMCQExamPage() {
                   />
                   <span className="text-sm font-medium text-gray-700">Lưu public</span>
                 </label>
-              </div>
+              </div> */}
             </div>
           </div>
 
@@ -643,7 +412,7 @@ export default function CreateMCQExamPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {selectedChapters.map((chap: any) => (
+                    {selectedChapters.map((chap) => (
                       <tr key={chap.chapterId} className="hover:bg-blue-50 transition-colors duration-200">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center space-x-3">
@@ -800,7 +569,7 @@ export default function CreateMCQExamPage() {
 
         {/* Student Selection Modal */}
         {showStudentPopup && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-50 backdrop-blur-sm p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[100vh] overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
@@ -894,7 +663,7 @@ export default function CreateMCQExamPage() {
 
         {/* Chapter Selection Modal */}
         {showChapterPopup && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-50 backdrop-blur-sm p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[100vh] overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
@@ -941,7 +710,7 @@ export default function CreateMCQExamPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {chapters.map((chap: any, idx: number) => {
+                      {chapters.map((chap, idx) => {
                         const checked =
                           chapterChecks[chap.chapterId] !== undefined
                             ? chapterChecks[chap.chapterId]
@@ -1003,5 +772,27 @@ export default function CreateMCQExamPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Đang tải dữ liệu lớp học...</p>
+      </div>
+    </div>
+  );
+}
+
+export default async function CreateMCQExamPage({ params }: { params: Promise<{ classId: string }> }) {
+  const { classId: classIdString } = await params;
+  const classId = Number(classIdString);
+  
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <CreateMCQExamContent classId={classId} />
+    </Suspense>
   );
 }

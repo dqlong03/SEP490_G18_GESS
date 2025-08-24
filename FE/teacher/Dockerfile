@@ -1,34 +1,26 @@
-# --------------------------
-# 📦 STAGE 1: BUILD
-# --------------------------
-FROM node:18-alpine AS build
+# Build stage
+FROM node:18-alpine AS builder
 
-# Đặt thư mục làm việc
 WORKDIR /app
 
-# Copy toàn bộ code FE/teacher vào container
+COPY package*.json ./
+RUN npm ci
+
 COPY . .
-
-# Cài đặt dependencies
-RUN npm install
-
-# Build ứng dụng Next.js
 RUN npm run build
 
-# --------------------------
-# 🚀 STAGE 2: RUNTIME
-# --------------------------
-FROM node:18-alpine
+# Production stage
+FROM node:18-alpine AS runner
 
-# Tạo thư mục app
 WORKDIR /app
 
-# Copy output từ stage build
-COPY --from=build /app .
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
-# Mở cổng 3000 trong container
 EXPOSE 3000
 
-# Chạy ứng dụng (production)
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-CMD ["npm", "start"]
+CMD ["node", "server.js"]

@@ -1,52 +1,51 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL + "/Semester";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://localhost:7074";
 
-export type Semester = {
+export interface Semester {
   semesterId: number;
   semesterName: string;
-  startDate: string; // ISO string format
-  endDate: string;
+}
+
+export interface SemesterForm {
+  semesterNames: { name: string }[];
+}
+
+export interface SemesterPayload {
+  semesters: Semester[];
+}
+
+export const semesterService = {
+  // Lấy danh sách semester
+  getSemesters: async (): Promise<Semester[]> => {
+    const res = await fetch(`${API_BASE}/api/Semesters`);
+    if (!res.ok) throw new Error("Lỗi khi tải dữ liệu học kỳ");
+    return res.json();
+  },
+
+  // Cập nhật semester
+  updateSemesters: async (data: SemesterForm): Promise<void> => {
+    const payload: SemesterPayload = {
+      semesters: data.semesterNames.map((x, idx) => ({
+        semesterId: idx + 1,
+        semesterName: x.name,
+      })),
+    };
+
+    const res = await fetch(`${API_BASE}/api/Semesters`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const contentType = res.headers.get("content-type");
+
+      if (contentType?.includes("application/json")) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Đã xảy ra lỗi");
+      } else {
+        const text = await res.text();
+        throw new Error(text || "Đã xảy ra lỗi không rõ");
+      }
+    }
+  },
 };
-
-export async function fetchSemesters(searchTerm: string): Promise<Semester[]> {
-  const query = searchTerm ? `?name=${encodeURIComponent(searchTerm)}` : "";
-  const res = await fetch(`${API_URL}${query}`);
-  if (!res.ok) throw new Error("Không thể tải danh sách kỳ học");
-  return res.json();
-}
-
-export async function addSemester(
-  semester: Omit<Semester, "semesterId">
-): Promise<Semester> {
-  const res = await fetch(API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(semester),
-  });
-  if (!res.ok) throw new Error("Không thể thêm kỳ học");
-  return res.json(); // Giả sử API trả về semester mới
-}
-
-export async function updateSemester(
-  id: number,
-  semester: Omit<Semester, "semesterId">
-): Promise<Semester> {
-  const res = await fetch(`${API_URL}/${id}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(semester),
-  });
-  if (!res.ok) throw new Error("Không thể cập nhật kỳ học");
-  return res.json(); // Giả sử API trả về semester đã cập nhật
-}
-
-export async function deleteSemester(id: number): Promise<void> {
-  const res = await fetch(`${API_URL}/${id}`, {
-    method: "DELETE",
-  });
-  if (!res.ok) throw new Error("Không thể xóa kỳ học");
-}
-

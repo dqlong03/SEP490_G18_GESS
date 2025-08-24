@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { sendOtp } from "@services/common/forgotPassService";
+import { sendOtp } from "@/services/common/forgotPassService";
 
 export function useForgotPassword() {
   const [email, setEmail] = useState("");

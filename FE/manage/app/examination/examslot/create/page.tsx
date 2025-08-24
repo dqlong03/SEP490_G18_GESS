@@ -1,15 +1,14 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Select from "react-select";
-import * as XLSX from 'xlsx';
-import { useRouter } from 'next/navigation';
-import CustomTimePicker from "@/components/examination/CustomTimePicker"; // hoặc đường dẫn phù hợp
+import CustomTimePicker from "@/components/examination/CustomTimePicker";
 import { Suspense } from "react";
+import { useExamSlotCreate } from "@/hooks/examination/examSlotHook";
 
 function Popup({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center animate-fadeIn">
+    <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center animate-fadeIn">
       <div className="bg-white rounded-xl shadow-2xl p-8 min-w-[500px] max-w-4xl max-h-[90vh] relative animate-popup overflow-hidden">
         <button
           className="absolute top-4 right-4 bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-lg transition-colors duration-200 font-medium"
@@ -30,406 +29,66 @@ const examTypeOptions = [
 ];
 
 const ExamSlotCreatePage = () => {
-  const [major, setMajor] = useState<any>(null);
-  const [subject, setSubject] = useState<any>(null);
-  const [semester, setSemester] = useState<any>(null);
-  const [roomPopup, setRoomPopup] = useState(false);
-  const [studentPopup, setStudentPopup] = useState(false);
-  const [selectedRooms, setSelectedRooms] = useState<number[]>([]);
-  const [studentList, setStudentList] = useState<any[]>([]);
-  const [date, setDate] = useState("");
-  const [duration, setDuration] = useState("");
-  const [startTime, setStartTime] = useState<string>("");
-const [endTime, setEndTime] = useState<string>("");
-  const [breakTime, setBreakTime] = useState("");
-  const [createdSlots, setCreatedSlots] = useState<any[]>([]);
-  const [studentFileName, setStudentFileName] = useState<string>('');
-  const [studentErrorMsg, setStudentErrorMsg] = useState<string>('');
-  const [studentListPopup, setStudentListPopup] = useState(false);
-  const [selectedSlotStudents, setSelectedSlotStudents] = useState<any[]>([]);
-  const [examType, setExamType] = useState<'Multiple' | 'Practice'>('Multiple');
-  const [optimizationType, setOptimizationType] = useState<'room' | 'slot'>('slot');
-  const [slotName, setSlotName] = useState('');
-  const [majors, setMajors] = useState<any[]>([]);
-  const [subjects, setSubjects] = useState<any[]>([]);
-  const [semesters, setSemesters] = useState<any[]>([]);
-  const [rooms, setRooms] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const {
+    // Form states
+    major,
+    setMajor,
+    subject,
+    setSubject,
+    semester,
+    setSemester,
+    date,
+    setDate,
+    duration,
+    setDuration,
+    startTime,
+    setStartTime,
+    endTime,
+    setEndTime,
+    breakTime,
+    setBreakTime,
+    slotName,
+    setSlotName,
+    examType,
+    setExamType,
+    optimizationType,
+    setOptimizationType,
 
-  useEffect(() => {
-    fetchMajors();
-    fetchSemesters();
-    fetchRooms();
-  }, []);
+    // Data states
+    majors,
+    subjects,
+    semesters,
+    rooms,
+    selectedRooms,
+    setSelectedRooms,
+    studentList,
+    setStudentList,
+    createdSlots,
 
-  useEffect(() => {
-    if (major?.value) {
-      fetchSubjects(major.value);
-    } else {
-      setSubjects([]);
-      setSubject(null);
-    }
-  }, [major]);
+    // UI states
+    roomPopup,
+    setRoomPopup,
+    studentPopup,
+    setStudentPopup,
+    studentListPopup,
+    setStudentListPopup,
+    selectedSlotStudents,
+    loading,
+    studentFileName,
+    studentErrorMsg,
 
-  const fetchMajors = async () => {
-    try {
-      const response = await fetch('https://localhost:7074/api/CreateExamSlot/GetAllMajor');
-      const data = await response.json();
-      setMajors(data.map((item: any) => ({
-        value: item.majorId,
-        label: item.majorName,
-        ...item
-      })));
-    } catch (error) {
-      console.error('Error fetching majors:', error);
-    }
-  };
-
-  const fetchSubjects = async (majorId: number) => {
-    try {
-      const response = await fetch(`https://localhost:7074/api/MultipleExam/subject/${majorId}`);
-      const data = await response.json();
-      setSubjects(data.map((item: any) => ({
-        value: item.subjectId,
-        label: item.subjectName,
-        ...item
-      })));
-    } catch (error) {
-      console.error('Error fetching subjects:', error);
-    }
-  };
-
-  const fetchSemesters = async () => {
-    try {
-      const response = await fetch('https://localhost:7074/api/Semesters');
-      const data = await response.json();
-      setSemesters(data.map((item: any) => ({
-        value: item.semesterId,
-        label: item.semesterName,
-        ...item
-      })));
-    } catch (error) {
-      console.error('Error fetching semesters:', error);
-    }
-  };
-
-  const fetchRooms = async () => {
-    try {
-      const response = await fetch('https://localhost:7074/api/CreateExamSlot/GetAllRooms');
-      const data = await response.json();
-      setRooms(data);
-    } catch (error) {
-      console.error('Error fetching rooms:', error);
-    }
-  };
-
-  const validateForm = () => {
-    if (!major || !subject || !semester || !date || !duration || !startTime || !endTime || !slotName) {
-      alert('Vui lòng điền đầy đủ thông tin!');
-      return false;
-    }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const examDate = new Date(date);
-    if (examDate < today) {
-      alert('Ngày thi phải lớn hơn hoặc bằng ngày hiện tại!');
-      return false;
-    }
-    const start = new Date(`${date}T${startTime}`);
-    const end = new Date(`${date}T${endTime}`);
-    const durationMinutes = parseInt(duration) || 0;
-    const startPlusDuration = new Date(start.getTime() + durationMinutes * 60000);
-    if (startPlusDuration > end) {
-      alert('Giờ bắt đầu cộng thời lượng phải nhỏ hơn hoặc bằng giờ kết thúc!');
-      return false;
-    }
-    if (selectedRooms.length === 0 || studentList.length === 0) {
-      alert('Vui lòng chọn phòng thi và danh sách sinh viên!');
-      return false;
-    }
-    return true;
-  };
-
-  const handleCreateSlots = async () => {
-    if (!validateForm()) return;
-    setLoading(true);
-    try {
-      const selectedRoomData = rooms.filter(room => selectedRooms.includes(room.roomId));
-      const studentsData = studentList.map(student => ({
-        email: student.email || "string",
-        code: student.mssv || "string",
-        fullName: student.name || "string",
-        gender: student.gender === 'Nam' || student.gender === true,
-        dateOfBirth: student.dob ? new Date(student.dob).toISOString() : new Date().toISOString(),
-        urlAvatar: student.avatar || "https://randomuser.me/api/portraits/men/1.jpg"
-      }));
-      const roomsData = selectedRoomData.map(room => ({
-        roomId: room.roomId,
-        roomName: room.roomName || "string",
-        description: room.description || "string",
-        status: room.status || "string",
-        capacity: room.capacity || 1
-      }));
-
-      
-      // Chuyển sang giờ Việt Nam (UTC+7)
-        const toVNISOString = (date: Date) => {
-          // KHÔNG cộng thêm 7 tiếng nữa!
-          return date.toISOString();
-        };
-
-      // Tạo các đối tượng Date cùng ngày, khác giờ
-      const examDateObj = new Date(date + "T00:00:00");
-      const startDateTime = new Date(date + "T" + startTime);
-      const endDateTime = new Date(date + "T" + endTime);
-
-    
-      const requestBody = {
-        students: studentsData,
-        rooms: roomsData,
-         startDate: toVNISOString(startDateTime),
-        duration: parseInt(duration) || 1,
-        startTimeInday: toVNISOString(startDateTime),
-        endTimeInDay: toVNISOString(endDateTime),
-        relaxationTime: parseInt(breakTime) || 1,
-        optimizedByRoom: optimizationType === 'room',
-        optimizedBySlotExam: optimizationType === 'slot',
-        slotName: slotName,
-        subjectId: subject?.value || 1,
-        semesterId: semester?.value || 1
-      };
-      const response = await fetch('https://localhost:7074/api/CreateExamSlot/CalculateExamSlot', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody)
-      });
-      if (!response.ok) {
-        throw new Error('Failed to create exam slots');
-      }
-      const result = await response.json();
-      // Dự liệu bảng dựa vào response body mới
-      const processedSlots = result.map((slot: any, index: number) => ({
-        stt: index + 1,
-       date: new Date(slot.date).toLocaleDateString('vi-VN'),
-        startTime: new Date(slot.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-        endTime: new Date(slot.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-        rooms: slot.rooms.map((r: any) => rooms.find(room => room.roomId === r.roomId)?.roomName).join(", "),
-        students: slot.rooms.flatMap((r: any) => r.students),
-        studentsDisplay: slot.rooms.flatMap((r: any) => r.students.map((s: any) => s.fullName)).join(", "),
-        slotName: slot.slotName,
-        status: slot.status,
-        multiOrPractice: slot.multiOrPractice,
-        originalData: slot
-      }));
-      setCreatedSlots(processedSlots);
-      alert('Tạo ca thi thành công!');
-    } catch (error) {
-      console.error('Error creating exam slots:', error);
-      alert('Có lỗi xảy ra khi tạo ca thi!');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSaveSlots = async () => {
-  if (createdSlots.length === 0) {
-    alert('Không có ca thi nào để lưu!');
-    return;
-  }
-
-  const toVNISOString = (date: Date) => date.toISOString();
-
-  try {
-    const saveData = createdSlots.map((slot, index) => {
-      const slotRooms = slot.originalData?.rooms || [];
-      // Lấy ngày, giờ từ originalData nếu có, nếu không lấy từ state
-      let slotDateStr = slot.originalData?.date || date;
-      let slotStartStr = slot.originalData?.startTime || startTime;
-      let slotEndStr = slot.originalData?.endTime || endTime;
-
-      // Nếu là ISO string thì dùng luôn, nếu chỉ là "HH:mm" thì ghép ngày
-      let startDateTime: Date;
-      let endDateTime: Date;
-      let examDateObj: Date;
-
-      // Xử lý ngày (nếu là ISO string thì lấy phần ngày, nếu là yyyy-MM-dd thì giữ nguyên)
-      if (/^\d{4}-\d{2}-\d{2}T/.test(slotDateStr)) {
-        // ISO string, lấy phần ngày
-        slotDateStr = slotDateStr.substring(0, 10);
-      }
-
-      // Xử lý giờ bắt đầu
-      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(slotStartStr)) {
-        startDateTime = new Date(slotStartStr);
-      } else if (/^\d{2}:\d{2}/.test(slotStartStr)) {
-        startDateTime = new Date(`${slotDateStr}T${slotStartStr}`);
-      } else {
-        throw new Error('Giờ bắt đầu không hợp lệ');
-      }
-
-      // Xử lý giờ kết thúc
-      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(slotEndStr)) {
-        endDateTime = new Date(slotEndStr);
-      } else if (/^\d{2}:\d{2}/.test(slotEndStr)) {
-        endDateTime = new Date(`${slotDateStr}T${slotEndStr}`);
-      } else {
-        throw new Error('Giờ kết thúc không hợp lệ');
-      }
-
-      // Ngày thi (00:00:00)
-      examDateObj = new Date(`${slotDateStr}T00:00:00`);
-
-      // Kiểm tra lại các giá trị Date
-      if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime()) || isNaN(examDateObj.getTime())) {
-        throw new Error('Giá trị ngày hoặc giờ không hợp lệ!');
-      }
-
-      return {
-        subjectId: subject?.value || 1,
-        status: slot.status || "Chưa gán bài thi",
-        multiOrPractice: examType,
-        slotName: slot.slotName || `Slot ${index + 1}`,
-        semesterId: semester?.value || 1,
-        date: toVNISOString(examDateObj),
-        startTime: toVNISOString(startDateTime),
-        endTime: toVNISOString(endDateTime),
-        rooms: slotRooms.map((room: any) => ({
-          roomId: room.roomId,
-          students: (room.students || []).map((student: any) => ({
-            email: student.email || "string",
-            code: student.code || student.mssv || "string",
-            fullName: student.fullName || student.name || "string",
-            gender: student.gender === 'Nam' || student.gender === true,
-            dateOfBirth: student.dateOfBirth || student.dob || new Date().toISOString(),
-            urlAvatar: student.urlAvatar || student.avatar || "default.png"
-          }))
-        }))
-      };
-    });
-    const response = await fetch('https://localhost:7074/api/CreateExamSlot/SaveExamSlot', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(saveData)
-    });
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error('Failed to save exam slots: ' + errorText);
-    }
-    alert('Lưu ca thi thành công!');
-    router.push('/examination/examslot/list');
-  } catch (error: any) {
-    console.error('Error saving exam slots:', error);
-    alert(error.message || 'Có lỗi xảy ra khi lưu ca thi!');
-  }
-};
-  const handleStudentEdit = (idx: number, field: string, value: string) => {
-    const newList = [...studentList];
-    // @ts-ignore
-    newList[idx][field] = value;
-    setStudentList(newList);
-  };
-
-  const handleDownloadStudentTemplate = () => {
-    const header = ['Avatar', 'MSSV', 'Email', 'Giới tính', 'Ngày sinh', 'Họ và tên'];
-    const rows = [
-      ['https://randomuser.me/api/portraits/men/1.jpg', 'SV001', 'sv001@example.com', 'Nam', '2002-01-01', 'Nguyễn Văn A'],
-      ['https://randomuser.me/api/portraits/women/2.jpg', 'SV002', 'sv002@example.com', 'Nữ', '2002-02-02', 'Trần Thị B'],
-    ];
-    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'DanhSach');
-    XLSX.writeFile(wb, 'mau_sinh_vien.xlsx');
-  };
-
-  const handleStudentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const resetInput = () => {
-      if (e.target) e.target.value = '';
-    };
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      setStudentErrorMsg('');
-      const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const json: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-      if (json.length < 2) {
-        setStudentErrorMsg('File phải có ít nhất 1 dòng dữ liệu sinh viên.');
-        setStudentFileName('');
-        resetInput();
-        return;
-      }
-      const header = json[0];
-      const requiredHeader = ['Avatar', 'MSSV', 'Email', 'Giới tính', 'Ngày sinh', 'Họ và tên'];
-      const isHeaderValid = requiredHeader.every((h, idx) => header[idx] === h);
-      if (!isHeaderValid) {
-        setStudentErrorMsg('File mẫu không đúng định dạng hoặc thiếu trường thông tin!');
-        setStudentFileName('');
-        resetInput();
-        return;
-      }
-      const dataArr = [];
-      for (let i = 1; i < json.length; i++) {
-        const row = json[i];
-        if (row.length < 6 || row.some((cell: string, idx: number) => cell === '')) {
-          setStudentErrorMsg(`Dòng ${i + 1} thiếu thông tin. Vui lòng điền đầy đủ tất cả trường!`);
-          setStudentFileName('');
-          resetInput();
-          return;
-        }
-        const [avatar, mssv, email, gender, dob, name] = row;
-        if (!isValidEmail(email)) {
-          setStudentErrorMsg(`Email không hợp lệ ở dòng ${i + 1}: ${email}`);
-          setStudentFileName('');
-          resetInput();
-          return;
-        }
-        if (!isValidDate(dob)) {
-          setStudentErrorMsg(`Ngày sinh không hợp lệ ở dòng ${i + 1}: ${dob} (Định dạng: YYYY-MM-DD)`);
-          setStudentFileName('');
-          resetInput();
-          return;
-        }
-        dataArr.push({
-          id: Date.now() + i,
-          avatar,
-          mssv,
-          email,
-          gender,
-          dob,
-          name,
-        });
-      }
-      setStudentFileName(file.name);
-      setStudentList(dataArr);
-      setStudentErrorMsg('');
-      resetInput();
-    };
-    reader.readAsArrayBuffer(file);
-  };
-
-  function isValidEmail(email: string) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  }
-
-  function isValidDate(date: string) {
-    return /^\d{4}-\d{2}-\d{2}$/.test(date) && !isNaN(Date.parse(date));
-  }
-
-  const handleViewStudents = (students: any[]) => {
-    setSelectedSlotStudents(students);
-    setStudentListPopup(true);
-  };
+    // Functions
+    handleCreateSlots,
+    handleSaveSlots,
+    handleStudentEdit,
+    handleDownloadStudentTemplate,
+    handleStudentUpload,
+    handleViewStudents,
+    addStudent,
+    removeStudent,
+  } = useExamSlotCreate();
 
   return (
-     <Suspense fallback={<div>Loading...</div>}>
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <div className="container mx-auto px-6 py-8">
         {/* Header Section */}
@@ -675,6 +334,27 @@ const [endTime, setEndTime] = useState<string>("");
               </div>
               <h3 className="text-2xl font-bold text-gray-800">Chọn phòng thi</h3>
             </div>
+            
+            {/* Select All Button */}
+            <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <button
+                onClick={() => {
+                  const allRoomIds = rooms.map(r => r.roomId);
+                  const isAllSelected = allRoomIds.every(id => selectedRooms.includes(id));
+                  setSelectedRooms(isAllSelected ? [] : allRoomIds);
+                }}
+                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-semibold"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {rooms.length > 0 && rooms.every(r => selectedRooms.includes(r.roomId)) ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+              </button>
+              <span className="text-blue-700 font-medium">
+                Đã chọn {selectedRooms.length}/{rooms.length} phòng
+              </span>
+            </div>
+
             <div className="bg-gray-50 rounded-xl p-6">
               <div className="overflow-hidden rounded-lg shadow-sm border border-gray-200">
                 <table className="w-full bg-white">
@@ -708,7 +388,7 @@ const [endTime, setEndTime] = useState<string>("");
               {selectedRooms.length > 0 && (
                 <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-blue-800 font-medium">
-                    Đã chọn {selectedRooms.length} phòng thi
+                    Đã chọn {selectedRooms.length} phòng thi (Tổng sức chứa: {rooms.filter(r => selectedRooms.includes(r.roomId)).reduce((sum, room) => sum + room.capacity, 0)} sinh viên)
                   </p>
                 </div>
               )}
@@ -742,7 +422,7 @@ const [endTime, setEndTime] = useState<string>("");
           {studentErrorMsg && (
             <div className="text-red-600 font-semibold mb-4">{studentErrorMsg}</div>
           )}
-          <div className="overflow-x-auto rounded shadow bg-white w-full">
+          <div className="overflow-x-auto rounded shadow  w-full">
             <table className="min-w-[900px] w-full text-sm md:text-base border border-gray-200">
               <thead>
                 <tr className="bg-gray-100 text-gray-700 font-semibold">
@@ -815,10 +495,7 @@ const [endTime, setEndTime] = useState<string>("");
                     <td className="py-2 px-2 border-b text-center">
                       <button
                         type="button"
-                        onClick={() => {
-                          const newList = studentList.filter((_, i) => i !== idx);
-                          setStudentList(newList);
-                        }}
+                        onClick={() => removeStudent(idx)}
                         className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition"
                       >
                         Xóa
@@ -831,7 +508,7 @@ const [endTime, setEndTime] = useState<string>("");
             <div className="mt-2">
               <button
                 type="button"
-                onClick={() => setStudentList([...studentList, { id: Date.now(), avatar: '', mssv: '', email: '', gender: '', dob: '', name: '' }])}
+                onClick={addStudent}
                 className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 transition font-semibold"
               >
                 Thêm sinh viên
@@ -1096,8 +773,15 @@ const [endTime, setEndTime] = useState<string>("");
         }
       `}</style>
     </div>
+  );
+};
+
+const ExamSlotCreatePageWrapper = () => {
+  return (
+    <Suspense fallback={<div>Đang tải...</div>}>
+      <ExamSlotCreatePage />
     </Suspense>
   );
 };
 
-export default ExamSlotCreatePage;
+export default ExamSlotCreatePageWrapper;

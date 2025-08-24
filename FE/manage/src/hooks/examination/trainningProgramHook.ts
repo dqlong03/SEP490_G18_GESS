@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import { useState, useEffect, ChangeEvent, FormEvent, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { showToast } from '@/utils/toastUtils';
 import {
   TrainingProgram,
   TrainingProgramForm,
@@ -31,6 +32,7 @@ export function useTrainingPrograms() {
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [searchName, setSearchName] = useState("");
   const [searchFromDate, setSearchFromDate] = useState("");
   const [searchToDate, setSearchToDate] = useState("");
@@ -38,6 +40,7 @@ export function useTrainingPrograms() {
     id: number;
     time: number;
   } | null>(null);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const router = useRouter();
 
@@ -55,14 +58,23 @@ export function useTrainingPrograms() {
       const data = await fetchPrograms(majorId, params);
       setPrograms(data);
 
-      const count = await countPrograms(majorId, {
-        name: searchName,
-        fromDate: searchFromDate,
-        toDate: searchToDate,
-        pageSize,
-      });
-      setTotalPages(Math.ceil(count / pageSize));
+      try {
+        const count = await countPrograms(majorId, {
+          name: searchName,
+          fromDate: searchFromDate,
+          toDate: searchToDate,
+          pageSize,
+        });
+        setTotalCount(count);
+        setTotalPages(Math.ceil(count / pageSize));
+      } catch (countErr) {
+        // Không hiển thị lỗi cho API count
+        console.error('Count API error:', countErr);
+        setTotalPages(1);
+        setTotalCount(data.length);
+      }
     } catch (err: any) {
+      showToast('error', err.message || 'Lỗi khi tải dữ liệu');
       setError(err.message);
     }
     setLoading(false);
@@ -71,7 +83,26 @@ export function useTrainingPrograms() {
   useEffect(() => {
     fetchAllPrograms();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageNumber, searchName, searchFromDate, searchToDate, majorId]);
+  }, [pageNumber, searchFromDate, searchToDate, majorId]);
+
+  // Debounced search for searchName
+  useEffect(() => {
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    const timeout = setTimeout(() => {
+      setPageNumber(1);
+      fetchAllPrograms();
+    }, 800); // 800ms delay
+
+    setSearchTimeout(timeout);
+
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchName]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
@@ -83,19 +114,29 @@ export function useTrainingPrograms() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    
+    // Validate end date must be greater than start date
+    if (form.endDate && form.startDate && form.endDate <= form.startDate) {
+      showToast('error', 'Ngày kết thúc phải lớn hơn ngày bắt đầu');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     try {
       if (editingId === null) {
         await createProgram(majorId, form);
+        showToast('success', 'Thêm chương trình đào tạo thành công');
       } else {
         await updateProgram(editingId, form);
+        showToast('success', 'Cập nhật chương trình đào tạo thành công');
       }
       setForm({ trainProName: "", startDate: "", endDate: "", noCredits: 0 });
       setEditingId(null);
       setShowPopup(false);
       fetchAllPrograms();
     } catch (err: any) {
+      showToast('error', err.message || 'Có lỗi xảy ra');
       setError(err.message);
     }
     setLoading(false);
@@ -118,8 +159,10 @@ export function useTrainingPrograms() {
     setError(null);
     try {
       await deleteProgram(id);
+      showToast('success', 'Xóa chương trình đào tạo thành công');
       fetchAllPrograms();
     } catch (err: any) {
+      showToast('error', err.message || 'Có lỗi xảy ra khi xóa');
       setError(err.message);
     }
     setLoading(false);
@@ -127,6 +170,11 @@ export function useTrainingPrograms() {
 
   const handleSearch = (e: FormEvent) => {
     e.preventDefault();
+    setPageNumber(1);
+    fetchAllPrograms();
+  };
+
+  const handleDateSearch = () => {
     setPageNumber(1);
     fetchAllPrograms();
   };
@@ -161,6 +209,7 @@ export function useTrainingPrograms() {
     pageNumber,
     pageSize,
     totalPages,
+    totalCount,
     searchName,
     setSearchName,
     searchFromDate,
@@ -173,6 +222,7 @@ export function useTrainingPrograms() {
     handleEdit,
     handleDelete,
     handleSearch,
+    handleDateSearch,
     closePopup,
     setShowPopup,
     setEditingId,

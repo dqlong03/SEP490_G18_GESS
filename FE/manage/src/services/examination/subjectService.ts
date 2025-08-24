@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL + "/Subject";
+const API_URL = process.env.NEXT_PUBLIC_API_URL + "/api/Subject";
 
 export type Subject = {
   subjectId: number;

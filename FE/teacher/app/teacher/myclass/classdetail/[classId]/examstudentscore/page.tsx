@@ -1,106 +1,72 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from 'react';
+import { useExamScore } from '@/hooks/teacher/useExamScore';
 
-type ExamScore = {
-  studentId: string;
-  fullName: string;
-  score: number | null;
-  code: string;
-};
-
-export default function ExamScorePage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const classId = searchParams.get("classId");
-  const examId = searchParams.get("examId");
-  const examType = searchParams.get("examType");
-
-  const [scores, setScores] = useState<ExamScore[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [examInfo, setExamInfo] = useState<{
-    examName?: string;
-    className?: string;
-  }>({});
-
-  useEffect(() => {
-    if (!examId || !examType) return;
-    async function fetchScores() {
-      setLoading(true);
-      try {
-        const res = await fetch(
-          `https://localhost:7074/api/Class/exam-scores?examId=${examId}&examType=${examType}`
-        );
-        if (!res.ok) throw new Error("Không thể lấy dữ liệu điểm thi");
-        const data: ExamScore[] = await res.json();
-        setScores(data);
-        
-        // Có thể thêm API call để lấy thông tin exam và class name
-        setExamInfo({
-          examName: "Bài kiểm tra", // Placeholder, thay bằng data từ API
-          className: "Lớp học" // Placeholder, thay bằng data từ API
-        });
-      } catch {
-        setScores([]);
-      }
-      setLoading(false);
-    }
-    fetchScores();
-  }, [examId, examType]);
-
-  // Tính toán thống kê
-  const getScoreStats = () => {
-    const validScores = scores.filter(s => s.score !== null).map(s => s.score!);
-    if (validScores.length === 0) return { avg: 0, max: 0, min: 0, passCount: 0 };
+function ExamScoreContent() {
+  const {
+    // Data
+    scores,
+    examInfo,
+    stats,
     
-    const avg = validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
-    const max = Math.max(...validScores);
-    const min = Math.min(...validScores);
-    const passCount = validScores.filter(score => score >= 5).length;
+    // State
+    loading,
+    error,
+    hasValidParams,
     
-    return { avg: avg.toFixed(1), max, min, passCount };
-  };
-
-  const stats = getScoreStats();
-
-  // Get score badge color
-  const getScoreBadge = (score: number | null) => {
-    if (score === null) {
-      return (
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
-          Chưa có điểm
-        </span>
-      );
-    }
+    // Actions
+    handleGoBack,
+    handleExportToExcel,
+    handlePrintScores,
     
-    if (score >= 8) {
-      return (
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-          {score}
-        </span>
-      );
-    } else if (score >= 6.5) {
-      return (
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-          {score}
-        </span>
-      );
-    } else if (score >= 5) {
-      return (
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
-          {score}
-        </span>
-      );
-    } else {
-      return (
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-          {score}
-        </span>
-      );
-    }
-  };
+    // Utilities
+    getScoreBadgeClass,
+    getScoreText,
+    getStudentInitial,
+  } = useExamScore();
+
+  // Early return for invalid parameters
+  if (!hasValidParams) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-xl mb-4">❌</div>
+          <p className="text-red-600 text-lg font-medium">Thông tin không hợp lệ</p>
+          <p className="text-gray-600 mt-2">Thiếu thông tin bài thi</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Đang tải dữ liệu điểm thi...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-xl mb-4">❌</div>
+          <p className="text-red-600 text-lg font-medium">Có lỗi xảy ra</p>
+          <p className="text-gray-600 mt-2">{error}</p>
+          <button
+            onClick={handleGoBack}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Quay lại
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -121,7 +87,7 @@ export default function ExamScorePage() {
             </div>
             
             <button
-              onClick={() => router.back()}
+              onClick={handleGoBack}
               className="flex items-center space-x-2 px-6 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors duration-200 font-medium text-gray-700"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,7 +109,7 @@ export default function ExamScorePage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Tổng sinh viên</p>
-                <p className="text-2xl font-bold text-gray-900">{scores.length}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalStudents}</p>
               </div>
             </div>
           </div>
@@ -202,86 +168,87 @@ export default function ExamScorePage() {
                 Bảng điểm chi tiết
               </h3>
               <div className="flex items-center space-x-4 text-sm text-gray-500">
-                <span>Tỷ lệ đạt: {scores.length > 0 ? Math.round((stats.passCount / scores.length) * 100) : 0}%</span>
+                <span>Tỷ lệ đạt: {stats.passRate}%</span>
                 <span>•</span>
-                <span>Tổng: {scores.length} sinh viên</span>
+                <span>Tổng: {stats.totalStudents} sinh viên</span>
               </div>
             </div>
           </div>
 
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-gray-600">Đang tải dữ liệu...</span>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã sinh viên</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên sinh viên</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Điểm</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Xếp loại</th>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã sinh viên</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên sinh viên</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Điểm</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Xếp loại</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {scores.map((item, idx) => (
+                  <tr key={`${item.studentId}-${item.code}`} className="hover:bg-blue-50 transition-colors duration-200">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{idx + 1}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{item.code}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+                          {getStudentInitial(item.fullName)}
+                        </div>
+                        <div className="text-sm font-medium text-gray-900">{item.fullName}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      {item.score !== null ? (
+                        <span className="text-lg font-bold text-gray-900">{item.score}</span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <span className={getScoreBadgeClass(item.score)}>
+                        {getScoreText(item.score)}
+                      </span>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {scores.map((item, idx) => (
-                    <tr key={`${item.studentId}-${item.code}`} className="hover:bg-blue-50 transition-colors duration-200">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{idx + 1}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{item.code}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
-                            {item.fullName.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="text-sm font-medium text-gray-900">{item.fullName}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        {item.score !== null ? (
-                          <span className="text-lg font-bold text-gray-900">{item.score}</span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        {getScoreBadge(item.score)}
-                      </td>
-                    </tr>
-                  ))}
-                  {scores.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center">
-                        <div className="flex flex-col items-center">
-                          <svg className="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                          </svg>
-                          <p className="text-gray-500 text-lg font-medium">Không có dữ liệu điểm thi</p>
-                          <p className="text-gray-400 text-sm">Chưa có sinh viên nào tham gia bài thi này</p>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
+                ))}
+                {scores.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center">
+                        <svg className="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        <p className="text-gray-500 text-lg font-medium">Không có dữ liệu điểm thi</p>
+                        <p className="text-gray-400 text-sm">Chưa có sinh viên nào tham gia bài thi này</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Export Actions */}
         <div className="mt-8 flex justify-end space-x-4">
-          <button className="flex items-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-colors duration-200 shadow-lg">
+          <button 
+            onClick={handleExportToExcel}
+            className="flex items-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-colors duration-200 shadow-lg"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <span>Xuất Excel</span>
           </button>
           
-          <button className="flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors duration-200 shadow-lg">
+          <button 
+            onClick={handlePrintScores}
+            className="flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors duration-200 shadow-lg"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
             </svg>
@@ -290,5 +257,24 @@ export default function ExamScorePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Đang tải dữ liệu điểm thi...</p>
+      </div>
+    </div>
+  );
+}
+
+export default function ExamScorePage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <ExamScoreContent />
+    </Suspense>
   );
 }

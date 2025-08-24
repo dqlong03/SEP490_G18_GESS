@@ -1,12 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Select from 'react-select';
-import * as XLSX from 'xlsx';
-
-import ExcelJS from 'exceljs';
 import { formatTimeHHmm } from "@/utils/formatDate";
 import { Suspense } from "react";
+import { useExamSlotList } from '@/hooks/examination/examSlotListHook';
 
 
 import {
@@ -30,103 +28,10 @@ import {
   Copy
 } from 'lucide-react';
 
-// Types
-interface ExamSlot {
-  examSlotId: number;
-  slotName: string;
-  status: string;
-  examType: 'Multiple' | 'Practice';
-  subjectId: number;
-  subjectName: string;
-  semesterId: number;
-  semesterName: string;
-  examDate: string;
-  gradeTeacherStatus: string;
-  proctorStatus: string;
-}
-
-interface ExamSlotDetail {
-  examSlotId: number;
-  slotName: string;
-  status: string;
-  examType: 'Multiple' | 'Practice';
-  subjectId: number;
-  subjectName: string;
-  examDate: string;
-  startTime: string;
-  endTime: string;
-  examName: string | null;
-  semesterName: string;
-  examSlotRoomDetails: ExamSlotRoom[];
-}
-
-interface ExamSlotRoom {
-  examSlotRoomId: number;
-  roomId: number;
-  roomName: string;
-  gradeTeacherName: string;
-  proctorName: string;
-  status: number;
-  examType: string;
-  examDate: string;
-  examName: string | null;
-  subjectName: string;
-  semesterName: string;
-  students: Student[];
-}
-
-interface Student {
-  email: string;
-  code: string;
-  fullName: string;
-  gender: boolean;
-  dateOfBirth: string;
-  urlAvatar?: string | null;
-}
-
-interface Major {
-  majorId: number;
-  majorName: string;
-}
-
-interface Subject {
-  subjectId: number;
-  subjectName: string;
-}
-
-interface Semester {
-  semesterId: number;
-  semesterName: string;
-}
-
-interface Exam {
-  examId: number;
-  examName: string;
-  examType: string;
-}
-
+// Types and constants
 interface SelectOption {
   value: string;
   label: string;
-}
-
-interface TeacherExcelRow {
-  code: string;
-  fullName: string;
-  email: string;
-  majorName: string;
-  phoneNumber: string;
-  dateOfBirth: string;
-  gender: string;
-}
-
-interface TeacherCheck {
-  teacherId: string;
-  teacherName: string;
-  isChecked: boolean;
-  code?: string;
-  majorId?: number;
-  majorName?: string;
 }
 
 const statusOptions = [
@@ -141,8 +46,6 @@ const examTypes = [
   { value: 'Multiple', label: 'Trắc nghiệm' },
   { value: 'Practice', label: 'Thực hành' }
 ];
-
-const API_BASE = 'https://localhost:7074/api';
 
 const customSelectStyles = {
   control: (provided: any, state: any) => ({
@@ -179,663 +82,95 @@ const customSelectStyles = {
   })
 };
 
-export default function ExamSlotListPage() {
-  // States
-  const [examSlots, setExamSlots] = useState<ExamSlot[]>([]);
-  const [majors, setMajors] = useState<Major[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [semesters, setSemesters] = useState<Semester[]>([]);
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
-  const [selectedMajor, setSelectedMajor] = useState<SelectOption | null>(null);
-  const [selectedSubject, setSelectedSubject] = useState<SelectOption | null>(null);
-  const [selectedSemester, setSelectedSemester] = useState<SelectOption | null>(null);
-  const [selectedYear, setSelectedYear] = useState<SelectOption | null>(null);
-  const [fromDate, setFromDate] = useState<string>('');
-  const [toDate, setToDate] = useState<string>('');
-  const [selectedStatus, setSelectedStatus] = useState<SelectOption | null>(null);
-  const [selectedExamType, setSelectedExamType] = useState<SelectOption | null>(null);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const [pageSize] = useState<number>(10);
-  const [showViewModal, setShowViewModal] = useState<boolean>(false);
-  const [assignType, setAssignType] = useState<'grade' | 'proctor' | null>(null);
-  const [showExamModal, setShowExamModal] = useState<boolean>(false);
-  const [selectedExamSlot, setSelectedExamSlot] = useState<ExamSlotDetail | null>(null);
-  const [selectedExamId, setSelectedExamId] = useState<string>('');
-  // Teacher assign popup logic (now handled in view modal)
-  const [teacherFileName, setTeacherFileName] = useState<string>('');
-  const [teacherErrorMsg, setTeacherErrorMsg] = useState<string>('');
-  const [teacherExcelRows, setTeacherExcelRows] = useState<TeacherExcelRow[]>([]);
-  const [teacherChecks, setTeacherChecks] = useState<TeacherCheck[]>([]);
-  const [teacherDropdowns, setTeacherDropdowns] = useState<{ [roomId: number]: TeacherCheck | null }>({});
-  const [isTheSame, setIsTheSame] = useState(false);
-  const [showStudents, setShowStudents] = useState<{ [roomId: number]: boolean }>({});
+function ExamSlotListPage() {
+  const {
+    // Data states
+    examSlots,
+    majors,
+    subjects,
+    semesters,
+    exams,
+    loading,
+    error,
+    setError,
 
-  // Years, options
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 10 }, (_, i) => currentYear - i);
-  const majorOptions: SelectOption[] = majors.map(major => ({
-    value: major.majorId.toString(),
-    label: major.majorName
-  }));
-  const subjectOptions: SelectOption[] = subjects.map(subject => ({
-    value: subject.subjectId?.toString() ?? '',
-    label: subject.subjectName
-  }));
-  const semesterOptions: SelectOption[] = semesters.map(semester => ({
-    value: semester.semesterId?.toString() ?? '',
-    label: semester.semesterName
-  }));
-  const yearOptions: SelectOption[] = years.map(year => ({
-    value: year.toString(),
-    label: year.toString()
-  }));
+    // Filter states
+    selectedMajor,
+    selectedSubject,
+    selectedSemester,
+    selectedYear,
+    fromDate,
+    toDate,
+    selectedStatus,
+    selectedExamType,
+
+    // Options
+    majorOptions,
+    subjectOptions,
+    semesterOptions,
+    yearOptions,
+
+    // Pagination
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    pageSize,
+
+    // Modal states
+    showViewModal,
+    setShowViewModal,
+    assignType,
+    setAssignType,
+    showExamModal,
+    setShowExamModal,
+    selectedExamSlot,
+    selectedExamId,
+    setSelectedExamId,
+
+    // Teacher states
+    teacherFileName,
+    teacherErrorMsg,
+    teacherExcelRows,
+    teacherChecks,
+    teacherDropdowns,
+    isTheSame,
+    setIsTheSame,
+    showStudents,
+
+    // Event handlers
+    handleMajorChange,
+    handleSubjectChange,
+    handleSemesterChange,
+    handleYearChange,
+    handleStatusChange,
+    handleExamTypeChange,
+    handleFromDateChange,
+    handleToDateChange,
+    handleStatusClick,
+    handleAssignTeacher,
+    handleTeacherDropdownChange,
+    handleDownloadTeacherTemplate,
+    handleTeacherUpload,
+    handleSaveGradeTeacher,
+    handleSaveProctorTeacher,
+    handleToggleStudents,
+    handleClearFilters,
+
+    // Action functions
+    fetchExamSlotDetail,
+    addExamToSlot,
+    changeExamSlotStatus,
+  } = useExamSlotList();
+
   const statusSelectOptions: SelectOption[] = statusOptions.map(status => ({
     value: status.value,
     label: status.label
   }));
+  
   const examTypeOptions: SelectOption[] = examTypes.map(type => ({
     value: type.value,
     label: type.label
   }));
-
-  // Fetch initial data
-  useEffect(() => {
-    fetchMajors();
-    fetchSemesters();
-    fetchExamSlots();
-  }, []);
-
-  const fetchMajors = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/Major/GetAllMajors`);
-      if (!response.ok) throw new Error('Failed to fetch majors');
-      const data = await response.json();
-      setMajors(data);
-    } catch (err) {
-      setError('Không thể tải danh sách ngành học');
-    }
-  };
-
-  const fetchSubjectsByMajor = async (majorId: number) => {
-    try {
-      const response = await fetch(`${API_BASE}/ViewExamSlot/GetAllSubjectsByMajorId/${majorId}`);
-      if (!response.ok) throw new Error('Failed to fetch subjects');
-      const data = await response.json();
-      setSubjects(data);
-    } catch (err) {
-      setError('Không thể tải danh sách môn học');
-    }
-  };
-
-  const fetchSemesters = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/Semesters`);
-      if (!response.ok) throw new Error('Failed to fetch semesters');
-      const data = await response.json();
-      setSemesters(data);
-    } catch (err) {
-      setError('Không thể tải danh sách học kỳ');
-    }
-  };
-
-  const fetchExamSlots = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (selectedSubject?.value) params.append('SubjectId', selectedSubject.value);
-      if (selectedSemester?.value) params.append('SemesterId', selectedSemester.value);
-      if (selectedYear?.value) params.append('Year', selectedYear.value);
-      if (selectedStatus?.value) params.append('Status', selectedStatus.value);
-      if (selectedExamType?.value) params.append('ExamType', selectedExamType.value);
-      if (fromDate) params.append('FromDate', fromDate);
-      if (toDate) params.append('ToDate', toDate);
-      params.append('pageSize', pageSize.toString());
-      params.append('pageIndex', currentPage.toString());
-
-      const response = await fetch(`${API_BASE}/ViewExamSlot/GetAllExamSlotsPagination?${params}`);
-      if (!response.ok) {
-        setExamSlots([]);
-        setTotalPages(1);
-        return;
-      }
-      const data = await response.json();
-      setExamSlots(data);
-
-      // Fetch total pages
-      const countResponse = await fetch(`${API_BASE}/ViewExamSlot/CountPage?${params}`);
-      if (countResponse.ok) {
-        const totalPagesData = await countResponse.json();
-        setTotalPages(totalPagesData);
-      }
-    } catch (err) {
-      alert('Không thể tải danh sách ca thi do lỗi hệ thống hoặc kết nối!');
-      setExamSlots([]);
-      setTotalPages(1);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchExamSlotDetail = async (examSlotId: number) => {
-    try {
-      const response = await fetch(`${API_BASE}/ViewExamSlot/GetExamSlotById/${examSlotId}`);
-      if (!response.ok) throw new Error('Failed to fetch exam slot detail');
-      const data = await response.json();
-      setSelectedExamSlot(data);
-      setShowViewModal(true);
-      setAssignType(null);
-      setTeacherChecks([]);
-      setTeacherDropdowns({});
-      setTeacherExcelRows([]);
-      setTeacherFileName('');
-      setTeacherErrorMsg('');
-      setIsTheSame(false);
-    } catch (err) {
-      setError('Không thể tải thông tin ca thi');
-    }
-  };
-
-  const fetchExams = async (semesterId: string, subjectId: string, examType: string, year: string) => {
-    try {
-      const params = new URLSearchParams({
-        semesterId,
-        subjectId,
-        examType,
-        year
-      });
-      const response = await fetch(`${API_BASE}/ViewExamSlot/GetAllExams?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch exams');
-      const data = await response.json();
-      setExams(data);
-    } catch (err) {
-      setError('Không thể tải danh sách bài thi');
-    }
-  };
-
-  const addExamToSlot = async (examSlotId: number, examId: number, examType: string) => {
-    try {
-      const params = new URLSearchParams({
-        examSlotId: examSlotId.toString(),
-        examId: examId.toString(),
-        examType
-      });
-      const response = await fetch(`${API_BASE}/ViewExamSlot/AddExamToExamSlot?${params}`, {
-        method: 'POST'
-      });
-      if (!response.ok) throw new Error('Failed to add exam to slot');
-      setShowExamModal(false);
-      fetchExamSlots();
-      alert('Thêm bài thi vào ca thi thành công!');
-    } catch (err) {
-      alert('Thêm bài thi vào ca thi không thành công!');
-      setError('Không thể thêm bài thi vào ca thi do đã có bài thi trong ca thi này');
-    }
-  };
-
-  const changeExamSlotStatus = async (examSlotId: number, examType: string) => {
-    try {
-      const params = new URLSearchParams({
-        examSlotId: examSlotId.toString(),
-        examType: examType.toString()
-      });
-      const response = await fetch(`${API_BASE}/ViewExamSlot/ChangeStatusExamSlot?${params}`, {
-        method: 'POST'
-      });
-      if (!response.ok) throw new Error('Failed to change status');
-      fetchExamSlots();
-      alert('Thay đổi trạng thái ca thi thành công!');
-    } catch (err) {
-      setError('Không thể thay đổi trạng thái ca thi');
-    }
-  };
-
-  const handleMajorChange = (option: SelectOption | null) => {
-    setSelectedMajor(option);
-    setSelectedSubject(null);
-    setSubjects([]);
-    setCurrentPage(1); // reset về trang 1
-
-    if (option?.value) {
-      fetchSubjectsByMajor(parseInt(option.value));
-    }
-  };
-
-  const handleStatusClick = async (examSlot: ExamSlot) => {
-    if (examSlot.status === 'Chưa gán bài thi') {
-      if (selectedSemester?.value && selectedSubject?.value && selectedYear?.value) {
-        await fetchExams(selectedSemester.value, selectedSubject.value, examSlot.examType, selectedYear.value);
-        // setSelectedExamSlot({ ...examSlot } as ExamSlotDetail);
-        setSelectedExamSlot({
-            examSlotId: examSlot.examSlotId,
-            slotName: examSlot.slotName,
-            status: examSlot.status,
-            examType: examSlot.examType,
-            subjectId: examSlot.subjectId,
-            subjectName: examSlot.subjectName,
-            examDate: examSlot.examDate,
-            startTime: '',
-            endTime: '',
-            examName: null,
-            semesterName: examSlot.semesterName,
-            examSlotRoomDetails: []
-          });
-        setShowExamModal(true);
-      } else {
-        alert('Vui lòng chọn học kỳ, môn học và năm để xem danh sách bài thi');
-      }
-    } else if (examSlot.status === 'Chưa mở ca') {
-        if (examSlot.proctorStatus !== 'Đã gán giảng viên coi thi') {
-        alert('Bạn cần gán đủ người coi thi cho tất cả các phòng trước khi mở ca!');
-        return;
-      }
-
-      const examDate = new Date(examSlot.examDate);
-      const currentDate = new Date();
-      examDate.setHours(0, 0, 0, 0);
-      currentDate.setHours(0, 0, 0, 0);
-      if (examDate.getTime() !== currentDate.getTime()) {
-        const examDateStr = examDate.toLocaleDateString('vi-VN');
-        const currentDateStr = currentDate.toLocaleDateString('vi-VN');
-        alert(
-          `Không thể mở ca thi!\n\n` +
-          `Ngày thi: ${examDateStr}\n` +
-          `Ngày hiện tại: ${currentDateStr}\n\n` +
-          `Ca thi chỉ có thể được mở vào đúng ngày thi.`
-        );
-        return;
-      }
-      const examTypeNum = examSlot.examType === 'Multiple' ? 'Multiple' : "Practice";
-      await changeExamSlotStatus(examSlot.examSlotId, examTypeNum);
-    } else {
-      const examTypeNum = examSlot.examType === 'Multiple' ? 'Multiple' : "Practice";
-      await changeExamSlotStatus(examSlot.examSlotId, examTypeNum);
-    }
-  };
-
-  // Khi bấm nút Gán, mở popup xem và truyền loại gán vào state
-  const handleAssignTeacher = async (examSlotId: number, type: 'grade' | 'proctor') => {
-    try {
-      const response = await fetch(`${API_BASE}/ViewExamSlot/GetExamSlotById/${examSlotId}`);
-      if (!response.ok) throw new Error('Failed to fetch exam slot detail');
-      const data = await response.json();
-      setSelectedExamSlot(data);
-      setShowViewModal(true);
-      setAssignType(type);
-      setTeacherChecks([]);
-      setTeacherDropdowns({});
-      setTeacherExcelRows([]);
-      setTeacherFileName('');
-      setTeacherErrorMsg('');
-      setIsTheSame(false);
-    } catch (err) {
-      setError('Không thể tải thông tin ca thi');
-    }
-  };
-
-  // Handle teacher dropdown change
-  const handleTeacherDropdownChange = (roomId: number, teacher: TeacherCheck | null) => {
-    setTeacherDropdowns(prev => {
-      const newDropdowns = { ...prev, [roomId]: teacher };
-      // Remove teacher from other rooms' dropdowns if selected
-      if (teacher) {
-        // Object.keys(newDropdowns).forEach(key => {
-        //   if (parseInt(key) !== roomId && newDropdowns[key]?.teacherId === teacher.teacherId) {
-        //     newDropdowns[key] = null;
-        //   }
-        // });
-
-        Object.keys(newDropdowns).forEach(key => {
-          const numKey = Number(key);
-          if (numKey !== roomId && newDropdowns[numKey]?.teacherId === teacher.teacherId) {
-            newDropdowns[numKey] = null;
-          }
-        });
-      }
-      return newDropdowns;
-    });
-  };
-
-  // Download teacher template
-const handleDownloadTeacherTemplate = async () => {
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('DanhSachGV');
-
-  // Header: Thêm các trường mới
-  worksheet.addRow(['Mã GV', 'Họ tên', 'Email', 'Số điện thoại', 'Ngày sinh', 'Giới tính', 'Ngành']);
-  worksheet.addRow([
-    'GV001',
-    'Nguyễn Văn A',
-    'gv001@example.com',
-    '0912345678',
-    '1990-01-01',
-    'Nam',
-    majors[0]?.majorName || ''
-  ]);
-  worksheet.addRow([
-    'GV002',
-    'Trần Thị B',
-    'gv002@example.com',
-    '0987654321',
-    '1992-02-02',
-    'Nữ',
-    majors[1]?.majorName || majors[0]?.majorName || ''
-  ]);
-
-  // Tạo dropdown cho cột Ngành (cột 7) ở 2 dòng mẫu
-  const majorNames = majors.map(m => m.majorName);
-  worksheet.getColumn(7).eachCell((cell, rowNumber) => {
-    if (rowNumber > 1 && rowNumber <= 3) { // Dòng 2 và 3
-      cell.dataValidation = {
-        type: 'list',
-        allowBlank: false,
-        formulae: [`"${majorNames.join(',')}"`],
-        showErrorMessage: true,
-        errorTitle: 'Lỗi',
-        error: 'Vui lòng chọn ngành từ danh sách!'
-      };
-    }
-  });
-
-  // Tạo dropdown cho cột Giới tính (cột 6) ở 2 dòng mẫu
-  worksheet.getColumn(6).eachCell((cell, rowNumber) => {
-    if (rowNumber > 1 && rowNumber <= 3) {
-      cell.dataValidation = {
-        type: 'list',
-        allowBlank: false,
-        formulae: [`"Nam,Nữ"`],
-        showErrorMessage: true,
-        errorTitle: 'Lỗi',
-        error: 'Vui lòng chọn giới tính Nam hoặc Nữ!'
-      };
-    }
-  });
-
-  // Xuất file
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'mau_giao_vien.xlsx';
-  a.click();
-  window.URL.revokeObjectURL(url);
-};
-
-  // Upload teacher file
-  const handleTeacherUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  setTeacherErrorMsg('');
-  setTeacherExcelRows([]);
-  setTeacherChecks([]);
-  setTeacherDropdowns({});
-  setTeacherFileName('');
-  const resetInput = () => {
-    if (e.target) e.target.value = '';
-  };
-  const reader = new FileReader();
-  reader.onload = async (evt) => {
-    const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-    const workbook = XLSX.read(data, { type: 'array' });
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-    const json: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-    if (json.length < 2) {
-      setTeacherErrorMsg('File phải có ít nhất 1 dòng dữ liệu giáo viên.');
-      setTeacherFileName('');
-      resetInput();
-      return;
-    }
-    const header = json[0];
-    const requiredHeader = [
-      'Mã GV', 'Họ tên', 'Email', 'Số điện thoại', 'Ngày sinh', 'Giới tính', 'Ngành'
-    ];
-    const isHeaderValid = requiredHeader.every((h, idx) => header[idx] === h);
-    if (!isHeaderValid) {
-      setTeacherErrorMsg('File mẫu không đúng định dạng hoặc thiếu trường thông tin!');
-      setTeacherFileName('');
-      resetInput();
-      return;
-    }
-    const dataArr: TeacherExcelRow[] = [];
-    for (let i = 1; i < json.length; i++) {
-      const row = json[i];
-      if (
-        row.length < 7 ||
-        row.some((cell: string, idx: number) => cell === '')
-      ) {
-        setTeacherErrorMsg(`Dòng ${i + 1} thiếu thông tin. Vui lòng điền đầy đủ tất cả trường!`);
-        setTeacherFileName('');
-        resetInput();
-        return;
-      }
-      const [code, fullName, email, phoneNumber, dateOfBirth, gender, majorName] = row;
-      const foundMajor = majors.find(m => m.majorName === majorName);
-      if (!foundMajor) {
-        setTeacherErrorMsg(`Ngành "${majorName}" ở dòng ${i + 1} không tồn tại. Vui lòng tải lên file khác!`);
-        setTeacherFileName('');
-        resetInput();
-        return;
-      }
-      if (gender !== 'Nam' && gender !== 'Nữ') {
-        setTeacherErrorMsg(`Giới tính ở dòng ${i + 1} phải là "Nam" hoặc "Nữ"!`);
-        setTeacherFileName('');
-        resetInput();
-        return;
-      }
-      // Validate ngày sinh (yyyy-mm-dd)
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) {
-        setTeacherErrorMsg(`Ngày sinh ở dòng ${i + 1} phải có định dạng yyyy-mm-dd!`);
-        setTeacherFileName('');
-        resetInput();
-        return;
-      }
-      dataArr.push({ code, fullName, email, phoneNumber, dateOfBirth, gender, majorName });
-    }
-    setTeacherFileName(file.name);
-    setTeacherExcelRows(dataArr);
-
-    // Call CheckTeacherExist API
-    try {
-      const checkExistBody = dataArr.map(row => ({
-        code: row.code,
-        fullname: row.fullName,
-        email: row.email,
-        phoneNumber: row.phoneNumber,
-        dateOfBirth: row.dateOfBirth,
-        gender: row.gender === 'Nam',
-        majorName: row.majorName,
-      }));
-
-      const body = checkExistBody.map(row => ({
-        code: row.code,
-        fullname: row.fullname,
-        email: row.email,
-        phoneNumber: row.phoneNumber,
-        dateOfBirth: row.dateOfBirth,
-        gender: row.gender,
-        userName: row.email,
-        isActive: true,
-        password: "Password123!",
-        majorName: row.majorName,
-        majorId: majorOptions.find(m => m.label === row.majorName)?.value || 0,
-        hireDate: "2025-08-17T07:17:00.631Z",
-        subjectId: 1
-      }));
-      if (!selectedExamSlot) return;
-      const checkExistRes = await fetch(`${API_BASE}/ViewExamSlot/CheckTeacherExist`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      if (!checkExistRes.ok) throw new Error('CheckTeacherExist failed');
-      const checkExistData = await checkExistRes.json();
-      // Only take teacherId, teacherName, code, majorId, majorName
-      const teacherIds = checkExistData.map((t: any, idx: number) => ({
-        teacherId: t.teacherId,
-        teacherName: t.fullname,
-        code: t.code,
-        majorId: majorOptions.find(m => m.label === dataArr[idx].majorName)?.value || 1,
-        majorName: dataArr[idx].majorName
-      }));
-
-      // Nếu là gán chấm thi thì KHÔNG gọi IsTeacherAvailable, lấy luôn danh sách này
-      if (assignType === 'grade') {
-        setTeacherChecks(teacherIds);
-        setTeacherErrorMsg('');
-        resetInput();
-        return;
-      }
-
-      // Nếu là gán coi thi thì vẫn gọi IsTeacherAvailable như cũ
-      const isAvailableRes = await fetch(`${API_BASE}/ViewExamSlot/IsTeacherAvailable`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          examSlotId: selectedExamSlot.examSlotId,
-          teacherChecks: teacherIds.map((t: any) => ({
-            teacherId: t.teacherId,
-            teacherName: t.teacherName,
-            isChecked: true
-          }))
-        })
-      });
-      if (!isAvailableRes.ok) throw new Error('IsTeacherAvailable failed');
-      const isAvailableData = await isAvailableRes.json();
-      // Only teachers with isChecked true
-      const availableTeachers: TeacherCheck[] = isAvailableData.teacherChecks
-        .filter((t: any) => t.isChecked)
-        .map((t: any) => {
-          const found = teacherIds.find((x: any) => x.teacherId === t.teacherId);
-          return {
-            teacherId: t.teacherId,
-            teacherName: t.teacherName,
-            isChecked: t.isChecked,
-            code: found?.code,
-            majorId: found?.majorId,
-            majorName: found?.majorName
-          };
-        });
-      setTeacherChecks(availableTeachers);
-      setTeacherErrorMsg('');
-    } catch (err) {
-      setTeacherErrorMsg('Lỗi kiểm tra giáo viên. Vui lòng thử lại!');
-    }
-    resetInput();
-  };
-  reader.readAsArrayBuffer(file);
-};
-  // Save grade teacher
-  const handleSaveGradeTeacher = async () => {
-    if (!selectedExamSlot) return;
-
-      const missingRooms = selectedExamSlot.examSlotRoomDetails.filter(room => !teacherDropdowns[room.roomId]);
-      if (missingRooms.length > 0) {
-        alert('Vui lòng chọn giáo viên cho tất cả các phòng trước khi lưu!');
-        return;
-      }
-    const teacherExamslotRoom = selectedExamSlot.examSlotRoomDetails.map(room => {
-      const teacher = teacherDropdowns[room.roomId];
-      if (!teacher) return null;
-      return {
-        examSlotRoomId: room.examSlotRoomId,
-        teacherId: teacher.teacherId,
-        teacherName: teacher.teacherName,
-        majorId: teacher.majorId
-      };
-    }).filter(Boolean);
-    if (teacherExamslotRoom.length !== selectedExamSlot.examSlotRoomDetails.length) {
-      alert('Vui lòng chọn đủ giáo viên cho tất cả các phòng!');
-      return;
-    }
-    try {
-      await fetch(`${API_BASE}/ViewExamSlot/AddGradeTeacherToExamSlot`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          teacherExamslotRoom,
-          subjectId: 1,
-          subjectName: 0
-        })
-      });
-      alert('Thêm giảng viên chấm thi thành công!');
-      setShowViewModal(false);
-      setAssignType(null);
-      fetchExamSlots();
-    } catch (err) {
-      alert('Lỗi khi lưu giảng viên chấm thi!');
-    }
-  };
-
-  // Save proctor teacher
-  const handleSaveProctorTeacher = async () => {
-    if (!selectedExamSlot) return;
-
-      const missingRooms = selectedExamSlot.examSlotRoomDetails.filter(room => !teacherDropdowns[room.roomId]);
-      if (missingRooms.length > 0) {
-        alert('Vui lòng chọn giáo viên cho tất cả các phòng trước khi lưu!');
-        return;
-      }
-    const teacherExamslotRoom = selectedExamSlot.examSlotRoomDetails.map(room => {
-      const teacher = teacherDropdowns[room.roomId];
-      if (!teacher) return null;
-      return {
-        examSlotRoomId: room.examSlotRoomId,
-        teacherId: teacher.teacherId,
-        teacherName: teacher.teacherName,
-        majorId: teacher.majorId
-      };
-    }).filter(Boolean);
-    if (teacherExamslotRoom.length !== selectedExamSlot.examSlotRoomDetails.length) {
-      alert('Vui lòng chọn đủ giáo viên cho tất cả các phòng!');
-      return;
-    }
-    try {
-      await fetch(`${API_BASE}/ViewExamSlot/AddTeacherToExamSlotRoom`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          teacherExamslotRoom,
-          isTheSame,
-          subjectId: 1,
-          subjectName: 0
-        })
-      });
-      alert('Thêm giảng viên coi thi thành công!');
-      setShowViewModal(false);
-      setAssignType(null);
-      fetchExamSlots();
-    } catch (err) {
-      alert('Lỗi khi lưu giảng viên coi thi!');
-    }
-  };
-
-  // Toggle show students
-  const handleToggleStudents = (roomId: number) => {
-    setShowStudents(prev => ({
-      ...prev,
-      [roomId]: !prev[roomId]
-    }));
-  };
-
-  useEffect(() => {
-    fetchExamSlots();
-  }, [selectedSubject, selectedSemester, selectedYear, selectedStatus, selectedExamType, fromDate, toDate, currentPage]);
-
-  const handleClearFilters = () => {
-    setSelectedMajor(null);
-    setSelectedSubject(null);
-    setSelectedSemester(null);
-    setSelectedYear(null);
-    setFromDate('');
-    setToDate('');
-    setSelectedStatus(null);
-    setSelectedExamType(null);
-    setCurrentPage(1);
-  };
 
   const getStatusBadge = (status: string, isClickable: boolean = false, examDate?: string) => {
   const statusConfig = statusOptions.find(s => s.value === status);
@@ -881,50 +216,7 @@ const handleDownloadTeacherTemplate = async () => {
   );
 };
 
-// Môn học
-const handleSubjectChange = (option: SelectOption | null) => {
-  setSelectedSubject(option);
-  setCurrentPage(1);
-};
-
-// Học kỳ
-const handleSemesterChange = (option: SelectOption | null) => {
-  setSelectedSemester(option);
-  setCurrentPage(1);
-};
-
-// Năm học
-const handleYearChange = (option: SelectOption | null) => {
-  setSelectedYear(option);
-  setCurrentPage(1);
-};
-
-// Trạng thái
-const handleStatusChange = (option: SelectOption | null) => {
-  setSelectedStatus(option);
-  setCurrentPage(1);
-};
-
-// Loại bài thi
-const handleExamTypeChange = (option: SelectOption | null) => {
-  setSelectedExamType(option);
-  setCurrentPage(1);
-};
-
-// Từ ngày
-const handleFromDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  setFromDate(e.target.value);
-  setCurrentPage(1);
-};
-
-// Đến ngày
-const handleToDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  setToDate(e.target.value);
-  setCurrentPage(1);
-};
-
   return (
-    <Suspense fallback={<div>Loading...</div>}>
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 pl-4 pr-4">
       <div className="max-w-full py-8">
         {/* Header Section */}
@@ -1099,7 +391,7 @@ const handleToDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200">
                       <th className="text-center py-4 px-6 font-semibold text-gray-700 w-16">STT</th>
@@ -1122,7 +414,7 @@ const handleToDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                           </span>
                         </td>
                         <td className="py-4 px-6">
-                          <div className="font-medium text-gray-900">{slot.slotName}</div>
+                          <div className="text-sm text-gray-900 max-w-[15ch] break-all font-medium">{slot.slotName}</div>
                         </td>
                         <td className="py-4 px-6">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -1591,6 +883,18 @@ const handleToDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         )}
       </div>
     </div>
-    </Suspense>
   );
 }
+
+// Wrapped component with Suspense for loading state
+const WrappedExamSlotListPage = () => {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center min-h-screen">
+      <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+    </div>}>
+      <ExamSlotListPage />
+    </Suspense>
+  );
+};
+
+export default WrappedExamSlotListPage;

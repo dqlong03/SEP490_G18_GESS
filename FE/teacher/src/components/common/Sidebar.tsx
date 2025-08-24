@@ -31,13 +31,13 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProp
     <>
       {isMobile && isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-30 z-10"
+          className="fixed inset-0 backdrop-blur-sm z-10"
           onClick={handleClose}
         ></div>
       )}
       
       <aside
-        className={`h-screen left-0 z-20 transition-all duration-300
+        className={`fixed top-0 left-0 h-screen z-20 transition-all duration-300 pt-13
           ${isMobile ? (isSidebarOpen ? 'w-80' : 'w-0') : 'w-70'}
           bg-white border-r border-gray-200 shadow-xl overflow-hidden`}
         style={{ pointerEvents: 'auto' }}
@@ -56,7 +56,7 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProp
           </div>
         </div>
 
-        <nav className="py-4 px-3 h-[calc(100vh-80px)]">
+        <nav className="py-4 px-3 h-[calc(100vh-80px)] overflow-y-auto">
           
 
           {role?.toLowerCase() === 'teacher' && (

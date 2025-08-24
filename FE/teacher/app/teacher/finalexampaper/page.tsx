@@ -1,16 +1,15 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import Select from 'react-select';
-import { getUserIdFromToken } from '@/utils/tokenUtils';
-import Link from 'next/link';
-import { 
-  BookOpen, 
-  Plus, 
-  Eye, 
+import { Suspense } from "react";
+import { useFinalExamPaper } from "../../../src/hooks/teacher/useFinalExamPaper";
+import Select from "react-select";
+import Link from "next/link";
+import {
+  BookOpen,
+  Plus,
+  Eye,
   FileText,
   Calendar,
-  GraduationCap,
   Settings,
   X,
   Target,
@@ -18,188 +17,37 @@ import {
   Filter,
   AlertCircle,
   PenTool,
-  Users,
   Search,
   CheckCircle,
   Percent
-} from 'lucide-react';
+} from "lucide-react";
 
-const API_URL = "https://localhost:7074";
-
-interface SubjectDTO {
-  subjectId: number;
-  subjectName: string;
-}
-
-interface SemesterDTO {
-  semesterId: number;
-  semesterName: string;
-}
-
-interface PracExamPaperDTO {
-  pracExamPaperId: number;
-  pracExamPaperName: string;
-  semesterName: string;
-}
-
-interface GradingCriterion {
-  criterionName: string;
-  weightPercent: number;
-  description: string;
-}
-
-interface ExamPaperDetail {
-  pracExamPaperId: number;
-  pracExamPaperName: string;
-  createAt: string;
-  subjectName: string;
-  semesterName: string;
-  categoryExamName: string | null;
-  status: string | null;
-  questions: {
-    questionOrder: number;
-    content: string;
-    answerContent: string;
-    score: number;
-  }[];
-}
-
-export default function ExamPaperListPage() {
-  const [subjects, setSubjects] = useState<SubjectDTO[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState<any>(null);
-  const [semesters, setSemesters] = useState<SemesterDTO[]>([]);
-  const [selectedSemester, setSelectedSemester] = useState<any>(null);
-  const [years, setYears] = useState<{ value: string; label: string }[]>([]);
-  const [selectedYear, setSelectedYear] = useState<{ value: string; label: string } | null>(null);
-
-  const [examPapers, setExamPapers] = useState<PracExamPaperDTO[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState('');
-
-  // Chi tiết đề thi
-  const [showDetail, setShowDetail] = useState(false);
-  const [detailData, setDetailData] = useState<ExamPaperDetail | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-    const [fetchError, setFetchError] = useState(false); // Thêm state để theo dõi lỗi API
-
-
-  // Lấy danh sách môn học, kỳ, năm
-  useEffect(() => {
-    const teacherId = getUserIdFromToken();
-    fetch(`${API_URL}/api/FinalExamPaper/GetAllMajorByTeacherId?teacherId=${teacherId}`)
-      .then(res => res.json())
-      .then(data => {
-        setSubjects(data || []);
-        if (data && data.length > 0) {
-          setSelectedSubject({ value: data[0].subjectId, label: data[0].subjectName });
-        }
-      });
-    fetch(`${API_URL}/api/Semesters`)
-      .then(res => res.json())
-      .then(data => {
-        setSemesters(data || []);
-        if (data && data.length > 0) {
-          setSelectedSemester({ value: data[0].semesterId, label: data[0].semesterName });
-        }
-      });
-    // Năm: 10 năm về trước kể từ năm hiện tại
-    const currentYear = new Date().getFullYear();
-    const yearArr = [];
-    for (let y = currentYear; y > currentYear - 10; y--) {
-      yearArr.push({ value: y.toString(), label: y.toString() });
-    }
-    setYears(yearArr);
-    if (yearArr.length > 0) {
-      setSelectedYear(yearArr[0]);
-    }
-  }, []);
-
- // Lấy danh sách đề thi khi chọn đủ bộ lọc
-  useEffect(() => {
-    if (selectedSubject && selectedSemester && selectedYear) {
-      setLoading(true);
-      setFetchError(false); // Reset lỗi trước khi fetch
-      fetch(`${API_URL}/api/FinalExamPaper/GetAllFinalExamPaper?subjectId=${selectedSubject.value}&semesterId=${selectedSemester.value}&year=${selectedYear.value}`)
-        .then(res => {
-          if (!res.ok) throw new Error('API error');
-          return res.json();
-        })
-        .then(data => {
-          setExamPapers(data || []);
-        })
-        .catch(() => {
-          setExamPapers([]);
-          setFetchError(true); // Đánh dấu lỗi
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setExamPapers([]);
-      setFetchError(false);
-    }
-  }, [selectedSubject, selectedSemester, selectedYear]);
-
-  // Xem chi tiết đề thi
-  const handleShowDetail = async (examPaperId: number) => {
-    setShowDetail(true);
-    setLoadingDetail(true);
-    try {
-      const res = await fetch(`${API_URL}/api/FinalExamPaper/ViewFinalExamPaperDetail/${examPaperId}`);
-      if (!res.ok) throw new Error('Không lấy được chi tiết đề thi');
-      const data = await res.json();
-      setDetailData(data);
-    } catch (err: any) {
-      setDetailData(null);
-      alert(err.message || 'Lỗi lấy chi tiết đề thi');
-    } finally {
-      setLoadingDetail(false);
-    }
-  };
-
-  const handleCloseDetail = () => {
-    setShowDetail(false);
-    setDetailData(null);
-  };
-
-  // Filter exam papers based on search text
-  const filteredExamPapers = examPapers.filter(exam =>
-    exam.pracExamPaperName.toLowerCase().includes(searchText.toLowerCase())
-  );
-
-  // Calculate total score from detail data
-  const totalScore = detailData?.questions.reduce((sum, q) => sum + q.score, 0) || 0;
-
-  // Function to parse grading criteria from JSON string
-  const parseGradingCriteria = (answerContent: string): GradingCriterion[] => {
-    if (!answerContent) return [];
-    
-    try {
-      // Try to parse as JSON first
-      const parsed = JSON.parse(answerContent);
-      if (Array.isArray(parsed)) {
-        return parsed.filter(item => 
-          item && 
-          typeof item === 'object' && 
-          item.criterionName && 
-          item.description
-        );
-      }
-    } catch (error) {
-      // If JSON parsing fails, fallback to text splitting
-      const points = answerContent
-        .split(/[\n\r]+|[.;]+/)
-        .map(point => point.trim())
-        .filter(point => point.length > 0 && point !== '.');
-      
-      // Convert to criterion format
-      return points.map((point, index) => ({
-        criterionName: `Tiêu chí ${index + 1}`,
-        weightPercent: Math.round(100 / points.length),
-        description: point
-      }));
-    }
-    
-    return [];
-  };
+const FinalExamPaperClient = () => {
+  const {
+    selectedSubject,
+    selectedSemester,
+    selectedYear,
+    searchText,
+    showDetail,
+    detailData,
+    loading,
+    loadingDetail,
+    fetchError,
+    subjectOptions,
+    semesterOptions,
+    yearOptions,
+    filteredExamPapers,
+    totalScore,
+    statistics,
+    setSelectedSubject,
+    setSelectedSemester,
+    setSelectedYear,
+    setSearchText,
+    handleShowDetail,
+    handleCloseDetail,
+    parseGradingCriteria,
+    formatDate,
+  } = useFinalExamPaper();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -228,13 +76,13 @@ export default function ExamPaperListPage() {
         </div>
 
         {/* Statistics */}
-        {examPapers.length > 0 && (
+        {statistics.hasData && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Tổng đề thi</p>
-                  <p className="text-2xl font-bold text-blue-600">{examPapers.length}</p>
+                  <p className="text-2xl font-bold text-blue-600">{statistics.totalExams}</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                   <FileText className="w-6 h-6 text-blue-600" />
@@ -279,7 +127,7 @@ export default function ExamPaperListPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Môn học</label>
               <Select
-                options={subjects.map(s => ({ value: s.subjectId, label: s.subjectName }))}
+                options={subjectOptions}
                 value={selectedSubject}
                 onChange={setSelectedSubject}
                 placeholder="Chọn môn học"
@@ -302,7 +150,7 @@ export default function ExamPaperListPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Học kỳ</label>
               <Select
-                options={semesters.map(s => ({ value: s.semesterId, label: s.semesterName }))}
+                options={semesterOptions}
                 value={selectedSemester}
                 onChange={setSelectedSemester}
                 placeholder="Chọn học kỳ"
@@ -325,7 +173,7 @@ export default function ExamPaperListPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Năm học</label>
               <Select
-                options={years}
+                options={yearOptions}
                 value={selectedYear}
                 onChange={setSelectedYear}
                 placeholder="Chọn năm"
@@ -392,7 +240,7 @@ export default function ExamPaperListPage() {
                       </div>
                     </td>
                   </tr>
-                ) : fetchError ? ( // Nếu có lỗi API, hiển thị như không có đề nào
+                ) : fetchError ? (
                   <tr>
                     <td colSpan={4} className="px-6 py-12 text-center">
                       <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -467,7 +315,7 @@ export default function ExamPaperListPage() {
 
         {/* Chi tiết đề thi modal */}
         {showDetail && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-50 backdrop-blur-sm p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[85vh] overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
                 <div className="flex items-center justify-between">
@@ -538,12 +386,7 @@ export default function ExamPaperListPage() {
                             </div>
                             <div>
                               <p className="text-sm text-gray-600">Ngày tạo</p>
-                              <p className="font-semibold text-gray-900">
-                                {detailData.createAt !== "0001-01-01T00:00:00" 
-                                  ? new Date(detailData.createAt).toLocaleDateString('vi-VN')
-                                  : 'Chưa cập nhật'
-                                }
-                              </p>
+                              <p className="font-semibold text-gray-900">{formatDate(detailData.createAt)}</p>
                             </div>
                           </div>
                           
@@ -673,5 +516,17 @@ export default function ExamPaperListPage() {
         )}
       </div>
     </div>
+  );
+};
+
+export default function FinalExamPaperPage() {
+  return (
+    <Suspense fallback={
+      <div className="p-6">
+        <div className="text-center">Đang tải...</div>
+      </div>
+    }>
+      <FinalExamPaperClient />
+    </Suspense>
   );
 }

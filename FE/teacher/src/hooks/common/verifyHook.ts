@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { verifyOtp } from "@services/common/verifyService";
+import { verifyOtp } from "@/services/common/verifyService";
 
 export function useOtpVerify() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);

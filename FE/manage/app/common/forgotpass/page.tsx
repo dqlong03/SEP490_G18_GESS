@@ -7,7 +7,6 @@ import { Suspense } from "react";
 export default function ForgotPasswordPage() {
   const { email, setEmail, error, success, loading, handleSubmit } = useForgotPassword();
   return (
-    <Suspense fallback={<div>Loading...</div>}>
     <ForgotPasswordForm
       email={email}
       setEmail={setEmail}
@@ -16,6 +15,5 @@ export default function ForgotPasswordPage() {
       loading={loading}
       handleSubmit={handleSubmit}
     />
-    </Suspense>
   );
 }

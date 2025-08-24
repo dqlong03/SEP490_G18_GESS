@@ -1,7 +1,14 @@
 "use client";
 
-import { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import {
+  useState,
+  useEffect,
+  ChangeEvent,
+  FormEvent,
+  useCallback,
+} from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/utils/toastUtils";
 import {
   Major,
   MajorForm,
@@ -15,7 +22,6 @@ import {
 export function useMajors() {
   const [majors, setMajors] = useState<Major[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<MajorForm>({
     majorName: "",
     startDate: "",
@@ -47,7 +53,6 @@ export function useMajors() {
 
   const fetchAllMajors = async () => {
     setLoading(true);
-    setError(null);
     try {
       const params = {
         name: searchName,
@@ -59,23 +64,65 @@ export function useMajors() {
       const data = await fetchMajors(params);
       setMajors(data);
 
-      const count = await countMajors({
-        name: searchName,
-        fromDate: searchFromDate,
-        toDate: searchToDate,
-        pageSize,
-      });
-      setTotalPages(Math.ceil(count / pageSize));
+      // Gọi count API để tính tổng số trang
+      try {
+        const countParams = {
+          name: searchName,
+          fromDate: searchFromDate,
+          toDate: searchToDate,
+        };
+        const countResponse = await countMajors(countParams);
+        // API có thể trả về object {count: number} hoặc chỉ là number
+        const totalCount =
+          typeof countResponse === "number"
+            ? countResponse
+            : countResponse.count || countResponse;
+        const calculatedPages = Math.ceil(totalCount / pageSize);
+        setTotalPages(calculatedPages);
+      } catch (countErr) {
+        setTotalPages(1);
+      }
     } catch (err: any) {
-      setError(err.message);
+      showToast("error", err.message || "Có lỗi xảy ra khi tải dữ liệu");
+      setMajors([]);
+      setTotalPages(1);
     }
     setLoading(false);
   };
 
+  // Debounce function for search
+  const debounce = useCallback((func: Function, delay: number) => {
+    let timeoutId: NodeJS.Timeout;
+    return (...args: any[]) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => func.apply(null, args), delay);
+    };
+  }, []);
+
+  // Debounced search function
+  const debouncedSearch = useCallback(
+    debounce(() => {
+      setPageNumber(1);
+      fetchAllMajors();
+    }, 800),
+    [searchName, searchFromDate, searchToDate]
+  );
+
   useEffect(() => {
     fetchAllMajors();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageNumber, searchName, searchFromDate, searchToDate]);
+  }, [pageNumber]);
+
+  // Handle search input changes with debounce
+  useEffect(() => {
+    if (searchName || searchFromDate || searchToDate) {
+      debouncedSearch();
+    } else {
+      setPageNumber(1);
+      fetchAllMajors();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchName, searchFromDate, searchToDate]);
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -90,20 +137,21 @@ export function useMajors() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
 
     try {
       if (editingId === null) {
         await createMajor(form);
+        showToast("success", "Thêm ngành học thành công!");
       } else {
         await updateMajor(editingId, form);
+        showToast("success", "Cập nhật ngành học thành công!");
       }
       setForm({ majorName: "", startDate: "", endDate: "", isActive: true });
       setEditingId(null);
       setShowPopup(false);
       fetchAllMajors();
     } catch (err: any) {
-      setError(err.message);
+      showToast("error", err.message || "Có lỗi xảy ra");
     }
     setLoading(false);
   };
@@ -129,12 +177,12 @@ export function useMajors() {
   const handleDelete = async (id: number) => {
     if (!confirm("Bạn có chắc muốn xóa ngành này?")) return;
     setLoading(true);
-    setError(null);
     try {
       await deleteMajor(id);
+      showToast("success", "Xóa ngành học thành công!");
       fetchAllMajors();
     } catch (err: any) {
-      setError(err.message);
+      showToast("error", err.message || "Có lỗi xảy ra khi xóa");
     }
     setLoading(false);
   };
@@ -164,7 +212,6 @@ export function useMajors() {
   return {
     majors,
     loading,
-    error,
     form,
     editingId,
     showPopup,
@@ -182,7 +229,6 @@ export function useMajors() {
     handleSubmit,
     handleEdit,
     handleDelete,
-    handleSearch,
     closePopup,
     setShowPopup,
     setEditingId,

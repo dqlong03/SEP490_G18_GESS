@@ -1,164 +1,38 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { Suspense } from 'react';
 import Select from 'react-select';
-import { useRouter } from 'next/navigation';
-import { getUserIdFromToken } from '@/utils/tokenUtils';
+import { useMyClass } from '@/hooks/teacher/useMyClass';
 
-export default function MyClassPage() {
-  const router = useRouter();
-  const [searchClassName, setSearchClassName] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState<any>(null);
-  const [selectedSubject, setSelectedSubject] = useState<any>(null);
+function MyClassContent() {
+  const {
+    // State
+    searchClassName,
+    selectedSemester,
+    selectedSubject,
+    selectedYear,
+    classes,
+    loading,
+    page,
+    pageSize,
+    totalPages,
+    yearOptions,
+    subjectOptions,
+    semesterOptions,
+    selectStyles,
 
-  const [semesters, setSemesters] = useState<any[]>([]);
-  const [subjects, setSubjects] = useState<any[]>([]);
-  const [classes, setClasses] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  // Phân trang
-  const [page, setPage] = useState(1);
-  const pageSize = 5;
-  const [totalPages, setTotalPages] = useState(1);
-
-  // Lấy teacherId từ token
-  const teacherId = getUserIdFromToken();
-
-  const currentYear = new Date().getFullYear();
-  const yearOptions = Array.from({ length: 10 }, (_, i) => ({
-    value: currentYear - i,
-    label: (currentYear - i).toString(),
-  }));
-  const [selectedYear, setSelectedYear] = useState({ value: currentYear, label: currentYear.toString() });
-
-  // Lấy danh sách kỳ học hiện tại
-  useEffect(() => {
-    fetch('https://localhost:7074/api/Semesters/CurrentSemester')
-      .then(res => res.json())
-      .then(data => setSemesters(data || []));
-  }, []);
-
-  // Lấy danh sách môn học từ API mới
-  useEffect(() => {
-    fetch('https://localhost:7074/api/Subject/ListSubject')
-      .then(res => res.json())
-      .then(data => setSubjects(data || []));
-  }, []);
-
-  // Lấy danh sách lớp của giáo viên (API 6)
-  useEffect(() => {
-    if (!teacherId) return;
-    setLoading(true);
-
-    // Tạo object params và loại bỏ key có giá trị rỗng/null/undefined
-    const rawParams: Record<string, string> = {
-      teacherId,
-      year: selectedYear?.value?.toString() || '',
-      name: searchClassName || '',
-      subjectId: selectedSubject?.value?.toString() || '',
-      semesterId: selectedSemester?.value?.toString() || '',
-      pageNumber: page.toString(),
-      pageSize: pageSize.toString(),
-    };
-    Object.keys(rawParams).forEach(
-      (key) => (rawParams[key] === '' || rawParams[key] == null) && delete rawParams[key]
-    );
-    const params = new URLSearchParams(rawParams);
-
-    fetch(`https://localhost:7074/api/Class/teacherId?${params.toString()}`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    })
-      .then(res => res.json())
-      .then(data => {
-        setClasses(data || []);
-        
-        // Tạo params riêng cho API CountPagesByTeacher (bỏ pageNumber và pageSize)
-        const countParams: Record<string, string> = {
-          year: selectedYear?.value?.toString() || '',
-          name: searchClassName || '',
-          subjectId: selectedSubject?.value?.toString() || '',
-          semesterId: selectedSemester?.value?.toString() || '',
-          pageSize: pageSize.toString(),
-        };
-        Object.keys(countParams).forEach(
-          (key) => (countParams[key] === '' || countParams[key] == null) && delete countParams[key]
-        );
-        const countParamsString = new URLSearchParams(countParams);
-        
-        // Lấy tổng số trang (API 7)
-        fetch(`https://localhost:7074/api/Class/CountPagesByTeacher/${teacherId}?${countParamsString.toString()}`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-        })
-          .then(res2 => res2.json())
-          .then(total => setTotalPages(total || 1));
-      })
-      .finally(() => setLoading(false));
-  }, [teacherId, searchClassName, selectedSubject, selectedSemester, selectedYear, page]);
-
-  // Tạo options cho react-select
-  const subjectOptions = subjects.map((s: any) => ({
-    value: s.subjectId || s.id,
-    label: s.subjectName || s.name,
-  }));
-
-  const semesterOptions = semesters.map((s: any) => ({
-    value: s.semesterId || s.id,
-    label: s.semesterName || s.name,
-  }));
-
-  // Chuyển sang trang tạo lớp học
-  const handleAddClass = () => {
-    router.push('/teacher/myclass/createclass');
-  };
-
-  // Xử lý sửa (để sau)
-  const handleEdit = (id: number) => {
-    alert(`Sửa lớp có ID: ${id}`);
-  };
-
-  // Xử lý chuyển sang trang chi tiết lớp
-  const handleDetail = (id: number) => {
-    router.push(`/teacher/myclass/classdetail/${id}`);
-  };
-
-  // Reset filters
-  const handleReset = () => {
-    setSearchClassName('');
-    setSelectedSemester(null);
-    setSelectedSubject(null);
-    setSelectedYear({ value: currentYear, label: currentYear.toString() });
-    setPage(1);
-  };
-
-  // Custom Select styles
-  const selectStyles = {
-    control: (provided: any, state: any) => ({
-      ...provided,
-      minHeight: '42px',
-      borderColor: state.isFocused ? '#3B82F6' : '#D1D5DB',
-      borderRadius: '8px',
-      boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-      '&:hover': {
-        borderColor: '#3B82F6'
-      }
-    }),
-    menu: (provided: any) => ({
-      ...provided,
-      zIndex: 50,
-      borderRadius: '8px',
-      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
-    }),
-    option: (provided: any, state: any) => ({
-      ...provided,
-      backgroundColor: state.isSelected ? '#3B82F6' : state.isFocused ? '#EBF8FF' : 'white',
-      color: state.isSelected ? 'white' : '#374151',
-      '&:active': {
-        backgroundColor: '#3B82F6'
-      }
-    })
-  };
+    // Event handlers
+    handleAddClass,
+    handleDetail,
+    handleReset,
+    handleSearchClassNameChange,
+    handleSemesterChange,
+    handleSubjectChange,
+    handleYearChange,
+    handleFormSubmit,
+    handlePreviousPage,
+    handleNextPage,
+  } = useMyClass();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -186,7 +60,7 @@ export default function MyClassPage() {
           </h3>
           
           <form
-            onSubmit={e => { e.preventDefault(); setPage(1); }}
+            onSubmit={handleFormSubmit}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 items-end"
           >
             <div className="space-y-2">
@@ -195,7 +69,7 @@ export default function MyClassPage() {
                 type="text"
                 placeholder="Tìm theo tên lớp"
                 value={searchClassName}
-                onChange={e => { setSearchClassName(e.target.value); setPage(1); }}
+                onChange={e => handleSearchClassNameChange(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200"
               />
             </div>
@@ -205,7 +79,7 @@ export default function MyClassPage() {
               <Select
                 options={semesterOptions}
                 value={selectedSemester}
-                onChange={(option) => { setSelectedSemester(option); setPage(1); }}
+                onChange={handleSemesterChange}
                 placeholder="Chọn kỳ học"
                 isClearable
                 isSearchable={false}
@@ -218,7 +92,7 @@ export default function MyClassPage() {
               <Select
                 options={yearOptions}
                 value={selectedYear}
-                onChange={option => { setSelectedYear(option); setPage(1); }}
+                onChange={handleYearChange}
                 placeholder="Chọn năm"
                 isSearchable={false}
                 styles={selectStyles}
@@ -230,7 +104,7 @@ export default function MyClassPage() {
               <Select
                 options={subjectOptions}
                 value={selectedSubject}
-                onChange={(option) => { setSelectedSubject(option); setPage(1); }}
+                onChange={handleSubjectChange}
                 placeholder="Chọn môn học"
                 isClearable
                 styles={selectStyles}
@@ -291,7 +165,7 @@ export default function MyClassPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {classes.length > 0 ? classes.map((cls: any, idx: number) => (
+                  {classes.length > 0 ? classes.map((cls, idx) => (
                     <tr key={cls.classId} className="hover:bg-blue-50 transition-colors duration-200">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {(page - 1) * pageSize + idx + 1}
@@ -365,7 +239,7 @@ export default function MyClassPage() {
                 
                 <div className="flex items-center space-x-2">
                   <button
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    onClick={handlePreviousPage}
                     disabled={page === 1}
                     className="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                   >
@@ -380,7 +254,7 @@ export default function MyClassPage() {
                   </span>
                   
                   <button
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    onClick={handleNextPage}
                     disabled={page === totalPages}
                     className="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                   >
@@ -396,5 +270,20 @@ export default function MyClassPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MyClassPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="flex items-center space-x-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="text-gray-600 font-medium">Đang tải...</span>
+        </div>
+      </div>
+    }>
+      <MyClassContent />
+    </Suspense>
   );
 }

@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { Suspense } from 'react';
 import Select from 'react-select';
-import { useRouter } from 'next/navigation';
+import { useMyExamPaper } from '@/hooks/teacher/useMyExamPaper';
 import { 
   FileText, 
   Plus, 
@@ -22,144 +22,59 @@ import {
   PenTool
 } from 'lucide-react';
 
-export default function MyEssayExamsPage() {
-  const router = useRouter();
-  const [searchName, setSearchName] = useState('');
-  const [selectedSubject, setSelectedSubject] = useState<any>(null);
-  const [selectedHead, setSelectedHead] = useState<any>(null);
-  const [selectedSemester, setSelectedSemester] = useState<any>(null);
+function MyEssayExamsContent() {
+  const {
+    // Filter state
+    searchName,
+    selectedSubject,
+    selectedHead,
+    selectedSemester,
 
-  const [subjects, setSubjects] = useState<any[]>([]);
-  const [exams, setExams] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+    // Data
+    exams,
+    loading,
 
-  // Phân trang
-  const [page, setPage] = useState(1);
-  const pageSize = 5;
-  const [totalPages, setTotalPages] = useState(1);
+    // Options for dropdowns
+    subjectOptions,
+    semesterOptions,
+    headOptions,
 
-  // Đầu điểm (categoryExamName) lấy từ API trả về trong từng đề thi
-  const [headOptions, setHeadOptions] = useState<any[]>([]);
+    // Pagination
+    page,
+    totalPages,
+    paginationInfo,
+    paginationRange,
 
-  // Lấy danh sách môn học
-  useEffect(() => {
-    fetch('https://localhost:7074/api/Subject/ListSubject')
-      .then(res => res.json())
-      .then(data => setSubjects(data || []))
-      .catch(() => setSubjects([]));
-  }, []);
+    // Statistics
+    statistics,
 
-  // Lấy danh sách đề thi tự luận
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (searchName) params.append('searchName', searchName);
-    if (selectedSubject) params.append('subjectId', selectedSubject.value);
-    if (selectedSemester) params.append('semesterId', selectedSemester.value);
-    if (selectedHead) params.append('categoryExamId', selectedHead.value);
-    params.append('page', page.toString());
-    params.append('pageSize', pageSize.toString());
+    // Styles
+    selectStyles,
 
-    fetch(`https://localhost:7074/api/PracticeExamPaper/GetAllExamPaperListAsync?${params.toString()}`)
-      .then(res => res.json())
-      .then(data => {
-        setExams(data || []);
-        // Lấy các đầu điểm duy nhất từ dữ liệu trả về
-        const heads = Array.from(
-          new Set((data || []).map((e: any) => e.categoryExamName).filter(Boolean))
-        ).map(name => ({ value: name, label: name }));
-        setHeadOptions(heads);
-      })
-      .catch(() => setExams([]))
-      .finally(() => setLoading(false));
+    // Filter handlers
+    handleSearchChange,
+    handleSubjectChange,
+    handleHeadChange,
+    handleSemesterChange,
+    handleFormSubmit,
 
-    // Lấy tổng số trang
-    const paramsCount = new URLSearchParams();
-    if (searchName) paramsCount.append('name', searchName);
-    if (selectedSubject) paramsCount.append('subjectId', selectedSubject.value);
-    if (selectedSemester) paramsCount.append('semesterId', selectedSemester.value);
-    if (selectedHead) paramsCount.append('categoryExamId', selectedHead.value);
-    paramsCount.append('pageSize', pageSize.toString());
+    // Pagination handlers
+    handlePageChange,
+    handlePreviousPage,
+    handleNextPage,
 
-    fetch(`https://localhost:7074/api/PracticeExamPaper/CountPages?${paramsCount.toString()}`)
-      .then(res => res.json())
-      .then(total => setTotalPages(total || 1))
-      .catch(() => setTotalPages(1));
-    // eslint-disable-next-line
-  }, [searchName, selectedSubject, selectedHead, selectedSemester, page]);
+    // CRUD handlers
+    handleEdit,
+    handleView,
+    handleDelete,
+    handleCreateNew,
 
-  // Dropdown options
-  const subjectOptions = subjects.map((s: any) => ({
-    value: s.subjectId,
-    label: s.subjectName,
-  }));
+    // Utilities
+    formatDate,
 
-  // Lấy danh sách kỳ học duy nhất từ dữ liệu trả về
-  const semesterOptions = Array.from(
-    new Set(exams.map((e: any) => e.semesterName).filter(Boolean))
-  ).map(name => ({ value: name, label: name }));
-
-  // Xử lý sửa/xóa
-  const handleEdit = (id: number) => {
-    router.push(`/teacher/myexampaper/edit/${id}`);
-  };
-
-  const handleDelete = (id: number) => {
-    if (confirm('Bạn có chắc chắn muốn xóa đề thi này?')) {
-      // Gọi API xóa
-      fetch(`https://localhost:7074/api/PracticeExamPaper/${id}`, {
-        method: 'DELETE'
-      })
-      .then(() => {
-        alert('Xóa đề thi thành công!');
-        // Reload dữ liệu
-        setPage(1);
-      })
-      .catch(() => {
-        alert('Có lỗi xảy ra khi xóa đề thi!');
-      });
-    }
-  };
-
-  const handleView = (id: number) => {
-    router.push(`/teacher/myexampaper/view/${id}`);
-  };
-
-  // Custom styles cho react-select
-  const selectStyles = {
-    control: (provided: any, state: any) => ({
-      ...provided,
-      minHeight: '48px',
-      borderColor: state.isFocused ? '#3b82f6' : '#d1d5db',
-      borderRadius: '8px',
-      boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-      '&:hover': {
-        borderColor: '#3b82f6'
-      }
-    }),
-    menu: (provided: any) => ({
-      ...provided,
-      zIndex: 20,
-      borderRadius: '8px',
-      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-    }),
-    option: (provided: any, state: any) => ({
-      ...provided,
-      backgroundColor: state.isSelected ? '#3b82f6' : state.isFocused ? '#eff6ff' : 'white',
-      color: state.isSelected ? 'white' : '#374151',
-      '&:hover': {
-        backgroundColor: state.isSelected ? '#3b82f6' : '#eff6ff'
-      }
-    })
-  };
-
-  const formatDate = (dateString: string) => {
-    try {
-      return new Date(dateString).toLocaleDateString('vi-VN');
-    } catch {
-      return dateString;
-    }
-  };
+    // Constants
+    PAGE_SIZE,
+  } = useMyExamPaper();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -228,7 +143,7 @@ export default function MyEssayExamsPage() {
           </div>
           
           <form
-            onSubmit={e => { e.preventDefault(); setPage(1); }}
+            onSubmit={handleFormSubmit}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
           >
             <div className="relative">
@@ -239,7 +154,7 @@ export default function MyEssayExamsPage() {
                 type="text"
                 placeholder="Tìm theo tên đề thi"
                 value={searchName}
-                onChange={e => { setSearchName(e.target.value); setPage(1); }}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
               />
             </div>
@@ -248,7 +163,7 @@ export default function MyEssayExamsPage() {
               <Select
                 options={subjectOptions}
                 value={selectedSubject}
-                onChange={(option) => { setSelectedSubject(option); setPage(1); }}
+                onChange={handleSubjectChange}
                 placeholder="Chọn môn học"
                 isClearable
                 styles={selectStyles}
@@ -260,7 +175,7 @@ export default function MyEssayExamsPage() {
               <Select
                 options={headOptions}
                 value={selectedHead}
-                onChange={(option) => { setSelectedHead(option); setPage(1); }}
+                onChange={handleHeadChange}
                 placeholder="Chọn đầu điểm"
                 isClearable
                 isSearchable={false}
@@ -273,7 +188,7 @@ export default function MyEssayExamsPage() {
               <Select
                 options={semesterOptions}
                 value={selectedSemester}
-                onChange={(option) => { setSelectedSemester(option); setPage(1); }}
+                onChange={handleSemesterChange}
                 placeholder="Chọn học kỳ"
                 isClearable
                 isSearchable={false}
@@ -289,7 +204,7 @@ export default function MyEssayExamsPage() {
           <button
             type="button"
             className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-            onClick={() => router.push('/teacher/myexampaper/createexampaper')}
+            onClick={handleCreateNew}
           >
             <Plus className="w-5 h-5" />
             <span>Tạo đề thi mới</span>
@@ -328,7 +243,7 @@ export default function MyEssayExamsPage() {
                   {exams.map((exam: any, idx: number) => (
                     <tr key={exam.pracExamPaperId} className="hover:bg-blue-50 transition-colors duration-200">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                        {(page - 1) * pageSize + idx + 1}
+                        {(page - 1) * PAGE_SIZE + idx + 1}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center space-x-3">
@@ -415,7 +330,7 @@ export default function MyEssayExamsPage() {
               <h3 className="text-lg font-semibold text-gray-800 mb-2">Không có đề thi nào</h3>
               <p className="text-gray-600 mb-4">Bạn chưa tạo đề thi nào hoặc không có đề thi phù hợp với bộ lọc.</p>
               <button
-                onClick={() => router.push('/teacher/myexampaper/createexampaper')}
+                onClick={handleCreateNew}
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 mx-auto"
               >
                 <Plus className="w-4 h-4" />
@@ -429,14 +344,14 @@ export default function MyEssayExamsPage() {
         {exams.length > 0 && (
           <div className="flex items-center justify-between mt-8">
             <div className="text-sm text-gray-700">
-              Hiển thị <span className="font-medium">{(page - 1) * pageSize + 1}</span> đến{' '}
-              <span className="font-medium">{Math.min(page * pageSize, exams.length)}</span> của{' '}
-              <span className="font-medium">{exams.length}</span> kết quả
+              Hiển thị <span className="font-medium">{paginationInfo.start}</span> đến{' '}
+              <span className="font-medium">{paginationInfo.end}</span> của{' '}
+              <span className="font-medium">{paginationInfo.total}</span> kết quả
             </div>
             
             <div className="flex items-center space-x-2">
               <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
+                onClick={handlePreviousPage}
                 disabled={page === 1}
                 className="flex items-center space-x-1 px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -445,26 +360,23 @@ export default function MyEssayExamsPage() {
               </button>
               
               <div className="flex items-center space-x-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const pageNum = i + 1;
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setPage(pageNum)}
-                      className={`px-3 py-2 rounded-lg transition-colors duration-200 ${
-                        page === pageNum
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-700'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
+                {paginationRange.map((pageNum) => (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`px-3 py-2 rounded-lg transition-colors duration-200 ${
+                      page === pageNum
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-700'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
               </div>
               
               <button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                onClick={handleNextPage}
                 disabled={page === totalPages || totalPages === 0}
                 className="flex items-center space-x-1 px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -476,5 +388,20 @@ export default function MyEssayExamsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function MyEssayExamsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    }>
+      <MyEssayExamsContent />
+    </Suspense>
   );
 }

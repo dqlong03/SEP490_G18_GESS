@@ -1,6 +1,6 @@
 // ✅ File: services/examination/roomService.ts
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL + "/Room";
+const API_URL = process.env.NEXT_PUBLIC_API_URL + "/api/Room";
 
 export type Room = {
   roomId: number;

@@ -1,5 +1,6 @@
 import axios from "axios";
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://localhost:7074/api";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL + "/api" || "https://localhost:7074/api";
 
 export interface LoginData {
   username: string;

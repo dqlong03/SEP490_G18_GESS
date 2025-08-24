@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL + "/major";
+const API_URL = process.env.NEXT_PUBLIC_API_URL + "/api/major";
 
 export type Major = {
   majorId: number;

@@ -1,10 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { Suspense } from 'react';
 import Select from 'react-select';
-import * as XLSX from 'xlsx';
-import { useSearchParams } from 'next/navigation';
-import { getUserIdFromToken } from '@/utils/tokenUtils';
 import { useRouter } from 'next/navigation';
 import { 
   Plus, 
@@ -23,503 +20,78 @@ import {
   Target,
   Hash,
   Sparkles,
-  FileSpreadsheet, Copy,Calendar
+  FileSpreadsheet, 
+  Copy,
+  Calendar
 } from 'lucide-react';
+import { useCreateMultipleQuestion } from '@/hooks/teacher/useCreateMultipleQuestion';
 
-type Answer = { text: string; isTrue: boolean };
-type Question = {
-  id: number;
-  content: string;
-  answers: Answer[];
-  difficulty: number;
-  isPublic: boolean;
-};
-
-type Option = { value: number; label: string };
-
-const defaultDifficulties: Option[] = [
-  { value: 1, label: 'Dễ' },
-  { value: 2, label: 'Trung bình' },
-  { value: 3, label: 'Khó' },
-];
-
-export default function CreateMCQQuestionPage() {
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [fileName, setFileName] = useState<string>('');
-  const [importError, setImportError] = useState<string>('');
-  const [levels, setLevels] = useState<Option[]>(defaultDifficulties);
-
-  const searchParams = useSearchParams();
-  const chapterId = Number(searchParams.get('chapterId'));
-  const categoryExamId = Number(searchParams.get('categoryExamId'));
-  const chapterName = searchParams.get('chapterName') || '';
-  const subjectName = searchParams.get('subjectName') || '';
-  const semesterName = searchParams.get('semesterName') || '';
-  const semesterId = Number(searchParams.get('semesterId'));
-
-
-  const [duplicateIds, setDuplicateIds] = useState<number[]>([]);
-
-  const [duplicateMap, setDuplicateMap] = useState<{ [id: number]: { similarityScore: number, similarQuestions: { questionID: number, content: string }[] } }>({});
-  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
-  const [aiQuestionType, setAIQuestionType] = useState<1 | 2 | 3>(2); // 1: True/False, 2: 1 lựa chọn, 3: nhiều lựa chọn
-
+function CreateMCQQuestionContent() {
   const router = useRouter();
-
-  // Thêm thủ công: chỉ 2 đáp án ban đầu
-  const [manualQ, setManualQ] = useState<Question>({
-    id: Math.floor(10000 + Math.random() * 90000),
-    content: '',
-    answers: [
-      { text: '', isTrue: false },
-      { text: '', isTrue: false }
-    ],
-    difficulty: 1,
-    isPublic: true,
-  });
-  const [showManualForm, setShowManualForm] = useState(false);
-  const manualFormRef = useRef<HTMLDivElement>(null);
-  const questionsListRef = useRef<HTMLDivElement>(null);
-
-  // Tạo bằng AI
-  const [showAIGen, setShowAIGen] = useState(false);
-  const [aiLink, setAILink] = useState("https://docs.google.com/document/d/1xD31S45CPW3Np_bEfJ_HkvzM7LDynu5WNpecLec5z8I/edit?tab=t.0");
-  const [aiLevels, setAILevels] = useState({
-    easy: 0,
-    medium: 0,
-    hard: 0
-  });
-  const [aiLoading, setAILoading] = useState(false);
-  const aiFormRef = useRef<HTMLDivElement>(null);
-
-  // Kiểm tra trùng lặp
-  const handleCheckDuplicate = async () => {
-    setCheckingDuplicate(true);
-    setDuplicateMap({});
-    try {
-      // Lấy danh sách câu hỏi đã có (theo response mới)
-      const existedRes = await fetch(
-        `https://localhost:7074/api/PracticeQuestion/all-questions?chapterId=${chapterId}&levelId=&questionType=multiple&pageNumber=1&pageSize=1000`
-      );
-      const existedData = await existedRes.json();
-      const existedQuestions = (existedData?.questions || []).map((q: any) => ({
-        questionID: q.questionId,
-        content: q.content
-      }));
-
-      // Danh sách câu hỏi mới (tạo id ngẫu nhiên nếu cần)
-      const newQuestions = questions.map(q => ({
-        questionID: q.id,
-        content: q.content
-      }));
-
-      // Gộp lại để so sánh
-      const allQuestions = [...newQuestions, ...existedQuestions];
-
-      // Gọi API kiểm tra trùng
-      const res = await fetch('https://localhost:7074/api/AIGradePracExam/FindSimilar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          questions: allQuestions,
-          similarityThreshold: 0.7
-        })
-      });
-      const result = await res.json();
-
-      // Lưu lại các câu hỏi trùng lặp (chỉ quan tâm đến câu hỏi mới)
-      const map: { [id: number]: { similarityScore: number, similarQuestions: { questionID: number, content: string }[] } } = {};
-      result.forEach((group: any) => {
-        // Nếu trong nhóm có câu hỏi mới (id thuộc questions), thì đánh dấu là trùng
-        const newQ = group.questions.find((q: any) => newQuestions.some(nq => nq.questionID === q.questionID));
-        if (newQ) {
-          map[newQ.questionID] = {
-            similarityScore: group.similarityScore,
-            similarQuestions: group.questions.filter((q: any) => !newQuestions.some(nq => nq.questionID === q.questionID))
-          };
-        }
-      });
-      setDuplicateMap(map);
-    } catch (err) {
-      alert('Lỗi kiểm tra trùng lặp!');
-    }
-    setCheckingDuplicate(false);
-  };
-
-  // Lấy mức độ khó và học kỳ hiện tại
-  useEffect(() => {
-    fetch('https://localhost:7074/api/MultipleQuestion/GetLevelQuestion')
-      .then(res => res.json())
-      .then(data => setLevels(data.map((l: any) => ({ value: l.levelQuestionId, label: l.levelQuestionName }))))
-      .catch(() => setLevels(defaultDifficulties));
+  
+  const {
+    // Core data
+    questions,
+    levels,
+    statistics,
     
-  }, []);
-
-  // Tải file mẫu
-  const handleDownloadTemplate = () => {
-    const header = [
-      'Nội dung',
-      'Đáp án A', 'IsTrueA',
-      'Đáp án B', 'IsTrueB',
-      'Đáp án C', 'IsTrueC',
-      'Đáp án D', 'IsTrueD',
-      'Đáp án E', 'IsTrueE',
-      'Đáp án F', 'IsTrueF',
-      'Độ khó'
-    ];
-    const rows = [
-      [
-        '2 + 2 = ?', '3', false, '4', true, '5', false, '', false, '', false, '', false, 1
-      ],
-      [
-        'C++ là ngôn ngữ gì?', 'Lập trình hướng đối tượng', true, 'Chỉ dùng cho web', false, '', false, '', false, '', false, '', false, 2
-      ]
-    ];
-    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Questions');
-    XLSX.writeFile(wb, 'mau_cau_hoi.xlsx');
-  };
-
-  // Import file
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImportError('');
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const json: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-      if (json.length < 2) {
-        setImportError('File phải có ít nhất 1 dòng dữ liệu.');
-        setFileName('');
-        return;
-      }
-      const header = json[0];
-      const requiredHeader = [
-        'Nội dung',
-        'Đáp án A', 'IsTrueA',
-        'Đáp án B', 'IsTrueB',
-        'Đáp án C', 'IsTrueC',
-        'Đáp án D', 'IsTrueD',
-        'Đáp án E', 'IsTrueE',
-        'Đáp án F', 'IsTrueF',
-        'Độ khó'
-      ];
-      const isHeaderValid = requiredHeader.every((h, idx) => header[idx] === h);
-      if (!isHeaderValid) {
-        setImportError('File mẫu không đúng định dạng!');
-        setFileName('');
-        return;
-      }
-      const dataArr: Question[] = [];
-      for (let i = 1; i < json.length; i++) {
-        const row = json[i];
-        if (row.length < 13) continue;
-        const answers: Answer[] = [];
-        for (let j = 1; j <= 11; j += 2) {
-          answers.push({ text: row[j], isTrue: row[j + 1] === true || row[j + 1] === 'TRUE' || row[j + 1] === true });
-        }
-        dataArr.push({
-          id:  Math.floor(10000 + Math.random() * 90000),
-          content: row[0],
-          answers,
-          difficulty: Number(row[12]) || 1,
-          isPublic: true,
-        });
-      }
-      setQuestions(prev => [...prev, ...dataArr]);
-      setFileName(file.name);
-      setImportError('');
-    };
-    reader.readAsArrayBuffer(file);
-  };
-
-  // Show manual form with scroll
-  const handleShowManualForm = () => {
-    setShowManualForm(true);
-    setTimeout(() => {
-      manualFormRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  };
-
-  // Show AI form with scroll
-  const handleShowAIForm = () => {
-    setShowAIGen(true);
-    setTimeout(() => {
-      aiFormRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  };
-
-  // Thêm thủ công
-  const handleAddManual = () => {
-    if (!manualQ.content.trim()) {
-      alert('Vui lòng nhập nội dung câu hỏi!');
-      return;
-    }
-    const validAnswers = manualQ.answers.filter(a => a.text.trim());
-    if (validAnswers.length < 2) {
-      alert('Phải có ít nhất 2 đáp án!');
-      return;
-    }
-    const hasCorrectAnswer = validAnswers.some(a => a.isTrue);
-    if (!hasCorrectAnswer) {
-      alert('Phải có ít nhất 1 đáp án đúng!');
-      return;
-    }
-    setQuestions([
-      ...questions,
-      { ...manualQ, id: Math.floor(10000 + Math.random() * 90000) }
-    ]);
-    setManualQ({
-      id: Math.floor(10000 + Math.random() * 90000),
-      content: '',
-      answers: [
-        { text: '', isTrue: false },
-        { text: '', isTrue: false }
-      ],
-      difficulty: 1,
-      isPublic: true,
-    });
-    setShowManualForm(false);
+    // URL parameters
+    chapterId,
+    categoryExamId,
+    chapterName,
+    subjectName,
+    semesterName,
+    semesterId,
     
-    // Auto scroll to questions list after adding
-    setTimeout(() => {
-      questionsListRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  };
-
-  // Thêm đáp án cho thủ công
-  const handleAddAnswerManual = () => {
-    if (manualQ.answers.length < 6) {
-      setManualQ({
-        ...manualQ,
-        answers: [...manualQ.answers, { text: '', isTrue: false }]
-      });
-    }
-  };
-
-  // Xóa đáp án thủ công
-  const handleDeleteAnswerManual = (idx: number) => {
-    if (manualQ.answers.length > 2) {
-      setManualQ({
-        ...manualQ,
-        answers: manualQ.answers.filter((_, i) => i !== idx)
-      });
-    }
-  };
-
-  // Tạo câu hỏi bằng AI
-  const handleGenerateAI = async () => {
-    if (!aiLink) {
-      alert('Vui lòng nhập link tài liệu!');
-      return;
-    }
+    // File import
+    fileName,
+    importError,
     
-    const totalQuestions = aiLevels.easy + aiLevels.medium + aiLevels.hard;
-    if (totalQuestions === 0) {
-      alert('Vui lòng nhập số câu hỏi cho ít nhất một mức độ!');
-      return;
-    }
+    // Duplicate checking
+    duplicateMap,
+    checkingDuplicate,
     
-    setAILoading(true);
-    try {
-      const levels = [];
-      if (aiLevels.easy > 0) {
-        levels.push({ difficulty: 'dễ', numberOfQuestions: aiLevels.easy, type: aiQuestionType });
-      }
-      if (aiLevels.medium > 0) {
-        levels.push({ difficulty: 'trung bình', numberOfQuestions: aiLevels.medium , type: aiQuestionType });
-      }
-      if (aiLevels.hard > 0) {
-        levels.push({ difficulty: 'khó', numberOfQuestions: aiLevels.hard, type: aiQuestionType });
-      }
-
-      const res = await fetch('https://localhost:7074/api/GenerateQuestions/GenerateMultipleQuestion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subjectName: subjectName,
-          materialLink: aiLink,
-          specifications: levels
-        })
-      });
-      const data = await res.json();
-      if (!Array.isArray(data)) throw new Error('Kết quả trả về không hợp lệ!');
-      
-      const newQuestions: Question[] = data.map((q: any, idx: number) => {
-        let answers: Answer[] = Array.isArray(q.answers)
-          ? q.answers.map((a: any) => ({
-              text: a.text || '',
-              isTrue: !!a.isTrue
-            }))
-          : [];
-        while (answers.length < 2) {
-          answers.push({ text: '', isTrue: false });
-        }
-        answers = answers.slice(0, 6);
-        
-        // Xác định difficulty dựa trên thứ tự levels
-        let difficulty = 1;
-        if (idx < aiLevels.easy) {
-          difficulty = 1;
-        } else if (idx < aiLevels.easy + aiLevels.medium) {
-          difficulty = 2;
-        } else {
-          difficulty = 3;
-        }
-        
-        return {
-          id:  Math.floor(10000 + Math.random() * 90000),
-          content: q.content || '',
-          answers,
-          difficulty: difficulty,
-          isPublic: true
-        };
-      });
-      
-      setQuestions(prev => [...prev, ...newQuestions]);
-      setShowAIGen(false);
-      setAILevels({ easy: 0, medium: 0, hard: 0 });
-      
-      // Auto scroll to questions list after AI generation
-      setTimeout(() => {
-        questionsListRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-      
-      alert(`Đã tạo thành công ${newQuestions.length} câu hỏi bằng AI!`);
-    } catch (err: any) {
-      alert('Lỗi tạo câu hỏi bằng AI: ' + "\nKiểm tra lại link tài liệu(đã được chia sẻ editable) và đã có nội dung");
-    }
-    setAILoading(false);
-  };
-
-  // Sửa câu hỏi
-  const handleEditQuestion = (idx: number, key: keyof Question, value: any) => {
-    setQuestions((prev) =>
-      prev.map((q, i) => (i === idx ? { ...q, [key]: value } : q))
-    );
-  };
-
-  // Sửa đáp án
-  const handleEditAnswer = (qIdx: number, aIdx: number, key: keyof Answer, value: any) => {
-    setQuestions((prev) =>
-      prev.map((q, i) =>
-        i === qIdx
-          ? {
-              ...q,
-              answers: q.answers.map((a, j) =>
-                j === aIdx ? { ...a, [key]: value } : a
-              ),
-            }
-          : q
-      )
-    );
-  };
-
-  // Xóa câu hỏi
-  const handleDeleteQuestion = (idx: number) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa câu hỏi này?')) {
-      setQuestions(questions.filter((_, i) => i !== idx));
-    }
-  };
-
-  // Xóa đáp án
-  const handleDeleteAnswer = (qIdx: number, aIdx: number) => {
-    setQuestions((prev) =>
-      prev.map((q, i) =>
-        i === qIdx
-          ? {
-              ...q,
-              answers: q.answers.map((a, j) =>
-                j === aIdx ? { ...a, text: '', isTrue: false } : a
-              ),
-            }
-          : q
-      )
-    );
-  };
-
-  // Lưu câu hỏi lên server
-  const handleSaveQuestions = async () => {
-    if (!semesterId) {
-      alert('Không tìm thấy học kỳ hiện tại!');
-      return;
-    }
-    if (!chapterId || !categoryExamId) {
-      alert('Thiếu chapterId hoặc categoryExamId trên URL!');
-      return;
-    }
-    if (questions.length === 0) {
-      alert('Không có câu hỏi để lưu!');
-      return;
-    }
-
-    // Validate all questions
-    for (let i = 0; i < questions.length; i++) {
-      const q = questions[i];
-      if (!q.content.trim()) {
-        alert(`Câu hỏi ${i + 1} chưa có nội dung!`);
-        return;
-      }
-      const validAnswers = q.answers.filter(a => a.text.trim());
-      if (validAnswers.length < 2) {
-        alert(`Câu hỏi ${i + 1} phải có ít nhất 2 đáp án!`);
-        return;
-      }
-      const hasCorrectAnswer = validAnswers.some(a => a.isTrue);
-      if (!hasCorrectAnswer) {
-        alert(`Câu hỏi ${i + 1} phải có ít nhất 1 đáp án đúng!`);
-        return;
-      }
-    }
-
-    try {
-      for (const q of questions) {
-        const answers = q.answers
-          .filter(a => a.text.trim())
-          .map(a => ({
-            content: a.text,
-            isCorrect: a.isTrue
-          }));
-        const teacherId = getUserIdFromToken();
-        const body = {
-          content: q.content,
-          urlImg: null,
-          isActive: true,
-          createdBy: teacherId,
-          isPublic: q.isPublic,
-          chapterId: chapterId,
-          categoryExamId: categoryExamId,
-          levelQuestionId: q.difficulty,
-          semesterId: semesterId,
-          answers: answers
-        };
-        await fetch('https://localhost:7074/api/MultipleQuestion/CreateMultipleQuestion', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-      }
-      alert('Lưu thành công!');
-      setQuestions([]);
-      router.push(`/teacher/questionbank?${searchParams.toString()}`);
-    } catch (error) {
-      alert('Có lỗi xảy ra khi lưu câu hỏi!');
-    }
-  };
-
-  const getLevelColor = (level: number) => {
-    const levelObj = levels.find(l => l.value === level);
-    switch (levelObj?.label) {
-      case 'Dễ': return 'bg-green-100 text-green-800';
-      case 'Trung bình': return 'bg-yellow-100 text-yellow-800';
-      case 'Khó': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+    // AI generation
+    showAIGen,
+    setShowAIGen,
+    aiLink,
+    setAILink,
+    aiLevels,
+    setAILevels,
+    aiQuestionType,
+    setAIQuestionType,
+    aiLoading,
+    aiTotalQuestions,
+    
+    // Manual question
+    showManualForm,
+    setShowManualForm,
+    manualQ,
+    setManualQ,
+    
+    // Refs
+    manualFormRef,
+    questionsListRef,
+    aiFormRef,
+    
+    // Handlers
+    handleCheckDuplicate,
+    handleDownloadTemplate,
+    handleUpload,
+    handleShowManualForm,
+    handleShowAIForm,
+    handleAddManual,
+    handleAddAnswerManual,
+    handleDeleteAnswerManual,
+    handleGenerateAI,
+    handleEditQuestion,
+    handleEditAnswer,
+    handleDeleteQuestion,
+    handleDeleteAnswer,
+    handleSaveQuestions,
+    handleGoBack,
+    getLevelColor
+  } = useCreateMultipleQuestion();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -562,7 +134,7 @@ export default function CreateMCQQuestionPage() {
             </div>
             
             <button
-              onClick={() => router.back()}
+              onClick={handleGoBack}
               className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 font-medium text-gray-700"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -573,7 +145,7 @@ export default function CreateMCQQuestionPage() {
 
         {/* Statistics */}
         {questions.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-4 md:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -585,13 +157,12 @@ export default function CreateMCQQuestionPage() {
                 </div>
               </div>
             </div>
-            
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Câu dễ</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {questions.filter(q => q.difficulty === 1).length}
+                    {statistics.easy}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -600,26 +171,26 @@ export default function CreateMCQQuestionPage() {
               </div>
             </div>
 
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-gray-600">Câu trung bình</p>
-                              <p className="text-2xl font-bold text-green-600">
-                                {questions.filter(q => q.difficulty === 2).length}
-                              </p>
-                            </div>
-                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                              <Award className="w-6 h-6 text-orange-600" />
-                            </div>
-                          </div>
-                        </div>
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Câu trung bình</p>
+                  <p className="text-2xl font-bold text-yellow-600">
+                    {statistics.medium}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                  <Award className="w-6 h-6 text-yellow-600" />
+                </div>
+              </div>
+            </div>
             
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Câu khó</p>
                   <p className="text-2xl font-bold text-red-600">
-                    {questions.filter(q => q.difficulty === 3).length}
+                    {statistics.hard}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
@@ -1166,34 +737,17 @@ export default function CreateMCQQuestionPage() {
             </button>
           </div>
         )}
-
-        {/* Empty State */}
-        {/* {questions.length === 0 && (
-          <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <FileText className="w-12 h-12 text-gray-400" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">Chưa có câu hỏi nào</h3>
-            <p className="text-gray-600 mb-6">Bắt đầu tạo câu hỏi bằng cách thêm thủ công, sử dụng AI, hoặc import từ file Excel</p>
-            <div className="flex justify-center space-x-4">
-              <button
-                onClick={handleShowManualForm}
-                className="flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
-              >
-                <Edit3 className="w-4 h-4" />
-                <span>Thêm thủ công</span>
-              </button>
-              <button
-                onClick={handleShowAIForm}
-                className="flex items-center space-x-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200"
-              >
-                <Brain className="w-4 h-4" />
-                <span>Tạo bằng AI</span>
-              </button>
-            </div>
-          </div>
-        )} */}
       </div>
     </div>
+  );
+}
+
+export default function CreateMCQQuestionPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+      <div className="text-lg">Đang tải...</div>
+    </div>}>
+      <CreateMCQQuestionContent />
+    </Suspense>
   );
 }

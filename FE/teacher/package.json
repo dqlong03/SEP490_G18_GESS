@@ -28,14 +28,14 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-google-recaptcha": "^2.1.9",
-    "postcss": "^8.5.5",
+    "autoprefixer": "^10.4.14",
+    "postcss": "^8.4.24",
     "prettier": "^3.5.3",
-    "tailwindcss": "^4",
+    "@tailwindcss/postcss": "^4.1.8",
     "typescript": "^5"
   }
 }

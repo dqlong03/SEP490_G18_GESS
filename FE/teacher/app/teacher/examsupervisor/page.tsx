@@ -252,6 +252,7 @@ export default function ExamSchedulePage() {
   const [examSchedules, setExamSchedules] = useState<ApiExamSchedule[]>([]);
   const [updatingStatus, setUpdatingStatus] = useState<number | null>(null);
   const router = useRouter();
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://localhost:7074";
 
 
   useEffect(() => {
@@ -281,7 +282,7 @@ export default function ExamSchedulePage() {
 
       try {
         const response = await fetch(
-          `https://localhost:7074/api/ExamSchedule/teacher/${teacherId}?fromDate=${fromDate}&toDate=${toDate}`
+          `${API_BASE_URL}/api/ExamSchedule/teacher/${teacherId}?fromDate=${fromDate}&toDate=${toDate}`
         );
         const data = await response.json();
         const schedules = Array.isArray(data) ? data : [];
@@ -337,7 +338,7 @@ export default function ExamSchedulePage() {
       
       try {
         const response = await fetch(
-          `https://localhost:7074/api/ExamSchedule/changestatus?examSlotRoomId=${exam.examSlotRoomId}&status=1`,
+          `${API_BASE_URL}/api/ExamSchedule/changestatus?examSlotRoomId=${exam.examSlotRoomId}&status=1`,
           {
             method: "POST",
             headers: {
@@ -559,7 +560,7 @@ export default function ExamSchedulePage() {
                               </div>
                               
                               <button
-                                className={`w-full flex items-center justify-center space-x-2 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 ${
+                                className={`w-full flex items-center justify-center space-x-2 text-white text-xs font-medium py-2 px-3 rounded-lg transition-colors duration-200 ${
                                   isUpdating 
                                     ? 'bg-gray-400 cursor-not-allowed' 
                                     : statusInfo.buttonColor

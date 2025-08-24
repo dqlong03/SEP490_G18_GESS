@@ -1,10 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import React, { Suspense } from 'react';
+import { useParams } from 'next/navigation';
 import Select from 'react-select';
-import { getUserIdFromToken } from '@/utils/tokenUtils';
-import Link from 'next/link';
 import { 
   CalendarDays, 
   Clock, 
@@ -24,383 +22,130 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
+import { useCreatePracticeExamForClass } from '@/hooks/teacher/useCreatePracticeExamForClass';
 
-import { useCallback } from 'react'; // thêm nếu chưa có
-
-
-const API_URL = "https://localhost:7074";
-
-interface PracticeExamPaperDTO {
-  pracExamPaperId: number;
-  pracExamPaperName: string;
-  year: string;
-  semester: string;
+interface CreatePracticeExamContentProps {
+  classId: number;
 }
 
-interface SemesterDTO {
-  semesterId: number;
-  semesterName: string;
-}
+function CreatePracticeExamContent({ classId }: CreatePracticeExamContentProps) {
+  const {
+    // Basic state
+    examName,
+    setExamName,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
+    duration,
+    setDuration,
+    loading,
+    error,
 
-interface ExamPaperDetail {
-  pracExamPaperId: number;
-  pracExamPaperName: string;
-  createAt: string;
-  subjectName: string;
-  semesterName: string;
-  categoryExamName: string;
-  status: string;
-  questions: {
-    questionOrder: number;
-    content: string;
-    answerContent: string;
-    score: number;
-  }[];
-}
+    // Class data
+    students,
+    gradeComponents,
+    selectedGradeComponent,
+    setSelectedGradeComponent,
 
-export default function CreateEssayExamPage() {
-  const router = useRouter();
-  const params = useParams();
-  const classId = Number(params?.classId);
+    // Student selection
+    showStudentPopup,
+    setShowStudentPopup,
+    studentChecks,
+    selectedStudents,
+    handleOpenStudentPopup,
+    handleCheckStudent,
+    handleCheckAllStudents,
+    handleUncheckAllStudents,
+    handleConfirmStudents,
 
-  // State
-  const [examName, setExamName] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [duration, setDuration] = useState<number>(60);
-  const [students, setStudents] = useState<any[]>([]);
-  const [showStudentPopup, setShowStudentPopup] = useState(false);
-  const [studentChecks, setStudentChecks] = useState<Record<string, boolean>>({});
-  const [selectedStudents, setSelectedStudents] = useState<any[]>([]);
-  const [gradeComponents, setGradeComponents] = useState<any[]>([]);
-  const [selectedGradeComponent, setSelectedGradeComponent] = useState<any>(null);
-  const [semesterId, setSemesterId] = useState<number | null>(null);
+    // Exam selection
+    showExamPopup,
+    setShowExamPopup,
+    examChecks,
+    examPapers,
+    selectedExams,
+    loadingExams,
+    handleOpenExamPopup,
+    handleCheckExam,
+    handleCheckAllExams,
+    handleUncheckAllExams,
+    handleSaveExams,
+    handleRemoveExam,
 
-  // Đề thi
-  const [showExamPopup, setShowExamPopup] = useState(false);
-  const [examChecks, setExamChecks] = useState<Record<number, boolean>>({});
-  const [examPapers, setExamPapers] = useState<PracticeExamPaperDTO[]>([]);
-  const [selectedExams, setSelectedExams] = useState<PracticeExamPaperDTO[]>([]);
-  const [loadingExams, setLoadingExams] = useState(false);
+    // Semester and year
+    semesters,
+    selectedSemester,
+    setSelectedSemester,
+    years,
+    selectedYear,
+    setSelectedYear,
 
-  // subjectId, semesterId
-  const [subjectId, setSubjectId] = useState<number | null>(null);
+    // Detail modal
+    showDetail,
+    detailData,
+    loadingDetail,
+    handleShowDetail,
+    handleCloseDetail,
 
-  // Kỳ và năm
-  const [semesters, setSemesters] = useState<SemesterDTO[]>([]);
-  const [selectedSemester, setSelectedSemester] = useState<any>(null);
-  const [years, setYears] = useState<{ value: string; label: string }[]>([]);
-  const [selectedYear, setSelectedYear] = useState<{ value: string; label: string } | null>(null);
+    // Preview
+    hoveredExam,
+    previewPosition,
+    handleMouseEnterExam,
+    handleMouseLeaveExam,
 
-  // Chi tiết đề thi
-  const [showDetail, setShowDetail] = useState(false);
-  const [detailData, setDetailData] = useState<ExamPaperDetail | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
+    // Form submission
+    isSubmitting,
+    handleSave,
 
-  // Preview đề thi khi hover (chỉ trong popup)
-  const [hoveredExam, setHoveredExam] = useState<PracticeExamPaperDTO | null>(null);
-  const [previewPosition, setPreviewPosition] = useState<{ x: number; y: number } | null>(null);
+    // Navigation
+    handleBack,
+    handleCreateNewExamPaper,
 
-  // Loading state
-  const [isSubmitting, setIsSubmitting] = useState(false);
+    // Utilities
+    selectStyles,
+    totalQuestions,
+    parseGradingCriteria,
+  } = useCreatePracticeExamForClass(classId);
 
-  // Lấy danh sách sinh viên, đầu điểm, subjectId, semesters, years
-  useEffect(() => {
-    if (!classId) return;
-     fetch(`${API_URL}/api/Class/${classId}/semester-id`)
-      .then(res => res.json())
-      .then(data => setSemesterId(data));
-    fetch(`${API_URL}/api/Class/${classId}/students`)
-      .then(res => res.json())
-      .then(data => setStudents(data || []));
-    fetch(`${API_URL}/api/Class/${classId}/grade-components`)
-      .then(res => res.json())
-      .then(data => setGradeComponents(
-        (data || []).map((g: any) => ({
-          value: g.categoryExamId,
-          label: g.categoryExamName
-        }))
-      ));
-    fetch(`${API_URL}/api/Class/${classId}/subject-id`)
-      .then(res => res.json())
-      .then(data => setSubjectId(data));
-    // Lấy danh sách kỳ
-    fetch(`${API_URL}/api/Semesters`)
-      .then(res => res.json())
-      .then(data => {
-        setSemesters(data || []);
-      });
-    // Lấy danh sách năm từ năm hiện tại về trước
-    const currentYear = new Date().getFullYear();
-    const yearArr = [];
-    for (let y = currentYear; y >= 2020; y--) {
-      yearArr.push({ value: y.toString(), label: y.toString() });
-    }
-    setYears(yearArr);
-  }, [classId]);
-
-
-  // Lấy danh sách đề thi khi mở popup hoặc khi đổi kỳ/năm
-  const fetchExamPapers = async (semesterName: string | null, year: string | null) => {
-      setLoadingExams(true);
-      try {
-        const teacherId = getUserIdFromToken();
-        if (!subjectId) throw new Error('Không lấy được subjectId');
-        const categoryId = selectedGradeComponent?.value;
-        if (!categoryId) throw new Error('Vui lòng chọn đầu điểm');
-        const examRes = await fetch(
-          `${API_URL}/api/PracticeExam/exams_paper?subjectId=${subjectId}&categoryId=${categoryId}&teacherId=${teacherId}`
-        );
-        if (!examRes.ok) throw new Error('Không lấy được danh sách đề thi');
-        const exams = await examRes.json();
-        let filtered = exams || [];
-
-        // Xác định giá trị mặc định nếu chưa chọn
-        const semesterFilter = semesterName || semesters[0]?.semesterName;
-        const yearFilter = year || years[0]?.value;
-
-        filtered = filtered.filter(
-          (e: PracticeExamPaperDTO) =>
-            e.semester === semesterFilter &&
-            e.year === yearFilter &&
-            !selectedExams.some(se => se.pracExamPaperId === e.pracExamPaperId)
-        );
-
-        setExamPapers(filtered);
-      } catch (err: any) {
-        setExamPapers([]);
-        alert(err.message || 'Lỗi lấy danh sách đề thi');
-      } finally {
-        setLoadingExams(false);
-      }
-    };
-  // Khi mở popup chọn đề hoặc đổi kỳ/năm thì load lại đề
-  useEffect(() => {
-    if (showExamPopup) {
-      fetchExamPapers(selectedSemester?.label ?? null, selectedYear?.value ?? null);
-    }
-    // eslint-disable-next-line
-  }, [showExamPopup, selectedSemester, selectedYear, selectedGradeComponent, subjectId]);
-
-  // Popup chọn sinh viên
-  const handleOpenStudentPopup = () => setShowStudentPopup(true);
-
-  const handleCheckStudent = (id: string, checked: boolean) => {
-    setStudentChecks((prev) => ({ ...prev, [id]: checked }));
-  };
-
-  const handleCheckAllStudents = () => {
-    const allChecked: Record<string, boolean> = {};
-    students.forEach((sv: any) => {
-      allChecked[sv.studentId] = true;
-    });
-    setStudentChecks(allChecked);
-  };
-
-  const handleUncheckAllStudents = () => {
-    setStudentChecks({});
-  };
-
-  const handleConfirmStudents = () => {
-    setSelectedStudents(students.filter((sv) => studentChecks[sv.studentId]));
-    setShowStudentPopup(false);
-  };
-
-  // Popup chọn đề thi
-  const handleOpenExamPopup = () => {
-    setExamChecks({});
-    setShowExamPopup(true);
-    setSelectedSemester(null);
-    setSelectedYear(null);
-    setExamPapers([]);
-  };
-
-  const handleCheckExam = (id: number, checked: boolean) => {
-    setExamChecks((prev) => ({ ...prev, [id]: checked }));
-  };
-
-  const handleCheckAllExams = () => {
-    const allChecked: Record<number, boolean> = {};
-    examPapers.forEach((exam) => {
-      allChecked[exam.pracExamPaperId] = true;
-    });
-    setExamChecks(allChecked);
-  };
-
-  const handleUncheckAllExams = () => {
-    setExamChecks({});
-  };
-
-  const handleSaveExams = () => {
-    const selected = examPapers.filter((exam) => examChecks[exam.pracExamPaperId]);
-    setSelectedExams(prev => [...prev, ...selected]);
-    setShowExamPopup(false);
-  };
-
-  const handleRemoveExam = (id: number) => {
-    setSelectedExams((prev) => prev.filter((c) => c.pracExamPaperId !== id));
-  };
-
-  // Xem chi tiết đề thi
-  const handleShowDetail = async (examPaperId: number) => {
-    setShowDetail(true);
-    setLoadingDetail(true);
-    try {
-      const res = await fetch(`${API_URL}/api/PracticeExamPaper/DetailExamPaper/${examPaperId}`);
-      if (!res.ok) throw new Error('Không lấy được chi tiết đề thi');
-      const data = await res.json();
-      setDetailData(data);
-    } catch (err: any) {
-      setDetailData(null);
-      alert(err.message || 'Lỗi lấy chi tiết đề thi');
-    } finally {
-      setLoadingDetail(false);
-    }
-  };
-
-  const handleCloseDetail = () => {
-    setShowDetail(false);
-    setDetailData(null);
-  };
-
-  // Preview khi hover trong popup chọn đề thi
-  const handleMouseEnterExam = async (exam: PracticeExamPaperDTO, e: React.MouseEvent) => {
-    setPreviewPosition({ x: e.clientX, y: e.clientY });
-    setHoveredExam(exam);
-    setLoadingDetail(true);
-    try {
-      const res = await fetch(`${API_URL}/api/PracticeExamPaper/DetailExamPaper/${exam.pracExamPaperId}`);
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setDetailData(data);
-    } catch {
-      setDetailData(null);
-    } finally {
-      setLoadingDetail(false);
-    }
-  };
-  const handleMouseLeaveExam = () => {
-    setHoveredExam(null);
-    setPreviewPosition(null);
-    setDetailData(null);
-  };
-
-  // Submit
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      const teacherId = getUserIdFromToken();
-      if (!subjectId) throw new Error('Không lấy được subjectId');
-      if (!selectedGradeComponent) throw new Error('Vui lòng chọn đầu điểm');
-      if (!examName || !startDate || !endDate || !duration || !selectedExams.length || !selectedStudents.length) {
-        throw new Error('Vui lòng nhập đầy đủ thông tin');
-      }
-       if (selectedStudents.length === 0) {
-          throw new Error('Vui lòng chọn ít nhất 1 sinh viên!');
-        }
-      const payload = {
-        pracExamName: examName,
-        duration: duration,
-        startDay: startDate,
-        endDay: endDate,
-        createAt: new Date().toISOString(),
-        teacherId: teacherId,
-        categoryExamId: selectedGradeComponent.value,
-        subjectId: subjectId,
-        status: "Chưa thi",
-        classId: classId,
-        semesterId: semesterId,
-        practiceExamPaperDTO: selectedExams.map(e => ({
-          pracExamPaperId: e.pracExamPaperId,
-          pracExamPaperName: e.pracExamPaperName,
-          year: Date.now().toString().slice(0, 4), // Lấy năm hiện tại
-          semester: e.semester
-        })),
-        studentIds: selectedStudents.map((s: any) => s.studentId)
-      };
-      const res = await fetch(`${API_URL}/api/PracticeExam/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error('Tạo bài kiểm tra thất bại');
-      alert('Tạo bài kiểm tra thành công!');
-      router.push(`/teacher/myclass/classdetail/${classId.toString()}`);
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi tạo bài kiểm tra');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Custom styles cho react-select
-  const selectStyles = {
-    control: (provided: any, state: any) => ({
-      ...provided,
-      minHeight: '48px',
-      borderColor: state.isFocused ? '#3b82f6' : '#d1d5db',
-      borderRadius: '8px',
-      boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
-      '&:hover': {
-        borderColor: '#3b82f6'
-      }
-    }),
-    menu: (provided: any) => ({
-      ...provided,
-      zIndex: 20,
-      borderRadius: '8px',
-      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-    }),
-    option: (provided: any, state: any) => ({
-      ...provided,
-      backgroundColor: state.isSelected ? '#3b82f6' : state.isFocused ? '#eff6ff' : 'white',
-      color: state.isSelected ? 'white' : '#374151',
-      '&:hover': {
-        backgroundColor: state.isSelected ? '#3b82f6' : '#eff6ff'
-      }
-    })
-  };
-
-  // Hàm chuyển trang tạo đề thi mới, bắt buộc chọn kỳ
-  const handleCreateNewExamPaper = useCallback(() => {
-    router.push(`/teacher/myexampaper/createexampaper/${classId}?semesterId=${semesterId}`);
-  }, [router, classId, semesterId]);
-
-  // Hàm parse answerContent thành các ý (nếu là JSON)
-  interface GradingCriterion {
-    criterionName: string;
-    weightPercent: number;
-    description: string;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Đang tải dữ liệu lớp học...</p>
+        </div>
+      </div>
+    );
   }
-  const parseGradingCriteria = (answerContent: string): GradingCriterion[] => {
-    if (!answerContent) return [];
-    try {
-      const parsed = JSON.parse(answerContent);
-      if (Array.isArray(parsed)) {
-        return parsed.filter(
-          (item) =>
-            item &&
-            typeof item === 'object' &&
-            item.criterionName &&
-            item.description
-        );
-      }
-    } catch {
-      // Nếu không phải JSON thì trả về rỗng
-    }
-    return [];
-  };
+
+  // if (error) {
+  //   return (
+  //     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+  //       <div className="text-center">
+  //         <div className="text-red-500 text-xl mb-4">❌</div>
+  //         <p className="text-red-600 text-lg font-medium">Có lỗi xảy ra</p>
+  //         <p className="text-gray-600 mt-2">{error}</p>
+  //         <button
+  //           onClick={handleBack}
+  //           className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+  //         >
+  //           Quay lại
+  //         </button>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-100">
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center">
-                <GraduationCap className="w-6 h-6 text-white" />
+                <FileText className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Tạo bài kiểm tra tự luận</h1>
@@ -409,7 +154,7 @@ export default function CreateEssayExamPage() {
             </div>
             
             <button
-              onClick={() => router.back()}
+              onClick={handleBack}
               className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 font-medium text-gray-700"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -419,7 +164,7 @@ export default function CreateEssayExamPage() {
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -447,11 +192,23 @@ export default function CreateEssayExamPage() {
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Thời lượng thi</p>
-                <p className="text-2xl font-bold text-purple-600">{duration} phút</p>
+                <p className="text-sm font-medium text-gray-600">Tổng câu hỏi</p>
+                <p className="text-2xl font-bold text-purple-600">{totalQuestions}</p>
               </div>
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Clock className="w-6 h-6 text-purple-600" />
+                <Target className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Thời lượng thi</p>
+                <p className="text-2xl font-bold text-orange-600">{duration} phút</p>
+              </div>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <Clock className="w-6 h-6 text-orange-600" />
               </div>
             </div>
           </div>
@@ -494,19 +251,22 @@ export default function CreateEssayExamPage() {
                 />
               </div>
               
-              {/* <div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Học kỳ <span className="text-red-500">*</span>
+                  Thời lượng thi (phút) <span className="text-red-500">*</span>
                 </label>
-                <Select
-                  options={semesters.map(s => ({ value: s.semesterId, label: s.semesterName }))}
-                  value={selectedSemester}
-                  onChange={setSelectedSemester}
-                  placeholder="Chọn học kỳ"
-                  styles={selectStyles}
-                  noOptionsMessage={() => 'Không có dữ liệu'}
-                />
-              </div> */}
+                <div className="relative">
+                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="number"
+                    min={1}
+                    value={duration}
+                    onChange={(e) => setDuration(Number(e.target.value))}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                    placeholder="Nhập thời lượng"
+                  />
+                </div>
+              </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -539,29 +299,11 @@ export default function CreateEssayExamPage() {
                   />
                 </div>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Thời lượng thi (phút) <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="number"
-                    min={1}
-                    value={duration}
-                    onChange={e => setDuration(Number(e.target.value))}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
-                    placeholder="Nhập thời lượng"
-                  />
-                </div>
-              </div>
             </div>
           </div>
 
-          {/* Student & Exam Selection */}
+          {/* Selection Buttons */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Student Selection */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                 <Users className="w-5 h-5 mr-2 text-blue-600" />
@@ -589,7 +331,6 @@ export default function CreateEssayExamPage() {
               )}
             </div>
 
-            {/* Exam Selection */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                 <FileText className="w-5 h-5 mr-2 text-green-600" />
@@ -602,14 +343,14 @@ export default function CreateEssayExamPage() {
                   className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg"
                   onClick={handleOpenExamPopup}
                 >
-                  <Search className="w-4 h-4" />
+                  <FileText className="w-4 h-4" />
                   <span>Chọn đề thi có sẵn</span>
                 </button>
                 
                 <button
                   type="button"
-                  onClick={handleCreateNewExamPaper}
                   className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg"
+                  onClick={handleCreateNewExamPaper}
                 >
                   <Plus className="w-4 h-4" />
                   <span>Tạo đề thi mới</span>
@@ -629,7 +370,7 @@ export default function CreateEssayExamPage() {
             </div>
           </div>
 
-          {/* Selected Exams Table */}
+          {/* Selected Exams */}
           {selectedExams.length > 0 && (
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
@@ -645,7 +386,7 @@ export default function CreateEssayExamPage() {
                     <tr>
                       <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
                       <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên đề thi</th>
-                      <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Học kỳ</th>
+                      <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Kỳ</th>
                       <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Năm</th>
                       <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
                     </tr>
@@ -673,77 +414,59 @@ export default function CreateEssayExamPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveExam(exam.pracExamPaperId)}
-                            className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200"
-                            title="Xóa đề thi"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-center space-x-2">
+                            <button
+                              type="button"
+                              onClick={() => handleShowDetail(exam.pracExamPaperId)}
+                              className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+                              title="Xem chi tiết"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveExam(exam.pracExamPaperId)}
+                              className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                              title="Xóa đề thi"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              
-              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-medium text-gray-900">
-                    Tổng số đề thi: <span className="text-purple-600 font-bold">{selectedExams.length}</span>
-                  </div>
-                  
-                  <button
-                    type="submit"
-                    disabled={isSubmitting || !examName || !startDate || !endDate || !duration || !selectedExams.length || !selectedStudents.length}
-                    className="flex items-center space-x-2 px-8 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        <span>Đang tạo...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4" />
-                        <span>Tạo bài kiểm tra</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
             </div>
           )}
 
-          {/* Submit Button for Empty State */}
-          {selectedExams.length === 0 && (
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={isSubmitting || !examName || !startDate || !endDate || !duration || !selectedExams.length || !selectedStudents.length}
-                className="flex items-center space-x-2 px-8 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Đang tạo...</span>
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4" />
-                    <span>Tạo bài kiểm tra</span>
-                  </>
-                )}
-              </button>
-            </div>
-          )}
+          {/* Submit Button */}
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={isSubmitting || !examName || !selectedGradeComponent || !startDate || !endDate || !duration || selectedStudents.length === 0}
+              className="flex items-center space-x-2 px-8 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Đang tạo...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>Tạo bài kiểm tra</span>
+                </>
+              )}
+            </button>
+          </div>
         </form>
 
         {/* Student Selection Modal */}
         {showStudentPopup && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[100vh] overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-800 flex items-center">
@@ -836,13 +559,13 @@ export default function CreateEssayExamPage() {
 
         {/* Exam Selection Modal */}
         {showExamPopup && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-8">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[100vh] overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-800 flex items-center">
                     <FileText className="w-5 h-5 mr-2 text-green-600" />
-                    Danh sách đề thi tự luận
+                    Chọn đề thi từ ngân hàng đề
                   </h3>
                   <button
                     onClick={() => setShowExamPopup(false)}
@@ -854,36 +577,36 @@ export default function CreateEssayExamPage() {
               </div>
               
               <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                {/* Filters */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div>
-                      <Select
-                        options={semesters.map(s => ({ value: s.semesterId, label: s.semesterName }))}
-                        value={selectedSemester || (semesters.length > 0 ? { value: semesters[0].semesterId, label: semesters[0].semesterName } : null)}
-                        onChange={option => {
-                          setSelectedSemester(option);
-                          setExamPapers([]);
-                        }}
-                        placeholder="Chọn học kỳ"
-                        isClearable
-                        styles={selectStyles}
-                      />
-                    </div>
-                    <div>
-                      <Select
-                        options={years}
-                        value={selectedYear || (years.length > 0 ? years[0] : null)}
-                        onChange={option => {
-                          setSelectedYear(option);
-                          setExamPapers([]);
-                        }}
-                        placeholder="Chọn năm"
-                        isClearable
-                        styles={selectStyles}
-                      />
-                    </div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Kỳ học</label>
+                    <Select
+                      options={semesters.map(s => ({ value: s.semesterId, label: s.semesterName }))}
+                      value={selectedSemester}
+                      onChange={setSelectedSemester}
+                      placeholder="Chọn kỳ học"
+                      styles={selectStyles}
+                      noOptionsMessage={() => 'Không có dữ liệu'}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Năm</label>
+                    <Select
+                      options={years}
+                      value={selectedYear}
+                      onChange={setSelectedYear}
+                      placeholder="Chọn năm"
+                      styles={selectStyles}
+                      noOptionsMessage={() => 'Không có dữ liệu'}
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex gap-4 mb-6">
                   <button
                     type="button"
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
+                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200"
                     onClick={handleCheckAllExams}
                   >
                     <CheckCircle2 className="w-4 h-4" />
@@ -900,27 +623,25 @@ export default function CreateEssayExamPage() {
                 </div>
                 
                 {loadingExams ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    <span className="ml-3 text-gray-600 font-medium">Đang tải đề thi...</span>
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
                   </div>
-                ) : examPapers.length > 0 ? (
+                ) : (
                   <div className="overflow-x-auto max-h-[50vh] rounded-lg border border-gray-200">
                     <table className="w-full">
                       <thead className="bg-gray-50 sticky top-0">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên đề thi</th>
-                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Học kỳ</th>
+                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Kỳ</th>
                           <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Năm</th>
                           <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Chọn</th>
-                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Chi tiết</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {examPapers.map((exam, idx) => (
-                          <tr
-                            key={exam.pracExamPaperId}
+                          <tr 
+                            key={exam.pracExamPaperId} 
                             className="hover:bg-blue-50 transition-colors duration-200"
                             onMouseEnter={e => handleMouseEnterExam(exam, e)}
                             onMouseLeave={handleMouseLeaveExam}
@@ -949,63 +670,21 @@ export default function CreateEssayExamPage() {
                                 type="checkbox"
                                 checked={!!examChecks[exam.pracExamPaperId]}
                                 onChange={(e) => handleCheckExam(exam.pracExamPaperId, e.target.checked)}
-                                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
                               />
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-center">
-                              <button
-                                type="button"
-                                className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors duration-200"
-                                onClick={() => handleShowDetail(exam.pracExamPaperId)}
-                                title="Xem chi tiết"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
-                    
-                    {/* Preview Tooltip */}
-                    {hoveredExam && previewPosition && (
-                      <div
-                        style={{
-                          position: 'fixed',
-                          left: previewPosition.x + 20,
-                          top: previewPosition.y - 20,
-                          zIndex: 1000,
-                        }}
-                        className="bg-white border border-gray-200 rounded-lg shadow-lg p-4 min-w-[320px] max-w-[420px] pointer-events-none"
-                      >
-                        {loadingDetail ? (
-                          <div className="flex items-center space-x-2">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                            <span>Đang tải chi tiết...</span>
-                          </div>
-                        ) : detailData ? (
-                          <div className="space-y-2">
-                            <div><strong>Tên đề thi:</strong> {detailData.pracExamPaperName}</div>
-                            <div><strong>Môn học:</strong> {detailData.subjectName}</div>
-                            <div><strong>Học kỳ:</strong> {detailData.semesterName}</div>
-                            <div><strong>Danh mục:</strong> {detailData.categoryExamName}</div>
-                            <div><strong>Trạng thái:</strong> {detailData.status}</div>
-                            <div><strong>Ngày tạo:</strong> {new Date(detailData.createAt).toLocaleString()}</div>
-                            <div><strong>Số câu hỏi:</strong> {detailData.questions.length}</div>
-                          </div>
-                        ) : (
-                          <div>Không có dữ liệu chi tiết</div>
-                        )}
-                      </div>
-                    )}
                   </div>
-                ) : (
+                )}
+                
+                {examPapers.length === 0 && !loadingExams && (
                   <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <AlertCircle className="w-8 h-8 text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Không có đề thi nào</h3>
-                    <p className="text-gray-600">Vui lòng chọn học kỳ và năm hoặc tạo đề thi mới</p>
+                    <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">Không có đề thi nào</p>
+                    <p className="text-gray-400 text-sm mt-2">Thử thay đổi bộ lọc hoặc tạo đề thi mới</p>
                   </div>
                 )}
               </div>
@@ -1036,12 +715,12 @@ export default function CreateEssayExamPage() {
 
         {/* Detail Modal */}
         {showDetail && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black bg-opacity-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-                    <Eye className="w-5 h-5 mr-2 text-blue-600" />
+                    <FileText className="w-5 h-5 mr-2 text-purple-600" />
                     Chi tiết đề thi
                   </h3>
                   <button
@@ -1053,62 +732,40 @@ export default function CreateEssayExamPage() {
                 </div>
               </div>
               
-              <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
                 {loadingDetail ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    <span className="ml-3 text-gray-600 font-medium">Đang tải chi tiết...</span>
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
                   </div>
                 ) : detailData ? (
                   <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">Tên đề thi</label>
-                        <p className="text-gray-900 font-semibold">{detailData.pracExamPaperName}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">Môn học</label>
-                        <p className="text-gray-900">{detailData.subjectName}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">Học kỳ</label>
-                        <p className="text-gray-900">{detailData.semesterName}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">Danh mục kỳ thi</label>
-                        <p className="text-gray-900">{detailData.categoryExamName}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">Trạng thái</label>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          {detailData.status}
-                        </span>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">Ngày tạo</label>
-                        <p className="text-gray-900">{new Date(detailData.createAt).toLocaleString()}</p>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-800 mb-2">{detailData.pracExamPaperName}</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                        <div>Môn học: <span className="font-medium">{detailData.subjectName}</span></div>
+                        <div>Kỳ: <span className="font-medium">{detailData.semesterName}</span></div>
+                        <div>Loại đề: <span className="font-medium">{detailData.categoryExamName}</span></div>
+                        <div>Trạng thái: <span className="font-medium">{detailData.status}</span></div>
                       </div>
                     </div>
                     
-                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-3">Danh sách câu hỏi</label>
+                    <div>
+                      <h5 className="font-semibold text-gray-800 mb-4">Danh sách câu hỏi ({detailData.questions.length})</h5>
                       <div className="space-y-4">
-                        {detailData.questions.map(q => {
+                        {detailData.questions.map((q, index) => {
                           const criteria = parseGradingCriteria(q.answerContent);
                           return (
-                            <div key={q.questionOrder} className="border border-gray-200 rounded-lg p-4">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <span className="w-6 h-6 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-xs font-bold">
-                                  {q.questionOrder}
-                                </span>
-                                <span className="font-medium text-gray-900">Câu {q.questionOrder}</span>
-                                <span className="ml-auto text-sm text-gray-600">Điểm: {q.score}</span>
+                            <div key={index} className="border border-gray-200 rounded-lg p-4">
+                              <div className="flex justify-between items-start mb-3">
+                                <h6 className="font-medium text-gray-800">
+                                  Câu {q.questionOrder}: ({q.score} điểm)
+                                </h6>
                               </div>
                               <div className="mb-3">
-                                <p className="text-gray-800">{q.content}</p>
+                                <p className="text-gray-700 text-sm bg-blue-50 p-3 rounded">{q.content}</p>
                               </div>
                               <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Tiêu chí chấm:</label>
+                                <h6 className="font-medium text-gray-700 mb-2">Đáp án/Tiêu chí chấm:</h6>
                                 {criteria.length > 0 ? (
                                   <ul className="list-disc pl-6 space-y-1">
                                     {criteria.map((c, i) => (
@@ -1134,14 +791,57 @@ export default function CreateEssayExamPage() {
                 ) : (
                   <div className="text-center py-12">
                     <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">Không có dữ liệu chi tiết</p>
+                    <p className="text-gray-500 text-lg">Không thể tải chi tiết đề thi</p>
                   </div>
                 )}
               </div>
             </div>
           </div>
         )}
+
+        {/* Preview Tooltip */}
+        {hoveredExam && previewPosition && detailData && (
+          <div
+            className="fixed z-50 bg-white rounded-lg shadow-xl border border-gray-200 p-4 max-w-md"
+            style={{
+              left: previewPosition.x + 10,
+              top: previewPosition.y - 50,
+              pointerEvents: 'none'
+            }}
+          >
+            <div className="space-y-2">
+              <h6 className="font-semibold text-gray-800">{hoveredExam.pracExamPaperName}</h6>
+              <div className="text-sm text-gray-600">
+                <div>Số câu hỏi: {detailData.questions.length}</div>
+                <div>Môn: {detailData.subjectName}</div>
+                <div>Kỳ: {detailData.semesterName}</div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Đang tải dữ liệu lớp học...</p>
+      </div>
+    </div>
+  );
+}
+
+export default async function CreateEssayExamPage({ params }: { params: Promise<{ classId: string }> }) {
+  const { classId: classIdString } = await params;
+  const classId = Number(classIdString);
+  
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <CreatePracticeExamContent classId={classId} />
+    </Suspense>
   );
 }

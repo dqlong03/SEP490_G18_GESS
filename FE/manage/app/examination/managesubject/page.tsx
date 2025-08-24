@@ -49,8 +49,7 @@ export default function SubjectManager() {
   } = useSubjects();
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+    <div className="min-h-screen bg-white">
       <div className="container mx-auto px-6 py-8">
         {/* Header Section */}
         <div className="mb-8">
@@ -65,24 +64,17 @@ export default function SubjectManager() {
           <p className="text-gray-600 ml-11">Quản lý danh sách môn học và thông tin liên quan</p>
         </div>
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-            <X className="w-5 h-5 text-red-500" />
-            <span className="text-red-700">{error}</span>
-          </div>
-        )}
-
         {/* Main Content Card */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
           {/* Search and Action Bar */}
           <div className="p-6 bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200">
-            <form onSubmit={handleSearch} className="flex flex-wrap gap-4 items-center">
+            <div className="flex flex-wrap gap-4 items-center">
               <div className="flex-1 min-w-72">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type="text"
-                    placeholder="Tìm kiếm theo tên môn học..."
+                    placeholder="Tìm kiếm"
                     value={searchName}
                     onChange={e => setSearchName(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white"
@@ -91,14 +83,6 @@ export default function SubjectManager() {
               </div>
               
               <div className="flex gap-2">
-                <button 
-                  type="submit" 
-                  className="flex items-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-sm"
-                >
-                  <Search className="w-4 h-4" />
-                  Tìm kiếm
-                </button>
-                
                 <button
                   type="button"
                   onClick={() => {
@@ -124,8 +108,9 @@ export default function SubjectManager() {
                   Thêm mới
                 </button>
               </div>
-            </form>
-          </div>          {/* Popup Add/Edit */}
+            </div>
+          </div>
+          {/* Popup Add/Edit */}
           {showPopup && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn">
               <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl mx-4 animate-slideUp border border-gray-100">
@@ -277,7 +262,7 @@ export default function SubjectManager() {
                       <th className="text-left py-4 px-6 font-semibold text-gray-700">
                         <div className="flex items-center gap-2">
                           <Target className="w-4 h-4" />
-                          ID
+                          STT
                         </div>
                       </th>
                       <th className="text-left py-4 px-6 font-semibold text-gray-700">
@@ -312,7 +297,7 @@ export default function SubjectManager() {
                       <tr key={subject.subjectId} className="hover:bg-blue-50/50 transition-colors duration-200">
                         <td className="py-4 px-6">
                           <span className="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 rounded-lg font-medium text-sm">
-                            {subject.subjectId}
+                            {index + 1}
                           </span>
                         </td>
                         <td className="py-4 px-6">
@@ -391,13 +376,13 @@ export default function SubjectManager() {
         {subjects.length > 0 && (
           <div className="bg-white border-t border-gray-200 px-6 py-4 rounded-b-xl">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-700">
+              {/* <div className="text-sm text-gray-700">
                 Hiển thị <span className="font-medium">{(pageNumber - 1) * pageSize + 1}</span> đến{' '}
                 <span className="font-medium">
                   {Math.min(pageNumber * pageSize, subjects.length)}
                 </span>{' '}
-                của <span className="font-medium">{subjects.length}</span> kết quả
-              </div>
+                của <span className="font-medium">{subjects.length}</span> kết quả */}
+              {/* </div> */}
               
               <div className="flex items-center gap-2">
                 <button
@@ -410,7 +395,7 @@ export default function SubjectManager() {
                 </button>
                 
                 <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  {Array.from({ length: Math.min(5, totalPages+1) }, (_, i) => {
                     let pageNum;
                     if (totalPages <= 5) {
                       pageNum = i + 1;
@@ -498,6 +483,5 @@ export default function SubjectManager() {
         }
       `}</style>
     </div>
-    </Suspense>
   );
 }

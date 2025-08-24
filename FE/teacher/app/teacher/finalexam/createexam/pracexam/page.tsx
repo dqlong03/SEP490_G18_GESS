@@ -1,250 +1,62 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Select from 'react-select';
-import { getUserIdFromToken } from '@/utils/tokenUtils';
-import { 
-  BookOpen, 
-  Plus, 
-  Trash2, 
-  Save, 
+import { Suspense } from "react";
+import { useCreatePracticalExam } from "../../../../../src/hooks/teacher/useCreatePracticalExam";
+import Select from "react-select";
+import {
+  BookOpen,
+  Plus,
+  Trash2,
+  Save,
   PenTool,
   Calendar,
-  GraduationCap,
-  FileText,
   Settings,
   X,
   ChevronLeft,
   Eye,
   CheckSquare,
-  Users,
   Target,
   Clock,
-  Filter,
+  FileText,
   AlertCircle
-} from 'lucide-react';
+} from "lucide-react";
 
-const API_URL = "https://localhost:7074";
-
-interface SubjectDTO {
-  subjectId: number;
-  subjectName: string;
-}
-
-interface SemesterDTO {
-  semesterId: number;
-  semesterName: string;
-}
-
-interface PracExamPaperDTO {
-  pracExamPaperId: number;
-  pracExamPaperName: string;
-  semesterName: string;
-}
-
-interface ExamPaperDetail {
-  pracExamPaperId: number;
-  pracExamPaperName: string;
-  createAt: string;
-  subjectName: string;
-  semesterName: string;
-  categoryExamName: string | null;
-  status: string | null;
-  questions: {
-    questionOrder: number;
-    content: string;
-    answerContent: string;
-    score: number;
-  }[];
-}
-
-export default function CreateFinalPracExamPage() {
-  const router = useRouter();
-  const [examName, setExamName] = useState('');
-  const [subjects, setSubjects] = useState<SubjectDTO[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState<any>(null);
-  const [semesters, setSemesters] = useState<SemesterDTO[]>([]);
-  const [selectedSemester, setSelectedSemester] = useState<any>(null);
-
-  // Đề thi
-  const [showExamPopup, setShowExamPopup] = useState(false);
-  const [examChecks, setExamChecks] = useState<Record<number, boolean>>({});
-  const [examPapers, setExamPapers] = useState<PracExamPaperDTO[]>([]);
-  const [selectedExams, setSelectedExams] = useState<PracExamPaperDTO[]>([]);
-  const [loadingExams, setLoadingExams] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Chi tiết đề thi
-  const [showDetail, setShowDetail] = useState(false);
-  const [detailData, setDetailData] = useState<ExamPaperDetail | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-
-  // Preview đề thi khi hover (chỉ trong popup)
-  const [hoveredExam, setHoveredExam] = useState<PracExamPaperDTO | null>(null);
-  const [previewPosition, setPreviewPosition] = useState<{ x: number; y: number } | null>(null);
-
-  // Lấy danh sách môn học và kỳ
-  useEffect(() => {
-    const teacherId = getUserIdFromToken();
-    if (teacherId) {
-      fetch(`${API_URL}/api/FinalExam/GetAllMajorByTeacherId?teacherId=${teacherId}`)
-        .then(res => res.json())
-        .then(data => setSubjects(data || []));
-    }
-    fetch(`${API_URL}/api/Semesters`)
-      .then(res => res.json())
-      .then(data => setSemesters(data || []));
-  }, []);
-
-  // Lấy danh sách đề thi khi mở popup
-  const fetchExamPapers = async () => {
-    setLoadingExams(true);
-    try {
-      if (!selectedSubject || !selectedSemester) throw new Error('Vui lòng chọn môn học và kỳ');
-      const res = await fetch(
-        `${API_URL}/api/FinalExam/GetAllFinalExamPaper?subjectId=${selectedSubject.value}&semesterId=${selectedSemester.value}`
-      );
-      if (!res.ok) throw new Error('Không lấy được danh sách đề thi');
-      const exams = await res.json();
-      setExamPapers(
-        (exams || []).filter(
-          (e: PracExamPaperDTO) =>
-            !selectedExams.some(se => se.pracExamPaperId === e.pracExamPaperId)
-        )
-      );
-    } catch (err: any) {
-      setExamPapers([]);
-      alert(err.message || 'Lỗi lấy danh sách đề thi');
-    } finally {
-      setLoadingExams(false);
-    }
-  };
-
-  useEffect(() => {
-    if (showExamPopup && selectedSubject && selectedSemester) {
-      fetchExamPapers();
-    }
-    // eslint-disable-next-line
-  }, [showExamPopup, selectedSubject, selectedSemester]);
-
-  // Popup chọn đề thi
-  const handleOpenExamPopup = () => {
-    setExamChecks({});
-    setShowExamPopup(true);
-    setExamPapers([]);
-  };
-
-  const handleCheckExam = (id: number, checked: boolean) => {
-    setExamChecks((prev) => ({ ...prev, [id]: checked }));
-  };
-
-  const handleCheckAllExams = () => {
-    const allChecked: Record<number, boolean> = {};
-    examPapers.forEach((exam) => {
-      allChecked[exam.pracExamPaperId] = true;
-    });
-    setExamChecks(allChecked);
-  };
-
-  const handleUncheckAllExams = () => {
-    setExamChecks({});
-  };
-
-  const handleSaveExams = () => {
-    const selected = examPapers.filter((exam) => examChecks[exam.pracExamPaperId]);
-    setSelectedExams(prev => [...prev, ...selected]);
-    setShowExamPopup(false);
-  };
-
-  const handleRemoveExam = (id: number) => {
-    setSelectedExams((prev) => prev.filter((c) => c.pracExamPaperId !== id));
-  };
-
-  // Xem chi tiết đề thi
-  const handleShowDetail = async (examPaperId: number) => {
-    setShowDetail(true);
-    setLoadingDetail(true);
-    try {
-      const res = await fetch(`${API_URL}/api/FinalExam/ViewFinalExamPaperDetail/${examPaperId}`);
-      if (!res.ok) throw new Error('Không lấy được chi tiết đề thi');
-      const data = await res.json();
-      setDetailData(data);
-    } catch (err: any) {
-      setDetailData(null);
-      alert(err.message || 'Lỗi lấy chi tiết đề thi');
-    } finally {
-      setLoadingDetail(false);
-    }
-  };
-
-  const handleCloseDetail = () => {
-    setShowDetail(false);
-    setDetailData(null);
-  };
-
-  // Preview khi hover trong popup chọn đề thi
-  const handleMouseEnterExam = async (exam: PracExamPaperDTO, e: React.MouseEvent) => {
-    setPreviewPosition({ x: e.clientX, y: e.clientY });
-    setHoveredExam(exam);
-    setLoadingDetail(true);
-    try {
-      const res = await fetch(`${API_URL}/api/FinalExam/ViewFinalExamPaperDetail/${exam.pracExamPaperId}`);
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setDetailData(data);
-    } catch {
-      setDetailData(null);
-    } finally {
-      setLoadingDetail(false);
-    }
-  };
-  
-  const handleMouseLeaveExam = () => {
-    setHoveredExam(null);
-    setPreviewPosition(null);
-    setDetailData(null);
-  };
-
-  // Submit
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      const teacherId = getUserIdFromToken();
-      if (!selectedSubject) throw new Error('Vui lòng chọn môn học');
-      if (!selectedSemester) throw new Error('Vui lòng chọn kỳ');
-      if (!examName || !selectedExams.length) {
-        throw new Error('Vui lòng nhập đầy đủ thông tin');
-      }
-      const payload = {
-        pracExamName: examName,
-        teacherId: teacherId,
-        subjectId: selectedSubject.value,
-        semesterId: selectedSemester.value,
-        practiceExamPaperDTO: selectedExams.map(e => ({
-          pracExamPaperId: e.pracExamPaperId
-        }))
-      };
-      const res = await fetch(`${API_URL}/api/FinalExam/CreateFinalPracExam`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error('Tạo bài kiểm tra thất bại');
-      alert('Tạo bài kiểm tra thành công!');
-      router.push(`/teacher/finalexam`);
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi tạo bài kiểm tra');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Total questions from selected exams
-  const totalQuestions = selectedExams.reduce((sum, exam) => {
-    return sum + (detailData?.questions?.length || 0);
-  }, 0);
+const CreatePracticalExamClient = () => {
+  const {
+    examName,
+    selectedSubject,
+    selectedSemester,
+    selectedExams,
+    examPapers,
+    examChecks,
+    showExamPopup,
+    showDetail,
+    detailData,
+    hoveredExam,
+    previewPosition,
+    loadingExams,
+    loadingDetail,
+    isSubmitting,
+    totalQuestions,
+    subjectOptions,
+    semesterOptions,
+    validationResult,
+    setExamName,
+    setSelectedSubject,
+    setSelectedSemester,
+    handleOpenExamPopup,
+    handleCheckExam,
+    handleCheckAllExams,
+    handleUncheckAllExams,
+    handleSaveExams,
+    handleRemoveExam,
+    handleShowDetail,
+    handleCloseDetail,
+    handleMouseEnterExam,
+    handleMouseLeaveExam,
+    setShowExamPopup,
+    handleSubmit,
+  } = useCreatePracticalExam();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -261,18 +73,10 @@ export default function CreateFinalPracExamPage() {
                 <p className="text-gray-600">Thiết lập và cấu hình bài thi tự luận từ các đề thi có sẵn</p>
               </div>
             </div>
-            
-            <button
-              onClick={() => router.back()}
-              className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 font-medium text-gray-700"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span>Quay lại</span>
-            </button>
           </div>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-8">
           {/* Basic Information */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center">
@@ -300,7 +104,7 @@ export default function CreateFinalPracExamPage() {
                   Môn học <span className="text-red-500">*</span>
                 </label>
                 <Select
-                  options={subjects.map(s => ({ value: s.subjectId, label: s.subjectName }))}
+                  options={subjectOptions}
                   value={selectedSubject}
                   onChange={setSelectedSubject}
                   placeholder="Chọn môn học"
@@ -323,7 +127,7 @@ export default function CreateFinalPracExamPage() {
                   Học kỳ <span className="text-red-500">*</span>
                 </label>
                 <Select
-                  options={semesters.map(s => ({ value: s.semesterId, label: s.semesterName }))}
+                  options={semesterOptions}
                   value={selectedSemester}
                   onChange={setSelectedSemester}
                   placeholder="Chọn học kỳ"
@@ -460,7 +264,7 @@ export default function CreateFinalPracExamPage() {
                   
                   <button
                     type="submit"
-                    disabled={isSubmitting || !examName || selectedExams.length === 0}
+                    disabled={isSubmitting || !validationResult.isValid}
                     className="flex items-center space-x-2 px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? (
@@ -483,7 +287,7 @@ export default function CreateFinalPracExamPage() {
 
         {/* Popup chọn đề thi */}
         {showExamPopup && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-50 backdrop-blur-sm p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[100vh] overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
@@ -664,7 +468,7 @@ export default function CreateFinalPracExamPage() {
 
         {/* Chi tiết đề thi modal */}
         {showDetail && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="fixed inset-0 z-60 flex items-center justify-center bg-opacity-50 backdrop-blur-sm p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[100vh] overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
@@ -793,5 +597,17 @@ export default function CreateFinalPracExamPage() {
         )}
       </div>
     </div>
+  );
+};
+
+export default function CreatePracticalExamPage() {
+  return (
+    <Suspense fallback={
+      <div className="p-6">
+        <div className="text-center">Đang tải...</div>
+      </div>
+    }>
+      <CreatePracticalExamClient />
+    </Suspense>
   );
 }

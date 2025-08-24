@@ -1,11 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { Suspense } from 'react';
 import Select from 'react-select';
-import * as XLSX from 'xlsx';
-import { useSearchParams } from 'next/navigation';
-import { getUserIdFromToken } from '@/utils/tokenUtils';
-import { useRouter } from 'next/navigation';
 import { 
   Plus, 
   Download, 
@@ -16,473 +12,83 @@ import {
   Edit3, 
   Trash2, 
   FileText,
-  AlertCircle,
   ChevronLeft,
   Award,
   Target,
   Hash,
   Sparkles,
   FileSpreadsheet,
-  CheckCircle,
-  PenTool,Calendar
+  PenTool,
+  Calendar
 } from 'lucide-react';
+import { useCreatePracticalQuestion } from '@/hooks/teacher/useCreatePracticalQuestion';
 
-const difficulties = [
-  { value: 1, label: 'Dễ' },
-  { value: 2, label: 'Trung bình' },
-  { value: 3, label: 'Khó' },
-];
+function CreatePracticalQuestionContent() {
+  const {
+    // URL params
+    chapterName,
+    subjectName,
+    semesterName,
 
-type Criterion = {
-  criterionName: string;
-  weightPercent: number;
-  description: string;
-};
+    // Core state
+    questions,
+    statistics,
 
-type EssayQuestion = {
-  id: number;
-  content: string;
-  criteria: Criterion[];
-  difficulty: number;
-  isPublic: boolean;
-};
+    // File import
+    fileName,
+    importError,
+    handleUpload,
+    handleDownloadTemplate,
 
-export default function CreateEssayQuestionPage() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const chapterId = Number(searchParams.get('chapterId'));
-  const categoryExamId = Number(searchParams.get('categoryExamId'));
-  const chapterName = searchParams.get('chapterName') || '';
-  const subjectName = searchParams.get('subjectName') || '';
-  const semesterName = searchParams.get('semesterName') || '';
-  const year = searchParams.get('year') || '';
+    // AI generation
+    showAIGen,
+    setShowAIGen,
+    aiLink,
+    setAILink,
+    aiNum,
+    setAINum,
+    aiLevel,
+    setAILevel,
+    aiLoading,
+    handleShowAIForm,
+    handleGenerateAI,
 
-  const [questions, setQuestions] = useState<EssayQuestion[]>([]);
-  const [fileName, setFileName] = useState<string>('');
-  const [importError, setImportError] = useState<string>('');
-  const [semesterId, setSemesterId] = useState<number | null>(null);
+    // Manual form
+    manualQ,
+    setManualQ,
+    showManualForm,
+    setShowManualForm,
+    handleShowManualForm,
+    handleAddManual,
+    addCriterion,
+    removeCriterion,
+    updateCriterion,
 
-  // AI form state
-  const [showAIGen, setShowAIGen] = useState(false);
-  const [aiLink, setAILink] = useState("https://docs.google.com/document/d/1xD31S45CPW3Np_bEfJ_HkvzM7LDynu5WNpecLec5z8I/edit?tab=t.0");
-  const [aiNum, setAINum] = useState(2);
-  const [aiLevel, setAILevel] = useState('dễ');
-  const [aiLoading, setAILoading] = useState(false);
+    // Question management
+    handleEditQuestion,
+    handleDeleteQuestion,
+    addCriterionToQuestion,
+    removeCriterionFromQuestion,
+    updateQuestionCriterion,
 
-  const [manualQ, setManualQ] = useState<EssayQuestion>({
-    id: Date.now(),
-    content: '',
-    criteria: [
-      { criterionName: '', weightPercent: 25, description: '' }
-    ],
-    difficulty: 1,
-    isPublic: true,
-  });
+    // Actions
+    handleSaveQuestions,
+    handleGoBack,
 
-  const [showManualForm, setShowManualForm] = useState(false);
-  const manualFormRef = useRef<HTMLDivElement>(null);
-  const questionsListRef = useRef<HTMLDivElement>(null); // Add ref for questions list
-  const aiFormRef = useRef<HTMLDivElement>(null); // Add ref for AI form
+    // Utilities
+    getLevelColor,
+    difficulties,
 
-
-  // Lấy học kỳ hiện tại
-  useEffect(() => {
-    fetch('https://localhost:7074/api/MultipleQuestion/GetCurrentSemester')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) setSemesterId(data[0].semesterId);
-        else if (data.semesterId) setSemesterId(data.semesterId);
-      })
-      .catch(() => setSemesterId(null));
-  }, []);
-
-  // Download template
-  const handleDownloadTemplate = () => {
-    const header = [
-      'Nội dung', 'Độ khó',
-      'Tiêu chí 1 - Tên', 'Tiêu chí 1 - Mô tả', 'Tiêu chí 1 - Phần trăm',
-      'Tiêu chí 2 - Tên', 'Tiêu chí 2 - Mô tả', 'Tiêu chí 2 - Phần trăm',
-      'Tiêu chí 3 - Tên', 'Tiêu chí 3 - Mô tả', 'Tiêu chí 3 - Phần trăm',
-      'Tiêu chí 4 - Tên', 'Tiêu chí 4 - Mô tả', 'Tiêu chí 4 - Phần trăm',
-      'Tiêu chí 5 - Tên', 'Tiêu chí 5 - Mô tả', 'Tiêu chí 5 - Phần trăm'
-    ];
-    const rows = [
-      [
-        'Trình bày khái niệm lập trình hướng đối tượng.', 1,
-        'Độ rõ ràng', 'Trình bày rõ ràng và dễ hiểu', 30,
-        'Nội dung chuyên môn', 'Đảm bảo mô tả đúng các khái niệm', 30,
-        'Tư duy/phân tích', 'Phân tích và kết nối hợp lý', 20,
-        'Ví dụ minh họa', 'Cung cấp ví dụ cụ thể', 20,
-        '', '', ''
-      ],
-      [
-        'Phân tích ưu điểm của ngôn ngữ C++ so với C.', 2,
-        'So sánh chính xác', 'So sánh đúng về tính năng', 40,
-        'Ví dụ minh họa', 'Đưa ra ví dụ cụ thể', 30,
-        'Cấu trúc bài viết', 'Trình bày có logic', 30,
-        '', '', '',
-        '', '', ''
-      ]
-    ];
-    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'EssayQuestions');
-    XLSX.writeFile(wb, 'mau_cau_hoi_tu_luan.xlsx');
-  };
-
-  // Import file
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  setImportError('');
-  const reader = new FileReader();
-  reader.onload = (evt) => {
-    const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-    const workbook = XLSX.read(data, { type: 'array' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const json: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-
-    // Validate header
-    const expectedHeader = [
-      'Nội dung', 'Độ khó',
-      'Tiêu chí 1 - Tên', 'Tiêu chí 1 - Mô tả', 'Tiêu chí 1 - Phần trăm',
-      'Tiêu chí 2 - Tên', 'Tiêu chí 2 - Mô tả', 'Tiêu chí 2 - Phần trăm',
-      'Tiêu chí 3 - Tên', 'Tiêu chí 3 - Mô tả', 'Tiêu chí 3 - Phần trăm',
-      'Tiêu chí 4 - Tên', 'Tiêu chí 4 - Mô tả', 'Tiêu chí 4 - Phần trăm',
-      'Tiêu chí 5 - Tên', 'Tiêu chí 5 - Mô tả', 'Tiêu chí 5 - Phần trăm'
-    ];
-    const fileHeader = json[0]?.map((h: any) => (h || '').toString().trim());
-    const isHeaderValid = expectedHeader.every((h, idx) => fileHeader[idx] === h);
-
-    if (!isHeaderValid) {
-      setImportError('File không đúng định dạng mẫu. Vui lòng tải file mẫu và nhập đúng các cột!');
-      setFileName('');
-      return;
-    }
-
-    if (json.length < 2) {
-      setImportError('File phải có ít nhất 1 dòng dữ liệu.');
-      setFileName('');
-      return;
-    }
-
-    const dataArr: EssayQuestion[] = [];
-    for (let i = 1; i < json.length; i++) {
-      const row = json[i];
-      // Validate: Nội dung và độ khó phải có
-      if (row.length < 2 || !row[0] || !row[1]) {
-        setImportError(`Dòng ${i + 1}: Thiếu nội dung hoặc độ khó!`);
-        setFileName('');
-        return;
-      }
-      // Validate: Độ khó phải là 1, 2 hoặc 3
-      if (![1, 2, 3].includes(Number(row[1]))) {
-        setImportError(`Dòng ${i + 1}: Độ khó phải là 1 (Dễ), 2 (Trung bình), hoặc 3 (Khó)!`);
-        setFileName('');
-        return;
-      }
-      const criteria: Criterion[] = [];
-      // Duyệt qua 5 nhóm tiêu chí (mỗi nhóm 3 cột: tên, mô tả, phần trăm)
-      for (let j = 0; j < 5; j++) {
-        const nameIndex = 2 + j * 3;
-        const descIndex = 3 + j * 3;
-        const weightIndex = 4 + j * 3;
-        // Nếu có tên tiêu chí thì validate các trường còn lại
-        if (row[nameIndex] && row[nameIndex].trim()) {
-          // Validate: Phần trăm phải là số và từ 1-100
-          const weight = Number(row[weightIndex]);
-          if (isNaN(weight) || weight < 1 || weight > 100) {
-            setImportError(`Dòng ${i + 1}: Phần trăm tiêu chí "${row[nameIndex]}" phải là số từ 1 đến 100!`);
-            setFileName('');
-            return;
-          }
-          criteria.push({
-            criterionName: row[nameIndex].trim(),
-            description: row[descIndex] ? row[descIndex].trim() : '',
-            weightPercent: weight
-          });
-        }
-      }
-      // Validate: Phải có ít nhất 1 tiêu chí
-      if (criteria.length === 0) {
-        setImportError(`Dòng ${i + 1}: Phải có ít nhất 1 tiêu chí chấm!`);
-        setFileName('');
-        return;
-      }
-      // Validate: Tổng phần trăm tiêu chí phải bằng 100
-      const totalWeight = criteria.reduce((sum, c) => sum + c.weightPercent, 0);
-      if (totalWeight !== 100) {
-        setImportError(`Dòng ${i + 1}: Tổng phần trăm các tiêu chí phải bằng 100% (hiện tại: ${totalWeight}%)!`);
-        setFileName('');
-        return;
-      }
-      dataArr.push({
-        id: Date.now() + i,
-        content: row[0],
-        criteria: criteria,
-        difficulty: Number(row[1]) || 1,
-        isPublic: true,
-      });
-    }
-    setQuestions([...questions, ...dataArr]);
-    setFileName(file.name);
-    setImportError('');
-  };
-  reader.readAsArrayBuffer(file);
-};
-  // Thêm tiêu chí mới cho form thủ công
-  const addCriterion = () => {
-    // if (manualQ.criteria.length >= 3) {
-    //   alert('Chỉ được phép tối đa 3 tiêu chí chấm điểm!');
-    //   return;
-    // }
-    setManualQ({
-      ...manualQ,
-      criteria: [...manualQ.criteria, { criterionName: '', weightPercent: 0, description: '' }]
-    });
-  };
-
-  // Xóa tiêu chí
-  const removeCriterion = (index: number) => {
-    const newCriteria = manualQ.criteria.filter((_, i) => i !== index);
-    setManualQ({ ...manualQ, criteria: newCriteria });
-  };
-
-  // Cập nhật tiêu chí
-  const updateCriterion = (index: number, field: keyof Criterion, value: string | number) => {
-    const newCriteria = [...manualQ.criteria];
-    newCriteria[index] = { ...newCriteria[index], [field]: value };
-    setManualQ({ ...manualQ, criteria: newCriteria });
-  };
-
-  // Thêm/xóa tiêu chí cho câu hỏi trong danh sách
-  const addCriterionToQuestion = (questionIdx: number) => {
-    const newQuestions = [...questions];
-    // if (newQuestions[questionIdx].criteria.length >= 3) {
-    //   alert('Chỉ được phép tối đa 3 tiêu chí chấm điểm!');
-    //   return;
-    // }
-    newQuestions[questionIdx].criteria.push({
-      criterionName: '',
-      weightPercent: 0,
-      description: ''
-    });
-    setQuestions(newQuestions);
-  };
-
-  const removeCriterionFromQuestion = (questionIdx: number, criterionIdx: number) => {
-    const newQuestions = [...questions];
-    newQuestions[questionIdx].criteria = newQuestions[questionIdx].criteria.filter((_, i) => i !== criterionIdx);
-    setQuestions(newQuestions);
-  };
-
-  // Cập nhật tiêu chí trong danh sách câu hỏi
-  const updateQuestionCriterion = (questionIdx: number, criterionIdx: number, field: keyof Criterion, value: string | number) => {
-    const newQuestions = [...questions];
-    newQuestions[questionIdx].criteria[criterionIdx] = {
-      ...newQuestions[questionIdx].criteria[criterionIdx],
-      [field]: value
-    };
-    setQuestions(newQuestions);
-  };
-
-  // Thêm thủ công
-  const handleAddManual = () => {
-    if (!manualQ.content.trim()) {
-      alert('Vui lòng nhập nội dung câu hỏi!');
-      return;
-    }
-    
-    const validCriteria = manualQ.criteria.filter(c => c.criterionName.trim());
-    if (validCriteria.length === 0) {
-      alert('Vui lòng thêm ít nhất một tiêu chí chấm!');
-      return;
-    }
-    
-    const totalWeight = validCriteria.reduce((sum, c) => sum + c.weightPercent, 0);
-    if (totalWeight !== 100) {
-      alert('Tổng phần trăm điểm của các tiêu chí phải bằng 100%!');
-      return;
-    }
-    
-    setQuestions([
-      ...questions,
-      { ...manualQ, id: Date.now(), criteria: validCriteria }
-    ]);
-    setManualQ({
-      id: Date.now(),
-      content: '',
-      criteria: [{ criterionName: '', weightPercent: 25, description: '' }],
-      difficulty: 1,
-      isPublic: true,
-    });
-    setShowManualForm(false);
-    
-    // Auto scroll to questions list after adding
-    setTimeout(() => {
-      questionsListRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  };
-
-  const handleShowManualForm = () => {
-    setShowManualForm(true);
-    setTimeout(() => {
-      manualFormRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  };
-
-    const handleShowAIForm = () => {
-    setShowAIGen(true);
-    setTimeout(() => {
-      aiFormRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  };
-
-  // Sửa câu hỏi
-  const handleEditQuestion = (idx: number, key: keyof EssayQuestion, value: any) => {
-    setQuestions((prev) =>
-      prev.map((q, i) => (i === idx ? { ...q, [key]: value } : q))
-    );
-  };
-
-  // Xóa câu hỏi
-  const handleDeleteQuestion = (idx: number) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa câu hỏi này?')) {
-      setQuestions(questions.filter((_, i) => i !== idx));
-    }
-  };
-
-  // Tạo câu hỏi bằng AI
-  const handleGenerateAI = async () => {
-    if (!aiLink || !aiNum || !aiLevel) {
-      alert('Vui lòng nhập đầy đủ thông tin!');
-      return;
-    }
-    setAILoading(true);
-    try {
-      const res = await fetch('https://localhost:7074/api/GenerateQuestions/GenerateEssayQuestion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subjectName: subjectName,
-          materialLink: aiLink,
-          levels: [{ difficulty: aiLevel, numberOfQuestions: aiNum }]
-        })
-      });
-      const data = await res.json();
-      if (!Array.isArray(data)) throw new Error('Kết quả trả về không hợp lệ!');
-      const newQuestions: EssayQuestion[] = data.map((q: any, idx: number) => ({
-        id: Date.now() + idx,
-        content: q.content,
-        criteria: q.bandScoreGuide || [],
-        difficulty: 1,
-        isPublic: true
-      }));
-      setQuestions(prev => [...prev, ...newQuestions]);
-      setShowAIGen(false);
-      setAINum(2);
-      setAILevel('dễ');
-      
-      // Auto scroll to questions list after AI generation
-      setTimeout(() => {
-        questionsListRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-      
-      alert(`Đã tạo thành công ${newQuestions.length} câu hỏi bằng AI!`);
-    } catch (err: any) {
-      alert('Lỗi tạo câu hỏi bằng AI: ' + "\nKiểm tra lại link tài liệu(đã được chia sẻ editable) và đã có nội dung");
-    }
-    setAILoading(false);
-  };
-
-  // Lưu câu hỏi lên server
-  const handleSaveQuestions = async () => {
-    if (!semesterId) {
-      alert('Không tìm thấy học kỳ hiện tại!');
-      return;
-    }
-    if (!chapterId || !categoryExamId) {
-      alert('Thiếu chapterId hoặc categoryExamId trên URL!');
-      return;
-    }
-    if (questions.length === 0) {
-      alert('Không có câu hỏi để lưu!');
-      return;
-    }
-
-    // Validate all questions
-    for (let i = 0; i < questions.length; i++) {
-      const q = questions[i];
-      if (!q.content.trim()) {
-        alert(`Câu hỏi ${i + 1} chưa có nội dung!`);
-        return;
-      }
-      if (q.criteria.length === 0) {
-        alert(`Câu hỏi ${i + 1} chưa có tiêu chí chấm!`);
-        return;
-      }
-      
-      // Kiểm tra tổng phần trăm điểm
-      const totalWeight = q.criteria.reduce((sum, c) => sum + c.weightPercent, 0);
-      if (totalWeight !== 100) {
-        alert(`Câu hỏi ${i + 1}: Tổng phần trăm điểm của các tiêu chí phải bằng 100% (hiện tại: ${totalWeight}%)`);
-        return;
-      }
-      
-      // Kiểm tra tên tiêu chí không được trống
-      for (let j = 0; j < q.criteria.length; j++) {
-        if (!q.criteria[j].criterionName.trim()) {
-          alert(`Câu hỏi ${i + 1}, tiêu chí ${j + 1}: Tên tiêu chí không được để trống!`);
-          return;
-        }
-      }
-    }
-
-    try {
-      const teacherId = getUserIdFromToken();
-      const body = questions.map(q => ({
-        content: q.content,
-        answerContent:q.content,
-        urlImg: "Default.png",
-        isActive: true,
-        createdBy: teacherId,
-        isPublic: q.isPublic,
-        categoryExamId: categoryExamId,
-        levelQuestionId: q.difficulty,
-        semesterId: semesterId,
-        criteria: JSON.stringify(q.criteria)
-      }));
-      const res = await fetch(`https://localhost:7074/api/PracticeQuestion/CreateMultiple/${chapterId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      if (res.ok) {
-        alert('Lưu thành công!');
-        setQuestions([]);
-        router.push(`/teacher/questionbank?${searchParams.toString()}`);
-      } else {
-        alert('Lưu thất bại!');
-      }
-    } catch (error) {
-      alert('Có lỗi xảy ra khi lưu câu hỏi!');
-    }
-  };
-
-  const getLevelColor = (level: number) => {
-    const levelObj = difficulties.find(d => d.value === level);
-    switch (levelObj?.label) {
-      case 'Dễ': return 'bg-green-100 text-green-800';
-      case 'Trung bình': return 'bg-yellow-100 text-yellow-800';
-      case 'Khó': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+    // Refs
+    manualFormRef,
+    questionsListRef,
+    aiFormRef
+  } = useCreatePracticalQuestion();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-       {/* Header */}
+        {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -492,7 +98,7 @@ export default function CreateEssayQuestionPage() {
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Tạo câu hỏi tự luận</h1>
                 <p className="text-gray-600">Tạo và quản lý câu hỏi tự luận cho ngân hàng câu hỏi</p>
-                {/* Hiển thị thông tin môn học và chương */}
+                
                 {(subjectName || chapterName) && (
                   <div className="flex items-center space-x-2 mt-2">
                     {subjectName && (
@@ -507,20 +113,19 @@ export default function CreateEssayQuestionPage() {
                         <span>Chương: {chapterName}</span>
                       </div>
                     )}
-
-                      {semesterName && (
-                                      <div className="flex items-center space-x-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-lg text-sm font-medium">
-                                        <Calendar className="w-4 h-4" />
-                                        <span>{semesterName}</span>
-                                      </div>
-                                    )}
+                    {semesterName && (
+                      <div className="flex items-center space-x-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-lg text-sm font-medium">
+                        <Calendar className="w-4 h-4" />
+                        <span>{semesterName}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             </div>
             
             <button
-              onClick={() => router.back()}
+              onClick={handleGoBack}
               className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 font-medium text-gray-700"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -536,7 +141,7 @@ export default function CreateEssayQuestionPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Tổng câu hỏi</p>
-                  <p className="text-2xl font-bold text-blue-600">{questions.length}</p>
+                  <p className="text-2xl font-bold text-blue-600">{statistics.total}</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                   <Hash className="w-6 h-6 text-blue-600" />
@@ -548,9 +153,7 @@ export default function CreateEssayQuestionPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Câu dễ</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    {questions.filter(q => q.difficulty === 1).length}
-                  </p>
+                  <p className="text-2xl font-bold text-green-600">{statistics.easy}</p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                   <Award className="w-6 h-6 text-green-600" />
@@ -558,15 +161,13 @@ export default function CreateEssayQuestionPage() {
               </div>
             </div>
 
-             <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Câu trung bình</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    {questions.filter(q => q.difficulty === 2).length}
-                  </p>
+                  <p className="text-2xl font-bold text-orange-600">{statistics.medium}</p>
                 </div>
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                   <Award className="w-6 h-6 text-orange-600" />
                 </div>
               </div>
@@ -576,9 +177,7 @@ export default function CreateEssayQuestionPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Câu khó</p>
-                  <p className="text-2xl font-bold text-red-600">
-                    {questions.filter(q => q.difficulty === 3).length}
-                  </p>
+                  <p className="text-2xl font-bold text-red-600">{statistics.hard}</p>
                 </div>
                 <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
                   <Target className="w-6 h-6 text-red-600" />
@@ -601,7 +200,7 @@ export default function CreateEssayQuestionPage() {
               <span>Thêm thủ công</span>
             </button>
             
-             <button
+            <button
               type="button"
               className="flex items-center justify-center space-x-2 px-6 py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg"
               onClick={handleShowAIForm}
@@ -825,25 +424,11 @@ export default function CreateEssayQuestionPage() {
                     type="button"
                     onClick={addCriterion}
                     className="flex items-center space-x-1 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg text-sm font-medium transition-colors"
-                    // disabled={manualQ.criteria.length >= 3}
-                    // title={manualQ.criteria.length >= 3 ? "Chỉ được phép tối đa 3 tiêu chí" : ""}
                   >
                     <Plus className="w-4 h-4" />
                     <span>Thêm tiêu chí</span>
                   </button>
                 </div>
-                
-                {/* Warning message when having more than 3 criteria */}
-                {/* {manualQ.criteria.length > 3 && (
-                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <AlertCircle className="w-5 h-5 text-red-600" />
-                      <span className="text-red-700 font-medium">
-                        Bạn có {manualQ.criteria.length} tiêu chí. Vui lòng xóa bớt để chỉ còn tối đa 3 tiêu chí!
-                      </span>
-                    </div>
-                  </div>
-                )} */}
                 
                 <div className="space-y-4">
                   {manualQ.criteria.map((criterion, index) => (
@@ -871,7 +456,7 @@ export default function CreateEssayQuestionPage() {
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
                           />
                         </div>
-                       
+                        
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Mô tả</label>
                           <input
@@ -883,7 +468,7 @@ export default function CreateEssayQuestionPage() {
                           />
                         </div>
 
-                         <div>
+                        <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Phần trăm (%)</label>
                           <input
                             type="number"
@@ -894,7 +479,6 @@ export default function CreateEssayQuestionPage() {
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
                           />
                         </div>
-
                       </div>
                     </div>
                   ))}
@@ -1005,26 +589,12 @@ export default function CreateEssayQuestionPage() {
                           type="button"
                           onClick={() => addCriterionToQuestion(idx)}
                           className="flex items-center space-x-1 px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg text-sm font-medium transition-colors"
-                          // disabled={q.criteria.length >= 3}
-                          // title={q.criteria.length >= 3 ? "Chỉ được phép tối đa 3 tiêu chí" : ""}
                         >
                           <Plus className="w-4 h-4" />
                           <span>Thêm tiêu chí</span>
                         </button>
                       </div>
                       
-                      {/* Warning message when having more than 3 criteria */}
-                      {/* {q.criteria.length > 3 && (
-                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                          <div className="flex items-center space-x-2">
-                            <AlertCircle className="w-5 h-5 text-red-600" />
-                            <span className="text-red-700 font-medium">
-                              Câu hỏi này có {q.criteria.length} tiêu chí. Vui lòng xóa bớt để chỉ còn tối đa 3 tiêu chí!
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                       */}
                       <div className="space-y-3">
                         {q.criteria.map((criterion, critIdx) => (
                           <div key={critIdx} className="bg-gray-50 rounded-lg p-4">
@@ -1075,7 +645,6 @@ export default function CreateEssayQuestionPage() {
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
                                 />
                               </div>
-
                             </div>
                           </div>
                         ))}
@@ -1112,34 +681,22 @@ export default function CreateEssayQuestionPage() {
             </button>
           </div>
         )}
-
-        {/* Empty State */}
-        {/* {questions.length === 0 && (
-          <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <PenTool className="w-12 h-12 text-gray-400" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">Chưa có câu hỏi nào</h3>
-            <p className="text-gray-600 mb-6">Bắt đầu tạo câu hỏi bằng cách thêm thủ công, sử dụng AI, hoặc import từ file Excel</p>
-            <div className="flex justify-center space-x-4">
-              <button
-                onClick={handleShowManualForm}
-                className="flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
-              >
-                <Edit3 className="w-4 h-4" />
-                <span>Thêm thủ công</span>
-              </button>
-              <button
-                onClick={() => setShowAIGen(true)}
-                className="flex items-center space-x-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200"
-              >
-                <Brain className="w-4 h-4" />
-                <span>Tạo bằng AI</span>
-              </button>
-            </div>
-          </div>
-        )} */}
       </div>
     </div>
+  );
+}
+
+export default function CreatePracticalQuestionPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    }>
+      <CreatePracticalQuestionContent />
+    </Suspense>
   );
 }

@@ -1,133 +1,102 @@
 "use client";
 
-import { useEffect, useState, FormEvent } from "react";
+import { useState } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
 import {
+  semesterService,
+  SemesterForm,
   Semester,
-  fetchSemesters,
-  addSemester,
-  updateSemester,
-  deleteSemester,
-} from "@services/examination/manageSemesterService";
+} from "@/services/examination/manageSemesterService";
+import useSWR from "swr";
+import { showToast } from "@/utils/toastUtils";
+import React from "react";
 
-export function useSemesterManager() {
-  const [semesters, setSemesters] = useState<Semester[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [formData, setFormData] = useState<Omit<Semester, "semesterId">>({
-    semesterName: "",
-    startDate: "",
-    endDate: "",
+export const useManageSemester = () => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Form setup
+  const { control, handleSubmit, reset, setValue } = useForm<SemesterForm>({
+    defaultValues: {
+      semesterNames: [{ name: "" }],
+    },
   });
-  const [selectedSemester, setSelectedSemester] = useState<Semester | null>(
-    null
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "semesterNames",
+  });
+
+  // Fetch semesters
+  const { data: semesters = [], mutate } = useSWR<Semester[]>(
+    "semesters",
+    semesterService.getSemesters
   );
-  const [isPopupOpen, setIsPopupOpen] = useState(false);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const data = await fetchSemesters(searchTerm);
-      setSemesters(data);
-    } catch (err: any) {
-      setError(err.message || "Lỗi khi tải danh sách kỳ học");
-    } finally {
-      setLoading(false);
+  // Initialize form với dữ liệu từ API
+  const initializeForm = () => {
+    if (semesters.length > 0) {
+      const semesterNames = semesters.map((s) => ({ name: s.semesterName }));
+      reset({ semesterNames });
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [searchTerm]);
+  // Load data when semesters change
+  React.useEffect(() => {
+    initializeForm();
+  }, [semesters]);
 
-  const handleSearch = (e: FormEvent) => {
-    e.preventDefault();
-    fetchData();
-  };
+  // Submit handler
+  const onSubmit = async (data: SemesterForm) => {
+    if (data.semesterNames.length === 0) {
+      showToast("error", "Vui lòng thêm ít nhất một học kỳ");
+      return;
+    }
 
-  const handleClear = () => {
-    setSearchTerm("");
-    fetchData();
-  };
+    const hasEmptyName = data.semesterNames.some((x) => !x.name.trim());
+    if (hasEmptyName) {
+      showToast("error", "Vui lòng điền đầy đủ tên học kỳ");
+      return;
+    }
 
-  const handleOpenPopup = () => {
-    setFormData({ semesterName: "", startDate: "", endDate: "" });
-    setSelectedSemester(null);
-    setIsPopupOpen(true);
-  };
-
-  const handleEdit = (semester: Semester) => {
-    setFormData({
-      semesterName: semester.semesterName,
-      startDate: semester.startDate,
-      endDate: semester.endDate,
-    });
-    setSelectedSemester(semester);
-    setIsPopupOpen(true);
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm("Bạn có chắc chắn muốn xóa kỳ học này?")) return;
-    setLoading(true);
+    setIsLoading(true);
     try {
-      await deleteSemester(id);
-      fetchData();
-    } catch (err: any) {
-      setError(err.message || "Lỗi khi xóa kỳ học");
+      await semesterService.updateSemesters(data);
+      showToast("success", "Cập nhật học kỳ thành công!");
+      mutate(); // Refresh data
+    } catch (error: any) {
+      showToast("error", error?.message || "Đã xảy ra lỗi");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  // Add semester field
+  const addSemesterField = () => {
+    append({ name: "" });
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      if (selectedSemester) {
-        await updateSemester(selectedSemester.semesterId, formData);
-      } else {
-        const newSemester = await addSemester(formData);
-        setSemesters((prev) => [
-          ...prev,
-          { ...newSemester, semesterId: Date.now() },
-        ]);
-      }
-      setIsPopupOpen(false);
-      fetchData();
-    } catch (err: any) {
-      setError(err.message || "Lỗi khi lưu kỳ học");
-    } finally {
-      setLoading(false);
+  // Remove semester field
+  const removeSemesterField = (index: number) => {
+    if (fields.length > 1) {
+      remove(index);
     }
-  };
-
-  const handleClosePopup = () => {
-    setIsPopupOpen(false);
   };
 
   return {
-    semesters,
-    loading,
-    error,
-    searchTerm,
-    setSearchTerm,
-    isPopupOpen,
-    setIsPopupOpen,
-    formData,
-    handleSearch,
-    handleClear,
-    handleOpenPopup,
-    handleEdit,
-    handleDelete,
-    handleChange,
-    handleSubmit,
-    handleClosePopup,
-    selectedSemester, // Đảm bảo trả về selectedSemester
-  };
-}
+    // Form
+    control,
+    fields,
+    handleSubmit: handleSubmit(onSubmit),
 
+    // Actions
+    addSemesterField,
+    removeSemesterField,
+
+    // State
+    isLoading,
+    semesters,
+
+    // Utils
+    initializeForm,
+  };
+};

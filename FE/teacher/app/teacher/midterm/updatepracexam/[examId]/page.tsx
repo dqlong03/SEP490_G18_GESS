@@ -1,12 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import React, { Suspense } from 'react';
 import Select from 'react-select';
-import { getUserIdFromToken } from '@/utils/tokenUtils';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { 
-  BookOpen, 
   Users, 
   Clock, 
   Settings, 
@@ -21,348 +19,81 @@ import {
   Eye,
   Search
 } from "lucide-react";
+import { useUpdatePracticeExam } from '@/hooks/teacher/useUpdatePracticeExam';
 
-const API_URL = "https://localhost:7074";
-
-interface PracticeExamPaperDTO {
-  pracExamPaperId: number;
-  pracExamPaperName: string;
-  year: string;
-  semester: string;
-}
-
-interface SemesterDTO {
-  semesterId: number;
-  semesterName: string;
-}
-
-interface ExamPaperDetail {
-  pracExamPaperId: number;
-  pracExamPaperName: string;
-  createAt: string;
-  subjectName: string;
-  semesterName: string;
-  categoryExamName: string;
-  status: string;
-  questions: {
-    questionOrder: number;
-    content: string;
-    answerContent: string;
-    score: number;
-  }[];
-}
-
-export default function UpdateEssayExamPage() {
-  const router = useRouter();
+function UpdatePracticeExamContent() {
   const params = useParams();
-  const examId = params?.examId;
+  const examId = params?.examId as string;
 
-  // State
-  const [examName, setExamName] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [duration, setDuration] = useState<number>(60);
-  const [students, setStudents] = useState<any[]>([]);
-  const [showStudentPopup, setShowStudentPopup] = useState(false);
-  const [studentChecks, setStudentChecks] = useState<Record<string, boolean>>({});
-  const [selectedStudents, setSelectedStudents] = useState<any[]>([]);
-  const [gradeComponents, setGradeComponents] = useState<any[]>([]);
-  const [selectedGradeComponent, setSelectedGradeComponent] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    // Basic state
+    examName,
+    setExamName,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
+    duration,
+    setDuration,
+    loading,
+    classId,
 
-  // Đề thi
-  const [showExamPopup, setShowExamPopup] = useState(false);
-  const [examChecks, setExamChecks] = useState<Record<number, boolean>>({});
-  const [examPapers, setExamPapers] = useState<PracticeExamPaperDTO[]>([]);
-  const [selectedExams, setSelectedExams] = useState<PracticeExamPaperDTO[]>([]);
-  const [loadingExams, setLoadingExams] = useState(false);
+    // Students
+    students,
+    selectedStudents,
+    showStudentPopup,
+    setShowStudentPopup,
+    studentChecks,
+    handleOpenStudentPopup,
+    handleCheckStudent,
+    handleCheckAllStudents,
+    handleUncheckAllStudents,
+    handleConfirmStudents,
 
-  // subjectId, semesterId, classId
-  const [subjectId, setSubjectId] = useState<number | null>(null);
-  const [classId, setClassId] = useState<number | null>(null);
+    // Grade components and semesters
+    gradeComponents,
+    selectedGradeComponent,
+    setSelectedGradeComponent,
+    semesters,
+    selectedSemester,
+    setSelectedSemester,
+    years,
+    selectedYear,
+    setSelectedYear,
 
-  // Kỳ và năm
-  const [semesters, setSemesters] = useState<SemesterDTO[]>([]);
-  const [selectedSemester, setSelectedSemester] = useState<any>(null);
-  const [years, setYears] = useState<{ value: string; label: string }[]>([]);
-  const [selectedYear, setSelectedYear] = useState<{ value: string; label: string } | null>(null);
+    // Exam papers
+    examPapers,
+    selectedExams,
+    showExamPopup,
+    setShowExamPopup,
+    examChecks,
+    loadingExams,
+    handleOpenExamPopup,
+    handleCheckExam,
+    handleCheckAllExams,
+    handleUncheckAllExams,
+    handleSaveExams,
+    handleRemoveExam,
 
-  // Chi tiết đề thi
-  const [showDetail, setShowDetail] = useState(false);
-  const [detailData, setDetailData] = useState<ExamPaperDetail | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
+    // Detail modal
+    showDetail,
+    detailData,
+    loadingDetail,
+    handleShowDetail,
+    handleCloseDetail,
 
-  // Preview đề thi khi hover (chỉ trong popup)
-  const [hoveredExam, setHoveredExam] = useState<PracticeExamPaperDTO | null>(null);
-  const [previewPosition, setPreviewPosition] = useState<{ x: number; y: number } | null>(null);
+    // Preview
+    hoveredExam,
+    previewPosition,
+    handleMouseEnterExam,
+    handleMouseLeaveExam,
 
-  // Lấy dữ liệu ban đầu
-  useEffect(() => {
-    if (!examId) return;
-    setLoading(true);
-    fetch(`${API_URL}/api/PracticeExam/GetPracticeExamForUpdate/${examId}`)
-      .then(res => res.json())
-      .then(data => {
-        setExamName(data.pracExamName || '');
-        setDuration(data.duration || 60);
-        setStartDate(data.startDay ? data.startDay.slice(0, 16) : '');
-        setEndDate(data.endDay ? data.endDay.slice(0, 16) : '');
-        setSelectedGradeComponent({
-          value: data.categoryExamId,
-          label: '', // sẽ set lại sau khi fetch gradeComponents
-        });
-        setSubjectId(data.subjectId);
-        setClassId(data.classId);
-        setSelectedSemester({
-          value: data.semesterId,
-          label: '', // sẽ set lại sau khi fetch semesters
-        });
-        setSelectedExams(data.practiceExamPaperDTO || []);
-        setSelectedStudents((data.studentIds || []).map((id: string) => ({ studentId: id })));
-      })
-      .finally(() => setLoading(false));
-  }, [examId]);
+    // Submit
+    handleUpdate,
 
-  // Lấy danh sách sinh viên, đầu điểm, subjectId, semesters, years
-  useEffect(() => {
-    if (!classId) return;
-    fetch(`${API_URL}/api/Class/${classId}/students`)
-      .then(res => res.json())
-      .then(data => {
-        setStudents(data || []);
-        setStudentChecks((prev) => {
-          const checks: Record<string, boolean> = {};
-          (selectedStudents || []).forEach((sv: any) => {
-            checks[sv.studentId] = true;
-          });
-          return checks;
-        });
-      });
-    fetch(`${API_URL}/api/Class/${classId}/grade-components`)
-      .then(res => res.json())
-      .then(data => {
-        const mapped = (data || []).map((g: any) => ({
-          value: g.categoryExamId,
-          label: g.categoryExamName
-        }));
-        setGradeComponents(mapped);
-        setSelectedGradeComponent((prev: any) => {
-          if (!prev) return null;
-          const found = mapped.find((g: any) => g.value === prev.value);
-          return found || prev;
-        });
-      });
-    fetch(`${API_URL}/api/Class/${classId}/subject-id`)
-      .then(res => res.json())
-      .then(data => setSubjectId(data));
-    fetch(`${API_URL}/api/Semesters`)
-      .then(res => res.json())
-      .then(data => {
-        setSemesters(data || []);
-        setSelectedSemester((prev: any) => {
-          if (!prev) return null;
-          const found = (data || []).find((s: any) => s.semesterId === prev.value);
-          return found ? { value: found.semesterId, label: found.semesterName } : prev;
-        });
-      });
-    const currentYear = new Date().getFullYear();
-    const yearArr = [];
-    for (let y = currentYear; y >= 2020; y--) {
-      yearArr.push({ value: y.toString(), label: y.toString() });
-    }
-    setYears(yearArr);
-  }, [classId, selectedStudents]);
-
-  // Lấy danh sách đề thi khi mở popup hoặc khi đổi kỳ/năm
-  const fetchExamPapers = async (semesterName: string | null, year: string | null) => {
-    setLoadingExams(true);
-    try {
-      const teacherId = getUserIdFromToken();
-      if (!subjectId) throw new Error('Không lấy được subjectId');
-      const categoryId = selectedGradeComponent?.value;
-      if (!categoryId) throw new Error('Vui lòng chọn đầu điểm');
-      const examRes = await fetch(
-        `${API_URL}/api/PracticeExam/exams_paper?subjectId=${subjectId}&categoryId=${categoryId}&teacherId=${teacherId}`
-      );
-      if (!examRes.ok) throw new Error('Không lấy được danh sách đề thi');
-      const exams = await examRes.json();
-      let filtered = exams || [];
-      if (semesterName && year) {
-        filtered = filtered.filter(
-          (e: PracticeExamPaperDTO) =>
-            e.semester === semesterName &&
-            e.year === year &&
-            !selectedExams.some(se => se.pracExamPaperId === e.pracExamPaperId)
-        );
-      } else {
-        filtered = filtered.filter(
-          (e: PracticeExamPaperDTO) =>
-            !selectedExams.some(se => se.pracExamPaperId === e.pracExamPaperId)
-        );
-      }
-      setExamPapers(filtered);
-    } catch (err: any) {
-      setExamPapers([]);
-      alert(err.message || 'Lỗi lấy danh sách đề thi');
-    } finally {
-      setLoadingExams(false);
-    }
-  };
-
-  useEffect(() => {
-    if (showExamPopup) {
-      fetchExamPapers(selectedSemester?.label ?? null, selectedYear?.value ?? null);
-    }
-    // eslint-disable-next-line
-  }, [showExamPopup, selectedSemester, selectedYear, selectedGradeComponent, subjectId]);
-
-  // Popup chọn sinh viên
-  const handleOpenStudentPopup = () => setShowStudentPopup(true);
-
-  const handleCheckStudent = (id: string, checked: boolean) => {
-    setStudentChecks((prev) => ({ ...prev, [id]: checked }));
-  };
-
-  const handleCheckAllStudents = () => {
-    const allChecked: Record<string, boolean> = {};
-    students.forEach((sv: any) => {
-      allChecked[sv.studentId] = true;
-    });
-    setStudentChecks(allChecked);
-  };
-
-  const handleUncheckAllStudents = () => {
-    setStudentChecks({});
-  };
-
-  const handleConfirmStudents = () => {
-    setSelectedStudents(students.filter((sv) => studentChecks[sv.studentId]));
-    setShowStudentPopup(false);
-  };
-
-  // Popup chọn đề thi
-  const handleOpenExamPopup = () => {
-    setExamChecks({});
-    setShowExamPopup(true);
-    setSelectedSemester(null);
-    setSelectedYear(null);
-    setExamPapers([]);
-  };
-
-  const handleCheckExam = (id: number, checked: boolean) => {
-    setExamChecks((prev) => ({ ...prev, [id]: checked }));
-  };
-
-  const handleCheckAllExams = () => {
-    const allChecked: Record<number, boolean> = {};
-    examPapers.forEach((exam) => {
-      allChecked[exam.pracExamPaperId] = true;
-    });
-    setExamChecks(allChecked);
-  };
-
-  const handleUncheckAllExams = () => {
-    setExamChecks({});
-  };
-
-  const handleSaveExams = () => {
-    const selected = examPapers.filter((exam) => examChecks[exam.pracExamPaperId]);
-    setSelectedExams(prev => [...prev, ...selected]);
-    setShowExamPopup(false);
-  };
-
-  const handleRemoveExam = (id: number) => {
-    setSelectedExams((prev) => prev.filter((c) => c.pracExamPaperId !== id));
-  };
-
-  // Xem chi tiết đề thi
-  const handleShowDetail = async (examPaperId: number) => {
-    setShowDetail(true);
-    setLoadingDetail(true);
-    try {
-      const res = await fetch(`${API_URL}/api/PracticeExamPaper/DetailExamPaper/${examPaperId}`);
-      if (!res.ok) throw new Error('Không lấy được chi tiết đề thi');
-      const data = await res.json();
-      setDetailData(data);
-    } catch (err: any) {
-      setDetailData(null);
-      alert(err.message || 'Lỗi lấy chi tiết đề thi');
-    } finally {
-      setLoadingDetail(false);
-    }
-  };
-
-  const handleCloseDetail = () => {
-    setShowDetail(false);
-    setDetailData(null);
-  };
-
-  // Preview khi hover trong popup chọn đề thi
-  const handleMouseEnterExam = async (exam: PracticeExamPaperDTO, e: React.MouseEvent) => {
-    setPreviewPosition({ x: e.clientX, y: e.clientY });
-    setHoveredExam(exam);
-    setLoadingDetail(true);
-    try {
-      const res = await fetch(`${API_URL}/api/PracticeExamPaper/DetailExamPaper/${exam.pracExamPaperId}`);
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setDetailData(data);
-    } catch {
-      setDetailData(null);
-    } finally {
-      setLoadingDetail(false);
-    }
-  };
-  const handleMouseLeaveExam = () => {
-    setHoveredExam(null);
-    setPreviewPosition(null);
-    setDetailData(null);
-  };
-
-  // Submit
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const teacherId = getUserIdFromToken();
-      if (!subjectId) throw new Error('Không lấy được subjectId');
-      if (!selectedSemester) throw new Error('Vui lòng chọn kỳ');
-      if (!selectedGradeComponent) throw new Error('Vui lòng chọn đầu điểm');
-      if (!examName || !startDate || !endDate || !duration || !selectedExams.length || !selectedStudents.length) {
-        throw new Error('Vui lòng nhập đầy đủ thông tin');
-      }
-      const payload = {
-        pracExamId: Number(examId),
-        pracExamName: examName,
-        duration: duration,
-        startDay: startDate,
-        endDay: endDate,
-        createAt: new Date().toISOString(),
-        teacherId: teacherId,
-        categoryExamId: selectedGradeComponent.value,
-        subjectId: subjectId,
-        status: "Chưa thi",
-        classId: classId,
-        semesterId: selectedSemester.value,
-        practiceExamPaperDTO: selectedExams.map(e => ({
-          pracExamPaperId: e.pracExamPaperId,
-          pracExamPaperName: e.pracExamPaperName,
-          year: e.year,
-          semester: e.semester
-        })),
-        studentIds: selectedStudents.map((s: any) => s.studentId)
-      };
-      const res = await fetch(`${API_URL}/api/PracticeExam/update`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error('Cập nhật bài kiểm tra thất bại');
-      alert('Cập nhật bài kiểm tra thành công!');
-      router.push(`/teacher/myclass/classdetail/${classId?.toString()}`);
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi cập nhật bài kiểm tra');
-    }
-  };
+    // Router
+    router
+  } = useUpdatePracticeExam(examId);
 
   if (loading) {
     return (
@@ -700,7 +431,7 @@ export default function UpdateEssayExamPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {students.map((sv: any, idx: number) => (
+                      {students.map((sv, idx) => (
                         <tr key={sv.studentId} className="hover:bg-blue-50 transition-colors duration-200">
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{idx + 1}</td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -774,7 +505,6 @@ export default function UpdateEssayExamPage() {
                       value={selectedSemester}
                       onChange={option => {
                         setSelectedSemester(option);
-                        setExamPapers([]);
                       }}
                       placeholder="Chọn kỳ"
                       isClearable
@@ -787,7 +517,6 @@ export default function UpdateEssayExamPage() {
                       value={selectedYear}
                       onChange={option => {
                         setSelectedYear(option);
-                        setExamPapers([]);
                       }}
                       placeholder="Năm"
                       isClearable
@@ -1020,5 +749,20 @@ export default function UpdateEssayExamPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function UpdatePracticeExamPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="flex items-center space-x-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="text-gray-600 font-medium">Đang tải...</span>
+        </div>
+      </div>
+    }>
+      <UpdatePracticeExamContent />
+    </Suspense>
   );
 }

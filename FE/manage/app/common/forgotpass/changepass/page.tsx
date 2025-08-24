@@ -21,7 +21,6 @@ export default function ChangePasswordPage() {
   } = useChangePassword();
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
     <div className="min-h-screen flex items-center justify-center bg-gray-50 relative animate-fadeIn">
       <div className="school-info absolute top-4 left-4 flex items-center space-x-2 lg:flex hidden animate-fadeInDelayed">
         <Image src={universitylogo} alt="School Icon" width={50} height={50} />
@@ -100,6 +99,6 @@ export default function ChangePasswordPage() {
         </div>
       </div>
     </div>
-    </Suspense>
+   
   );
 }

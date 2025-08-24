@@ -5,7 +5,7 @@ export async function verifyOtp(
   otp: string
 ): Promise<{ success: boolean; message?: string }> {
   try {
-    const res = await fetch(`${API_BASE}/Otp/verify`, {
+    const res = await fetch(`${API_BASE}/api/Otp/verify`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, otp }),

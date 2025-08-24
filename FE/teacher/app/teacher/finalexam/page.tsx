@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense } from 'react';
 import Select from 'react-select';
 import { 
   Eye, 
@@ -19,176 +19,75 @@ import {
   Filter,
   Clock
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { getUserIdFromToken } from '@/utils/tokenUtils';
-
-type Subject = {
-  subjectId: number;
-  subjectName: string;
-  description: string;
-  course: string;
-  noCredits: number;
-};
-
-type Semester = {
-  semesterId: number;
-  semesterName: string;
-};
-
-type Exam = {
-  examId: number;
-  examName: string;
-  subjectName: string;
-  semesterName: string;
-  year: number;
-  semesterId: number;
-  examType: number;
-};
+import { useFinalExam } from '../../../src/hooks/teacher/useFinalExam';
 
 const PAGE_SIZE = 10;
 
-export default function ExamListPage() {
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [semesters, setSemesters] = useState<Semester[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
-  const [selectedSemester, setSelectedSemester] = useState<Semester | null>(null);
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
-  const [textSearch, setTextSearch] = useState('');
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [fetchError, setFetchError] = useState(false);
+// Loading component
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center space-x-2">
+    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+    <span className="text-gray-500 font-medium">Đang tải...</span>
+  </div>
+);
 
-  // Modal xem bài thi
-  const [examDetail, setExamDetail] = useState<any>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState<string | null>(null);
-
-  // Thêm filter loại bài thi
-  const [examTypeFilter, setExamTypeFilter] = useState<number>(0);
-
-  const router = useRouter();
-
-  // Năm học dropdown: 10 năm nhỏ hơn năm hiện tại
-  const years = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
-
-  // Lấy teacherId từ token
-  const teacherId = getUserIdFromToken();
-
-  // Fetch subjects (lớp học)
-  useEffect(() => {
-    if (!teacherId) return;
-    setLoading(true);
-    fetch(`https://localhost:7074/api/AssignGradeCreateExam/GetAllSubjectsByTeacherId?teacherId=${teacherId}`)
-      .then(res => res.json())
-      .then(data => {
-        setSubjects(data);
-        if (data && data.length > 0) setSelectedSubject(data[0]);
-        setFetchError(false);
-      })
-      .catch(() => setFetchError(true))
-      .finally(() => setLoading(false));
-  }, [teacherId]);
-
-  // Fetch semesters
-  useEffect(() => {
-    fetch('https://localhost:7074/api/Semesters')
-      .then(res => res.json())
-      .then(data => {
-        setSemesters(data);
-        if (data && data.length > 0) setSelectedSemester(data[0]);
-      });
-  }, []);
-
-  // Fetch exams
-  const fetchExams = () => {
-    const params = new URLSearchParams();
-    if (selectedSubject) params.append('subjectId', selectedSubject.subjectId.toString());
-    if (selectedSemester) params.append('semesterId', selectedSemester.semesterId.toString());
-    if (selectedYear) params.append('year', selectedYear.toString());
-    if (textSearch) params.append('textsearch', textSearch);
-    if (examTypeFilter !== 0) params.append('type', examTypeFilter.toString());
-    params.append('pageNumber', page.toString());
-    params.append('pageSize', PAGE_SIZE.toString());
-
-    setLoading(true);
-    setFetchError(false);
-
-    fetch(`https://localhost:7074/api/FinalExam/GetAllFinalExam?${params.toString()}`)
-      .then(res => res.json())
-      .then(data => {
-        // Sắp xếp: tự luận (2) trước, trắc nghiệm (1) sau
-        const sorted = [...data].sort((a, b) => {
-          if (a.examType === b.examType) return 0;
-          if (a.examType === 2) return -1;
-          if (b.examType === 2) return 1;
-          return 0;
-        });
-        setExams(sorted);
-      })
-      .catch(() => {
-        setExams([]);
-        setFetchError(true);
-      })
-      .finally(() => setLoading(false));
-
-    fetch(`https://localhost:7074/api/FinalExam/CountPageNumberFinalExam?${params.toString()}`)
-      .then(res => res.json())
-      .then(data => setTotalPages(data))
-      .catch(() => setTotalPages(1));
-  };
-
-  useEffect(() => {
-    fetchExams();
-    // eslint-disable-next-line
-  }, [selectedSubject, selectedSemester, selectedYear, textSearch, page, examTypeFilter]);
-
-  // Subject options for react-select
-  const subjectOptions = subjects.map(s => ({
-    value: s.subjectId,
-    label: s.subjectName,
-    ...s,
-  }));
-
-  // Semester options
-  const semesterOptions = semesters.map(s => ({
-    value: s.semesterId,
-    label: s.semesterName,
-    ...s, 
-  }));
-
-  // Xem chi tiết bài thi
-  const handleViewExam = async (exam: Exam) => {
-    setSelectedExam(exam);
-    setShowModal(true);
-    setExamDetail(null);
-    setDetailError(null);
-    setDetailLoading(true);
-    try {
-      const type = exam.examType; // 1: Trắc nghiệm, 2: Tự luận
-      const res = await fetch(`https://localhost:7074/api/FinalExam/ViewFinalExamDetail/${exam.examId}/${type}`);
-      if (!res.ok) throw new Error('Lỗi khi lấy dữ liệu');
-      const data = await res.json();
-      setExamDetail(data);
-    } catch (err) {
-      setDetailError('Không thể lấy thông tin bài thi.');
-    } finally {
-      setDetailLoading(false);
-    }
-  };
-
-  // Count statistics
-  const totalExams = exams.length;
-  const multipleChoiceExams = exams.filter(e => e.examType === 1).length;
-  const essayExams = exams.filter(e => e.examType === 2).length;
-
-  const getExamTypeColor = (type: number) => {
-    return type === 1 ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800';
-  };
+// Main content component
+const FinalExamContent = () => {
+  const {
+    // Data
+    subjects,
+    semesters,
+    exams,
+    selectedSubject,
+    selectedSemester,
+    selectedYear,
+    textSearch,
+    examTypeFilter,
+    
+    // Pagination
+    page,
+    totalPages,
+    
+    // Loading states
+    loading,
+    fetchError,
+    detailLoading,
+    detailError,
+    
+    // Modal states
+    showModal,
+    showCreateModal,
+    selectedExam,
+    examDetail,
+    
+    // Statistics
+    statistics,
+    
+    // Options
+    subjectOptions,
+    semesterOptions,
+    yearOptions,
+    examTypeFilterOptions,
+    
+    // Event handlers
+    setSelectedSubject,
+    setSelectedSemester,
+    setSelectedYear,
+    setTextSearch,
+    setExamTypeFilter,
+    setPage,
+    setShowModal,
+    setShowCreateModal,
+    
+    // Actions
+    handleViewExam,
+    handleCreateMultipleChoice,
+    handleCreateEssay,
+    
+    // Utility functions
+    getExamTypeColor,
+    getExamTypeLabel,
+  } = useFinalExam();
 
   const getExamTypeIcon = (type: number) => {
     return type === 1 ? <CheckSquare className="w-4 h-4" /> : <PenTool className="w-4 h-4" />;
@@ -227,7 +126,7 @@ export default function ExamListPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Tổng bài thi</p>
-                  <p className="text-2xl font-bold text-blue-600">{totalExams}</p>
+                  <p className="text-2xl font-bold text-blue-600">{statistics.total}</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                   <FileText className="w-6 h-6 text-blue-600" />
@@ -239,7 +138,7 @@ export default function ExamListPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Trắc nghiệm</p>
-                  <p className="text-2xl font-bold text-green-600">{multipleChoiceExams}</p>
+                  <p className="text-2xl font-bold text-green-600">{statistics.multipleChoice}</p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                   <CheckSquare className="w-6 h-6 text-green-600" />
@@ -251,7 +150,7 @@ export default function ExamListPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Tự luận</p>
-                  <p className="text-2xl font-bold text-purple-600">{essayExams}</p>
+                  <p className="text-2xl font-bold text-purple-600">{statistics.essay}</p>
                 </div>
                 <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                   <PenTool className="w-6 h-6 text-purple-600" />
@@ -274,7 +173,7 @@ export default function ExamListPage() {
               <Select
                 options={subjectOptions}
                 value={selectedSubject ? subjectOptions.find(s => s.value === selectedSubject.subjectId) : null}
-                onChange={option => { setSelectedSubject(option); setPage(1); }}
+                onChange={option => setSelectedSubject(option)}
                 placeholder="Chọn môn học"
                 isSearchable
                 styles={{
@@ -295,7 +194,7 @@ export default function ExamListPage() {
               <Select
                 options={semesterOptions}
                 value={selectedSemester ? semesterOptions.find(s => s.value === selectedSemester.semesterId) : null}
-                onChange={option => { setSelectedSemester(option); setPage(1); }}
+                onChange={option => setSelectedSemester(option)}
                 placeholder="Chọn học kỳ"
                 styles={{
                   control: (provided) => ({
@@ -313,9 +212,9 @@ export default function ExamListPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Năm học</label>
               <Select
-                options={years.map(y => ({ value: y, label: y.toString() }))}
+                options={yearOptions}
                 value={{ value: selectedYear, label: selectedYear.toString() }}
-                onChange={option => { setSelectedYear(option?.value ?? years[0]); setPage(1); }}
+                onChange={option => setSelectedYear(option?.value ?? yearOptions[0]?.value)}
                 placeholder="Chọn năm"
                 styles={{
                   control: (provided) => ({
@@ -333,22 +232,9 @@ export default function ExamListPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Loại bài thi</label>
               <Select
-                options={[
-                  { value: 0, label: 'Tất cả' },
-                  { value: 2, label: 'Tự luận' },
-                  { value: 1, label: 'Trắc nghiệm' },
-                ]}
-                value={
-                  examTypeFilter === 1
-                    ? { value: 1, label: 'Trắc nghiệm' }
-                    : examTypeFilter === 2
-                    ? { value: 2, label: 'Tự luận' }
-                    : { value: 0, label: 'Tất cả' }
-                }
-                onChange={option => {
-                  setExamTypeFilter(option?.value ?? 0);
-                  setPage(1);
-                }}
+                options={examTypeFilterOptions}
+                value={examTypeFilterOptions.find(option => option.value === examTypeFilter)}
+                onChange={option => setExamTypeFilter(option?.value ?? 0)}
                 placeholder="Loại bài thi"
                 styles={{
                   control: (provided) => ({
@@ -373,7 +259,7 @@ export default function ExamListPage() {
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
               placeholder="Tìm kiếm bài thi..."
               value={textSearch}
-              onChange={e => { setTextSearch(e.target.value); setPage(1); }}
+              onChange={e => setTextSearch(e.target.value)}
             />
           </div>
         </div>
@@ -383,7 +269,7 @@ export default function ExamListPage() {
           <div className="px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-800 flex items-center">
               <FileText className="w-5 h-5 mr-2 text-blue-600" />
-              Danh sách bài thi ({totalExams})
+              Danh sách bài thi ({statistics.total})
             </h3>
           </div>
           
@@ -404,10 +290,7 @@ export default function ExamListPage() {
                 {loading ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-8 text-center">
-                      <div className="flex items-center justify-center space-x-2">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                        <span className="text-gray-500 font-medium">Đang tải...</span>
-                      </div>
+                      <LoadingSpinner />
                     </td>
                   </tr>
                 ) : fetchError ? (
@@ -444,7 +327,7 @@ export default function ExamListPage() {
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getExamTypeColor(exam.examType)}`}>
                           {getExamTypeIcon(exam.examType)}
                           <span className="ml-1">
-                            {exam.examType === 1 ? 'Trắc nghiệm' : 'Tự luận'}
+                            {getExamTypeLabel(exam.examType)}
                           </span>
                         </span>
                       </td>
@@ -481,7 +364,7 @@ export default function ExamListPage() {
           <div className="mt-6 flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
                 className="flex items-center space-x-1 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 transition-colors duration-200"
               >
@@ -494,7 +377,7 @@ export default function ExamListPage() {
               </span>
               
               <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages || totalPages === 0}
                 className="flex items-center space-x-1 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 transition-colors duration-200"
               >
@@ -512,7 +395,7 @@ export default function ExamListPage() {
 
       {/* Modal xem bài thi */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
@@ -532,8 +415,7 @@ export default function ExamListPage() {
             <div className="p-6 overflow-y-auto max-h-[60vh]">
               {detailLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <span className="ml-3 text-gray-500 font-medium">Đang tải...</span>
+                  <LoadingSpinner />
                 </div>
               ) : detailError ? (
                 <div className="text-center py-8">
@@ -717,7 +599,7 @@ export default function ExamListPage() {
 
       {/* Modal tạo bài thi cuối kỳ */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-800 text-center flex items-center justify-center">
@@ -729,10 +611,7 @@ export default function ExamListPage() {
             <div className="p-6 space-y-4">
               <button
                 className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg"
-                onClick={() => {
-                  setShowCreateModal(false);
-                  router.push('/teacher/finalexam/createexam/mulexam');
-                }}
+                onClick={handleCreateMultipleChoice}
               >
                 <CheckSquare className="w-5 h-5" />
                 <span>Tạo bài thi trắc nghiệm</span>
@@ -740,10 +619,7 @@ export default function ExamListPage() {
               
               <button
                 className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg"
-                onClick={() => {
-                  setShowCreateModal(false);
-                  router.push('/teacher/finalexam/createexam/pracexam');
-                }}
+                onClick={handleCreateEssay}
               >
                 <PenTool className="w-5 h-5" />
                 <span>Tạo bài thi tự luận</span>
@@ -763,5 +639,14 @@ export default function ExamListPage() {
         </div>
       )}
     </div>
+  );
+};
+
+// Main component with Suspense wrapper
+export default function ExamListPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <FinalExamContent />
+    </Suspense>
   );
 }

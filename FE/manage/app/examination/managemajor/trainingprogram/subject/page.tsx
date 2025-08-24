@@ -10,13 +10,13 @@ import {
   Trash2,
   Target,
   FileText,
-  ChevronDown,
   X
 } from 'lucide-react';
 import { useTrainingProgramSubjects } from '@/hooks/examination/subjectHook';
 import { Suspense } from "react";
+import Select from 'react-select';
 
-export default function TrainingProgramSubjectManager() {
+function TrainingProgramSubjectContent() {
   const {
     subjects,
     allSubjects,
@@ -31,44 +31,46 @@ export default function TrainingProgramSubjectManager() {
     setSelectedSubjectId,
     handleAddSubject,
     handleDelete,
-    handleSearch,
   } = useTrainingProgramSubjects();
+
+  // Prepare options for react-select
+  const subjectOptions = allSubjects
+    .filter(s => !subjects.some(sub => sub.subjectId === s.subjectId))
+    .map(subject => ({
+      value: subject.subjectId,
+      label: `${subject.subjectName} (${subject.noCredits} TC)`,
+      subject: subject
+    }));
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+    <div className="min-h-screen bg-white">
       <div className="container mx-auto px-6 py-8">
         {/* Header Section */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
-              <BookOpen className="w-6 h-6 text-white" />
+            <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+              <GraduationCap className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Quản lý môn học trong chương trình đào tạo
-            </h1>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                Quản lý môn học trong chương trình
+              </h1>
+              <p className="text-gray-600 text-sm mt-1">Quản lý các môn học thuộc chương trình đào tạo</p>
+            </div>
           </div>
-          <p className="text-gray-600 ml-11">Thêm và quản lý môn học trong chương trình đào tạo</p>
         </div>
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-            <X className="w-5 h-5 text-red-500" />
-            <span className="text-red-700">{error}</span>
-          </div>
-        )}
-
+     
         {/* Main Content Card */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
           {/* Search and Add Section */}
           <div className="p-6 bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200 space-y-6">
             {/* Search Bar */}
-            <form onSubmit={handleSearch} className="flex flex-wrap gap-4 items-center">
+            <div className="flex flex-wrap gap-4 items-center">
               <div className="flex-1 min-w-72">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type="text"
-                    placeholder="Tìm kiếm theo tên môn học..."
+                    placeholder="Tìm kiếm"
                     value={searchName}
                     onChange={e => setSearchName(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white"
@@ -77,14 +79,6 @@ export default function TrainingProgramSubjectManager() {
               </div>
               
               <div className="flex gap-2">
-                <button 
-                  type="submit" 
-                  className="flex items-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-sm"
-                >
-                  <Search className="w-4 h-4" />
-                  Tìm kiếm
-                </button>
-                
                 <button
                   type="button"
                   onClick={() => {
@@ -97,7 +91,7 @@ export default function TrainingProgramSubjectManager() {
                   Xóa lọc
                 </button>
               </div>
-            </form>
+            </div>
 
             {/* Add Subject Section */}
             <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -108,23 +102,39 @@ export default function TrainingProgramSubjectManager() {
               <form onSubmit={handleAddSubject} className="flex flex-wrap gap-3 items-end">
                 <div className="flex-1 min-w-80">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Chọn môn học</label>
-                  <div className="relative">
-                    <select
-                      value={selectedSubjectId ?? ''}
-                      onChange={e => setSelectedSubjectId(Number(e.target.value))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white appearance-none"
-                    >
-                      <option value="">-- Chọn môn học để thêm --</option>
-                      {allSubjects
-                        .filter(s => !subjects.some(sub => sub.subjectId === s.subjectId))
-                        .map(subject => (
-                          <option key={subject.subjectId} value={subject.subjectId}>
-                            {subject.subjectName} ({subject.noCredits} TC)
-                          </option>
-                        ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-                  </div>
+                  <Select
+                    value={subjectOptions.find(opt => opt.value === selectedSubjectId) || null}
+                    onChange={(selectedOption) => setSelectedSubjectId(selectedOption?.value || null)}
+                    options={subjectOptions}
+                    placeholder="-- Chọn môn học để thêm --"
+                    isSearchable={true}
+                    noOptionsMessage={() => "Không tìm thấy môn học"}
+                    className="react-select-container"
+                    classNamePrefix="react-select"
+                    styles={{
+                      control: (provided, state) => ({
+                        ...provided,
+                        minHeight: '48px',
+                        border: state.isFocused ? '2px solid #3b82f6' : '1px solid #d1d5db',
+                        boxShadow: state.isFocused ? '0 0 0 1px #3b82f6' : 'none',
+                        '&:hover': {
+                          border: state.isFocused ? '2px solid #3b82f6' : '1px solid #9ca3af'
+                        }
+                      }),
+                      option: (provided, state) => ({
+                        ...provided,
+                        backgroundColor: state.isSelected 
+                          ? '#3b82f6' 
+                          : state.isFocused 
+                            ? '#eff6ff' 
+                            : 'white',
+                        color: state.isSelected ? 'white' : '#374151',
+                        '&:hover': {
+                          backgroundColor: state.isSelected ? '#3b82f6' : '#eff6ff'
+                        }
+                      })
+                    }}
+                  />
                 </div>
                 <button
                   type="submit"
@@ -152,12 +162,18 @@ export default function TrainingProgramSubjectManager() {
                     <BookOpen className="w-8 h-8 text-gray-400" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-1">Chưa có môn học nào</h3>
-                    <p className="text-gray-500">Chương trình đào tạo này chưa có môn học nào</p>
+                    <h3 className="text-lg font-medium text-gray-900 mb-1">
+                      {error ? 'Có lỗi xảy ra' : 'Chưa có môn học nào'}
+                    </h3>
+                    <p className="text-gray-500">
+                      {error ? 'Không thể tải dữ liệu môn học' : 'Chương trình đào tạo này chưa có môn học nào'}
+                    </p>
                   </div>
-                  <div className="text-sm text-blue-600">
-                    Sử dụng form bên trên để thêm môn học vào chương trình
-                  </div>
+                  {!error && (
+                    <div className="text-sm text-blue-600">
+                      Sử dụng form bên trên để thêm môn học vào chương trình
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -168,7 +184,7 @@ export default function TrainingProgramSubjectManager() {
                       <th className="text-left py-4 px-6 font-semibold text-gray-700">
                         <div className="flex items-center gap-2">
                           <Target className="w-4 h-4" />
-                          ID
+                          STT
                         </div>
                       </th>
                       <th className="text-left py-4 px-6 font-semibold text-gray-700">
@@ -203,7 +219,7 @@ export default function TrainingProgramSubjectManager() {
                       <tr key={subject.subjectId} className="hover:bg-blue-50/50 transition-colors duration-200">
                         <td className="py-4 px-6">
                           <span className="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 rounded-lg font-medium text-sm">
-                            {subject.subjectId}
+                            {index + 1}
                           </span>
                         </td>
                         <td className="py-4 px-6">
@@ -231,11 +247,12 @@ export default function TrainingProgramSubjectManager() {
                         <td className="py-4 px-6 text-center">
                           <button
                             onClick={() => handleDelete(subject.subjectId)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors duration-200 text-sm font-medium mx-auto"
-                            title="Xóa môn học khỏi chương trình"
+                            disabled={loading}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors duration-200 text-sm font-medium mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Xóa môn học khỏi chương trình (sẽ xóa ngay lập tức)"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
-                            Xóa
+                            {loading ? 'Đang xóa...' : 'Xóa'}
                           </button>
                         </td>
                       </tr>
@@ -279,6 +296,20 @@ export default function TrainingProgramSubjectManager() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function TrainingProgramSubjectManager() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải...</p>
+        </div>
+      </div>
+    }>
+      <TrainingProgramSubjectContent />
     </Suspense>
   );
 }

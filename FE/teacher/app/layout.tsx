@@ -8,6 +8,8 @@ import { usePathname } from 'next/navigation';
 import './globals.css';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import React, { useState, Dispatch, SetStateAction } from 'react';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Định nghĩa kiểu cho props
 interface LayoutProps {
@@ -33,8 +35,11 @@ export default function RootLayout({ children }: LayoutProps) {
             {showHeaderSidebar && <Header setIsSidebarOpen={setIsSidebarOpen} />}
             <div className="flex flex-1">
               {showHeaderSidebar && <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />}
-              <main className="flex-1 p-4">{children}</main>
+             <main className={`flex-1 p-4 transition-all duration-300 ${showHeaderSidebar ? 'lg:ml-70' : ''} ${showHeaderSidebar ? 'min-h-screen' : ''} ${showHeaderSidebar ? 'mt-10' : ''}`}>
+              {children}
+            </main>
             </div>
+            <ToastContainer />
           </AuthProvider>
         </GoogleOAuthProvider>
       </body>

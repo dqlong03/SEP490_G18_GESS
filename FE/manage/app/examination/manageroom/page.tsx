@@ -35,7 +35,6 @@ export default function RoomManager() {
     setOpenMenuId,
   } = useRoomManager();
   return (
-    <Suspense fallback={<div>Loading...</div>}>
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
       <ToastContainer />
       <div className="container mx-auto px-6 py-8">
@@ -93,15 +92,7 @@ export default function RoomManager() {
               </select>
             </div>
             <div className="flex items-end gap-3">
-              <button
-                type="submit"
-                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl font-medium flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                Tìm kiếm
-              </button>
+             
               <button
                 type="button"
                 onClick={() => {
@@ -280,7 +271,7 @@ export default function RoomManager() {
           </div>
         </div>        {/* Popup */}
         {showPopup && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm animate-fadeIn">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-50 backdrop-blur-sm animate-fadeIn">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 animate-popup overflow-hidden">
               <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
@@ -406,6 +397,5 @@ export default function RoomManager() {
         }
       `}</style>
     </div>
-    </Suspense>
   );
 }

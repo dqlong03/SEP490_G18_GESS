@@ -19,13 +19,11 @@ export default function UserInformationPage() {
   };
 
   return (
-     <Suspense fallback={<div>Loading...</div>}>
     <UserInfoForm
       userData={userData}
       loading={loading}
       handleChange={handleChange}
       handleSubmit={onSubmit}
     />
-    </Suspense>
   );
 }

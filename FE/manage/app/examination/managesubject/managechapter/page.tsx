@@ -1,180 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
-import { ToastContainer, toast } from "react-toastify";
+import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { create } from "zustand";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
-import useSWR, { mutate } from "swr";
-
 import { Suspense } from "react";
+import { useManageChapter } from "@hooks/examination/manageChapterHook";
 
-interface Chapter {
-  id: number;
-  chapterName: string;
-  description: string;
-  curriculum: string;
-}
-
-interface ChapterState {
-  chapters: Chapter[];
-  selectedChapter: Chapter | null;
-  isPopupOpen: boolean;
-  expandedChapterIds: number[];
-  setChapters: (chapters: Chapter[]) => void;
-  setSelectedChapter: (chapter: Chapter | null) => void;
-  setIsPopupOpen: (isOpen: boolean) => void;
-  toggleExpanded: (id: number) => void;
-}
-
-const useChapterStore = create<ChapterState>((set) => ({
-  chapters: [],
-  selectedChapter: null,
-  isPopupOpen: false,
-  expandedChapterIds: [],
-  setChapters: (chapters) => set({ chapters }),
-  setSelectedChapter: (chapter) => set({ selectedChapter: chapter }),
-  setIsPopupOpen: (isOpen) => set({ isPopupOpen: isOpen }),
-  toggleExpanded: (id) =>
-    set((state) => ({
-      expandedChapterIds: state.expandedChapterIds.includes(id)
-        ? state.expandedChapterIds.filter((i) => i !== id)
-        : [...state.expandedChapterIds, id],
-    })),
-}));
-
-interface ChapterFormData {
-  title: string;
-  description: string;
-  syllabusFile: FileList;
-}
-
-interface SubjectBasicDTO {
-  subjectName: string;
-  course: string;
-}
-
-const API = "https://localhost:7074";
-const fetcher = async (url: string) => {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("API Error");
-  return res.json();
-};
-
-export default function ChapterManagement() {
+function ChapterManagementContent() {
   const {
     chapters,
     selectedChapter,
+    subjectInfo,
     isPopupOpen,
     expandedChapterIds,
-    setChapters,
-    setSelectedChapter,
-    setIsPopupOpen,
+    register,
+    handleSubmit,
+    handleSave,
+    handleEdit,
+    handleDelete,
+    openEditPopup,
+    openCreatePopup,
+    closePopup,
     toggleExpanded,
-  } = useChapterStore();
-
-  const { register, handleSubmit, reset, setValue } =
-    useForm<ChapterFormData>();
-
-  const [subjectId, setSubjectId] = useState<string>("");
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get("subjectId");
-    if (id) setSubjectId(id);
-    else toast.error("Không tìm thấy subjectId từ URL");
-  }, []);
-
-  const { data: subjectInfo } = useSWR<SubjectBasicDTO>(
-    subjectId ? `${API}/api/Subject/${subjectId}` : null,
-    fetcher
-  );
-
-  const { data: chapterData } = useSWR<Chapter[]>(
-    subjectId ? `${API}/api/Chapter/GetAllChapterBySub/${subjectId}` : null,
-    fetcher,
-    {
-      onSuccess: (data) => {
-        setChapters(data);
-      },
-    }
-  );
-
-  const mutateChapters = () =>
-    mutate(`${API}/api/Chapter/GetAllChapterBySub/${subjectId}`);
-
-  const handleSave: SubmitHandler<ChapterFormData> = async (data) => {
-    const file = data.syllabusFile?.[0];
-    if (!file) return toast.error("Vui lòng chọn file giáo trình!");
-
-    const formData = new FormData();
-    formData.append("ChapterName", data.title);
-    formData.append("Description", data.description);
-    formData.append("CurriculumFile", file);
-    formData.append("SubjectId", subjectId);
-
-    try {
-      const res = await fetch(`${API}/api/Chapter`, {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) throw new Error("Thêm chương thất bại");
-      mutateChapters();
-      setIsPopupOpen(false);
-      reset();
-      toast.success("Đã thêm chương mới!");
-    } catch (err: any) {
-      toast.error("Lỗi: " + err.message);
-    }
-  };
-
-  const handleEdit: SubmitHandler<ChapterFormData> = async (data) => {
-    if (!selectedChapter) return;
-    const file = data.syllabusFile?.[0];
-
-    const formData = new FormData();
-    formData.append("ChapterName", data.title);
-    formData.append("Description", data.description);
-    formData.append("SubjectId", subjectId);
-    formData.append("ExistingCurriculumUrl", selectedChapter.curriculum);
-    if (file) formData.append("NewCurriculumFile", file);
-
-    try {
-      const res = await fetch(`${API}/api/Chapter/${selectedChapter.id}`, {
-        method: "PUT",
-        body: formData,
-      });
-      if (!res.ok) throw new Error("Cập nhật chương thất bại");
-      mutateChapters();
-      setSelectedChapter(null);
-      setIsPopupOpen(false);
-      reset();
-      toast.success("Đã cập nhật chương!");
-    } catch (err: any) {
-      toast.error("Lỗi: " + err.message);
-    }
-  };
-
-  const handleOpenPopup = (ch: Chapter | null) => {
-    if (ch) {
-      setSelectedChapter(ch);
-      setValue("title", ch.chapterName);
-      setValue("description", ch.description);
-    } else {
-      reset();
-    }
-    setIsPopupOpen(true);
-  };
-
-  const handleClosePopup = () => {
-    setIsPopupOpen(false);
-    setSelectedChapter(null);
-    reset();
-  };
+  } = useManageChapter();
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
     <div className="p-6 min-h-screen bg-gray-100">
       <ToastContainer />
 
@@ -199,7 +49,7 @@ export default function ChapterManagement() {
           <h3 className="text-2xl font-bold text-gray-800">Quản lý chương</h3>
           <button
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 cursor-pointer"
-            onClick={() => handleOpenPopup(null)}
+            onClick={openCreatePopup}
           >
             + Thêm chương
           </button>
@@ -209,7 +59,7 @@ export default function ChapterManagement() {
             <div
               key={ch.id}
               className="bg-white rounded-xl shadow p-4 cursor-pointer"
-              onClick={() => handleOpenPopup(ch)}
+              onClick={() => openEditPopup(ch)}
             >
               <div className="flex justify-between items-center">
                 <div>
@@ -278,7 +128,7 @@ export default function ChapterManagement() {
                 {selectedChapter ? "Chỉnh sửa chương" : "Thêm chương mới"}
               </h3>
               <button
-                onClick={handleClosePopup}
+                onClick={closePopup}
                 className="text-gray-500 hover:text-gray-700 focus:outline-none cursor-pointer"
                 style={{ lineHeight: "1" }}
               >
@@ -345,7 +195,7 @@ export default function ChapterManagement() {
                 {selectedChapter && (
                   <button
                     type="button"
-                    // onClick={handleDelete}
+                    onClick={() => handleDelete(selectedChapter.id)}
                     className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 cursor-pointer"
                   >
                     Xóa
@@ -363,6 +213,14 @@ export default function ChapterManagement() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ChapterManagement() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ToastContainer />
+      <ChapterManagementContent />
     </Suspense>
   );
 }

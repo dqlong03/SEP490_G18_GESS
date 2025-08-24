@@ -1,341 +1,65 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { Suspense } from "react";
+import { useParams } from 'next/navigation';
 import Select from "react-select";
-import { getUserIdFromToken } from "@/utils/tokenUtils";
-import { useParams, useRouter } from 'next/navigation';
 import { BookOpen, Users, Clock, Settings, ChevronLeft, Save, Plus, Trash2, X, Check } from "lucide-react";
+import { useUpdateMCQExam } from '@/hooks/teacher/useUpdateMCQExam';
 
-const API_URL = "https://localhost:7074";
-
-export default function UpdateMCQExamPage() {
+function UpdateMCQExamContent() {
   const params = useParams();
-  const router = useRouter();
   const examId = Number(params.examId);
 
-  // State
-  const [examName, setExamName] = useState("");
-  const [duration, setDuration] = useState<number>(60);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [gradeComponents, setGradeComponents] = useState<any[]>([]);
-  const [selectedGradeComponent, setSelectedGradeComponent] = useState<any>(null);
-  const [chapters, setChapters] = useState<any[]>([]);
-  const [showChapterPopup, setShowChapterPopup] = useState(false);
-  const [chapterChecks, setChapterChecks] = useState<Record<number, boolean>>({});
-  const [selectedChapters, setSelectedChapters] = useState<any[]>([]);
-  const [chapterQuestions, setChapterQuestions] = useState<Record<
-    number,
-    { easy: number; medium: number; hard: number; max: { easy: number; medium: number; hard: number } }
-  >>({});
-  const [students, setStudents] = useState<any[]>([]);
-  const [showStudentPopup, setShowStudentPopup] = useState(false);
-  const [studentChecks, setStudentChecks] = useState<Record<string, boolean>>({});
-  const [selectedStudents, setSelectedStudents] = useState<any[]>([]);
-  const [semesterId, setSemesterId] = useState<number | null>(null);
-  const [teacherId, setTeacherId] = useState<string>("");
-  const [subjectId, setSubjectId] = useState<number | null>(null);
-  const [questionInput, setQuestionInput] = useState<number>(0);
-  const [isPublic, setIsPublic] = useState(true);
-  const [questionBankType, setQuestionBankType] = useState<"all" | "common" | "private">("all");
-  const [classId, setClassId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    // State
+    examName,
+    duration,
+    startDate,
+    endDate,
+    gradeComponents,
+    selectedGradeComponent,
+    chapters,
+    showChapterPopup,
+    chapterChecks,
+    selectedChapters,
+    chapterQuestions,
+    students,
+    showStudentPopup,
+    studentChecks,
+    selectedStudents,
+    questionInput,
+    isPublic,
+    questionBankType,
+    loading,
+    totalQuestions,
 
-  // Lấy dữ liệu ban đầu
-  useEffect(() => {
-    setTeacherId(getUserIdFromToken() || "");
-    if (!examId) return;
-    setLoading(true);
-    fetch(`${API_URL}/api/MultipleExam/get-for-update/${examId}`)
-      .then(res => res.json())
-      .then(async data => {
-        setExamName(data.multiExamName || "");
-        setDuration(data.duration || 60);
-        setStartDate(data.startDay ? data.startDay.slice(0, 16) : "");
-        setEndDate(data.endDay ? data.endDay.slice(0, 16) : "");
-        setSelectedGradeComponent({
-          value: data.categoryExamId,
-          label: "",
-        });
-        setSemesterId(data.semesterId);
-        setIsPublic(data.isPublish);
-        setQuestionBankType(data.questionBankType || "all");
-        setClassId(data.classId);
-        setSubjectId(data.subjectId);
-        setSelectedStudents((data.studentExamDTO || []).map((s: any) => ({
-          studentId: s.studentId
-        })));
-        
-        // Process chapters and questions
-        setSelectedChapters((data.noQuestionInChapterDTO || []).reduce((arr: any[], item: any) => {
-          if (!arr.some((c: any) => c.chapterId === item.chapterId)) {
-            arr.push({ chapterId: item.chapterId, chapterName: item.chapterName });
-          }
-          return arr;
-        }, []));
-        
-        const chapterQ: Record<number, any> = {};
-        for (const item of (data.noQuestionInChapterDTO || [])) {
-          if (!chapterQ[item.chapterId]) {
-            chapterQ[item.chapterId] = { easy: 0, medium: 0, hard: 0, max: { easy: 0, medium: 0, hard: 0 } };
-          }
-          if (item.levelQuestionId === 1) chapterQ[item.chapterId].easy = item.numberQuestion;
-          if (item.levelQuestionId === 2) chapterQ[item.chapterId].medium = item.numberQuestion;
-          if (item.levelQuestionId === 3) chapterQ[item.chapterId].hard = item.numberQuestion;
-        }
-        
-        for (const chapId of Object.keys(chapterQ)) {
-          const easy = await fetchQuestionCount(Number(chapId), "easy");
-          const medium = await fetchQuestionCount(Number(chapId), "medium");
-          const hard = await fetchQuestionCount(Number(chapId), "hard");
-          chapterQ[chapId].max = { easy, medium, hard };
-        }
-        setChapterQuestions(chapterQ);
-        setQuestionInput(data.numberQuestion || 0);
-      })
-      .finally(() => setLoading(false));
-  }, [examId]);
+    // Setters
+    setExamName,
+    setDuration,
+    setStartDate,
+    setEndDate,
+    setSelectedGradeComponent,
+    setShowChapterPopup,
+    setChapterChecks,
+    setShowStudentPopup,
+    setQuestionInput,
+    setIsPublic,
+    setQuestionBankType,
 
-  // Lấy dữ liệu phụ thuộc classId
-  useEffect(() => {
-    if (!classId) return;
-    fetch(`${API_URL}/api/Class/${classId}/grade-components`)
-      .then(res => res.json())
-      .then(data => {
-        const mapped = data.map((g: any) => ({
-          value: g.categoryExamId,
-          label: g.categoryExamName
-        }));
-        setGradeComponents(mapped);
-
-        setSelectedGradeComponent((prev: any) => {
-          if (prev && prev.value) {
-            const found = mapped.find((g: any) => g.value === prev.value);
-            return found || null;
-          }
-          return null;
-        });
-      });
-    
-    fetch(`${API_URL}/api/Class/${classId}/chapters`)
-      .then(res => res.json())
-      .then(data => {
-        setChapters(data);
-        setSelectedChapters((prev: any[]) => {
-          if (!prev.length) return prev;
-          return prev.map((item) => {
-            const found = data.find((c: any) => c.chapterId === item.chapterId);
-            return found
-              ? { chapterId: item.chapterId, chapterName: found.chapterName }
-              : item;
-          });
-        });
-      });
-
-    fetch(`${API_URL}/api/Class/${classId}/students`)
-      .then(res => res.json())
-      .then(data => setStudents(data));
-    
-    fetch(`${API_URL}/api/Class/${classId}/subject-id`)
-      .then(res => res.json())
-      .then(data => setSubjectId(data));
-  }, [classId]);
-
-  const fetchQuestionCount = async (
-    chapterId: number,
-    level: "easy" | "medium" | "hard"
-  ) => {
-    const levelId = level === "easy" ? 1 : level === "medium" ? 2 : 3;
-    let url = `${API_URL}/api/MultipleExam/question-count?chapterId=${chapterId}&levelId=${levelId}`;
-    if (questionBankType === "common") {
-      url += "&isPublic=true";
-    } else if (questionBankType === "private") {
-      url += "&isPublic=false";
-      const teacherId = getUserIdFromToken();
-      if (teacherId) {
-        url += `&teacherId=${teacherId}`;
-      }
-    }
-    const res = await fetch(url);
-    return await res.json();
-  };
-
-  const handleSaveChapters = async () => {
-    const chaptersSelected = chapters.filter((chap) => chapterChecks[chap.chapterId]);
-    const newChapterQuestions: Record<number, any> = { ...chapterQuestions };
-    for (const chap of chaptersSelected) {
-      if (!newChapterQuestions[chap.chapterId]) {
-        const easy = await fetchQuestionCount(chap.chapterId, "easy");
-        const medium = await fetchQuestionCount(chap.chapterId, "medium");
-        const hard = await fetchQuestionCount(chap.chapterId, "hard");
-        newChapterQuestions[chap.chapterId] = {
-          easy: 0,
-          medium: 0,
-          hard: 0,
-          max: { easy, medium, hard },
-        };
-      }
-    }
-    setSelectedChapters([
-      ...selectedChapters,
-      ...chaptersSelected.filter(
-        (chap) => !selectedChapters.some((selected) => selected.chapterId === chap.chapterId)
-      ),
-    ]);
-    setChapterQuestions(newChapterQuestions);
-    setShowChapterPopup(false);
-  };
-
-  const handleRemoveChapter = (id: number) => {
-    setSelectedChapters((prev) => prev.filter((c) => c.chapterId !== id));
-    setChapterQuestions((prev) => {
-      const newQ = { ...prev };
-      delete newQ[id];
-      return newQ;
-    });
-  };
-
-  const handleChangeQuestionCount = (
-    chapterId: number,
-    type: "easy" | "medium" | "hard",
-    value: number
-  ) => {
-    setChapterQuestions((prev) => ({
-      ...prev,
-      [chapterId]: {
-        ...prev[chapterId],
-        [type]: Math.max(0, Math.min(value, prev[chapterId].max[type])),
-        max: prev[chapterId].max,
-      },
-    }));
-  };
-
-  const totalQuestions = Object.values(chapterQuestions).reduce(
-    (sum, q) => sum + (q.easy || 0) + (q.medium || 0) + (q.hard || 0),
-    0
-  );
-
-  const handleOpenStudentPopup = () => {
-    setShowStudentPopup(true);
-  };
-
-  const handleCheckStudent = (id: string, checked: boolean) => {
-    setStudentChecks((prev) => ({ ...prev, [id]: checked }));
-  };
-
-  const handleCheckAllStudents = () => {
-    const allChecked: Record<string, boolean> = {};
-    students.forEach((sv: any) => {
-      allChecked[sv.studentId] = true;
-    });
-    setStudentChecks(allChecked);
-  };
-
-  const handleUncheckAllStudents = () => {
-    setStudentChecks({});
-  };
-
-  const handleConfirmStudents = () => {
-    setSelectedStudents(
-      students.filter((sv) => studentChecks[sv.studentId])
-    );
-    setShowStudentPopup(false);
-  };
-
-  const handleCheckAllChapters = () => {
-    const allChecked: Record<number, boolean> = {};
-    chapters
-      .filter(
-        (chap) =>
-          !selectedChapters.some(
-            (selected) => selected.chapterId === chap.chapterId
-          )
-      )
-      .forEach((chap: any) => {
-        allChecked[chap.chapterId] = true;
-      });
-    setChapterChecks(allChecked);
-  };
-
-  const handleUncheckAllChapters = () => {
-    setChapterChecks({});
-  };
-
-  const buildNoQuestionInChapterDTO = () => {
-    const arr: { numberQuestion: number; chapterId: number; levelQuestionId: number }[] = [];
-    selectedChapters.forEach((chap: any) => {
-      if (chapterQuestions[chap.chapterId]?.easy > 0) {
-        arr.push({
-          numberQuestion: chapterQuestions[chap.chapterId].easy,
-          chapterId: chap.chapterId,
-          levelQuestionId: 1,
-        });
-      }
-      if (chapterQuestions[chap.chapterId]?.medium > 0) {
-        arr.push({
-          numberQuestion: chapterQuestions[chap.chapterId].medium,
-          chapterId: chap.chapterId,
-          levelQuestionId: 2,
-        });
-      }
-      if (chapterQuestions[chap.chapterId]?.hard > 0) {
-        arr.push({
-          numberQuestion: chapterQuestions[chap.chapterId].hard,
-          chapterId: chap.chapterId,
-          levelQuestionId: 3,
-        });
-      }
-    });
-    return arr;
-  };
-
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!examName || !selectedGradeComponent || !startDate || !endDate || !duration || !semesterId || !teacherId) {
-      alert("Vui lòng nhập đầy đủ thông tin bắt buộc!");
-      return;
-    }
-    if (questionInput > 0 && totalQuestions !== questionInput) {
-      alert("Tổng số câu đã chọn phải bằng số câu hỏi yêu cầu!");
-      return;
-    }
-    const payload = {
-      MultiExamId: examId,
-      MultiExamName: examName,
-      NumberQuestion: totalQuestions,
-      Duration: duration,
-      StartDay: startDate,
-      EndDay: endDate,
-      CreateAt: new Date().toISOString(),
-      teacherId,
-      subjectId,
-      classId,
-      categoryExamId: selectedGradeComponent.value,
-      semesterId,
-      isPublish: isPublic,
-      questionBankType,
-      noQuestionInChapterDTO: buildNoQuestionInChapterDTO(),
-      studentExamDTO: selectedStudents.map((sv: any) => ({
-        studentId: sv.studentId
-      })),
-    };
-    
-    try {
-      const res = await fetch(`${API_URL}/api/MultipleExam/update`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        alert("Cập nhật bài kiểm tra thành công!");
-        router.push(`/teacher/myclass/classdetail/${classId?.toString()}`);
-      } else {
-        alert("Cập nhật bài kiểm tra thất bại!");
-      }
-    } catch {
-      alert("Có lỗi xảy ra khi cập nhật!");
-    }
-  };
+    // Functions
+    handleSaveChapters,
+    handleRemoveChapter,
+    handleChangeQuestionCount,
+    handleOpenStudentPopup,
+    handleCheckStudent,
+    handleCheckAllStudents,
+    handleUncheckAllStudents,
+    handleConfirmStudents,
+    handleCheckAllChapters,
+    handleUncheckAllChapters,
+    handleUpdate,
+    handleBack,
+  } = useUpdateMCQExam(examId);
 
   if (loading) {
     return (
@@ -365,7 +89,7 @@ export default function UpdateMCQExamPage() {
             </div>
             
             <button
-              onClick={() => router.back()}
+              onClick={handleBack}
               className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200 font-medium text-gray-700"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -482,7 +206,7 @@ export default function UpdateMCQExamPage() {
                 </select>
               </div>
               
-              <div className="flex items-center space-x-3">
+              {/* <div className="flex items-center space-x-3">
                 <label className="flex items-center space-x-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -492,7 +216,7 @@ export default function UpdateMCQExamPage() {
                   />
                   <span className="text-sm font-medium text-gray-700">Lưu public</span>
                 </label>
-              </div>
+              </div> */}
             </div>
           </div>
 
@@ -572,7 +296,7 @@ export default function UpdateMCQExamPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {selectedChapters.map((chap: any) => (
+                    {selectedChapters.map((chap) => (
                       <tr key={chap.chapterId} className="hover:bg-blue-50 transition-colors duration-200">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">{chap.chapterName}</div>
@@ -723,7 +447,7 @@ export default function UpdateMCQExamPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {students.map((sv: any, idx: number) => (
+                      {students.map((sv, idx) => (
                         <tr key={sv.studentId} className="hover:bg-blue-50 transition-colors duration-200">
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{idx + 1}</td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -821,7 +545,7 @@ export default function UpdateMCQExamPage() {
                               (selected) => selected.chapterId === chap.chapterId
                             )
                         )
-                        .map((chap: any, idx: number) => (
+                        .map((chap, idx) => (
                           <tr key={chap.chapterId} className="hover:bg-blue-50 transition-colors duration-200">
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               Chương {idx + 1}
@@ -871,5 +595,25 @@ export default function UpdateMCQExamPage() {
         )}
       </div>
     </div>
+  );
+}
+
+// Loading component
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Đang tải trang cập nhật bài kiểm tra...</p>
+      </div>
+    </div>
+  );
+}
+
+export default function UpdateMCQExamPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <UpdateMCQExamContent />
+    </Suspense>
   );
 }

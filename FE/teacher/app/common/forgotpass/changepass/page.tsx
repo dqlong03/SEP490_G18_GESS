@@ -3,7 +3,6 @@
 import { useChangePassword } from '@/hooks/common/changePassHook';
 import Link from 'next/link';
 import Image from 'next/image';
-import universitylogo from '@public/uni.png';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import '@/styles/forgotpass.css';
 
@@ -22,7 +21,7 @@ export default function ChangePasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 relative animate-fadeIn">
       <div className="school-info absolute top-4 left-4 flex items-center space-x-2 lg:flex hidden animate-fadeInDelayed">
-        <Image src={universitylogo} alt="School Icon" width={50} height={50} />
+        <Image src="/uni.png" alt="School Icon" width={50} height={50} />
         <span className="text-2xl font-semibold text-gray-800">Fpt University</span>
       </div>
       <div className="max-w-md w-full space-y-6 p-8 bg-white rounded-xl shadow-lg">

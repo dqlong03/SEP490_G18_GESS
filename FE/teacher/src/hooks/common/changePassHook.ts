@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { resetPassword } from "@services/common/changePassService";
+import { resetPassword } from "@/services/common/changePassService";
 
 export function useChangePassword() {
   const [password, setPassword] = useState("");

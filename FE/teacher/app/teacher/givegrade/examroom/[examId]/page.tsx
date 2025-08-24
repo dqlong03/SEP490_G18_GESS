@@ -1,154 +1,28 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useExamGradingDetail } from '@/hooks/teacher/useExamGradingDetail';
 
-// DTO cho dữ liệu từ API
-type StudentGradingDTO = {
-  practiceExamHistoryId: string;
-  studentId: string;
-  studentCode: string;
-  fullName: string;
-  isGraded: number;
-  score: number | null;
-};
-
-type ExamSlotRoomGradingInfoDTO = {
-  examSlotRoomId: number;
-  examName: string;
-  duration: number;
-  startDay: string;
-  slotName: string;
-  subjectName: string;
-  students: StudentGradingDTO[];
-};
-
-interface PageProps {
-  params: { examId: string };
-}
-
-export default function ExamGradingDetailPage({ params }: PageProps) {
-  const router = useRouter();
-  const examId = Number(params.examId);
+function ExamGradingDetailContent({ examId }: { examId: number }) {
   const searchParams = useSearchParams();
   const action = searchParams.get('action');
 
-  const [examInfo, setExamInfo] = useState<ExamSlotRoomGradingInfoDTO | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-
-  useEffect(() => {
-    // Gọi API lấy thông tin bài thi và danh sách sinh viên
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`https://localhost:7074/api/GradeSchedule/examslotroom/${examId}/grading-info`);
-        if (!res.ok) {
-          setExamInfo(null);
-        } else {
-          const data: ExamSlotRoomGradingInfoDTO = await res.json();
-          setExamInfo(data);
-        }
-      } catch (error) {
-        setExamInfo(null);
-      }
-      setLoading(false);
-    };
-    fetchData();
-  }, [examId]);
-
-  // Chuyển sang trang chấm bài cho sinh viên
-  const handleGradeStudent = (studentId: string) => {
-    if (action === 'edit') {
-      router.push(`/teacher/givegrade/examroom/${examId}/gradeexampaper?studentId=${studentId}&action=edit`);
-    } else {
-      router.push(`/teacher/givegrade/examroom/${examId}/gradeexampaper?studentId=${studentId}`);
-    }
-  };
-
-  // Xác nhận chấm xong phòng thi
-  const handleConfirm = async () => {
-    try {
-      const res = await fetch(
-        `https://localhost:7074/api/GradeSchedule/examslotroom/${examId}/mark-graded`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-      if (!res.ok) {
-        const msg = await res.text();
-        alert(msg || 'Không thể cập nhật trạng thái chấm bài!');
-      } else {
-        alert('Đã chuyển trạng thái chấm bài thành công cho ca/phòng thi!');
-        router.push('/teacher/givegrade');
-      }
-    } catch (err) {
-      alert('Lỗi khi cập nhật trạng thái chấm bài!');
-    }
-    setShowConfirmModal(false);
-  };
-
-  // Quay lại
-  const handleBack = () => {
-    router.push('/teacher/givegrade');
-  };
-
-  // Format ngày
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  // Get status badge
-  const getStatusBadge = (isGraded: number) => {
-    if (isGraded === 1) {
-      return (
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-          <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-          Đã chấm
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-        <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
-        Chưa chấm
-      </span>
-    );
-  };
-
-  // Get progress stats
-  const getProgressStats = () => {
-    if (!examInfo?.students) return { total: 0, graded: 0, percentage: 0 };
-    const total = examInfo.students.length;
-    const graded = examInfo.students.filter(s => s.isGraded === 1).length;
-    const percentage = total > 0 ? Math.round((graded / total) * 100) : 0;
-    return { total, graded, percentage };
-  };
+  const {
+    examInfo,
+    loading,
+    showConfirmModal,
+    setShowConfirmModal,
+    handleGradeStudent,
+    handleConfirm,
+    handleBack,
+    formatDate,
+    getStatusBadgeProps,
+    getProgressStats,
+    handleOpenConfirm
+  } = useExamGradingDetail(examId, action);
 
   const { total, graded, percentage } = getProgressStats();
-
-
-  const handleOpenConfirm = () => {
-    if (!examInfo || !examInfo.students) {
-      alert('Không có dữ liệu phòng thi để xác nhận.');
-      return;
-    }
-    const totalStudents = examInfo.students.length;
-    const gradedCount = examInfo.students.filter(s => s.isGraded === 1).length;
-    if (gradedCount !== totalStudents) {
-      alert(`Còn ${totalStudents - gradedCount} bài chưa chấm. Vui lòng chấm hết trước khi xác nhận.`);
-      return;
-    }
-    setShowConfirmModal(true);
-  };
 
 
   return (
@@ -299,65 +173,71 @@ export default function ExamGradingDetailPage({ params }: PageProps) {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {examInfo.students.map((student, idx) => (
-                      <tr key={student.studentId} className="hover:bg-blue-50 transition-colors duration-200">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {idx + 1}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
-                              {student.fullName.charAt(0).toUpperCase()}
+                    {examInfo.students.map((student, idx) => {
+                      const statusProps = getStatusBadgeProps(student.isGraded);
+                      return (
+                        <tr key={student.studentId} className="hover:bg-blue-50 transition-colors duration-200">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {idx + 1}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+                                {student.fullName.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">{student.fullName}</div>
+                              </div>
                             </div>
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">{student.fullName}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900">
-                          {student.studentCode}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          {getStatusBadge(student.isGraded)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          {student.isGraded === 1 ? (
-                            <span className="text-lg font-bold text-blue-600">{student.score}</span>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          {student.isGraded === 0 ? (
-                            <button
-                              onClick={() => handleGradeStudent(student.studentId)}
-                              className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg"
-                            >
-                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
-                              Chấm bài
-                            </button>
-                          ) : (
-                            action === 'edit' ? (
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900">
+                            {student.studentCode}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <span className={statusProps.className}>
+                              <div className={statusProps.dotClass}></div>
+                              {statusProps.text}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            {student.isGraded === 1 ? (
+                              <span className="text-lg font-bold text-blue-600">{student.score}</span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            {student.isGraded === 0 ? (
                               <button
                                 onClick={() => handleGradeStudent(student.studentId)}
-                                className="inline-flex items-center px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg"
+                                className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg"
                               >
                                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
-                                Sửa điểm
+                                Chấm bài
                               </button>
                             ) : (
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
-                                ✓ Hoàn thành
-                              </span>
-                            )
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                              action === 'edit' ? (
+                                <button
+                                  onClick={() => handleGradeStudent(student.studentId)}
+                                  className="inline-flex items-center px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg"
+                                >
+                                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  </svg>
+                                  Sửa điểm
+                                </button>
+                              ) : (
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                                  ✓ Hoàn thành
+                                </span>
+                              )
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                     {(!examInfo.students || examInfo.students.length === 0) && (
                       <tr>
                         <td colSpan={6} className="px-6 py-12 text-center">
@@ -447,5 +327,25 @@ export default function ExamGradingDetailPage({ params }: PageProps) {
         )}
       </div>
     </div>
+  );
+}
+
+export default async function ExamGradingDetailPage({ params }: { params: Promise<{ examId: string }> }) {
+  const { examId: examIdString } = await params;
+  const examId = Number(examIdString);
+
+  return (
+    <Suspense 
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-xl p-8 flex items-center space-x-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="text-lg font-medium text-gray-700">Đang tải trang...</span>
+          </div>
+        </div>
+      }
+    >
+      <ExamGradingDetailContent examId={examId} />
+    </Suspense>
   );
 }

@@ -1,223 +1,43 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { getUserIdFromToken } from '@utils/tokenUtils';
+import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ToastContainer } from "react-toastify";
-import { showToast } from "@/utils/toastUtils";
+import { useStudentExamDetail } from '@/hooks/teacher/useStudentExamDetail';
 
-type QuestionDTO = {
-  questionId: number;
-  content: string;
-  gradingCriteria: string;
-  studentAnswer: string;
-  score: number;
-  practiceExamHistoryId: string;
-  practiceQuestionId: number;
-  maxScore: number; // Thêm maxScore
-};
-
-type StudentExamDetail = {
-  studentId: string;
-  studentCode: string;
-  fullName: string;
-  pracExamId: number;
-  questions: QuestionDTO[];
-};
-
-type SuggestResult = {
-  totalScore: number;
-  overallExplanation: string;
-  criterionScores?: Array<{
-    criterionName: string;
-    achievementPercent: number;
-    weightedScore: number;
-    explanation: string;
-  }>;
-};
-
-const API_BASE = 'https://localhost:7074/api/GradeScheduleMidTerm';
-const SUGGEST_API = `https://localhost:7074/api/AIGradePracExam/GradeEssayAnswer`;
-const MATERIAL_LINK = "https://docs.google.com/document/d/1xD31S45CPW3Np_bEfJ_HkvzM7LDynu5WNpecLec5z8I/edit?tab=t.0#heading=h.bllyran0q013";
-
-export default function GradeMidtermStudentPage() {
-  const router = useRouter();
+function StudentExamDetailContent() {
   const searchParams = useSearchParams();
-  const teacherId = getUserIdFromToken();
   const examId = searchParams.get('examId');
   const studentId = searchParams.get('studentId');
   const examType = searchParams.get('examType') || '2';
 
-  const [examDetail, setExamDetail] = useState<StudentExamDetail | null>(null);
-  const [scores, setScores] = useState<{ [qid: number]: number | '' }>({});
-  const [totalScore, setTotalScore] = useState<number>(0); // Thêm state tổng điểm
-  const [showCriteria, setShowCriteria] = useState<{ [qid: number]: boolean }>({});
-  const [loading, setLoading] = useState(true);
-  const [showConfirmPopup, setShowConfirmPopup] = useState(false);
-  const [suggesting, setSuggesting] = useState<{ [qid: number]: boolean }>({});
-  const [suggestResult, setSuggestResult] = useState<{ [qid: number]: SuggestResult | null }>({});
+  const {
+    // State
+    examDetail,
+    scores,
+    totalScore,
+    showCriteria,
+    loading,
+    showConfirmPopup,
+    suggesting,
+    suggestResult,
 
-  useEffect(() => {
-    async function fetchExamDetail() {
-      setLoading(true);
-      try {
-        const res = await fetch(
-          `${API_BASE}/teacher/${teacherId}/exam/${examId}/student/${studentId}/submission?examType=${examType}`
-        );
-        if (!res.ok) throw new Error('Không lấy được dữ liệu bài thi');
-        const raw = await res.json();
-        const data: StudentExamDetail = {
-          studentId: raw.studentId,
-          studentCode: raw.studentCode,
-          fullName: raw.fullName,
-          pracExamId: raw.pracExamHistoryId,
-          questions: (raw.questionPracExamDTO || []).map((q: any) => ({
-            questionId: q.practiceQuestionId,
-            content: q.questionContent,
-            gradingCriteria: q.gradingCriteria,
-            studentAnswer: q.answer,
-            score: q.gradedScore ?? q.score ?? 0,
-            pracExamHistoryId: q.pracExamHistoryId,
-            practiceQuestionId: q.practiceQuestionId,
-            maxScore: q.score || 10, // Sử dụng score từ API làm maxScore
-          })),
-        };
-        setExamDetail(data);
-        const initialScores: { [qid: number]: number | '' } = {};
-        let calculatedTotal = 0;
-        data.questions.forEach(q => {
-          initialScores[q.questionId] = q.score ?? '';
-          if (typeof q.score === 'number') {
-            calculatedTotal += q.score;
-          }
-        });
-        setScores(initialScores);
-        setTotalScore(calculatedTotal);
-      } catch (err) {
-        showToast("error", "Lỗi khi lấy dữ liệu bài thi");
-      }
-      setLoading(false);
-    }
-    fetchExamDetail();
-  }, [teacherId, examId, studentId, examType]);
+    // Computed values
+    gradedQuestionsCount,
+    totalMaxScore,
+    calculatedTotal,
 
-  // Tính toán tổng điểm từ các câu hỏi
-  const calculateTotalFromQuestions = () => {
-    return Object.values(scores).reduce((total, score) => {
-      return total + (typeof score === 'number' ? score : 0);
-    }, 0);
-  };
-
-  // Cập nhật tổng điểm khi scores thay đổi
-  useEffect(() => {
-    const calculated = calculateTotalFromQuestions();
-    setTotalScore(calculated);
-  }, [scores]);
-
-  // Tính tổng maxScore của tất cả câu hỏi
-  const getTotalMaxScore = () => {
-    if (!examDetail) return 0;
-    return examDetail.questions.reduce((total, q) => total + (q.maxScore || 10), 0);
-  };
-
-  const handleScoreChange = async (qid: number, value: number | '') => {
-    setScores(prev => ({ ...prev, [qid]: value }));
-    if (
-      teacherId &&
-      examDetail &&
-      examDetail.pracExamId &&
-      value !== '' &&
-      examDetail.questions
-    ) {
-      const question = examDetail.questions.find(q => q.questionId === qid);
-      if (!question) return;
-      try {
-        await fetch(
-          `${API_BASE}/teacher/${teacherId}/exam/${examId}/student/${studentId}/grade`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              pracExamHistoryId: question.pracExamHistoryId,
-              practiceQuestionId: question.practiceQuestionId,
-              gradedScore: value,
-            }),
-          }
-        );
-        showToast("success", "Cập nhật điểm thành công!");
-      } catch (err) {
-        showToast("error", "Lỗi khi gửi điểm!");
-      }
-    }
-  };
-
-  const handleSuggestScore = async (q: QuestionDTO) => {
-    setSuggesting(prev => ({ ...prev, [q.questionId]: true }));
-    setSuggestResult(prev => ({ ...prev, [q.questionId]: null }));
-    try {
-      // Đảm bảo bandScoreGuide là array
-      let bandScoreGuide: any[] = [];
-      if (Array.isArray(q.gradingCriteria)) {
-        bandScoreGuide = q.gradingCriteria;
-      } else if (typeof q.gradingCriteria === "string") {
-        try {
-          const parsed = JSON.parse(q.gradingCriteria);
-          if (Array.isArray(parsed)) bandScoreGuide = parsed;
-        } catch {
-          // Nếu không parse được thì để mảng rỗng
-          bandScoreGuide = [];
-        }
-      }
-
-      const body = {
-        questionContent: q.content,
-        answerContent: q.studentAnswer,
-        bandScoreGuide: bandScoreGuide,
-        materialLink: MATERIAL_LINK,
-        maxScore: q.maxScore || 10 // Sử dụng maxScore từ câu hỏi
-      };
-      const res = await fetch(SUGGEST_API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error('Không lấy được gợi ý chấm điểm');
-      const result = await res.json();
-      setSuggestResult(prev => ({ ...prev, [q.questionId]: result }));
-    } catch (err) {
-      setSuggestResult(prev => ({ ...prev, [q.questionId]: null }));
-      showToast("error", "Lỗi khi lấy gợi ý chấm điểm!");
-    }
-    setSuggesting(prev => ({ ...prev, [q.questionId]: false }));
-  };
-
-  const handleApplySuggestScore = async (q: QuestionDTO, score: number) => {
-    await handleScoreChange(q.questionId, score);
-    setScores(prev => ({ ...prev, [q.questionId]: score }));
-    setSuggestResult(prev => ({ ...prev, [q.questionId]: null }));
-  };
-
-  const handleConfirm = async () => {
-    try {
-      const res = await fetch(
-        `https://localhost:7074/api/GradeScheduleMidTerm/examId/${examId}/student/${studentId}/mark-graded`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ totalScore }), // Sử dụng totalScore từ state
-        }
-      );
-      if (!res.ok) throw new Error('Không thể cập nhật trạng thái chấm bài!');
-      showToast("success", "Đã chuyển trạng thái chấm bài thành công!");
-      router.back();
-    } catch (err) {
-      showToast("error", "Lỗi khi cập nhật trạng thái chấm bài!");
-    }
-  };
-
-  const getGradedQuestionsCount = () => {
-    return Object.values(scores).filter(score => score !== '').length;
-  };
+    // Functions
+    handleScoreChange,
+    handleSuggestScore,
+    handleApplySuggestScore,
+    handleConfirm,
+    handleBack,
+    toggleCriteria,
+    toggleConfirmPopup,
+    getQuickScoreButtons,
+    setTotalScore,
+  } = useStudentExamDetail(examId, studentId, examType);
 
   if (loading) {
     return (
@@ -252,7 +72,7 @@ export default function GradeMidtermStudentPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => router.back()}
+                onClick={handleBack}
                 className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors duration-200 font-medium text-gray-700"
                 type="button"
               >
@@ -268,13 +88,13 @@ export default function GradeMidtermStudentPage() {
             {/* Progress Indicator */}
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-600">
-                <span className="font-semibold text-blue-600">{getGradedQuestionsCount()}</span>
+                <span className="font-semibold text-blue-600">{gradedQuestionsCount}</span>
                 /{examDetail.questions.length} câu đã chấm
               </div>
               <div className="w-32 bg-gray-200 rounded-full h-2">
                 <div 
                   className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${(getGradedQuestionsCount() / examDetail.questions.length) * 100}%` }}
+                  style={{ width: `${(gradedQuestionsCount / examDetail.questions.length) * 100}%` }}
                 ></div>
               </div>
             </div>
@@ -307,7 +127,7 @@ export default function GradeMidtermStudentPage() {
             <div>
               <h3 className="text-lg font-bold text-green-800 mb-2">Tổng điểm bài thi</h3>
               <p className="text-sm text-green-600">
-                Điểm từ các câu hỏi: <span className="font-semibold">{calculateTotalFromQuestions()}</span>
+                Điểm từ các câu hỏi: <span className="font-semibold">{calculatedTotal}</span>
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -319,17 +139,17 @@ export default function GradeMidtermStudentPage() {
                   <input
                     type="number"
                     min={0}
-                    max={getTotalMaxScore()}
+                    max={totalMaxScore}
                     step={0.1}
                     value={totalScore}
                     onChange={e => setTotalScore(Number(e.target.value) || 0)}
                     className="border border-green-300 rounded-lg px-4 py-2 w-24 text-center font-bold text-lg bg-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
-                  <span className="text-green-700 font-medium">/ {getTotalMaxScore()}</span>
+                  <span className="text-green-700 font-medium">/ {totalMaxScore}</span>
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-green-600">{Math.round((totalScore / getTotalMaxScore()) * 100)}%</div>
+                <div className="text-3xl font-bold text-green-600">{Math.round((totalScore / totalMaxScore) * 100)}%</div>
                 <div className="text-sm text-green-600">Tỷ lệ đạt</div>
               </div>
             </div>
@@ -367,7 +187,7 @@ export default function GradeMidtermStudentPage() {
                   <button
                     className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200"
                     type="button"
-                    onClick={() => setShowCriteria(prev => ({ ...prev, [q.questionId]: !prev[q.questionId] }))}
+                    onClick={() => toggleCriteria(q.questionId)}
                   >
                     <svg className={`w-5 h-5 transition-transform duration-200 ${showCriteria[q.questionId] ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -436,7 +256,7 @@ export default function GradeMidtermStudentPage() {
                     <div className="flex items-center space-x-3">
                       {/* Quick Score Buttons */}
                       <div className="flex space-x-2">
-                        {[0, Math.round((q.maxScore || 10) * 0.5), Math.round((q.maxScore || 10) * 0.8), q.maxScore || 10].map(score => (
+                        {getQuickScoreButtons(q.maxScore || 10).map(score => (
                           <button
                             key={score}
                             onClick={() => handleScoreChange(q.questionId, score)}
@@ -513,7 +333,7 @@ export default function GradeMidtermStudentPage() {
                         <div className="mb-3">
                           <p className="text-sm font-medium text-green-700 mb-2">Chi tiết từng tiêu chí:</p>
                           <ul className="list-disc pl-6 space-y-2">
-                            {suggestResult[q.questionId].criterionScores.map(
+                            {suggestResult[q.questionId]?.criterionScores?.map(
                               (c: { criterionName: string; achievementPercent: number; weightedScore: number; explanation: string }, idx: number) => (
                                 <li key={idx}>
                                   <span className="font-semibold text-blue-800">{c.criterionName}</span>
@@ -535,14 +355,14 @@ export default function GradeMidtermStudentPage() {
                         <div className="flex items-center space-x-2">
                           <span className="text-sm font-medium text-green-700">Điểm đề xuất:</span>
                           <span className="px-3 py-1 bg-green-600 text-white rounded-lg font-bold">
-                            {suggestResult[q.questionId].totalScore}/{q.maxScore || 10}
+                            {suggestResult[q.questionId]?.totalScore}/{q.maxScore || 10}
                           </span>
                         </div>
                       </div>
-                      {suggestResult[q.questionId].overallExplanation && (
+                      {suggestResult[q.questionId]?.overallExplanation && (
                         <div className="mt-2 text-gray-700">
                           <span className="font-medium text-green-700">Nhận xét tổng quan: </span>
-                          {suggestResult[q.questionId].overallExplanation}
+                          {suggestResult[q.questionId]?.overallExplanation}
                         </div>
                       )}
 
@@ -550,7 +370,7 @@ export default function GradeMidtermStudentPage() {
                         <button
                           className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors duration-200 shadow-md hover:shadow-lg"
                           type="button"
-                          onClick={() => handleApplySuggestScore(q, suggestResult[q.questionId].totalScore)}
+                          onClick={() => handleApplySuggestScore(q, suggestResult[q.questionId]?.totalScore || 0)}
                         >
                           Áp dụng điểm này
                         </button>
@@ -566,7 +386,7 @@ export default function GradeMidtermStudentPage() {
         {/* Submit Button */}
         <div className="mt-8 text-center">
           <button
-            onClick={() => setShowConfirmPopup(true)}
+            onClick={() => toggleConfirmPopup(true)}
             className="px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
             type="button"
           >
@@ -590,14 +410,14 @@ export default function GradeMidtermStudentPage() {
                 </p>
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                   <p className="text-sm text-blue-800">
-                    Tổng điểm: <span className="font-bold text-xl">{totalScore}</span> / {getTotalMaxScore()} điểm
+                    Tổng điểm: <span className="font-bold text-xl">{totalScore}</span> / {totalMaxScore} điểm
                   </p>
                 </div>
               </div>
               
               <div className="flex space-x-4">
                 <button
-                  onClick={() => setShowConfirmPopup(false)}
+                  onClick={() => toggleConfirmPopup(false)}
                   className="flex-1 px-6 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold transition-colors duration-200"
                   type="button"
                 >
@@ -605,7 +425,7 @@ export default function GradeMidtermStudentPage() {
                 </button>
                 <button
                   onClick={() => {
-                    setShowConfirmPopup(false);
+                    toggleConfirmPopup(false);
                     handleConfirm();
                   }}
                   className="flex-1 px-6 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors duration-200 shadow-lg"
@@ -619,5 +439,25 @@ export default function GradeMidtermStudentPage() {
         )}
       </div>
     </div>
+  );
+}
+
+// Loading component
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Đang tải bài thi sinh viên...</p>
+      </div>
+    </div>
+  );
+}
+
+export default function GradeMidtermStudentPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <StudentExamDetailContent />
+    </Suspense>
   );
 }

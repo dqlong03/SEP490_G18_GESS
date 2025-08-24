@@ -1,4 +1,5 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL + "/api" || "https://localhost:7074/api";
 
 export async function resetPassword(
   email: string,

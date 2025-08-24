@@ -1,439 +1,332 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { Suspense } from 'react';
 import Select from 'react-select';
-import * as XLSX from 'xlsx';
-import { getUserIdFromToken } from '@/utils/tokenUtils';
-import {useRouter} from 'next/navigation';
+import { useCreateClass } from '@/hooks/teacher/useCreateClass';
+import { 
+  BookOpen, 
+  Users, 
+  Calendar, 
+  Download, 
+  Upload, 
+  Plus, 
+  Trash2,
+  FileSpreadsheet,
+  AlertCircle
+} from 'lucide-react';
 
-export default function AddClassPage() {
-  const [className, setClassName] = useState('');
-  const [subjects, setSubjects] = useState<any[]>([]);
-  const [semesters, setSemesters] = useState<any[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState<any>(null);
-  const [selectedSemester, setSelectedSemester] = useState<any>(null);
-  const [students, setStudents] = useState<any[]>([]);
-  const [fileName, setFileName] = useState<string>('');
-  const [errorMsg, setErrorMsg] = useState<string>('');
-  const [loading, setLoading] = useState(false);
-  const studentId = "FFD82D0C-E754-480F-FC1A-08DDB5DCA989"; 
+function CreateClassContent() {
+  const {
+    // Form state
+    className,
+    setClassName,
+    selectedSubject,
+    setSelectedSubject,
+    selectedSemester,
+    setSelectedSemester,
+    subjectOptions,
+    semesterOptions,
 
-  const router = useRouter();
+    // Students state
+    students,
+    fileName,
 
-  // Fetch subjects and semesters on mount
-  useEffect(() => {
-    const teacherId = getUserIdFromToken();
-    fetch(`https://localhost:7074/api/Class/subjects-by-teacher/${teacherId}`)
-      .then(res => res.json())
-      .then(data => setSubjects(data || []));
-    fetch('https://localhost:7074/api/Semesters')
-      .then(res => res.json())
-      .then(data => setSemesters(data || []));
-  }, []);
+    // UI state
+    errorMsg,
+    loading,
 
-  // Dropdown options
-  const subjectOptions = subjects.map((s: any) => ({
-    value: s.subjectId,
-    label: s.subjectName,
-    ...s,
-  }));
-  const semesterOptions = semesters.map((s: any) => ({
-    value: s.semesterId,
-    label: s.semesterName,
-    ...s,
-  }));
+    // Handlers
+    handleDownloadTemplate,
+    handleUpload,
+    handleAddStudent,
+    handleEditStudent,
+    handleDeleteStudent,
+    handleFormSubmit,
 
-  // Download template
-  const handleDownloadTemplate = () => {
-    const header = ['Avatar', 'Code', 'Email', 'Giới tính', 'Ngày sinh', 'Họ và tên'];
-    const rows = [
-      ['https://randomuser.me/api/portraits/men/1.jpg', 'C001', 'sv001@example.com', 'Nam', '2002-01-01', 'Nguyễn Văn A'],
-      ['https://randomuser.me/api/portraits/women/2.jpg', 'C002', 'sv002@example.com', 'Nữ', '2002-02-02', 'Trần Thị B'],
-    ];
-    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'DanhSach');
-    XLSX.writeFile(wb, 'mau_sinh_vien.xlsx');
-  };
-
-  // Upload and validate file
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const resetInput = () => {
-      if (e.target) e.target.value = '';
-    };
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      setErrorMsg('');
-      const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const json: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-
-      if (json.length < 2) {
-        setErrorMsg('File phải có ít nhất 1 dòng dữ liệu sinh viên.');
-        setFileName('');
-        resetInput();
-        return;
-      }
-      const header = json[0];
-      const requiredHeader = ['Avatar', 'Code', 'Email', 'Giới tính', 'Ngày sinh', 'Họ và tên'];
-      const isHeaderValid = requiredHeader.every((h, idx) => header[idx] === h);
-      if (!isHeaderValid) {
-        setErrorMsg('File mẫu không đúng định dạng hoặc thiếu trường thông tin!');
-        setFileName('');
-        resetInput();
-        return;
-      }
-      const dataArr = [];
-      for (let i = 1; i < json.length; i++) {
-        const row = json[i];
-        if (row.length < 6 || row.some((cell: string, idx: number) => cell === '')) {
-          setErrorMsg(`Dòng ${i + 1} thiếu thông tin. Vui lòng điền đầy đủ tất cả trường!`);
-          setFileName('');
-          resetInput();
-          return;
-        }
-        const [avatar, code, email, gender, dob, fullName] = row;
-        if (!isValidEmail(email)) {
-          setErrorMsg(`Email không hợp lệ ở dòng ${i + 1}: ${email}`);
-          setFileName('');
-          resetInput();
-          return;
-        }
-        if (!isValidDate(dob)) {
-          setErrorMsg(`Ngày sinh không hợp lệ ở dòng ${i + 1}: ${dob} (Định dạng: YYYY-MM-DD)`);
-          setFileName('');
-          resetInput();
-          return;
-        }
-        dataArr.push({
-          studentId: studentId, // Tạo GUID bất kỳ
-          avatar,
-          code,
-          email,
-          gender,
-          dob,
-          fullName,
-        });
-      }
-      setFileName(file.name);
-      setStudents(dataArr);
-      setErrorMsg('');
-      resetInput();
-    };
-    reader.readAsArrayBuffer(file);
-  };
-
-  // Add student row
-  const handleAddStudent = () => {
-    setStudents([
-      ...students,
-      {
-        studentId: studentId,
-        avatar: '',
-        code: '',
-        email: '',
-        gender: '',
-        dob: '',
-        fullName: '',
-      },
-    ]);
-  };
-
-  // Edit student
-  const handleEditStudent = (idx: number, key: string, value: string) => {
-    setStudents((prev) =>
-      prev.map((sv, i) => (i === idx ? { ...sv, [key]: value } : sv))
-    );
-  };
-
-  // Delete student
-  const handleDeleteStudent = (idx: number) => {
-    setStudents((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  function isValidEmail(email: string) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  }
-
-  function isValidDate(date: string) {
-    return /^\d{4}-\d{2}-\d{2}$/.test(date) && !isNaN(Date.parse(date));
-  }
-
-  // Save class (call API)
-  const handleSave = async () => {
-    if (!className.trim() || !selectedSubject || !selectedSemester) {
-      setErrorMsg('Vui lòng nhập đầy đủ thông tin lớp học!');
-      return;
-    }
-    for (let i = 0; i < students.length; i++) {
-      const sv = students[i];
-      if (
-        !sv.code?.trim() ||
-        !sv.email.trim() ||
-        !sv.gender.trim() ||
-        !sv.dob.trim() ||
-        !sv.fullName.trim() ||
-        !sv.avatar.trim()
-      ) {
-        setErrorMsg(`Sinh viên dòng ${i + 1} thiếu thông tin. Vui lòng điền đầy đủ!`);
-        return;
-      }
-      if (!isValidEmail(sv.email)) {
-        setErrorMsg(`Email không hợp lệ ở dòng ${i + 1}: ${sv.email}`);
-        return;
-      }
-      if (!isValidDate(sv.dob)) {
-        setErrorMsg(`Ngày sinh không hợp lệ ở dòng ${i + 1}: ${sv.dob} (Định dạng: YYYY-MM-DD)`);
-        return;
-      }
-    }
-    setErrorMsg('');
-    setLoading(true);
-
-    try {
-      const teacherId = getUserIdFromToken();
-      const payload = {
-        teacherId,
-        subjectId: selectedSubject.value,
-        semesterId: selectedSemester.value,
-        className: className.trim(),
-        students: students.map(sv => ({
-          studentId: sv.studentId || studentId,
-          code: sv.code,
-          fullName: sv.fullName,
-          email: sv.email,
-          gender: sv.gender === 'Nam' ? true : false,
-          dateOfBirth: sv.dob,
-          avartar: sv.avatar,
-          cohortId: sv.cohortId || 0
-        })),
-      };
-
-      const res = await fetch('https://localhost:7074/api/Class/CreateClass', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        setErrorMsg(err?.message || 'Lỗi khi tạo lớp học');
-        setLoading(false);
-        return;
-      }
-
-      setErrorMsg('');
-      alert('Tạo lớp học thành công!');
-      router.push('/teacher/myclass'); // Redirect to class list
-      // Optionally reset form here
-    } catch (err: any) {
-      setErrorMsg('Lỗi khi tạo lớp học');
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Styles
+    selectStyles,
+  } = useCreateClass();
 
   return (
-    <div className="w-full min-h-screen font-sans p-0">
-      <div className="w-full py-8 px-4">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-left">Thêm lớp học mới</h2>
-        <form
-          onSubmit={e => { e.preventDefault(); handleSave(); }}
-          className="space-y-6"
-        >
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[220px]">
-              <label className="block font-semibold mb-1">Tên lớp</label>
-              <input
-                type="text"
-                value={className}
-                onChange={e => setClassName(e.target.value)}
-                required
-                className="border rounded px-3 py-2 w-full focus:ring-2 focus:ring-blue-200 transition"
-                placeholder="Nhập tên lớp"
-              />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        
+        {/* Header Section */}
+        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg">
+              <BookOpen className="w-6 h-6" />
             </div>
-            <div className="flex-1 min-w-[220px]">
-              <label className="block font-semibold mb-1">Kỳ học</label>
-              <Select
-                options={semesterOptions}
-                value={selectedSemester}
-                onChange={setSelectedSemester}
-                placeholder="Chọn kỳ học"
-                isClearable
-                styles={{
-                  control: (provided) => ({
-                    ...provided,
-                    minHeight: '40px',
-                    borderColor: '#d1d5db',
-                    boxShadow: 'none',
-                  }),
-                }}
-              />
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">Tạo Lớp Học Mới</h1>
+              <p className="text-gray-600">Thêm lớp học và quản lý danh sách sinh viên</p>
             </div>
-            <div className="flex-1 min-w-[220px]">
-              <label className="block font-semibold mb-1">Môn học</label>
-              <Select
-                options={subjectOptions}
-                value={selectedSubject}
-                onChange={setSelectedSubject}
-                placeholder="Chọn môn học"
-                isClearable
-                styles={{
-                  control: (provided) => ({
-                    ...provided,
-                    minHeight: '40px',
-                    borderColor: '#d1d5db',
-                    boxShadow: 'none',
-                  }),
-                }}
-              />
+          </div>
+        </div>
+
+        <form onSubmit={handleFormSubmit} className="space-y-8">
+          
+          {/* Form Fields */}
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-blue-600" />
+              Thông tin lớp học
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tên lớp học
+                </label>
+                <input
+                  type="text"
+                  value={className}
+                  onChange={e => setClassName(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="Nhập tên lớp học"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Kỳ học
+                </label>
+                <Select
+                  options={semesterOptions}
+                  value={selectedSemester}
+                  onChange={setSelectedSemester}
+                  placeholder="Chọn kỳ học"
+                  isClearable
+                  styles={selectStyles}
+                  className="react-select-container"
+                  classNamePrefix="react-select"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Môn học
+                </label>
+                <Select
+                  options={subjectOptions}
+                  value={selectedSubject}
+                  onChange={setSelectedSubject}
+                  placeholder="Chọn môn học"
+                  isClearable
+                  styles={selectStyles}
+                  className="react-select-container"
+                  classNamePrefix="react-select"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Nút mẫu và upload */}
-          <div className="flex items-center gap-4 mt-2">
-            <button
-              type="button"
-              onClick={handleDownloadTemplate}
-              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition font-semibold"
-            >
-              Tải file mẫu
-            </button>
-            <label className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold cursor-pointer">
-              Tải lên danh sách sinh viên
-              <input
-                type="file"
-                accept=".xlsx, .xls"
-                onChange={handleUpload}
-                className="hidden"
-              />
-            </label>
-            {fileName && (
-              <span className="text-gray-600 text-sm ml-2">{fileName}</span>
+          {/* File Upload Section */}
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-600" />
+              Danh sách sinh viên
+            </h2>
+            
+            <div className="flex flex-wrap items-center gap-4 mb-4">
+              <button
+                type="button"
+                onClick={handleDownloadTemplate}
+                className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 font-medium shadow-md hover:shadow-lg"
+              >
+                <Download className="w-4 h-4" />
+                Tải file mẫu
+              </button>
+              
+              <label className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 font-medium shadow-md hover:shadow-lg cursor-pointer">
+                <Upload className="w-4 h-4" />
+                Tải lên danh sách
+                <input
+                  type="file"
+                  accept=".xlsx, .xls"
+                  onChange={handleUpload}
+                  className="hidden"
+                />
+              </label>
+              
+              {fileName && (
+                <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-100 px-3 py-2 rounded-lg">
+                  <FileSpreadsheet className="w-4 h-4" />
+                  {fileName}
+                </div>
+              )}
+            </div>
+
+            {/* Display errors */}
+            {errorMsg && (
+              <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                <AlertCircle className="w-5 h-5" />
+                <span className="font-medium">{errorMsg}</span>
+              </div>
             )}
           </div>
 
-          {/* Hiển thị lỗi */}
-          {errorMsg && (
-            <div className="text-red-600 font-semibold mt-2">{errorMsg}</div>
-          )}
-
-          {/* Bảng sinh viên */}
+          {/* Students table */}
           {students.length > 0 && (
-            <div className="overflow-x-auto rounded shadow bg-white mt-6 w-full">
-              <table className="min-w-[900px] w-full text-sm md:text-base border border-gray-200">
-                <thead>
-                  <tr className="bg-gray-100 text-gray-700 font-semibold">
-                    <th className="py-2 px-2 border-b min-w-[60px] text-center">STT</th>
-                    <th className="py-2 px-2 border-b min-w-[120px] text-center">Avatar</th>
-                    <th className="py-2 px-2 border-b min-w-[100px] text-left">Code</th>
-                    <th className="py-2 px-2 border-b min-w-[220px] text-left">Email</th>
-                    <th className="py-2 px-2 border-b min-w-[100px] text-center">Giới tính</th>
-                    <th className="py-2 px-2 border-b min-w-[140px] text-center">Ngày sinh</th>
-                    <th className="py-2 px-2 border-b min-w-[200px] text-left">Họ và tên</th>
-                    <th className="py-2 px-2 border-b min-w-[80px] text-center"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {students.map((sv, idx) => (
-                    <tr key={idx} className="hover:bg-blue-50 transition">
-                      <td className="py-2 px-2 border-b text-center">{idx + 1}</td>
-                      <td className="py-2 px-2 border-b text-center">
-                       
-                        <input
-                          type="text"
-                          value={sv.avatar}
-                          onChange={e => handleEditStudent(idx, 'avatar', e.target.value)}
-                          className="border rounded px-2 py-1 w-full"
-                          placeholder="URL ảnh"
-                        />
-                      </td>
-                      <td className="py-2 px-2 border-b">
-                        <input
-                          type="text"
-                          value={sv.code}
-                          onChange={e => handleEditStudent(idx, 'code', e.target.value)}
-                          className="border rounded px-2 py-1 w-full"
-                        />
-                      </td>
-                      <td className="py-2 px-2 border-b">
-                        <input
-                          type="email"
-                          value={sv.email}
-                          onChange={e => handleEditStudent(idx, 'email', e.target.value)}
-                          className="border rounded px-2 py-1 w-full"
-                        />
-                      </td>
-                      <td className="py-2 px-2 border-b text-center">
-                        <select
-                          value={sv.gender}
-                          onChange={e => handleEditStudent(idx, 'gender', e.target.value)}
-                          className="border rounded px-2 py-1 w-full"
-                        >
-                          <option value="">--</option>
-                          <option value="Nam">Nam</option>
-                          <option value="Nữ">Nữ</option>
-                        </select>
-                      </td>
-                      <td className="py-2 px-2 border-b text-center">
-                        <input
-                          type="date"
-                          value={sv.dob}
-                          onChange={e => handleEditStudent(idx, 'dob', e.target.value)}
-                          className="border rounded px-2 py-1 w-full"
-                        />
-                      </td>
-                      <td className="py-2 px-2 border-b">
-                        <input
-                          type="text"
-                          value={sv.fullName}
-                          onChange={e => handleEditStudent(idx, 'fullName', e.target.value)}
-                          className="border rounded px-2 py-1 w-full"
-                        />
-                      </td>
-                      <td className="py-2 px-2 border-b text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteStudent(idx)}
-                          className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition"
-                        >
-                          Xóa
-                        </button>
-                      </td>
+            <div className="bg-white rounded-xl shadow-md overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-blue-600" />
+                  Danh sách sinh viên ({students.length} sinh viên)
+                </h3>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[1000px]">
+                  <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avatar</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã SV</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Giới tính</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày sinh</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Họ và tên</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="mt-2">
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {students.map((sv, idx) => (
+                      <tr key={idx} className="hover:bg-blue-50 transition-colors duration-200">
+                        <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {idx + 1}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <input
+                            type="text"
+                            value={sv.avatar}
+                            onChange={e => handleEditStudent(idx, 'avatar', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            placeholder="URL ảnh"
+                          />
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <input
+                            type="text"
+                            value={sv.code}
+                            onChange={e => handleEditStudent(idx, 'code', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            placeholder="Mã sinh viên"
+                          />
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <input
+                            type="email"
+                            value={sv.email}
+                            onChange={e => handleEditStudent(idx, 'email', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            placeholder="Email sinh viên"
+                          />
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <select
+                            value={sv.gender}
+                            onChange={e => handleEditStudent(idx, 'gender', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          >
+                            <option value="">Chọn giới tính</option>
+                            <option value="Nam">Nam</option>
+                            <option value="Nữ">Nữ</option>
+                          </select>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <input
+                            type="date"
+                            value={sv.dob}
+                            onChange={e => handleEditStudent(idx, 'dob', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <input
+                            type="text"
+                            value={sv.fullName}
+                            onChange={e => handleEditStudent(idx, 'fullName', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            placeholder="Họ và tên"
+                          />
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteStudent(idx)}
+                            className="inline-flex items-center gap-1 bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 transition-colors duration-200 text-sm font-medium"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Xóa
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
                 <button
                   type="button"
                   onClick={handleAddStudent}
-                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 transition font-semibold"
+                  className="inline-flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200 font-medium"
                 >
+                  <Plus className="w-4 h-4" />
                   Thêm sinh viên
                 </button>
               </div>
             </div>
           )}
 
-          <div className="mt-6">  
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition font-semibold"
-              disabled={loading}
-            >
-              {loading ? 'Đang lưu...' : 'Lưu lớp học'}
-            </button>
+          {/* Submit Button */}
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">Hoàn tất tạo lớp</h3>
+                <p className="text-sm text-gray-600">Kiểm tra thông tin và lưu lớp học</p>
+              </div>
+              <button
+                type="submit"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Đang lưu...
+                  </>
+                ) : (
+                  <>
+                    <BookOpen className="w-4 h-4" />
+                    Lưu lớp học
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </form>
       </div>
     </div>
+  );
+}
+
+export default function CreateClassPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="bg-white rounded-xl shadow-md p-8 flex items-center space-x-4">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800">Đang tải</h3>
+            <p className="text-sm text-gray-600">Vui lòng chờ trong giây lát...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <CreateClassContent />
+    </Suspense>
   );
 }

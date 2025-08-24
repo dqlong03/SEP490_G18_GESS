@@ -79,7 +79,6 @@ export default function Dashboard() {
   const router = useRouter();
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
     <div className="flex flex-col h-screen bg-gray-100">
       {/* Main Content */}
       <div className="flex-1 p-6">
@@ -119,6 +118,5 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
-    </Suspense>
   );
 }

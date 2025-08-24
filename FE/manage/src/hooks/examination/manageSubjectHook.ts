@@ -2,6 +2,7 @@
 
 import { useState, useEffect, ChangeEvent, FormEvent, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/utils/toastUtils";
 import {
   Subject,
   SubjectForm,
@@ -46,12 +47,18 @@ export function useSubjects() {
       const data = await fetchSubjects(params);
       setSubjects(data);
 
-      const count = await countSubjects({
-        name: searchName,
-        pageSize,
-      });
-      setTotalPages(Math.ceil(count / pageSize));
+      try {
+        const count = await countSubjects({
+          name: searchName,
+          pageSize,
+        });
+        setTotalPages(Math.ceil(count / pageSize));
+      } catch (countErr) {
+        // Không báo lỗi cho API count
+        setTotalPages(1);
+      }
     } catch (err: any) {
+      showToast("error", "Có lỗi xảy ra khi tải dữ liệu: " + err.message);
       setError(err.message);
     }
     setLoading(false);
@@ -60,7 +67,21 @@ export function useSubjects() {
   useEffect(() => {
     fetchAllSubjects();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageNumber, searchName]);
+  }, [pageNumber]);
+
+  // Debounce search
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      if (pageNumber === 1) {
+        fetchAllSubjects();
+      } else {
+        setPageNumber(1);
+      }
+    }, 800); // Chờ 800ms sau khi dừng gõ
+
+    return () => clearTimeout(debounceTimer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchName]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -93,14 +114,17 @@ export function useSubjects() {
     try {
       if (editingId === null) {
         await createSubject(form);
+        showToast("success", "Thêm môn học thành công!");
       } else {
         await updateSubject(editingId, form);
+        showToast("success", "Cập nhật môn học thành công!");
       }
       setForm({ subjectName: "", description: "", course: "", noCredits: 0 });
       setEditingId(null);
       setShowPopup(false);
       fetchAllSubjects();
     } catch (err: any) {
+      showToast("error", "Có lỗi xảy ra: " + err.message);
       setError(err.message);
     }
     setLoading(false);
@@ -119,8 +143,7 @@ export function useSubjects() {
 
   const handleSearch = (e: FormEvent) => {
     e.preventDefault();
-    setPageNumber(1);
-    fetchAllSubjects();
+    // Không cần xử lý gì vì đã có debounce
   };
 
   const handleMenuAction = (action: "score" | "chapter", subjectId: number) => {

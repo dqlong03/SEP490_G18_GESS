@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUsers } from "@hooks/admin/manageUserHook";
-import { Suspense } from "react";
 
 export default function ManageUser() {
   const {
@@ -31,7 +30,6 @@ export default function ManageUser() {
   };
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
     <div className="container mx-auto px-4 py-6 fadeIn">
       {/* Search and filter bar */}
       <div className="flex flex-wrap gap-4 mb-4">
@@ -128,6 +126,6 @@ export default function ManageUser() {
         </table>
       </div>
     </div>
-    </Suspense>
+    
   );
 }

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import { getUserIdFromToken } from '@/utils/tokenUtils';
+import React, { Suspense } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { useCreateExamPaper } from '@/hooks/teacher/useCreateExamPaper';
 import { 
   BookOpen, 
   Plus, 
@@ -22,341 +23,86 @@ import {
   Star
 } from 'lucide-react';
 
-
-type Question = {
-  id: number;
-  content: string;
-  level: string;
-};
-
-type Chapter = {
-  chapterId: number;
-  chapterName: string;
-  description: string;
-};
-
-type Level = {
-  value: number;
-  label: string;
-};
-
-type GradeComponent = {
-  value: number;
-  label: string;
-};
-
-// Thêm type cho tiêu chí chấm
-type Criterion = {
-  criterionName: string;
-  weightPercent: number;
-  description: string;
-};
-
-const levels: Level[] = [
-  { value: 1, label: 'Dễ' },
-  { value: 2, label: 'Trung bình' },
-  { value: 3, label: 'Khó' },
-];
-
-const API_URL = 'https://localhost:7074';
-
-export default function CreateExamPaperPage() {
+function CreateExamPaperContent() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
 
   const classId = Number(params.classId);
-  const semesterId = searchParams.get('semesterId'); // sẽ là string hoặc null
-  const semesterIdNumber = semesterId ? Number(semesterId) : null;
+  const semesterId = searchParams.get('semesterId');
 
-  console.log(semesterId);
+  const {
+    // Basic form state
+    inputName,
+    setInputName,
+    selectedGradeComponent,
+    setSelectedGradeComponent,
+    isSubmitting,
 
-  // State
-  const [inputName, setInputName] = useState('');
-  const [showQuestionPopup, setShowQuestionPopup] = useState(false);
-  const [searchContent, setSearchContent] = useState('');
-  const [selectedLevel, setSelectedLevel] = useState<Level | null>(null);
-  const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
-  const [chapters, setChapters] = useState<Chapter[]>([]);
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [questionChecks, setQuestionChecks] = useState<Record<number, boolean>>({});
-  const [selectedQuestions, setSelectedQuestions] = useState<Question[]>([]);
-  const [questionScores, setQuestionScores] = useState<Record<number, number>>({});
-  const [manualQuestions, setManualQuestions] = useState<any[]>([]);
-  const [showManualInput, setShowManualInput] = useState(false);
+    // Data
+    chapters,
+    gradeComponents,
+    questions,
+    levels,
 
-  // Phân trang popup
-  const [questionPage, setQuestionPage] = useState(1);
-  const [questionTotalPages, setQuestionTotalPages] = useState(1);
-  const [loadingQuestions, setLoadingQuestions] = useState(false);
+    // Question selection
+    showQuestionPopup,
+    setShowQuestionPopup,
+    selectedQuestions,
+    questionChecks,
+    setQuestionChecks,
+    questionScores,
 
-  // State cho nhập thủ công - cập nhật để có tiêu chí chấm
-  const [manualContent, setManualContent] = useState('');
-  const [manualScore, setManualScore] = useState(1);
-  const [manualCriteria, setManualCriteria] = useState<Criterion[]>([
-    { criterionName: '', weightPercent: 25, description: '' }
-  ]);
-  const [manualLevel, setManualLevel] = useState('');
-  const [manualChapter, setManualChapter] = useState<number | null>(null);
+    // Question filters and pagination
+    searchContent,
+    selectedLevel,
+    selectedChapter,
+    questionPage,
+    questionTotalPages,
+    loadingQuestions,
 
-  // Sửa câu hỏi thủ công
-  const [editingManualId, setEditingManualId] = useState<number | null>(null);
+    // Manual questions
+    showManualInput,
+    manualQuestions,
+    manualContent,
+    setManualContent,
+    manualScore,
+    setManualScore,
+    manualCriteria,
+    manualLevel,
+    setManualLevel,
+    manualChapter,
+    setManualChapter,
+    editingManualId,
 
-  // Đầu điểm
-  const [gradeComponents, setGradeComponents] = useState<GradeComponent[]>([]);
-  const [selectedGradeComponent, setSelectedGradeComponent] = useState<GradeComponent | null>(null);
+    // Computed values
+    totalScore,
 
-  // Loading state
-  const [isSubmitting, setIsSubmitting] = useState(false);
+    // Action handlers
+    handleSave,
+    handleSaveQuestions,
+    handleRemoveQuestion,
+    handleAddManualQuestion,
+    handleEditManualQuestion,
+    handleCancelManualInput,
+    showManualInputDialog,
+    updateQuestionScore,
+    updateManualQuestionScore,
 
-  // Lấy danh sách chapter và đầu điểm khi vào trang
-  useEffect(() => {
-    if (classId) {
-      fetch(`${API_URL}/api/Class/${classId}/chapters`)
-        .then(res => res.json())
-        .then(data => setChapters(data || []))
-        .catch(() => setChapters([]));
-      fetch(`${API_URL}/api/Class/${classId}/grade-components`)
-        .then(res => res.json())
-        .then(data => setGradeComponents(
-          (data || []).map((g: any) => ({
-            value: g.categoryExamId,
-            label: g.categoryExamName
-          }))
-        ));
-    }
-  }, [classId]);
+    // Criteria management
+    addCriterion,
+    removeCriterion,
+    updateCriterion,
 
-  // Lấy tất cả câu hỏi khi vào trang hoặc khi filter/thay đổi trang
-  useEffect(() => {
-    if (classId) {
-      fetchQuestions(questionPage);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [classId, searchContent, selectedLevel, selectedChapter, questionPage]);
+    // Filter handlers
+    handleSearchChange,
+    handleLevelChange,
+    handleChapterChange,
+    handlePageChange,
 
-  const fetchQuestions = async (page: number) => {
-    setLoadingQuestions(true);
-    const params = new URLSearchParams({
-      classId: String(classId),
-      page: String(page),
-      pageSize: '10',
-      ...(searchContent && { content: searchContent }),
-      ...(selectedLevel && { levelId: String(selectedLevel.value) }),
-      ...(selectedChapter && { chapterId: String(selectedChapter.chapterId) }),
-    });
-    const res = await fetch(`${API_URL}/api/PracticeQuestion/practice-questions?${params}`);
-    const data = await res.json();
-    setQuestions(data.data || []);
-    setQuestionTotalPages(data.totalPages || 1);
-    setQuestionPage(data.page || 1);
-    setLoadingQuestions(false);
-  };
-
-  // Lưu câu hỏi đã chọn
-  const handleSaveQuestions = () => {
-    const newSelected = questions.filter(q => questionChecks[q.id]);
-    setSelectedQuestions([...selectedQuestions, ...newSelected.filter(q => !selectedQuestions.some(sq => sq.id === q.id))]);
-    setQuestionScores(prev => ({
-      ...prev,
-      ...Object.fromEntries(newSelected.map(q => [q.id, 1])),
-    }));
-    setShowQuestionPopup(false);
-    setQuestionChecks({});
-    setSearchContent('');
-    setSelectedLevel(null);
-    setSelectedChapter(null);
-    setQuestionPage(1);
-  };
-
-  // Xóa câu hỏi khỏi danh sách đã chọn
-  const handleRemoveQuestion = (id: number, isManual = false) => {
-    if (isManual) {
-      setManualQuestions(manualQuestions.filter(q => q.manualId !== id));
-    } else {
-      setSelectedQuestions(selectedQuestions.filter(q => q.id !== id));
-      setQuestionScores(prev => {
-        const newScores = { ...prev };
-        delete newScores[id];
-        return newScores;
-      });
-    }
-  };
-
-  // Tổng số điểm
-  const totalScore =
-    selectedQuestions.reduce((sum, q) => sum + (questionScores[q.id] || 0), 0) +
-    manualQuestions.reduce((sum, q) => sum + (q.score || 0), 0);
-
-  // Gửi tạo đề thi
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputName || !selectedGradeComponent || (selectedQuestions.length + manualQuestions.length) === 0) {
-      alert('Vui lòng nhập tên đề thi, chọn đầu điểm và chọn/thêm ít nhất 1 câu hỏi!');
-      return;
-    }
-
-    // Thêm validation tổng điểm phải bằng 10
-    if (totalScore !== 10) {
-      alert(`Tổng điểm của đề thi phải bằng 10! Hiện tại: ${totalScore} điểm`);
-      return;
-    }
-
-    setIsSubmitting(true);
-    const teacherId = getUserIdFromToken();
-    const payload = {
-      classId,
-      examName: inputName,
-      totalQuestion: selectedQuestions.length + manualQuestions.length,
-      teacherId,
-      categoryExamId: selectedGradeComponent.value,
-      semesterId: semesterIdNumber, // Sử dụng semesterIdNumber đã chuyển đổi
-      manualQuestions: manualQuestions.map(q => ({
-        content: q.content,
-        criteria: JSON.stringify(q.criteria), // Serialize criteria array to JSON string
-        score: q.score,
-        level: q.level,
-        chapterId: q.chapterId,
-      })),
-      selectedQuestions: selectedQuestions.map(q => ({
-        practiceQuestionId: q.id,
-        score: questionScores[q.id] ?? 1,
-      })),
-    };
-
-    try {
-      const res = await fetch(`${API_URL}/api/PracticeExamPaper/create-exam-paper`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const err = await res.text();
-        alert('Tạo đề thi thất bại: ' + err);
-        return;
-      }
-      const data = await res.json();
-      alert('Tạo đề thi thành công! Mã đề: ' + data.pracExamPaperId);
-      router.push(`/teacher/myexam/createpracexam/${classId.toString()}`);
-    } catch (error) {
-      alert('Có lỗi xảy ra khi gọi API!');
-      console.error(error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Thêm các hàm xử lý tiêu chí chấm
-  const addCriterion = () => {
-    // if (manualCriteria.length >= 3) {
-    //   alert('Chỉ được phép tối đa 3 tiêu chí chấm điểm!');
-    //   return;
-    // }
-    setManualCriteria([
-      ...manualCriteria,
-      { criterionName: '', weightPercent: 0, description: '' }
-    ]);
-  };
-
-  const removeCriterion = (index: number) => {
-    const newCriteria = manualCriteria.filter((_, i) => i !== index);
-    setManualCriteria(newCriteria);
-  };
-
-  const updateCriterion = (index: number, field: keyof Criterion, value: string | number) => {
-    const newCriteria = [...manualCriteria];
-    newCriteria[index] = { ...newCriteria[index], [field]: value };
-    setManualCriteria(newCriteria);
-  };
-
-  // Cập nhật hàm thêm câu hỏi thủ công
-  const handleAddManualQuestion = () => {
-    if (!manualContent.trim() || manualScore <= 0 || !manualLevel || !manualChapter) {
-      alert('Vui lòng nhập nội dung, điểm hợp lệ, chọn độ khó và chương!');
-      return;
-    }
-
-    // Validate tiêu chí chấm
-    const validCriteria = manualCriteria.filter(c => c.criterionName.trim());
-    if (validCriteria.length === 0) {
-      alert('Vui lòng thêm ít nhất một tiêu chí chấm!');
-      return;
-    }
-
-    const totalWeight = validCriteria.reduce((sum, c) => sum + c.weightPercent, 0);
-    if (totalWeight !== 100) {
-      alert('Tổng phần trăm điểm của các tiêu chí phải bằng 100%!');
-      return;
-    }
-
-    if (editingManualId) {
-      setManualQuestions(manualQuestions.map(q =>
-        q.manualId === editingManualId
-          ? {
-              ...q,
-              content: manualContent,
-              score: manualScore,
-              criteria: validCriteria,
-              level: manualLevel,
-              chapterId: manualChapter,
-            }
-          : q
-      ));
-      setEditingManualId(null);
-    } else {
-      setManualQuestions([
-        ...manualQuestions,
-        {
-          manualId: Date.now(),
-          content: manualContent,
-          score: manualScore,
-          criteria: validCriteria,
-          level: manualLevel,
-          chapterId: manualChapter,
-        },
-      ]);
-    }
-    setManualContent('');
-    setManualScore(1);
-    setManualCriteria([{ criterionName: '', weightPercent: 25, description: '' }]);
-    setManualLevel('');
-    setManualChapter(null);
-    setShowManualInput(false);
-  };
-
-  // Cập nhật hàm bắt đầu sửa câu hỏi thủ công
-  const handleEditManualQuestion = (manualId: number) => {
-    const q = manualQuestions.find(q => q.manualId === manualId);
-    if (q) {
-      setManualContent(q.content);
-      setManualScore(q.score);
-      setManualCriteria(q.criteria || [{ criterionName: '', weightPercent: 25, description: '' }]);
-      setManualLevel(q.level);
-      setManualChapter(q.chapterId);
-      setEditingManualId(manualId);
-      setShowManualInput(true);
-    }
-  };
-
-  // Cập nhật hàm hủy sửa/thêm
-  const handleCancelManualInput = () => {
-    setManualContent('');
-    setManualScore(1);
-    setManualCriteria([{ criterionName: '', weightPercent: 25, description: '' }]);
-    setManualLevel('');
-    setManualChapter(null);
-    setEditingManualId(null);
-    setShowManualInput(false);
-  };
-
-  const getLevelInfo = (level: string) => {
-    const levelMap: Record<string, { color: string; bgColor: string }> = {
-      'Dễ': { color: 'text-green-600', bgColor: 'bg-green-50' },
-      'Trung bình': { color: 'text-yellow-600', bgColor: 'bg-yellow-50' },
-      'Khó': { color: 'text-red-600', bgColor: 'bg-red-50' },
-    };
-    return levelMap[level] || { color: 'text-gray-600', bgColor: 'bg-gray-50' };
-  };
+    // Utility functions
+    getLevelInfo,
+  } = useCreateExamPaper(classId, semesterId);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -487,15 +233,7 @@ export default function CreateExamPaperPage() {
               <button
                 type="button"
                 className="flex items-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg"
-                onClick={() => {
-                  setShowManualInput(true);
-                  setEditingManualId(null);
-                  setManualContent('');
-                  setManualScore(1);
-                  setManualCriteria([{ criterionName: '', weightPercent: 25, description: '' }]);
-                  setManualLevel('');
-                  setManualChapter(null);
-                }}
+                onClick={showManualInputDialog}
               >
                 <Plus className="w-4 h-4" />
                 <span>Thêm câu hỏi thủ công</span>
@@ -573,26 +311,12 @@ export default function CreateExamPaperPage() {
                       type="button"
                       onClick={addCriterion}
                       className="flex items-center space-x-1 px-3 py-1 bg-green-100 hover:bg-green-200 text-green-800 rounded-lg text-sm font-medium transition-colors"
-                      // disabled={manualCriteria.length >= 3}
-                      // title={manualCriteria.length >= 3 ? "Chỉ được phép tối đa 3 tiêu chí" : ""}
                     >
                       <Plus className="w-4 h-4" />
                       <span>Thêm tiêu chí</span>
                     </button>
                   </div>
                   
-                  {/* Warning message when having more than 3 criteria */}
-                  {/* {manualCriteria.length > 3 && (
-                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <AlertCircle className="w-5 h-5 text-red-600" />
-                        <span className="text-red-700 font-medium">
-                          Bạn có {manualCriteria.length} tiêu chí. Vui lòng xóa bớt để chỉ còn tối đa 3 tiêu chí!
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                   */}
                   <div className="space-y-4">
                     {manualCriteria.map((criterion, index) => (
                       <div key={index} className="border border-gray-200 rounded-lg p-4">
@@ -714,12 +438,7 @@ export default function CreateExamPaperPage() {
                               type="number"
                               min={0}
                               value={questionScores[q.id] ?? 1}
-                              onChange={e =>
-                                setQuestionScores((prev) => ({
-                                  ...prev,
-                                  [q.id]: Number(e.target.value),
-                                }))
-                              }
+                              onChange={e => updateQuestionScore(q.id, Number(e.target.value))}
                               className="w-20 px-2 py-1 border border-gray-300 rounded text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
                           </div>
@@ -761,12 +480,7 @@ export default function CreateExamPaperPage() {
                               type="number"
                               min={0}
                               value={q.score}
-                              onChange={e => {
-                                const val = Number(e.target.value);
-                                setManualQuestions(manualQuestions.map(mq =>
-                                  mq.manualId === q.manualId ? { ...mq, score: val } : mq
-                                ));
-                              }}
+                              onChange={e => updateManualQuestionScore(q.manualId, Number(e.target.value))}
                               className="w-20 px-2 py-1 border border-gray-300 rounded text-center focus:ring-2 focus:ring-green-500 focus:border-transparent"
                             />
                           </div>
@@ -796,7 +510,7 @@ export default function CreateExamPaperPage() {
                         <div className="bg-white rounded-lg p-3 mb-3">
                           <span className="text-sm font-medium text-gray-600 mb-2 block">Tiêu chí chấm điểm:</span>
                           <div className="space-y-2">
-                            {q.criteria.map((criterion: Criterion, critIdx: number) => (
+                            {q.criteria.map((criterion, critIdx) => (
                               <div key={critIdx} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                                 <div className="flex-1">
                                   <span className="font-medium text-sm text-gray-800">{criterion.criterionName}</span>
@@ -891,10 +605,7 @@ export default function CreateExamPaperPage() {
                       type="text"
                       placeholder="Tìm theo nội dung"
                       value={searchContent}
-                      onChange={e => {
-                        setSearchContent(e.target.value);
-                        setQuestionPage(1);
-                      }}
+                      onChange={e => handleSearchChange(e.target.value)}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     />
                   </div>
@@ -904,8 +615,7 @@ export default function CreateExamPaperPage() {
                       value={selectedLevel?.value || ''}
                       onChange={e => {
                         const val = Number(e.target.value);
-                        setSelectedLevel(val ? levels.find(l => l.value === val) || null : null);
-                        setQuestionPage(1);
+                        handleLevelChange(val ? levels.find(l => l.value === val) || null : null);
                       }}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     >
@@ -921,8 +631,7 @@ export default function CreateExamPaperPage() {
                       value={selectedChapter?.chapterId || ''}
                       onChange={e => {
                         const val = Number(e.target.value);
-                        setSelectedChapter(val ? chapters.find(c => c.chapterId === val) || null : null);
-                        setQuestionPage(1);
+                        handleChapterChange(val ? chapters.find(c => c.chapterId === val) || null : null);
                       }}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     >
@@ -1007,7 +716,7 @@ export default function CreateExamPaperPage() {
                   <button
                     type="button"
                     disabled={questionPage <= 1}
-                    onClick={() => setQuestionPage(p => Math.max(1, p - 1))}
+                    onClick={() => handlePageChange(Math.max(1, questionPage - 1))}
                     className="flex items-center space-x-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
                     <ChevronLeft className="w-4 h-4" />
@@ -1021,7 +730,7 @@ export default function CreateExamPaperPage() {
                   <button
                     type="button"
                     disabled={questionPage >= questionTotalPages}
-                    onClick={() => setQuestionPage(p => Math.min(questionTotalPages, p + 1))}
+                    onClick={() => handlePageChange(Math.min(questionTotalPages, questionPage + 1))}
                     className="flex items-center space-x-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
                     <span>Trang sau</span>
@@ -1055,5 +764,20 @@ export default function CreateExamPaperPage() {
         )}
       </div>
     </div>
-  );  
+  );
+}
+
+export default function CreateExamPaperPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Đang tải trang tạo đề thi...</p>
+        </div>
+      </div>
+    }>
+      <CreateExamPaperContent />
+    </Suspense>
+  );
 }

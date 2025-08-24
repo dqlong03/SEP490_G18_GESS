@@ -1,182 +1,51 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { Suspense } from 'react';
 import Select from 'react-select';
-import { useRouter } from 'next/navigation';
-import { getUserIdFromToken } from '@utils/tokenUtils';
+import { useGiveGrade } from '@/hooks/teacher/useGiveGrade';
 
-const statusOptions = [
-  { value: 0, label: 'Chưa chấm' },
-  { value: 1, label: 'Đã chấm' }
-];
+// Loading component
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Đang tải...</p>
+      </div>
+    </div>
+  );
+}
 
-// 10 năm gần nhất
-const getYearOptions = () => {
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  return Array.from({ length: 10 }, (_, i) => {
-    const y1 = currentYear - i;
-    const y2 = y1 + 1;
-    return {
-      value: y1,
-      label: `${y1}-${y2}`,
-    };
-  });
-};
+function GiveGradeContent() {
+  const {
+    // State
+    subjects,
+    semesters,
+    selectedSubject,
+    setSelectedSubject,
+    selectedSemester,
+    setSelectedSemester,
+    selectedStatus,
+    setSelectedStatus,
+    selectedYear,
+    setSelectedYear,
+    yearOptions,
+    statusOptions,
+    exams,
+    totalPages,
+    page,
+    setPage,
+    loading,
+    pageSize,
+    statistics,
 
-export default function GiveGradePage() {
-  const [subjects, setSubjects] = useState<any[]>([]);
-  const [semesters, setSemesters] = useState<any[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState<any>(null);
-  const [selectedSemester, setSelectedSemester] = useState<any>(null);
-  const [selectedStatus, setSelectedStatus] = useState<any>(statusOptions[0]); // Mặc định: Chưa chấm
-  const [selectedYear, setSelectedYear] = useState<any>(null);
-
-  const [exams, setExams] = useState<any[]>([]);
-  const [totalPages, setTotalPages] = useState(1);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const pageSize = 10;
-  const router = useRouter();
-
-  const teacherId = getUserIdFromToken() || '2A96A929-C6A1-4501-FC19-08DDB5DCA989';
-
-  // Lấy năm hiện tại làm mặc định
-  const yearOptions = useMemo(() => getYearOptions(), []);
-  
-  // Fetch subjects và set giá trị mặc định
-  useEffect(() => {
-    fetch(`https://localhost:7074/api/MultipleExam/subjects-by-teacher/${teacherId}`)
-      .then(res => res.json())
-      .then(data => {
-        const subjectOptions = data.map((s: any) => ({
-          value: s.subjectId,
-          label: s.subjectName,
-        }));
-        setSubjects(subjectOptions);
-        // Set môn học đầu tiên làm mặc định
-        if (subjectOptions.length > 0) {
-          setSelectedSubject(subjectOptions[0]);
-        }
-      })
-      .catch(() => setSubjects([]));
-  }, [teacherId]);
-
-  // Fetch semesters và set giá trị mặc định
-  useEffect(() => {
-    fetch(`https://localhost:7074/api/Semesters`)
-      .then(res => res.json())
-      .then(data => {
-        const semesterOptions = data.map((s: any) => ({
-          value: s.semesterId,
-          label: s.semesterName,
-        }));
-        setSemesters(semesterOptions);
-        // Set học kỳ đầu tiên làm mặc định
-        if (semesterOptions.length > 0) {
-          setSelectedSemester(semesterOptions[0]);
-        }
-      })
-      .catch(() => setSemesters([]));
-  }, []);
-
-  // Set năm học hiện tại làm mặc định
-  useEffect(() => {
-    if (yearOptions.length > 0) {
-      setSelectedYear(yearOptions[0]);
-    }
-  }, [yearOptions]);
-
-  // Fetch exams
-  useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    params.append("teacherId", teacherId);
-    if (selectedSubject) params.append("subjectId", selectedSubject.value);
-    if (selectedStatus) params.append("statusExam", selectedStatus.value);
-    if (selectedSemester) params.append("semesterId", selectedSemester.value);
-    if (selectedYear) params.append("year", selectedYear.value);
-    params.append("pagesze", pageSize.toString());
-    params.append("pageindex", page.toString());
-
-    fetch(`https://localhost:7074/api/GradeSchedule/teacher?${params.toString()}`)
-      .then(res => res.json())
-      .then(data => setExams(Array.isArray(data) ? data : []))
-      .catch(() => setExams([]))
-      .finally(() => setLoading(false));
-  }, [selectedSubject, selectedStatus, selectedSemester, selectedYear, page, teacherId]);
-
-  // Fetch total pages
-  useEffect(() => {
-    const params = new URLSearchParams();
-    params.append("teacherId", teacherId);
-    if (selectedSubject) params.append("subjectId", selectedSubject.value);
-    if (selectedStatus) params.append("statusExam", selectedStatus.value);
-    if (selectedSemester) params.append("semesterId", selectedSemester.value);
-    if (selectedYear) params.append("year", selectedYear.value);
-    params.append("pagesze", pageSize.toString());
-    params.append("pageindex", page.toString());
-
-    fetch(`https://localhost:7074/api/GradeSchedule/teacher/count?${params.toString()}`)
-      .then(res => res.json())
-      .then(data => setTotalPages(Number(data) || 1))
-      .catch(() => setTotalPages(1));
-  }, [selectedSubject, selectedStatus, selectedSemester, selectedYear, page, teacherId]);
-
-  // Handle grading action
-  const handleGrade = (examSlotRoomId: number, action: "edit" | "grade" = "grade") => {
-    router.push(`/teacher/givegrade/examroom/${examSlotRoomId}?action=${action}`);
-  };
-
-  // Reset filter - set về giá trị mặc định
-  const handleReset = () => {
-    setSelectedSubject(subjects.length > 0 ? subjects[0] : null);
-    setSelectedSemester(semesters.length > 0 ? semesters[0] : null);
-    setSelectedStatus(statusOptions[0]);
-    setSelectedYear(yearOptions.length > 0 ? yearOptions[0] : null);
-    setPage(1);
-  };
-
-  // Format trạng thái
-  const getStatusLabel = (isGrade: number | null) => {
-    if (isGrade === null || isGrade === 0) return "Chưa chấm";
-    if (isGrade === 1) return "Đã chấm";
-    return "";
-  };
-
-  // Format trạng thái màu và badge
-  const getStatusBadge = (isGrade: number | null) => {
-    if (isGrade === null || isGrade === 0) {
-      return (
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-          <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
-          Chưa chấm
-        </span>
-      );
-    }
-    if (isGrade === 1) {
-      return (
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-          <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-          Đã chấm
-        </span>
-      );
-    }
-    return "";
-  };
-
-  // Format ngày
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return "";
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("vi-VN", {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+    // Functions
+    handleGrade,
+    handleReset,
+    getStatusLabel,
+    getStatusBadgeProps,
+    formatDate,
+  } = useGiveGrade();
 
   // Custom Select styles
   const selectStyles = {
@@ -204,6 +73,19 @@ export default function GiveGradePage() {
         backgroundColor: '#3B82F6'
       }
     })
+  };
+
+  // Status badge component
+  const StatusBadge = ({ isGrade }: { isGrade: number | null }) => {
+    const props = getStatusBadgeProps(isGrade);
+    if (props.type === 'unknown') return null;
+    
+    return (
+      <span className={props.className}>
+        <div className={props.dotClassName}></div>
+        {props.text}
+      </span>
+    );
   };
 
   return (
@@ -314,7 +196,7 @@ export default function GiveGradePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Tổng bài thi</p>
-                <p className="text-2xl font-bold text-blue-600">{exams.length}</p>
+                <p className="text-2xl font-bold text-blue-600">{statistics.totalExams}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -328,7 +210,7 @@ export default function GiveGradePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Chưa chấm</p>
-                <p className="text-2xl font-bold text-red-600">{exams.filter(e => !e.isGrade || e.isGrade === 0).length}</p>
+                <p className="text-2xl font-bold text-red-600">{statistics.ungradedExams}</p>
               </div>
               <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -342,7 +224,7 @@ export default function GiveGradePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Đã chấm</p>
-                <p className="text-2xl font-bold text-green-600">{exams.filter(e => e.isGrade === 1).length}</p>
+                <p className="text-2xl font-bold text-green-600">{statistics.gradedExams}</p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -356,9 +238,7 @@ export default function GiveGradePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Tỷ lệ hoàn thành</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {exams.length > 0 ? Math.round((exams.filter(e => e.isGrade === 1).length / exams.length) * 100) : 0}%
-                </p>
+                <p className="text-2xl font-bold text-purple-600">{statistics.completionRate}%</p>
               </div>
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -375,7 +255,7 @@ export default function GiveGradePage() {
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-800">Danh sách bài thi</h3>
               <div className="text-sm text-gray-500">
-                Tổng: {exams.length} bài thi
+                Tổng: {statistics.totalExams} bài thi
               </div>
             </div>
           </div>
@@ -412,7 +292,7 @@ export default function GiveGradePage() {
                         <div className="text-sm text-gray-900">{exam.subjectName}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
-                        {getStatusBadge(exam.isGrade)}
+                        <StatusBadge isGrade={exam.isGrade} />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900">
                         {semesters.find(s => s.value === exam.semesterId)?.label || ""}
@@ -506,5 +386,13 @@ export default function GiveGradePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function GiveGradePage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <GiveGradeContent />
+    </Suspense>
   );
 }

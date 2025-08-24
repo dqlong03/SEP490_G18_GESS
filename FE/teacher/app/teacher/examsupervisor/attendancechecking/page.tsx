@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useAttendanceChecking } from "@/hooks/teacher/useAttendanceChecking";
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -24,235 +25,52 @@ import {
   Pause
 } from "lucide-react";
 
-interface ExamInfo {
-  examSlotRoomId: number;
-  slotName: string;
-  roomName: string;
-  subjectName: string;
-  examDate: string;
-  examName: string;
-  startTime: string;
-  endTime: string;
-  code: string;
-}
+// Loading component
+const LoadingSpinner = () => (
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+    <div className="bg-white rounded-xl shadow-lg p-8 flex items-center space-x-4">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <span className="text-gray-700 font-medium">Đang tải thông tin ca thi...</span>
+    </div>
+  </div>
+);
 
-interface Student {
-  id: string;
-  code: string;
-  fullName: string;
-  avatarURL: string;
-  isCheckedIn: number;
-  statusExamHistory: string; // Thêm field mới
-}
-
-export default function AttendanceCheckingPage() {
+// Main component content
+function AttendanceCheckingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const examId = searchParams.get("examId");
-  const isViewMode = searchParams.get("view") === "true"; // Kiểm tra chế độ view
+  const isViewMode = searchParams.get("view") === "true";
 
-  const [examInfo, setExamInfo] = useState<ExamInfo | null>(null);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [attendance, setAttendance] = useState<{ [id: string]: boolean }>({});
-  const [isConfirmed, setIsConfirmed] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [isFinishing, setIsFinishing] = useState(false); 
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const {
+    // Main state
+    examInfo,
+    students,
+    attendance,
+    isConfirmed,
+    setIsConfirmed,
+    collapsed,
+    setCollapsed,
+    loading,
+    isFinishing,
+    isRefreshing,
 
-  // Timer states - phân biệt 2 loại timer
-  const [codeRefreshTimer, setCodeRefreshTimer] = useState(300); // 5 phút cho refresh code
-  const [dataRefreshTimer, setDataRefreshTimer] = useState(5); // 5 giây cho refresh data
-  
-  const codeTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const dataTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const codeIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const dataIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    // Timer state
+    codeRefreshTimer,
+    dataRefreshTimer,
 
-  // Fetch exam info
-   const fetchExamInfo = async () => {
-    if (!examId) return;
-    try {
-      const res = await fetch(`https://localhost:7074/api/ExamSchedule/slots/${examId}`);
-      const data = await res.json();
-     
-      setExamInfo(data);
-    } catch (error) {
-      console.error("Error fetching exam info:", error);
-      setExamInfo(null);
-    }
-  };
+    // Statistics
+    attendedCount,
+    totalStudents,
+    attendanceRate,
 
-  // Fetch students
-  const fetchStudents = async (showLoader = false) => {
-    if (!examId) return;
-    
-    if (showLoader) setIsRefreshing(true);
-    
-    try {
-      const res = await fetch(`https://localhost:7074/api/ExamSchedule/students/${examId}`);
-      const data = await res.json();
-      const studentsData = Array.isArray(data) ? data : [];
-      setStudents(studentsData);
-      
-      // Map trạng thái điểm danh
-      const att: { [id: string]: boolean } = {};
-      studentsData.forEach((sv: Student) => {
-        att[sv.id] = sv.isCheckedIn === 1;
-      });
-      setAttendance(att);
-    } catch (error) {
-      console.error("Error fetching students:", error);
-      setStudents([]);
-      setAttendance({});
-    } finally {
-      if (showLoader) setIsRefreshing(false);
-    }
-  };
-
-  // Load all data
-  const loadData = async () => {
-    setLoading(true);
-    await Promise.all([fetchExamInfo(), fetchStudents()]);
-    setLoading(false);
-  };
-
-  // Refresh code only
-  const refreshCode = async () => {
-    if (!examId) return;
-    try {
-      console.log("Refreshing code...");
-      await fetch(`https://localhost:7074/api/ExamSchedule/refresh?examSlotId=${examId}`, {
-        method: "POST",
-      });
-      console.log("Code refreshed successfully");
-    } catch (error) {
-      console.error("Error refreshing code:", error);
-    }
-  };
-
-  // Initial data load
-  useEffect(() => {
-    const initializeData = async () => {
-      if (!isViewMode && examId) {
-        // Gọi API refresh code trước khi load data (chỉ khi không phải view mode)
-        await refreshCode();
-      }
-      // Sau đó mới load data
-      await loadData();
-    };
-    
-    initializeData();
-  }, [examId, isViewMode]);
-
-  // Auto refresh code every 5 minutes - CHỈ khi KHÔNG phải view mode
-  useEffect(() => {
-    if (isViewMode || loading || !examId) return;
-
-    // Clear any existing interval
-    if (codeIntervalRef.current) {
-      clearInterval(codeIntervalRef.current);
-    }
-
-    // Set up new interval for code refresh (5 minutes)
-    codeIntervalRef.current = setInterval(async () => {
-      console.log("Auto refreshing code...");
-      await refreshCode();
-      await fetchExamInfo(); // Cũng cần lấy exam info mới sau khi refresh code
-      setCodeRefreshTimer(300); // Reset timer về 5 phút
-    }, 300000); // 300000ms = 5 phút
-
-    // Cleanup on unmount or dependency change
-    return () => {
-      if (codeIntervalRef.current) {
-        clearInterval(codeIntervalRef.current);
-      }
-    };
-  }, [isViewMode, loading, examId]);
-
-  // Auto refresh students data every 5 seconds - CHỈ khi KHÔNG phải view mode
-  useEffect(() => {
-    if (isViewMode || loading || !examId) return;
-
-    // Clear any existing interval
-    if (dataIntervalRef.current) {
-      clearInterval(dataIntervalRef.current);
-    }
-
-    // Set up new interval for data refresh (5 seconds)
-     dataIntervalRef.current = setInterval(async () => {
-      console.log("Auto refreshing student data...");
-      // Gọi đồng thời lấy students và exam info mới nhất
-      const [_, examInfoRes] = await Promise.all([
-        fetchStudents(true),
-        fetch(`https://localhost:7074/api/ExamSchedule/slots/${examId}`)
-      ]);
-      // Kiểm tra status của examInfo mới nhất
-      let examInfoData = null;
-      try {
-        examInfoData = await examInfoRes.json();
-      } catch {}
-      if (examInfoData && examInfoData.status === 2) {
-        router.push("/teacher/examsupervisor");
-        return;
-      }
-      setDataRefreshTimer(5); // Reset timer về 5 giây
-    }, 5000);
-
-    // Cleanup on unmount or dependency change
-    return () => {
-      if (dataIntervalRef.current) {
-        clearInterval(dataIntervalRef.current);
-      }
-    };
-  }, [isViewMode, loading, examId]);
-
-  // Code refresh timer countdown (5 minutes) - CHỈ khi KHÔNG phải view mode
-  useEffect(() => {
-    if (isViewMode || loading) return;
-    
-    if (codeRefreshTimer <= 0) {
-      setCodeRefreshTimer(300); // Reset về 5 phút
-      return;
-    }
-    
-    codeTimerRef.current = setTimeout(() => setCodeRefreshTimer(t => t - 1), 1000);
-    return () => {
-      if (codeTimerRef.current) clearTimeout(codeTimerRef.current);
-    };
-  }, [codeRefreshTimer, isViewMode, loading]);
-
-  // Data refresh timer countdown (5 seconds) - CHỈ khi KHÔNG phải view mode
-  useEffect(() => {
-    if (isViewMode || loading) return;
-    
-    if (dataRefreshTimer <= 0) {
-      setDataRefreshTimer(5); // Reset về 5 giây
-      return;
-    }
-    
-    dataTimerRef.current = setTimeout(() => setDataRefreshTimer(t => t - 1), 1000);
-    return () => {
-      if (dataTimerRef.current) clearTimeout(dataTimerRef.current);
-    };
-  }, [dataRefreshTimer, isViewMode, loading]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (codeTimerRef.current) clearTimeout(codeTimerRef.current);
-      if (dataTimerRef.current) clearTimeout(dataTimerRef.current);
-      if (codeIntervalRef.current) clearInterval(codeIntervalRef.current);
-      if (dataIntervalRef.current) clearInterval(dataIntervalRef.current);
-    };
-  }, []);
-
-  // Format mm:ss
-  const formatTime = (sec: number) => {
-    const m = Math.floor(sec / 60).toString().padStart(2, "0");
-    const s = (sec % 60).toString().padStart(2, "0");
-    return `${m}:${s}`;
-  };
+    // Functions
+    formatTime,
+    handleCheck,
+    handleConfirmAttendance,
+    handleFinishExam,
+    handleManualRefresh
+  } = useAttendanceChecking({ examId, isViewMode });
 
   // Get status badge for exam history
   const getExamStatusBadge = (status: string) => {
@@ -288,98 +106,8 @@ export default function AttendanceCheckingPage() {
     }
   };
 
-  // Điểm danh từng sinh viên - VÔ HIỆU HÓA trong view mode
-  const handleCheck = async (studentId: string) => {
-    if (isViewMode) return; // Không cho phép thao tác trong view mode
-    
-    if (!examId) return;
-    try {
-      await fetch(
-        `https://localhost:7074/api/ExamSchedule/checkin?examSlotId=${examId}&studentId=${studentId}`,
-        { method: "POST" }
-      );
-      setAttendance((prev) => ({
-        ...prev,
-        [studentId]: !prev[studentId],
-      }));
-    } catch {
-      // Có thể show toast lỗi nếu cần
-    }
-  };
-
-  const handleConfirmAttendance = () => {
-    if (isViewMode) return; // Không cho phép thao tác trong view mode
-    setCollapsed(true);
-    // Có thể gọi API xác nhận điểm danh nếu cần
-  };
-
-  const handleFinishExam = async () => {
-    if (isViewMode) return; // Không cho phép thao tác trong view mode
-    
-    if (!examInfo?.examSlotRoomId) {
-      alert("Không tìm thấy thông tin ca thi");
-      return;
-    }
-
-    setIsFinishing(true);
-    
-    try {
-      const response = await fetch(
-        `https://localhost:7074/api/ExamSchedule/changestatus?examSlotRoomId=${examInfo.examSlotRoomId}&status=2`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (response.ok) {
-        // Clear intervals before leaving
-        if (codeIntervalRef.current) clearInterval(codeIntervalRef.current);
-        if (dataIntervalRef.current) clearInterval(dataIntervalRef.current);
-        if (codeTimerRef.current) clearTimeout(codeTimerRef.current);
-        if (dataTimerRef.current) clearTimeout(dataTimerRef.current);
-        
-        // Hiển thị thông báo thành công
-        alert("Đã hoàn thành ca thi thành công!");
-        
-        // Đợi một chút để người dùng thấy thông báo rồi chuyển trang
-        setTimeout(() => {
-          router.push("/teacher/examsupervisor");
-        }, 1000);
-      } else {
-        throw new Error("Không thể hoàn thành ca thi");
-      }
-    } catch (error) {
-      console.error("Error finishing exam:", error);
-      alert("Có lỗi xảy ra khi hoàn thành ca thi. Vui lòng thử lại.");
-    } finally {
-      setIsFinishing(false);
-    }
-  };
-
-  // Manual refresh function
-  const handleManualRefresh = async () => {
-    await refreshCode();
-    await Promise.all([fetchExamInfo(), fetchStudents(true)]);
-    setCodeRefreshTimer(300); // Reset code timer về 5 phút
-    setDataRefreshTimer(5); // Reset data timer về 5 giây
-  };
-
-  const attendedCount = Object.values(attendance).filter(Boolean).length;
-  const totalStudents = students.length;
-  const attendanceRate = totalStudents > 0 ? Math.round((attendedCount / totalStudents) * 100) : 0;
-
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="bg-white rounded-xl shadow-lg p-8 flex items-center space-x-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="text-gray-700 font-medium">Đang tải thông tin ca thi...</span>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
@@ -802,5 +530,14 @@ export default function AttendanceCheckingPage() {
         )}
       </div>
     </div>
+  );
+}
+
+// Main export with Suspense wrapper
+export default function AttendanceCheckingPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <AttendanceCheckingContent />
+    </Suspense>
   );
 }

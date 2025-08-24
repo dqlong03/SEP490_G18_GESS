@@ -4,9 +4,9 @@ import { login, loginGoogle } from "@/services/authService";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { jwtDecode } from "jwt-decode";
+import { showToast } from "@/utils/toastUtils";
 
 export const useAuthLogic = () => {
-  const [error, setError] = useState("");
   const [recaptchaToken, setRecaptchaToken] = useState("");
   const router = useRouter();
   const { login: authLogin } = useAuth();
@@ -14,7 +14,7 @@ export const useAuthLogic = () => {
   const handleSubmit = async (username: string, password: string) => {
     try {
       if (!recaptchaToken) {
-        setError("Vui lòng xác thực captcha");
+        showToast("error", "Vui lòng xác thực captcha");
         return;
       }
 
@@ -24,16 +24,29 @@ export const useAuthLogic = () => {
         recaptchaToken,
       });
 
+      const decodedToken = jwtDecode<any>(response.token);
+
+      // Kiểm tra role - chỉ cho phép admin và examination
+      if (
+        decodedToken.Role.toLowerCase() !== "admin" &&
+        decodedToken.Role.toLowerCase() !== "examination"
+      ) {
+        showToast(
+          "error",
+          "Tài khoản của bạn không có quyền truy cập vào hệ thống này. Vui lòng liên hệ quản trị viên."
+        );
+        return;
+      }
+
       authLogin(response.token);
 
-      const decodedToken = jwtDecode<any>(response.token);
-      if (decodedToken.Role === "Admin") {
+      if (decodedToken.Role.toLowerCase() === "admin") {
         router.push("/admin/homepage");
-      } else {
-        router.push("/examination/homepage"); // Điều hướng đến trang người dùng bình thường
+      } else if (decodedToken.Role.toLowerCase() === "examination") {
+        router.push("/examination/homepage");
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || "Đăng nhập thất bại");
+      showToast("error", err.response?.data?.message || "Đăng nhập thất bại");
     }
   };
 
@@ -41,26 +54,39 @@ export const useAuthLogic = () => {
     try {
       const idToken = tokenResponse?.credential;
       if (!idToken) {
-        setError("Không lấy được id_token từ Google");
+        showToast("error", "Không lấy được id_token từ Google");
         return;
       }
 
       const googleResponse = await loginGoogle({ idToken });
-      authLogin(googleResponse.token);
 
       const decodedToken = jwtDecode<any>(googleResponse.token);
-      if (decodedToken.Role === "Admin") {
+
+      // Kiểm tra role - chỉ cho phép admin và examination
+      if (
+        decodedToken.Role.toLowerCase() !== "admin" &&
+        decodedToken.Role.toLowerCase() !== "examination"
+      ) {
+        showToast(
+          "error",
+          "Tài khoản của bạn không có quyền truy cập vào hệ thống này. Vui lòng liên hệ quản trị viên."
+        );
+        return;
+      }
+
+      authLogin(googleResponse.token);
+
+      if (decodedToken.Role.toLowerCase() === "admin") {
         router.push("/admin/homepage");
-      } else {
-        router.push("/examination/homepage"); // Điều hướng đến trang người dùng bình thường
+      } else if (decodedToken.Role.toLowerCase() === "examination") {
+        router.push("/examination/homepage");
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || "Đăng nhập thất bại");
+      showToast("error", err.response?.data?.message || "Đăng nhập thất bại");
     }
   };
 
   return {
-    error,
     handleSubmit,
     googleLogin,
     setRecaptchaToken,

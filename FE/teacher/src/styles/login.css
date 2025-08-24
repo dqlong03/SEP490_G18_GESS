@@ -1,3 +1,22 @@
+/* Remove default margins and ensure full screen */
+body,
+html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+/* Hide scrollbars but keep functionality */
+.login-container {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.login-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
 h2 {
   font-family: "Roboto";
   /* font-style: italic; */
@@ -5,9 +24,9 @@ h2 {
   color: #333;
 }
 
-/* Input focus */
-input[type="email"],
-input[type="password"] {
+/* Input focus - Only for legacy inputs, not modern Tailwind inputs */
+input[type="email"]:not(.tailwind-input),
+input[type="password"]:not(.tailwind-input) {
   background-color: #f9fafb;
   border: 1px solid #d2d6dc;
   border-radius: 8px;
@@ -16,8 +35,8 @@ input[type="password"] {
   transition: all 0.3s ease;
 }
 
-input[type="email"]:focus,
-input[type="password"]:focus {
+input[type="email"]:focus:not(.tailwind-input),
+input[type="password"]:focus:not(.tailwind-input) {
   border-color: #4a90e2;
   outline: none;
   box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);

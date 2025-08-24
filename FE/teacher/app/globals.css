@@ -1,1 +1,16 @@
 @import "tailwindcss";
+/* Custom widths for sidebar */
+.w-70 {
+  width: 280px;
+}
+
+.ml-70 {
+  margin-left: 280px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .lg\:ml-70 {
+    margin-left: 0;
+  }
+}
