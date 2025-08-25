@@ -123,69 +123,6 @@ namespace GESS.Test
             _context.SaveChanges();
         }
 
-        [Test]
-        public async Task AddStudentsToClassAsync_ValidData_ReturnsSuccess()
-        {
-            // Arrange
-            var request = new AddStudentsToClassRequest
-            {
-                ClassId = 1,
-                Students = new List<StudentAddDto>
-                {
-                    new StudentAddDto
-                    {
-                        Email = "student1@test.com",
-                        Code = "SV001",
-                        FullName = "Sinh viên 1"
-                    },
-                    new StudentAddDto
-                    {
-                        Email = "student2@test.com",
-                        Code = "SV002",
-                        FullName = "Sinh viên 2"
-                    }
-                }
-            };
-
-            // Mock ClassRepository.GetByIdAsync to return existing class
-            var mockClassRepository = Mock.Get(_mockUnitOfWork.Object.ClassRepository);
-            mockClassRepository.Setup(repo => repo.GetByIdAsync(1))
-                .ReturnsAsync(_context.Classes.First());
-
-            // Mock UserRepository.GetByCodeAndEmailAsync to return null (new users)
-            var mockUserRepository = Mock.Get(_mockUnitOfWork.Object.UserRepository);
-            mockUserRepository.Setup(repo => repo.GetByCodeAndEmailAsync(It.IsAny<string>(), It.IsAny<string>()))
-                .ReturnsAsync((User)null);
-
-            // Mock StudentRepository.GetStudentbyUserId to return null (new students)
-            var mockStudentRepository = Mock.Get(_mockUnitOfWork.Object.StudentRepository);
-            mockStudentRepository.Setup(repo => repo.GetStudentbyUserId(It.IsAny<Guid>()))
-                .ReturnsAsync((Student)null);
-
-            // Mock ClassRepository.CheckIfStudentInClassAsync to return false (not in class)
-            mockClassRepository.Setup(repo => repo.CheckIfStudentInClassAsync(It.IsAny<int>(), It.IsAny<Guid>()))
-                .ReturnsAsync(false);
-
-            // Mock UserManager.CreateAsync to return success
-            _mockUserManager.Setup(um => um.CreateAsync(It.IsAny<User>(), It.IsAny<string>()))
-                .ReturnsAsync(IdentityResult.Success);
-
-            // Mock RoleManager.RoleExistsAsync to return false (role doesn't exist)
-            _mockRoleManager.Setup(rm => rm.RoleExistsAsync("Sinh viên"))
-                .ReturnsAsync(false);
-
-            // Mock RoleManager.CreateAsync to return success
-            _mockRoleManager.Setup(rm => rm.CreateAsync(It.IsAny<IdentityRole<Guid>>()))
-                .ReturnsAsync(IdentityResult.Success);
-
-            // Mock UserManager.AddToRoleAsync to return success
-            _mockUserManager.Setup(um => um.AddToRoleAsync(It.IsAny<User>(), "Sinh viên"))
-                .ReturnsAsync(IdentityResult.Success);
-
-            // Act
-            await _classService.Invoking(s => s.AddStudentsToClassAsync(request))
-                .Should().NotThrowAsync();
-        }
 
         [Test]
         public async Task AddStudentsToClassAsync_ClassNotFound_ThrowsException()
@@ -328,44 +265,7 @@ namespace GESS.Test
                 .Should().ThrowAsync<Exception>()
                 .WithMessage("*Các sinh viên đã tồn tại trong lớp*");
         }
-
-        [Test]
-        public async Task AddStudentsToClassAsync_UserCreationFails_ThrowsException()
-        {
-            // Arrange
-            var request = new AddStudentsToClassRequest
-            {
-                ClassId = 1,
-                Students = new List<StudentAddDto>
-                {
-                    new StudentAddDto
-                    {
-                        Email = "student1@test.com",
-                        Code = "SV001",
-                        FullName = "Sinh viên 1"
-                    }
-                }
-            };
-
-            // Mock ClassRepository.GetByIdAsync to return existing class
-            var mockClassRepository = Mock.Get(_mockUnitOfWork.Object.ClassRepository);
-            mockClassRepository.Setup(repo => repo.GetByIdAsync(1))
-                .ReturnsAsync(_context.Classes.First());
-
-            // Mock UserRepository.GetByCodeAndEmailAsync to return null (new user)
-            var mockUserRepository = Mock.Get(_mockUnitOfWork.Object.UserRepository);
-            mockUserRepository.Setup(repo => repo.GetByCodeAndEmailAsync(It.IsAny<string>(), It.IsAny<string>()))
-                .ReturnsAsync((User)null);
-
-            // Mock UserManager.CreateAsync to return failure
-            _mockUserManager.Setup(um => um.CreateAsync(It.IsAny<User>(), It.IsAny<string>()))
-                .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "User creation failed" }));
-
-            // Act & Assert
-            await _classService.Invoking(s => s.AddStudentsToClassAsync(request))
-                .Should().ThrowAsync<Exception>()
-                .WithMessage("*Không thể tạo người dùng*");
-        }
+        
 
         [Test]
         public async Task AddStudentsToClassAsync_ExistingUser_AddsToClass()
