@@ -87,7 +87,7 @@ namespace GESS.Api.Controllers
 
             var allQuestions = new List<GeneratedQuestion>();
 
-            // Xây prompt CHUYÊN BIỆT cho kiểu đã chọn
+            // --- XÂY PROMPT CHUYÊN BIỆT (đã thêm quy tắc ngôn ngữ) ---
             var promptBuilder = new StringBuilder();
             promptBuilder.AppendLine($"Bạn là một chuyên gia tạo đề kiểm tra. Hãy tạo các câu hỏi kiểm tra môn {request.SubjectName} dựa trên tài liệu sau:");
             promptBuilder.AppendLine(materialContent);
@@ -114,10 +114,36 @@ namespace GESS.Api.Controllers
             promptBuilder.AppendLine();
             promptBuilder.AppendLine("Lưu ý: dùng tiếng Việt cho trường 'Difficulty' (dễ, trung bình, khó).");
 
+            // ---- QUY TẮC NGÔN NGỮ (BẮT BUỘC) ----
+            promptBuilder.AppendLine();
+            promptBuilder.AppendLine("QUY TẮC NGÔN NGỮ (BẮT BUỘC):");
+            promptBuilder.AppendLine("- Nếu môn học là một NGÔN NGỮ (ví dụ: 'Tiếng Anh', 'English', 'IELTS', 'TOEIC', 'Tiếng Nhật', 'JLPT', 'Tiếng Trung', 'HSK', 'Tiếng Hàn', 'TOPIK', 'French', 'DELF/DALF', 'German', 'Goethe', 'Spanish', 'DELE', v.v.), gọi ngôn ngữ đó là TargetLanguage.");
+            promptBuilder.AppendLine("- Khi có TargetLanguage: VIẾT TOÀN BỘ 'Content' và 'Answers[].Text' BẰNG TargetLanguage. KHÔNG dùng tiếng Việt, KHÔNG dịch sang tiếng Việt, KHÔNG kèm chú thích tiếng Việt.");
+            promptBuilder.AppendLine("- VẪN giữ 'Difficulty' bằng tiếng Việt ('dễ', 'trung bình', 'khó').");
+            promptBuilder.AppendLine("- Với câu TrueFalse: GIỮ CHÍNH XÁC hai đáp án 'True' và 'False' (không dịch) để tương thích với hệ thống hiện tại.");
+            promptBuilder.AppendLine("- Nếu tài liệu nguồn (material) không cùng ngôn ngữ với TargetLanguage, KHÔNG dịch tài liệu; chỉ dùng làm nguồn kiến thức, nhưng câu hỏi/đáp án PHẢI viết bằng TargetLanguage.");
+            promptBuilder.AppendLine("- Không chèn phiên âm/romanization hoặc phụ đề tiếng Việt, trừ khi material yêu cầu rõ ràng.");
+            promptBuilder.AppendLine();
+
+            // Nếu có thể xác định target language từ SubjectName, gắn vào prompt để model biết rõ ngôn ngữ đích
+            var detectedTargetLanguage = DetermineTargetLanguageFromSubjectName(request.SubjectName);
+            if (!string.IsNullOrEmpty(detectedTargetLanguage))
+            {
+                promptBuilder.AppendLine($"TARGET_LANGUAGE (phát hiện tự động từ SubjectName): {detectedTargetLanguage}");
+                promptBuilder.AppendLine($"(Ghi chú: nếu TargetLanguage được chỉ định là {detectedTargetLanguage}, PHẢI viết 'Content' và 'Answers[].Text' bằng {detectedTargetLanguage}.)");
+                promptBuilder.AppendLine();
+            }
+            else
+            {
+                promptBuilder.AppendLine("LƯU Ý: Nếu môn học là ngôn ngữ nhưng không thể xác định ngôn ngữ rõ ràng từ SubjectName, hãy cố gắng suy đoán TargetLanguage từ nội dung tài liệu hoặc các từ khóa; nếu vẫn không xác định được, giữ nguyên tiếng Việt cho 'Content' và 'Answers[].Text'.");
+                promptBuilder.AppendLine();
+            }
+
+            // Ví dụ định dạng — giữ như trước nhưng nhắc model thay thế văn bản minh họa bằng TargetLanguage khi cần
             if (chosenType.Equals("SelectOne", StringComparison.OrdinalIgnoreCase))
             {
+                promptBuilder.AppendLine("LƯU Ý: trong ví dụ dưới đây, nếu có TargetLanguage thì hãy thay tất cả chuỗi minh họa bằng ngôn ngữ đó (chỉ 'Difficulty' vẫn là tiếng Việt):");
                 promptBuilder.AppendLine(@"
-Định dạng đầu ra ví dụ (mỗi phần tử phải giống schema sau):
 {
   ""Content"": ""Nội dung câu hỏi?"",
   ""Type"": ""SelectOne"",
@@ -134,8 +160,8 @@ TRẢ VỀ CHỈ MẢNG JSON.");
             }
             else if (chosenType.Equals("MultipleChoice", StringComparison.OrdinalIgnoreCase))
             {
+                promptBuilder.AppendLine("LƯU Ý: trong ví dụ dưới đây, nếu có TargetLanguage thì hãy thay tất cả chuỗi minh họa bằng ngôn ngữ đó (chỉ 'Difficulty' vẫn là tiếng Việt):");
                 promptBuilder.AppendLine(@"
-Định dạng đầu ra ví dụ (mỗi phần tử phải giống schema sau):
 {
   ""Content"": ""Nội dung câu hỏi?"",
   ""Type"": ""MultipleChoice"",
@@ -152,8 +178,8 @@ TRẢ VỀ CHỈ MẢNG JSON.");
             }
             else // TrueFalse
             {
+                promptBuilder.AppendLine("LƯU Ý: trong ví dụ dưới đây, nếu có TargetLanguage thì hãy thay tất cả chuỗi minh họa bằng ngôn ngữ đó (chỉ 'Difficulty' vẫn là tiếng Việt). NHỚ GIỮ 'True'/'False' cho đáp án:");
                 promptBuilder.AppendLine(@"
-Định dạng đầu ra ví dụ (mỗi phần tử phải giống schema sau):
 {
   ""Content"": ""Câu hỏi True/False?"",
   ""Type"": ""TrueFalse"",
@@ -169,13 +195,19 @@ TRẢ VỀ CHỈ MẢNG JSON.");
 
             var prompt = promptBuilder.ToString();
 
-            // Gửi body với system message nghiêm ngặt, temperature = 0, tăng max_tokens để tránh bị cắt
+            // System message được gia cố (JSON-only + rule về ngôn ngữ)
+            var systemMessage = @"
+You are a strict JSON-only response generator. Do not output any text except the exact JSON array requested by the user. Follow all schema and count constraints exactly.
+If the subject indicates a foreign language course (examples: English, Japanese, Chinese, Korean, French, German, Spanish or exam names like IELTS, JLPT, HSK, TOPIK, DELF, Goethe, DELE, TOEIC), identify the TargetLanguage and generate ALL 'Content' and 'Answers[].Text' in that TargetLanguage (do NOT translate to Vietnamese). Keep the 'Difficulty' field in Vietnamese using exactly one of: 'dễ', 'trung bình', 'khó'. For True/False questions use exactly the two labels 'True' and 'False'. Do NOT add translations, explanations, transliterations, or any text other than the required JSON array. If no foreign language is detected, default to Vietnamese for 'Content' and 'Answers[].Text'.
+";
+
+            // Gửi body với system + user prompts
             var body = new
             {
                 model = "gpt-4o-mini",
                 messages = new[]
                 {
-            new { role = "system", content = "You are a strict JSON-only response generator. Do not output any text except the exact JSON array requested by the user. Follow all schema and count constraints exactly." },
+            new { role = "system", content = systemMessage },
             new { role = "user", content = prompt }
         },
                 temperature = 0.0,
@@ -308,7 +340,22 @@ TRẢ VỀ CHỈ MẢNG JSON.");
             return Ok(allQuestions);
         }
 
+        // Helper: xác định TargetLanguage từ SubjectName (nhẹ, không can thiệp logic khác)
+        private string DetermineTargetLanguageFromSubjectName(string subjectName)
+        {
+            if (string.IsNullOrWhiteSpace(subjectName)) return null;
+            var s = subjectName.ToLowerInvariant();
 
+            if (s.Contains("tiếng anh") || s.Contains("english") || s.Contains("ielts") || s.Contains("toeic")) return "English";
+            if (s.Contains("tiếng nhật") || s.Contains("japanese") || s.Contains("jlpt")) return "Japanese";
+            if (s.Contains("tiếng trung") || s.Contains("chinese") || s.Contains("hsk") || s.Contains("中文") || s.Contains("汉语")) return "Chinese";
+            if (s.Contains("tiếng hàn") || s.Contains("korean") || s.Contains("topik")) return "Korean";
+            if (s.Contains("tiếng pháp") || s.Contains("french") || s.Contains("delf")) return "French";
+            if (s.Contains("tiếng đức") || s.Contains("german") || s.Contains("goethe")) return "German";
+            if (s.Contains("tiếng tây ban nha") || s.Contains("spanish") || s.Contains("dele")) return "Spanish";
+
+            return null;
+        }
         [HttpPost("GenerateEssayQuestion")]
         public async Task<IActionResult> GenerateEssay([FromBody] PracQuestionRequest request)
         {
