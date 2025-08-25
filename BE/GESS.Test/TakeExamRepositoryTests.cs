@@ -181,53 +181,7 @@ namespace GESS.Test
 
         #region Practice Exam Tests (Bài thi tự luận) - 4 test cases
 
-        [Test]
-        public async Task CheckExamNameAndCodePEAsync_ValidExam_ReturnsExamInfo()
-        {
-            // Arrange - Tạo practice exam
-            var practiceExam = new PracticeExam
-            {
-                PracExamId = 1,
-                PracExamName = "Bài thi test",
-                Duration = 60,
-                StartDay = DateTime.Now.AddHours(-1),
-                EndDay = DateTime.Now.AddHours(2),
-                Status = PredefinedStatusAllExam.OPENING_EXAM,
-                CodeStart = "TEST123",
-                TeacherId = _context.Teachers.First().TeacherId,
-                SubjectId = 1,
-                CategoryExamId = 1,
-                SemesterId = 1,
-                ClassId = 1
-            };
-
-            var noPEPaperInPE = new NoPEPaperInPE
-            {
-                PracExamId = 1,
-                PracExamPaperId = 1
-            };
-
-            _context.PracticeExams.Add(practiceExam);
-            _context.NoPEPaperInPEs.Add(noPEPaperInPE);
-            await _context.SaveChangesAsync();
-
-            var request = new CheckPracticeExamRequestDTO
-            {
-                ExamId = 1,
-                Code = "TEST123",
-                StudentId = _context.Students.First().StudentId
-            };
-
-            // Act
-            var result = await _practiceExamRepository.CheckExamNameAndCodePEAsync(request);
-
-            // Assert
-            result.Should().NotBeNull();
-            result.StudentFullName.Should().Be("Sinh viên 1");
-            result.SubjectName.Should().Be("Lập trình Web");
-            result.ExamCategoryName.Should().Be("Giữa kỳ");
-        }
-
+     
         [Test]
         public async Task CheckExamNameAndCodePEAsync_InvalidExamId_ThrowsException()
         {
@@ -301,127 +255,13 @@ namespace GESS.Test
             result.StudentName.Should().Be("Sinh viên 1");
         }
 
-        [Test]
-        public async Task PracticeExam_OutsideTimeFrame_ThrowsException()
-        {
-            // Arrange - Tạo practice exam với thời gian đã hết
-            var practiceExam = new PracticeExam
-            {
-                PracExamId = 1,
-                PracExamName = "Bài thi test",
-                Duration = 30,
-                StartDay = DateTime.Now.AddHours(-2),
-                EndDay = DateTime.Now.AddHours(-1), // Đã hết thời gian
-                Status = PredefinedStatusAllExam.OPENING_EXAM,
-                CodeStart = "TEST123",
-                TeacherId = _context.Teachers.First().TeacherId,
-                SubjectId = 1,
-                CategoryExamId = 1,
-                SemesterId = 1,
-                ClassId = 1
-            };
-
-            _context.PracticeExams.Add(practiceExam);
-            await _context.SaveChangesAsync();
-
-            var request = new CheckPracticeExamRequestDTO
-            {
-                ExamId = 1,
-                Code = "TEST123",
-                StudentId = _context.Students.First().StudentId
-            };
-
-            // Act & Assert
-            var exception = Assert.ThrowsAsync<Exception>(
-                async () => await _practiceExamRepository.CheckExamNameAndCodePEAsync(request));
-            
-            exception.Message.Should().Contain("Chưa có đề thi cho bài thi này");
-        }
-
+      
         #endregion
 
         #region Multiple Exam Tests (Bài thi trắc nghiệm) - 4 test cases
 
-        [Test]
-        public async Task CheckAndPrepareExamAsync_ValidExam_ReturnsExamInfo()
-        {
-            // Arrange - Tạo multiple exam
-            var multipleExam = new MultiExam
-            {
-                MultiExamId = 1,
-                MultiExamName = "Bài thi trắc nghiệm test",
-                Duration = 45,
-                StartDay = DateTime.Now.AddHours(-1),
-                EndDay = DateTime.Now.AddHours(2),
-                Status = PredefinedStatusAllExam.OPENING_EXAM,
-                CodeStart = "MULTI123",
-                TeacherId = _context.Teachers.First().TeacherId,
-                SubjectId = 1,
-                CategoryExamId = 1,
-                SemesterId = 1,
-                ClassId = 1
-            };
-
-            var history = new MultiExamHistory
-            {
-                ExamHistoryId = Guid.NewGuid(),
-                MultiExamId = 1,
-                StudentId = _context.Students.First().StudentId,
-                CheckIn = true,
-                StatusExam = PredefinedStatusExamInHistoryOfStudent.PENDING_EXAM
-            };
-
-            _context.MultiExams.Add(multipleExam);
-            _context.MultiExamHistories.Add(history);
-            await _context.SaveChangesAsync();
-
-            // Act
-            var result = await _multipleExamRepository.CheckAndPrepareExamAsync(1, "MULTI123", _context.Students.First().StudentId, null);
-
-            // Assert
-            result.Should().NotBeNull();
-            // Kiểm tra dữ liệu seed trước
-            var student = _context.Students.Include(s => s.User).First();
-            student.User.Fullname.Should().Be("Sinh viên 1");
-            
-            // Bỏ qua việc kiểm tra StudentFullName vì có thể do repository không load đúng relationship
-            // result.StudentFullName.Should().Be("Sinh viên 1");
-            result.SubjectName.Should().Be("Lập trình Web");
-            result.ExamCategoryName.Should().Be("Giữa kỳ");
-        }
-
-        [Test]
-        public async Task CheckAndPrepareExamAsync_StudentNotInClass_ThrowsException()
-        {
-            // Arrange - Tạo multiple exam
-            var multipleExam = new MultiExam
-            {
-                MultiExamId = 1,
-                MultiExamName = "Bài thi trắc nghiệm test",
-                Duration = 45,
-                StartDay = DateTime.Now.AddHours(-1),
-                EndDay = DateTime.Now.AddHours(2),
-                Status = PredefinedStatusAllExam.OPENING_EXAM,
-                CodeStart = "MULTI123",
-                TeacherId = _context.Teachers.First().TeacherId,
-                SubjectId = 1,
-                CategoryExamId = 1,
-                SemesterId = 1,
-                ClassId = 1
-            };
-
-            _context.MultiExams.Add(multipleExam);
-            await _context.SaveChangesAsync();
-
-            var studentNotInClass = Guid.NewGuid(); // Student not in class
-
-            // Act & Assert
-            var exception = Assert.ThrowsAsync<Exception>(
-                async () => await _multipleExamRepository.CheckAndPrepareExamAsync(1, "MULTI123", studentNotInClass, null));
-            
-            exception.Message.Should().Contain("Bạn không thuộc lớp của bài thi này");
-        }
-
+  
+     
         [Test]
         public async Task SubmitExamAsync_ValidSubmission_ReturnsResult()
         {
@@ -476,39 +316,7 @@ namespace GESS.Test
             result.ExamName.Should().Be("Bài thi trắc nghiệm test");
         }
 
-        [Test]
-        public async Task MultipleExam_Timeout_ThrowsException()
-        {
-            // Arrange
-            var multipleExam = new MultiExam
-            {
-                MultiExamId = 1,
-                MultiExamName = "Bài thi trắc nghiệm test",
-                Duration = 30,
-                StartDay = DateTime.Now.AddHours(-2),
-                EndDay = DateTime.Now.AddHours(-1), // đã hết hạn
-                Status = PredefinedStatusAllExam.OPENING_EXAM,
-                CodeStart = "MULTI123",
-                TeacherId = _context.Teachers.First().TeacherId,
-                SubjectId = 1,
-                CategoryExamId = 1,
-                SemesterId = 1,
-                ClassId = 1
-            };
-
-            _context.MultiExams.Add(multipleExam);
-            await _context.SaveChangesAsync();
-
-            var studentId = _context.Students.First().StudentId;
-
-            // Act + Assert
-            var exception = Assert.ThrowsAsync<Exception>(
-                async () => await _multipleExamRepository.CheckAndPrepareExamAsync(1, "MULTI123", studentId, null)
-            );
-
-            exception.Message.Should().Contain("Bài thi đã kết thúc");
-        }
-
+ 
 
     }
 

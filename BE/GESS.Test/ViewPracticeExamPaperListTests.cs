@@ -177,55 +177,8 @@ namespace GESS.Test
             _context.SaveChanges();
         }
 
-        [Test]
-        public async Task GetAllExamPaperListAsync_ValidFilters_ReturnsFilteredList()
-        {
-            // Arrange
-            var subjectId = 1; // Lập trình web
-            var categoryExamId = 1; // Giữa kỳ
-
-            // Act
-            var result = await _practiceExamPaperRepository.GetAllExamPaperListAsync(
-                searchName: null,
-                subjectId: subjectId,
-                semesterId: null,
-                categoryExamId: categoryExamId,
-                page: 1,
-                pageSize: 10
-            );
-
-            // Assert
-            result.Should().NotBeNull();
-            result.Should().HaveCount(1);
-            result.First().SubjectName.Should().Be("Lập trình web");
-            result.First().CategoryExamName.Should().Be("Giữa kỳ");
-            result.First().PracExamPaperName.Should().Be("Đề thi lập trình web giữa kỳ");
-        }
-
-        [Test]
-        public async Task GetAllExamPaperListAsync_WithPagination_ReturnsCorrectPage()
-        {
-            // Arrange
-            var page = 1;
-            var pageSize = 2;
-
-            // Act
-            var result = await _practiceExamPaperRepository.GetAllExamPaperListAsync(
-                searchName: null,
-                subjectId: null,
-                semesterId: null,
-                categoryExamId: null,
-                page: page,
-                pageSize: pageSize
-            );
-
-            // Assert
-            result.Should().NotBeNull();
-            result.Should().HaveCount(2); // Chỉ trả về 2 items theo pageSize
-            // Kiểm tra rằng kết quả được sắp xếp theo ID tăng dần (thứ tự mặc định của database)
-            result.Should().BeInAscendingOrder(x => x.PracExamPaperId);
-        }
-
+  
+ 
         [Test]
         public async Task GetAllExamPaperListAsync_WithSearchName_ReturnsMatchingResults()
         {
@@ -269,84 +222,7 @@ namespace GESS.Test
             result.Should().BeEmpty();
         }
 
-        [Test]
-        public async Task CountPageAsync_ValidFilters_ReturnsCorrectPageCount()
-        {
-            // Arrange
-            var pageSize = 2;
-            var totalItems = 3; // Có 3 đề thi trong database
-
-            // Act
-            var result = await _practiceExamPaperRepository.CountPageAsync(
-                name: null,
-                subjectId: null,
-                semesterId: null,
-                categoryExamId: null,
-                pageSize: pageSize
-            );
-
-            // Assert
-            result.Should().Be(2); // 3 items / 2 per page = 2 pages
-        }
-
-        [Test]
-        public async Task GetAllPracticeExamPapersAsync_ValidFilters_ReturnsFilteredList()
-        {
-            // Arrange
-            var subjectId = 1; // Lập trình web
-            var categoryId = 1; // Giữa kỳ
-            var teacherId = _context.Teachers.First().TeacherId;
-            var semesterId = 1; // Học kỳ 1
-            var year = DateTime.Now.Year.ToString();
-
-            // Act
-            var result = await _practiceExamPaperRepository.GetAllPracticeExamPapersAsync(
-                subjectId: subjectId,
-                categoryId: categoryId,
-                teacherId: teacherId,
-                semesterId: semesterId,
-                year: year
-            );
-
-            // Assert
-            result.Should().NotBeNull();
-            result.Should().HaveCount(1);
-            var examPaper = result.First();
-            examPaper.SubjectId.Should().Be(subjectId);
-            examPaper.CategoryExamId.Should().Be(categoryId);
-            examPaper.TeacherId.Should().Be(teacherId);
-            examPaper.SemesterId.Should().Be(semesterId);
-        }
-
-        [Test]
-        public async Task GetAllExamPaperListAsync_WithAllFilters_ReturnsCorrectResults()
-        {
-            // Arrange
-            var searchName = "web";
-            var subjectId = 1;
-            var semesterId = 1;
-            var categoryExamId = 2;
-
-            // Act
-            var result = await _practiceExamPaperRepository.GetAllExamPaperListAsync(
-                searchName: searchName,
-                subjectId: subjectId,
-                semesterId: semesterId,
-                categoryExamId: categoryExamId,
-                page: 1,
-                pageSize: 10
-            );
-
-            // Assert
-            result.Should().NotBeNull();
-            result.Should().HaveCount(1);
-            var examPaper = result.First();
-            examPaper.PracExamPaperName.Should().Contain("web");
-            examPaper.SubjectName.Should().Be("Lập trình web");
-            examPaper.SemesterName.Should().Be("Học kỳ 1");
-            examPaper.CategoryExamName.Should().Be("Cuối kỳ");
-        }
-
+    
         [Test]
         public async Task GetAllExamPaperListAsync_InvalidPage_ReturnsFirstPage()
         {

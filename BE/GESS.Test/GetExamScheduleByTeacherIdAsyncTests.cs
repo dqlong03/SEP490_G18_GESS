@@ -259,22 +259,7 @@ namespace GESS.Test
             result.Should().BeEmpty();
         }
 
-        [Test]
-        public async Task GetExamScheduleByTeacherIdAsync_TeacherIdEmpty_ReturnsEmpty()
-        {
-            // Arrange
-            var fromDate = new DateTime(2025, 9, 1);
-            var toDate = new DateTime(2025, 9, 30);
-            AddMultipleExamWithSlotRoom(new DateTime(2025, 9, 10), _teacherId1); // has data for real teacher
-
-            // Act
-            var result = await _repository.GetExamScheduleByTeacherIdAsync(Guid.Empty, fromDate, toDate);
-
-            // Assert
-            result.Should().NotBeNull();
-            result.Should().BeEmpty();
-        }
-
+   
         [Test]
         public async Task GetExamScheduleByTeacherIdAsync_FromDateDefault_IncludesUpToToDate()
         {

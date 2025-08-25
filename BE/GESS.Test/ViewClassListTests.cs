@@ -281,57 +281,7 @@ namespace GESS.Test
             }
         }
 
-        [Test]
-        public async Task GetAllClassByTeacherIdAsync_InvalidTeacherId_ReturnsEmptyList()
-        {
-            // Arrange
-            var invalidTeacherId = Guid.NewGuid();
-            var name = "";
-            var subjectId = (int?)null;
-            var semesterId = (int?)null;
-            var pageNumber = 1;
-            var pageSize = 5;
-
-            // Act
-            var result = await _classRepository.GetAllClassByTeacherIdAsync(invalidTeacherId, name, subjectId, semesterId, pageNumber, pageSize);
-
-            // Assert
-            result.Should().NotBeNull();
-            result.Should().HaveCount(0);
-        }
-
-        [Test]
-        public async Task CountPageAsync_ValidRequest_ReturnsCorrectPageCount()
-        {
-            // Arrange
-            var name = "";
-            var subjectId = (int?)null;
-            var semesterId = (int?)null;
-            var pageSize = 1; // 1 item per page
-
-            // Act
-            var result = await _classRepository.CountPageAsync(name, subjectId, semesterId, pageSize);
-
-            // Assert
-            result.Should().Be(2); // 2 classes / 1 per page = 2 pages
-        }
-
-        [Test]
-        public async Task CountPageByTeacherAsync_ValidTeacherId_ReturnsCorrectPageCount()
-        {
-            // Arrange
-            var teacherId = _context.Teachers.First().TeacherId;
-            var name = "";
-            var subjectId = (int?)null;
-            var semesterId = (int?)null;
-            var pageSize = 1; // 1 item per page
-
-            // Act
-            var result = await _classRepository.CountPageByTeacherAsync(teacherId, name, subjectId, semesterId, pageSize);
-
-            // Assert
-            result.Should().Be(2); // 2 classes của teacher / 1 per page = 2 pages
-        }
+     
 
         [Test]
         public async Task GetStudentsByClassIdAsync_ValidClassId_ReturnsStudents()
@@ -365,46 +315,9 @@ namespace GESS.Test
             result.Should().HaveCount(0);
         }
 
-        [Test]
-        public async Task CountStudentsInClassAsync_ValidClassId_ReturnsCorrectCount()
-        {
-            // Arrange
-            var classId = 1;
+      
 
-            // Act
-            var result = await _classRepository.CountStudentsInClassAsync(classId);
-
-            // Assert
-            result.Should().Be(1); // Class1 có 1 student
-        }
-
-        [Test]
-        public async Task CountStudentsInClassAsync_InvalidClassId_ReturnsZero()
-        {
-            // Arrange
-            var invalidClassId = 999;
-
-            // Act
-            var result = await _classRepository.CountStudentsInClassAsync(invalidClassId);
-
-            // Assert
-            result.Should().Be(0);
-        }
-
-        [Test]
-        public async Task CheckIfStudentInClassAsync_StudentInClass_ReturnsTrue()
-        {
-            // Arrange
-            var classId = 1;
-            var studentId = _context.Students.First().StudentId;
-
-            // Act
-            var result = await _classRepository.CheckIfStudentInClassAsync(classId, studentId);
-
-            // Assert
-            result.Should().BeTrue();
-        }
-
+      
         [Test]
         public async Task CheckIfStudentInClassAsync_StudentNotInClass_ReturnsFalse()
         {

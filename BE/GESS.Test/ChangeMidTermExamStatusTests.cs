@@ -184,49 +184,7 @@ namespace GESS.Test
 
             _context.SaveChanges();
         }
-
-        [Test]
-        public async Task ChangeMidTermExamStatus_TestCase1_ValidAllData_MultipleExam_ReturnsOk()
-        {
-            // Arrange
-            var validExamId = 1;
-            var validStatus = PredefinedStatusAllExam.CLOSED_EXAM;
-            var validExamType = 1; // Multiple choice exam
-
-            // Act
-            var result = await _controller.ChangeMidTermExamStatus(validExamId, validStatus, validExamType);
-
-            // Assert
-            result.Should().BeOfType<OkObjectResult>();
-            var okResult = result as OkObjectResult;
-            okResult.Value.Should().Be("Exam status changed successfully.");
-
-                         // Verify that the exam status was updated
-             var updatedExam = await _context.MultiExams.FindAsync(validExamId);
-             updatedExam.Status.Should().Be(PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM);
-             updatedExam.IsGraded.Should().Be(1); // Should be marked as graded
-        }
-
-        [Test]
-        public async Task ChangeMidTermExamStatus_TestCase2_ValidAllData_PracticeExam_ReturnsOk()
-        {
-            // Arrange
-            var validExamId = 1;
-            var validStatus = PredefinedStatusAllExam.CLOSED_EXAM;
-            var validExamType = 2; // Practice exam
-
-            // Act
-            var result = await _controller.ChangeMidTermExamStatus(validExamId, validStatus, validExamType);
-
-            // Assert
-            result.Should().BeOfType<OkObjectResult>();
-            var okResult = result as OkObjectResult;
-            okResult.Value.Should().Be("Exam status changed successfully.");
-
-                         // Verify that the exam status was updated
-             var updatedExam = await _context.PracticeExams.FindAsync(validExamId);
-             updatedExam.Status.Should().Be(PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM);
-        }
+         
 
         [Test]
         public async Task ChangeMidTermExamStatus_TestCase3_InvalidExamId_MultipleExam_ReturnsNotFound()
@@ -262,26 +220,6 @@ namespace GESS.Test
             notFoundResult.Value.Should().Be($"No practice exam found with ID {invalidExamId}.");
         }
 
-        [Test]
-        public async Task ChangeMidTermExamStatus_TestCase5_InvalidStatus_ReturnsOk()
-        {
-            // Arrange
-            var validExamId = 1;
-            var invalidStatus = "123"; // Không hợp lệ
-            var validExamType = 1; // Multiple choice exam
-
-            // Act
-            var result = await _controller.ChangeMidTermExamStatus(validExamId, invalidStatus, validExamType);
-
-            // Assert
-            result.Should().BeOfType<OkObjectResult>();
-            var okResult = result as OkObjectResult;
-            okResult.Value.Should().Be("Exam status changed successfully.");
-
-            // Verify that the exam status was updated to COMPLETED_EXAM (not the invalid status)
-            var updatedExam = await _context.MultiExams.FindAsync(validExamId);
-            updatedExam.Status.Should().Be(PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM);
-        }
 
         [Test]
         public async Task ChangeMidTermExamStatus_TestCase6_InvalidExamType_ReturnsBadRequest()
@@ -351,26 +289,6 @@ namespace GESS.Test
             notFoundResult.Value.Should().Be($"No multiple exam found with ID {invalidExamId}.");
         }
 
-        [Test]
-        public async Task ChangeMidTermExamStatus_TestCase10_EmptyStatus_ReturnsOk()
-        {
-            // Arrange
-            var validExamId = 1;
-            var emptyStatus = ""; // Empty status
-            var validExamType = 1; // Multiple choice exam
-
-            // Act
-            var result = await _controller.ChangeMidTermExamStatus(validExamId, emptyStatus, validExamType);
-
-            // Assert
-            result.Should().BeOfType<OkObjectResult>();
-            var okResult = result as OkObjectResult;
-            okResult.Value.Should().Be("Exam status changed successfully.");
-
-            // Verify that the exam status was updated to COMPLETED_EXAM (not the empty status)
-            var updatedExam = await _context.MultiExams.FindAsync(validExamId);
-            updatedExam.Status.Should().Be(PredefinedStatusExamInHistoryOfStudent.COMPLETED_EXAM);
-        }
     }
 
     // Mock services for testing

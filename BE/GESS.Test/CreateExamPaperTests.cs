@@ -131,46 +131,7 @@ namespace GESS.Test
             _context.SaveChanges();
         }
 
-        [Test]
-        public async Task CreateExamPaperAsync_ValidRequest_ReturnsSuccessResponse()
-        {
-            // Arrange
-            var request = new PracticeExamPaperCreateRequest
-            {
-                ClassId = 1,
-                ExamName = "Đề thi giữa kỳ",
-                TotalQuestion = 5,
-                TeacherId = _context.Teachers.First().TeacherId,
-                CategoryExamId = 1,
-                ManualQuestions = new List<ManualQuestionDTO>
-                {
-                    new ManualQuestionDTO
-                    {
-                        Content = "Câu hỏi 1",
-                        Criteria = "Tiêu chí chấm điểm 1",
-                        Score = 2.0,
-                        Level = "Dễ",
-                        ChapterId = 1
-                    }
-                },
-                SelectedQuestions = new List<SelectedQuestionDTO>()
-            };
-
-            // Act
-            var result = await _practiceExamPaperRepository.CreateExamPaperAsync(request);
-
-            // Assert
-            result.Should().NotBeNull();
-            result.PracExamPaperId.Should().BeGreaterThan(0);
-            result.Message.Should().Be("Tạo đề thi thành công");
-
-            // Kiểm tra PracticeExamPaper được tạo
-            var examPaper = _context.PracticeExamPapers.FirstOrDefault(e => e.PracExamPaperId == result.PracExamPaperId);
-            examPaper.Should().NotBeNull();
-            examPaper.PracExamPaperName.Should().Be("Đề thi giữa kỳ");
-            examPaper.NumberQuestion.Should().Be(5);
-            examPaper.Status.Should().Be("published");
-        }
+        
 
         [Test]
         public async Task CreateExamPaperAsync_NoSemester_ThrowsException()

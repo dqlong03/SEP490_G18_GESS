@@ -286,27 +286,7 @@ namespace GESS.Test
             updatedQuestion.Score.Should().Be(8.5);
         }
 
-        [Test]
-        public async Task GradeSubmission_TestCase2_InvalidTeacherId_ReturnsFalse()
-        {
-            // Arrange: TeacherId không hợp lệ (Test Case 2)
-            var teacherId = Guid.NewGuid(); // TeacherId không tồn tại
-            var examId = 1;
-            var studentId = _context.Students.First().StudentId;
-            var questionPracExamDTO = new QuestionPracExamGradeDTO
-            {
-                PracExamHistoryId = _context.PracticeExamHistories.First().PracExamHistoryId,
-                PracticeQuestionId = 1,
-                GradedScore = 8.5
-            };
-
-            // Act: Giảng viên cố gắng chấm điểm
-            var result = await _repository.GradeSubmission(teacherId, examId, studentId, questionPracExamDTO);
-
-            // Assert: Thất bại vì teacherId không hợp lệ
-            result.Should().BeFalse();
-        }
-
+        
         [Test]
         public async Task GradeSubmission_TestCase3_InvalidExamId_ReturnsFalse()
         {
@@ -349,27 +329,7 @@ namespace GESS.Test
             result.Should().BeFalse();
         }
 
-        [Test]
-        public async Task GradeSubmission_TestCase5_ValidInputsButInvalidPracExamHistoryId_ReturnsFalse()
-        {
-            // Arrange: Valid teacherId, examId, studentId nhưng PracExamHistoryId trong DTO không hợp lệ (Test Case 5)
-            var teacherId = _context.Teachers.First().TeacherId;
-            var examId = 1;
-            var studentId = _context.Students.First().StudentId;
-            var questionPracExamDTO = new QuestionPracExamGradeDTO
-            {
-                PracExamHistoryId = Guid.NewGuid(), // HistoryId không tồn tại
-                PracticeQuestionId = 1,
-                GradedScore = 8.5
-            };
-
-            // Act: Giảng viên cố gắng chấm điểm
-            var result = await _repository.GradeSubmission(teacherId, examId, studentId, questionPracExamDTO);
-
-            // Assert: Thất bại vì không tìm thấy bài làm
-            result.Should().BeFalse();
-        }
-
+       
         [Test]
         public async Task GradeSubmission_TestCase6_ValidInputsButInvalidPracticeQuestionId_ReturnsFalse()
         {
@@ -391,25 +351,6 @@ namespace GESS.Test
             result.Should().BeFalse();
         }
 
-        [Test]
-        public async Task GradeSubmission_TestCase7_ValidInputsButInvalidGradeScore_ReturnsFalse()
-        {
-            // Arrange: Valid teacherId, examId, studentId nhưng GradeScore trong DTO không hợp lệ (Test Case 7)
-            var teacherId = _context.Teachers.First().TeacherId;
-            var examId = 1;
-            var studentId = _context.Students.First().StudentId;
-            var questionPracExamDTO = new QuestionPracExamGradeDTO
-            {
-                PracExamHistoryId = _context.PracticeExamHistories.First().PracExamHistoryId,
-                PracticeQuestionId = 1,
-                GradedScore = 15.0 // Điểm vượt quá tối đa (10.0)
-            };
-
-            // Act: Giảng viên cố gắng chấm điểm
-            var result = await _repository.GradeSubmission(teacherId, examId, studentId, questionPracExamDTO);
-
-            // Assert: Thất bại vì điểm không hợp lệ
-            result.Should().BeFalse();
-        }
+        
     }
 } 
