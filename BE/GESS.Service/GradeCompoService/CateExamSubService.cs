@@ -115,9 +115,10 @@ namespace GESS.Service.GradeCompoService
             var entity = await _unitOfWork.CateExamSubRepository.GetBySubIdAndCateEIdAsync(subjectId , categoryExamId);
 
             // Check business rule (example: GradeComponent sum for a CategoryExam <= 100)
-            var categoryExamSubjects = await _unitOfWork.CateExamSubRepository.GetAllCateExamSubBySubIdAsync(subjectId); // Await trước
-            var totalGradeComponent = categoryExamSubjects
-                .Sum(ces => ces.GradeComponent);
+            var categoryExamSubjects = await _unitOfWork.CateExamSubRepository.GetAllCateExamSubBySubIdAsync(subjectId); 
+            var totalGradeComponent = categoryExamSubjects.Sum(ces => ces.GradeComponent) - entity.GradeComponent;
+
+            // Kiểm tra logic cộng với giá trị GradeComponent mới
             if (totalGradeComponent + dto.GradeComponent > 100)
             {
                 throw new BusinessRuleException("Tổng thành phần điểm cho các bài thi không được vượt quá 100%.");
