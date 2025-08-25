@@ -84,6 +84,12 @@ namespace GESS.Service.multipleQuestion
             }
             return questionCount;
         }
+
+        public async Task<string> GetLinkFromChapterId(int chapterId)
+        {
+            var link = await _unitOfWork.MultipleQuestionRepository.GetLinkFromChapterId(chapterId);
+            return link;
+        }
     }
 
 }

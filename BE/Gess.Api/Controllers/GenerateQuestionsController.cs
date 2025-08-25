@@ -16,12 +16,32 @@ namespace GESS.Api.Controllers
     public class GenerateQuestionsController : ControllerBase
     {
         private readonly string _apiKey;
+        private readonly IMultipleQuestionService _multipleQuestionService;
 
-        public GenerateQuestionsController(IOptions<APIKeyOptions> apiKeyOptions)
+        public GenerateQuestionsController(IMultipleQuestionService multipleQuestionService, IOptions<APIKeyOptions> apiKeyOptions)
         {
             _apiKey = apiKeyOptions.Value.Key;
-        }
+            _multipleQuestionService = multipleQuestionService;
 
+        }
+        //API lấy link tài liệu theo chapter Id 
+        [HttpPost("GetMaterialLink")]
+        public async Task<IActionResult> GetMaterialLink([FromBody] int chapterId)
+        {
+            try
+            {
+                var result = await _multipleQuestionService.GetLinkFromChapterId(chapterId);
+                if (string.IsNullOrEmpty(result))
+                {
+                    return NotFound("Không tìm thấy link tài liệu cho chapterId đã cho.");
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while processing your request.");
+            }
+        }
 
         [HttpPost("GenerateMultipleQuestion")]
         public async Task<IActionResult> PostGenerate([FromBody] QuestionRequest request)

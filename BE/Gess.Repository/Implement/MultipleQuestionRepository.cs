@@ -120,6 +120,16 @@ namespace GESS.Repository.Implement
                 throw new InvalidOperationException("An error occurred while retrieving the final question count.", ex);
             }
         }
+
+        public async Task<string> GetLinkFromChapterId(int chapterId)
+        {
+            var chapter = await _context.Chapters.FindAsync(chapterId);
+            if(chapter != null)
+            {
+                return chapter.Course==null?"": chapter.Course;
+            }
+            return "";
+        }
     }
 
 

@@ -19,5 +19,6 @@ namespace GESS.Service.multipleQuestion
         Task<MultipleQuestionCreateDTO> MultipleQuestionCreateAsync(MultipleQuestionCreateDTO multipleQuestionCreateDTO);
         Task<List<QuestionMultiExamSimpleDTO>> GetAllQuestionMultiExamByMultiExamIdAsync(int multiExamId);
         Task<int> GetFinalQuestionCount(int? chapterId, int? levelId, int? semesterId);
+        Task <string> GetLinkFromChapterId(int chapterId);
     }
 }
