@@ -410,9 +410,26 @@ namespace GESS.Repository.Implement
             int assignedPaperId = examPapers[paperIndex];
 
             // 6. Lấy exam history và phân tích trạng thái
-            var history = await _context.PracticeExamHistories
-                .FirstOrDefaultAsync(h => h.PracExamId == exam.PracExamId && h.StudentId == request.StudentId && h.ExamSlotRoomId == request.ExamSlotRoomId);
+            PracticeExamHistory history;
 
+            if (isMidtermExam)
+            {
+                history = await _context.PracticeExamHistories
+                    .FirstOrDefaultAsync(h => h.PracExamId == exam.PracExamId && h.StudentId == request.StudentId);
+
+                if (history == null || !history.CheckIn)
+                    throw new Exception("Bạn chưa được điểm danh.");
+            }
+            else
+            {
+                history = await _context.PracticeExamHistories
+                    .FirstOrDefaultAsync(h => h.PracExamId == exam.PracExamId &&
+                                              h.StudentId == request.StudentId &&
+                                              h.ExamSlotRoomId == request.ExamSlotRoomId);
+
+                if (history == null || !history.CheckIn)
+                    throw new Exception("Bạn chưa được điểm danh hoặc ExamSlotRoomId không đúng.");
+            }
             if (history == null)
             {
                 // TH1: Lần đầu vào thi - tạo history mới
