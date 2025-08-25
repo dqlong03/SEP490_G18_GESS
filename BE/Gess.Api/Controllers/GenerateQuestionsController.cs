@@ -376,67 +376,100 @@ If the subject indicates a foreign language course (examples: English, Japanese,
             }
 
             promptBuilder.AppendLine(@"
-                Mỗi câu hỏi phải có định dạng JSON như sau:
-                {
-                  ""Content"": ""Nội dung câu hỏi tự luận rõ ràng và cụ thể."",
-                  ""BandScoreGuide"": [
-                    {
-                      ""CriterionName"": ""Tên tiêu chí (ví dụ: Độ rõ ràng)"",
-                      ""WeightPercent"": 30.0, // phần trăm trọng số của tiêu chí trên tổng (tổng các WeightPercent của một câu phải là 100)
-                      ""Description"": ""Mô tả cách chấm tiêu chí này.""
-                    },
-                    ...
-                  ]
-                }
+Mỗi câu hỏi phải có định dạng JSON như sau:
+{
+  ""Content"": ""Nội dung câu hỏi tự luận rõ ràng và cụ thể."",
+  ""BandScoreGuide"": [
+    {
+      ""CriterionName"": ""Tên tiêu chí (ví dụ: Độ rõ ràng)"",
+      ""WeightPercent"": 30.0,
+      ""Description"": ""Mô tả cách chấm tiêu chí này.""
+    },
+    ...
+  ]
+}
 
-                Yêu cầu với BandScoreGuide:
-                1. Cho ít nhất 3-5 tiêu chí phù hợp với loại câu hỏi và độ khó (ví dụ: Độ rõ ràng, Nội dung, Tư duy/phân tích, Ngữ pháp, Tính logic, Ví dụ minh họa...)..
-                2. Tổng các WeightPercent trong mỗi BandScoreGuide phải là 100. Nếu không, điều chỉnh sao cho tương đối hợp lý và ghi rõ trong mô tả rằng đã cân chỉnh.
-                3. Mỗi tiêu chí cần có mô tả ngắn (1-2 câu) giải thích việc chấm.
-                4. Trả về toàn bộ danh sách câu hỏi là một mảng JSON hợp lệ, không thêm văn bản khác ngoài cấu trúc JSON. Nếu trả về trong code block như ```json ...```, chỉ lấy phần JSON bên trong.
+Yêu cầu với BandScoreGuide:
+1. Cho ít nhất 3-5 tiêu chí phù hợp với loại câu hỏi và độ khó (ví dụ: Độ rõ ràng, Nội dung, Tư duy/phân tích, Ngữ pháp, Tính logic, Ví dụ minh họa...).
+2. Tổng các WeightPercent trong mỗi BandScoreGuide phải là 100. Nếu không, điều chỉnh sao cho tương đối hợp lý và ghi rõ trong mô tả rằng đã cân chỉnh.
+3. Mỗi tiêu chí cần có mô tả ngắn (1-2 câu) giải thích việc chấm.
+4. Trả về toàn bộ danh sách câu hỏi là một mảng JSON hợp lệ, không thêm văn bản khác ngoài cấu trúc JSON. Nếu trả về trong code block như ```json ...```, chỉ lấy phần JSON bên trong.
 
-                Ví dụ đầu ra:
-                [
-                  {
-                    ""Content"": ""Giải thích các yếu tố ảnh hưởng tới tăng trưởng kinh tế trong ngắn hạn và dài hạn."",
-                    ""BandScoreGuide"": [
-                      {
-                        ""CriterionName"": ""Độ rõ ràng"",
-                        ""WeightPercent"": 25.0,
-                        ""Description"": ""Trình bày mạch lạc, dễ hiểu.""
-                      },
-                      {
-                        ""CriterionName"": ""Tư duy/phân tích"",
-                        ""WeightPercent"": 30.0,
-                        ""Description"": ""Phân tích đúng nguyên nhân và hệ quả.""
-                      },
-                      {
-                        ""CriterionName"": ""Nội dung chuyên môn"",
-                        ""WeightPercent"": 25.0,
-                        ""Description"": ""Đúng các khái niệm và lý thuyết liên quan.""
-                      },
-                      {
-                        ""CriterionName"": ""Ví dụ minh họa"",
-                        ""WeightPercent"": 20.0,
-                                ""Description"": ""Có ví dụ cụ thể để hỗ trợ lập luận.""
-                      }
-                    ]
-                  }
-                ]
-                ");
+Ví dụ đầu ra:
+[
+  {
+    ""Content"": ""Giải thích các yếu tố ảnh hưởng tới tăng trưởng kinh tế trong ngắn hạn và dài hạn."",
+    ""BandScoreGuide"": [
+      {
+        ""CriterionName"": ""Độ rõ ràng"",
+        ""WeightPercent"": 25.0,
+        ""Description"": ""Trình bày mạch lạc, dễ hiểu.""
+      },
+      {
+        ""CriterionName"": ""Tư duy/phân tích"",
+        ""WeightPercent"": 30.0,
+        ""Description"": ""Phân tích đúng nguyên nhân và hệ quả.""
+      },
+      {
+        ""CriterionName"": ""Nội dung chuyên môn"",
+        ""WeightPercent"": 25.0,
+        ""Description"": ""Đúng các khái niệm và lý thuyết liên quan.""
+      },
+      {
+        ""CriterionName"": ""Ví dụ minh họa"",
+        ""WeightPercent"": 20.0,
+        ""Description"": ""Có ví dụ cụ thể để hỗ trợ lập luận.""
+      }
+    ]
+  }
+]
+");
 
-            string prompt = promptBuilder.ToString();
+            // ---- QUY TẮC NGÔN NGỮ (BẮT BUỘC) ----
+            promptBuilder.AppendLine();
+            promptBuilder.AppendLine("QUY TẮC NGÔN NGỮ (BẮT BUỘC):");
+            promptBuilder.AppendLine("- Nếu môn học là một NGÔN NGỮ (ví dụ: 'Tiếng Anh', 'English', 'IELTS', 'TOEIC', 'Tiếng Nhật', 'JLPT', 'Tiếng Trung', 'HSK', 'Tiếng Hàn', 'TOPIK', 'French', 'DELF/DALF', 'German', 'Goethe', 'Spanish', 'DELE', v.v.), gọi ngôn ngữ đó là TargetLanguage.");
+            promptBuilder.AppendLine("- Khi có TargetLanguage: VIẾT TOÀN BỘ các trường sau bằng TargetLanguage: 'Content', 'BandScoreGuide[].CriterionName', 'BandScoreGuide[].Description'. KHÔNG dịch sang tiếng Việt, KHÔNG kèm chú thích tiếng Việt.");
+            promptBuilder.AppendLine("- Nếu không phải môn ngôn ngữ, giữ 'Content' và 'BandScoreGuide' bằng tiếng Việt.");
+            promptBuilder.AppendLine("- Tổng các WeightPercent trong mỗi BandScoreGuide phải là 100. Nếu cần model có thể cân chỉnh tự động nhưng phải đảm bảo tổng = 100 và ghi rõ trong mô tả nếu đã chỉnh.");
+            promptBuilder.AppendLine("- Trả về CHỈ một mảng JSON hợp lệ, không thêm văn bản giải thích ngoài JSON. Nếu model dùng ```json ...```, chỉ lấy phần JSON bên trong.");
+            promptBuilder.AppendLine();
+
+            // Gắn TARGET_LANGUAGE nếu detect được từ SubjectName (giúp model chắc chắn hơn)
+            var detectedTargetLanguage = DetermineTargetLanguageFromSubjectName(request.SubjectName);
+            if (!string.IsNullOrEmpty(detectedTargetLanguage))
+            {
+                promptBuilder.AppendLine($"TARGET_LANGUAGE (phát hiện tự động): {detectedTargetLanguage}");
+                promptBuilder.AppendLine($"(Ghi chú: nếu TargetLanguage = {detectedTargetLanguage}, PHẢI viết 'Content' và các chuỗi trong BandScoreGuide bằng {detectedTargetLanguage}.)");
+                promptBuilder.AppendLine();
+            }
+            else
+            {
+                promptBuilder.AppendLine("LƯU Ý: nếu môn học là ngôn ngữ nhưng không thể xác định rõ từ SubjectName, model hãy suy đoán TargetLanguage từ nội dung tài liệu. Nếu vẫn không chắc, dùng tiếng Việt cho 'Content' và 'BandScoreGuide'.");
+                promptBuilder.AppendLine();
+            }
+
+            var prompt = promptBuilder.ToString();
 
             using var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+
+            // System message gia cố: JSON-only + rule ngôn ngữ essay
+            var systemMessage = @"
+You are a strict JSON-only response generator. Do not output any text except the exact JSON array requested by the user. Follow all schema and count constraints exactly.
+If the subject indicates a foreign language course (examples: English, Japanese, Chinese, Korean, French, German, Spanish or exam names like IELTS, JLPT, HSK, TOPIK, DELF, Goethe, DELE, TOEIC), identify the TargetLanguage and generate ALL 'Content', 'BandScoreGuide[].CriterionName' and 'BandScoreGuide[].Description' in that TargetLanguage (do NOT translate to Vietnamese). Do NOT add translations, explanations, transliterations, or any text other than the required JSON array. If no foreign language is detected, default to Vietnamese for text fields.
+";
 
             var body = new
             {
                 model = "gpt-4o-mini",
                 messages = new[]
                 {
+            new { role = "system", content = systemMessage },
             new { role = "user", content = prompt }
-        }
+        },
+                temperature = 0.0,
+                max_tokens = 3000
             };
 
             var json = JsonConvert.SerializeObject(body);
@@ -480,7 +513,7 @@ If the subject indicates a foreign language course (examples: English, Japanese,
                         {
                             crit.WeightPercent = Math.Round(crit.WeightPercent * 100.0 / totalWeight, 2);
                         }
-                        // thêm ghi chú vào mô tả tổng thể nếu cần (có thể mở rộng)
+                        // (Tuỳ biến) có thể thêm ghi chú vào mô tả nếu muốn
                     }
                 }
 
