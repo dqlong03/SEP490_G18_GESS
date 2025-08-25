@@ -196,9 +196,9 @@ namespace GESS.Service.gradeSchedule
             return submissions;
         }
 
-        public async Task<bool> GradeSubmission(Guid teacherId, int examId, Guid studentId, QuestionPracExamGradeDTO questionPracExamDTO)
+        public async Task<bool> GradeSubmission(Guid teacherId, int examId, Guid studentId, QuestionPracExamGradeDTO questionPracExamDTO, int? examSlotRoomId)
         {
-           var result = await _unitOfWork.GradeScheduleRepository.GradeSubmission(teacherId, examId, studentId, questionPracExamDTO);
+           var result = await _unitOfWork.GradeScheduleRepository.GradeSubmission(teacherId, examId, studentId, questionPracExamDTO, examSlotRoomId);
             if (result)
             {
                 await _unitOfWork.SaveChangesAsync();

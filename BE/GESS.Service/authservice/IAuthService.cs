@@ -14,5 +14,7 @@ namespace GESS.Service.authservice
         Task<LoginResult> LoginAsync(LoginModel loginModel);
         Task<LoginResult> RefreshTokenAsync(string refreshToken);
         Task<bool> ResetPasswordAsync(ResetPasswordDTO model);
+        
+        
     }
 }
