@@ -421,12 +421,28 @@ namespace GESS.Repository.Implement
             }
 
             // 5. Get exam history and check for attendance
-            var history = await _context.MultiExamHistories
-                .FirstOrDefaultAsync(h => h.MultiExamId == exam.MultiExamId && h.StudentId == studentId && h.ExamSlotRoomId == examSlotRoomId);
+            MultiExamHistory history;
 
-            if (history == null || !history.CheckIn)
+            if (isMidterm)
             {
-                throw new Exception("Bạn chưa được điểm danh.");
+                // Giữa kỳ: chỉ cần tìm theo examId + studentId
+                history = await _context.MultiExamHistories
+                    .FirstOrDefaultAsync(h => h.MultiExamId == exam.MultiExamId &&
+                                              h.StudentId == studentId);
+
+                if (history == null || !history.CheckIn)
+                    throw new Exception("Bạn chưa được điểm danh.");
+            }
+            else
+            {
+                // Cuối kỳ: bắt buộc check thêm ExamSlotRoomId
+                history = await _context.MultiExamHistories
+                    .FirstOrDefaultAsync(h => h.MultiExamId == exam.MultiExamId &&
+                                              h.StudentId == studentId &&
+                                              h.ExamSlotRoomId == examSlotRoomId);
+
+                if (history == null || !history.CheckIn)
+                    throw new Exception("Bạn chưa được điểm danh ");
             }
 
             // 6. Phân tích trạng thái hiện tại và quyết định hành động
