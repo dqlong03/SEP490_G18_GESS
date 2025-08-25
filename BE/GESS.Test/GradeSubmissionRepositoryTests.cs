@@ -274,7 +274,7 @@ namespace GESS.Test
             };
 
             // Act: Giảng viên chấm điểm
-            var result = await _repository.GradeSubmission(teacherId, examId, studentId, questionPracExamDTO);
+            var result = await _repository.GradeSubmission(teacherId, examId, studentId, questionPracExamDTO,null);
 
             // Assert: Thành công
             result.Should().BeTrue();
@@ -302,7 +302,7 @@ namespace GESS.Test
             };
 
             // Act: Giảng viên cố gắng chấm điểm
-            var result = await _repository.GradeSubmission(teacherId, examId, studentId, questionPracExamDTO);
+            var result = await _repository.GradeSubmission(teacherId, examId, studentId, questionPracExamDTO,null);
 
             // Assert: Thất bại vì examId không hợp lệ
             result.Should().BeFalse();
@@ -323,7 +323,7 @@ namespace GESS.Test
             };
 
             // Act: Giảng viên cố gắng chấm điểm
-            var result = await _repository.GradeSubmission(teacherId, examId, studentId, questionPracExamDTO);
+            var result = await _repository.GradeSubmission(teacherId, examId, studentId, questionPracExamDTO, null);
 
             // Assert: Thất bại vì studentId không hợp lệ
             result.Should().BeFalse();
@@ -345,7 +345,7 @@ namespace GESS.Test
             };
 
             // Act: Giảng viên cố gắng chấm điểm
-            var result = await _repository.GradeSubmission(teacherId, examId, studentId, questionPracExamDTO);
+            var result = await _repository.GradeSubmission(teacherId, examId, studentId, questionPracExamDTO, null);
 
             // Assert: Thất bại vì không tìm thấy câu hỏi
             result.Should().BeFalse();
