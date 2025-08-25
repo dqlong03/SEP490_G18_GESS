@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Google.Apis.Auth;
 using GESS.Common;
+using GESS.Repository.Interface;
 
 namespace GESS.Service.authservice
 {
@@ -24,15 +25,17 @@ namespace GESS.Service.authservice
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMemoryCache _memoryCache;
         private readonly IConfiguration _configuration;
+        private readonly IUserRepository _userRepository;
 
 
-        public AuthService(UserManager<User> userManager, IJwtService jwtService, IUnitOfWork unitOfWork, IMemoryCache memoryCache, IConfiguration configuration)
+        public AuthService(UserManager<User> userManager, IJwtService jwtService, IUnitOfWork unitOfWork, IMemoryCache memoryCache, IConfiguration configuration, IUserRepository userRepository)
         {
             _userManager = userManager;
             _jwtService = jwtService;
             _unitOfWork = unitOfWork;
             _memoryCache = memoryCache;
             _configuration = configuration;
+            _userRepository = userRepository;
         }
 
         // Xử lý đăng nhập với Google
@@ -296,7 +299,7 @@ namespace GESS.Service.authservice
 
             // 3. Lấy người dùng theo email
             Console.WriteLine(model.Email);
-            var user = await _userManager.FindByEmailAsync(model.Email);
+            var user = await _userRepository.GetUserByEmailAsync(model.Email);
 
             if (user == null) return false;
 

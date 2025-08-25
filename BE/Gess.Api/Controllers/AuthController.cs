@@ -18,6 +18,7 @@ namespace GESS.Api.Controllers
         private readonly IAuthService _authService;
         private readonly IJwtService _jwtService;
         private readonly UserManager<User> _userManager;
+        
         private readonly IUnitOfWork _unitOfWork;
 
         public AuthController(

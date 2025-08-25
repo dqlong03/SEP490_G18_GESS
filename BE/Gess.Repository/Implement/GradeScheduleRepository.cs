@@ -481,38 +481,76 @@ namespace GESS.Repository.Implement
             submissions.QuestionPracExamDTO = questions;
             return submissions;
         }
-        public async Task<bool> GradeSubmission(Guid teacherId, int examId, Guid studentId, QuestionPracExamGradeDTO questionPracExamDTO)
-        {        
+        public async Task<bool> GradeSubmission(Guid teacherId, int examId, Guid studentId, QuestionPracExamGradeDTO questionPracExamDTO, int? examSlotRoomId)
+        {
 
             // 7. Tìm bài làm của học sinh trong đề thi
-            var submission = await _context.PracticeExamHistories
-                .Where(p => p.StudentId == studentId
-                            && p.PracticeExam.PracExamId == examId)
-                .Select(p => new
+            if(examSlotRoomId != null)
+
+            {
+                var submission = await _context.PracticeExamHistories
+             .Where(p => p.StudentId == studentId
+                         && p.PracticeExam.PracExamId == examId && p.ExamSlotRoomId == examSlotRoomId)
+             .Select(p => new
+             {
+                 p.PracExamHistoryId,
+                 p.PracExamPaperId
+             }).FirstOrDefaultAsync();
+                if (submission == null)
                 {
-                    p.PracExamHistoryId,
-                    p.PracExamPaperId
-                }).FirstOrDefaultAsync();
+                    return false;
+                }
 
-            if (submission == null)
-            {
-                return false;
+                // 8. Lấy câu hỏi cần chấm điểm
+                var question = await _context.QuestionPracExams
+                    .FirstOrDefaultAsync(q => q.PracExamHistoryId == submission.PracExamHistoryId
+                                              && q.PracticeQuestionId == questionPracExamDTO.PracticeQuestionId);
+
+                if (question == null)
+                {
+                    return false;
+                }
+
+                // 9. Cập nhật điểm
+                question.Score = questionPracExamDTO.GradedScore;
+                await _context.SaveChangesAsync();
+                return true;
             }
-
-            // 8. Lấy câu hỏi cần chấm điểm
-            var question = await _context.QuestionPracExams
-                .FirstOrDefaultAsync(q => q.PracExamHistoryId == submission.PracExamHistoryId
-                                          && q.PracticeQuestionId == questionPracExamDTO.PracticeQuestionId);
-
-            if (question == null)
+            else
             {
-                return false;
-            }
+                var submission = await _context.PracticeExamHistories
+           .Where(p => p.StudentId == studentId
+                       && p.PracticeExam.PracExamId == examId )
+           .Select(p => new
+           {
+               p.PracExamHistoryId,
+               p.PracExamPaperId
+           }).FirstOrDefaultAsync();
+                if (submission == null)
+                {
+                    return false;
+                }
 
-            // 9. Cập nhật điểm
-            question.Score = questionPracExamDTO.GradedScore;
-            await _context.SaveChangesAsync();
-            return true;
+                // 8. Lấy câu hỏi cần chấm điểm
+                var question = await _context.QuestionPracExams
+                    .FirstOrDefaultAsync(q => q.PracExamHistoryId == submission.PracExamHistoryId
+                                              && q.PracticeQuestionId == questionPracExamDTO.PracticeQuestionId);
+
+                if (question == null)
+                {
+                    return false;
+                }
+
+                // 9. Cập nhật điểm
+                question.Score = questionPracExamDTO.GradedScore;
+                await _context.SaveChangesAsync();
+                return true;
+            }
+         
+
+            
+
+            
         }
 
         public async Task<bool> ChangeStatusGraded(Guid teacherId, int examId)

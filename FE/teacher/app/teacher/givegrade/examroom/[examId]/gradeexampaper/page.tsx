@@ -253,9 +253,9 @@ function GradeExamPaperContent() {
                     <div className="flex items-center space-x-3">
                       {/* Quick Score Buttons */}
                       <div className="flex space-x-2">
-                        {[0, Math.round((q.maxScore || 10) * 0.5), Math.round((q.maxScore || 10) * 0.8), q.maxScore || 10].map(score => (
+                        {[0, Math.round((q.maxScore || 10) * 0.5), Math.round((q.maxScore || 10) * 0.8), q.maxScore || 10].map((score,idx) => (
                           <button
-                            key={score}
+                            key={`${q.questionId}-${score}-${idx}`} 
                             onClick={() => handleScoreChange(q.questionId, score)}
                             className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors duration-200 ${
                               scores[q.questionId] === score 

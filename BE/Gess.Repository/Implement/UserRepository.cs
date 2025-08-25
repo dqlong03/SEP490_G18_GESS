@@ -36,6 +36,12 @@ namespace GESS.Repository.Implement
 
         }
 
+        public Task<User> GetUserByEmailAsync(string email)
+        {
+            return _context.Users.FirstOrDefaultAsync(u => u.Email.Equals(email));
+
+        }
+
         public async Task<User> GetByEmailAsync(string email)
         {
             return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);

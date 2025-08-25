@@ -24,5 +24,6 @@ namespace GESS.Repository.Interface
         Task<List<UserListDTO>> GetAllUsersAsync(bool? active, string? name, DateTime? fromDate, DateTime? toDate, int pageNumber, int pageSize);
         public Task CreateAsync(User user);
         public Task<User> GetByEmailAsync(string email);
+        public Task<User> GetUserByEmailAsync(string email);
     }
 }
