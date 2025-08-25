@@ -78,10 +78,11 @@ export const submitQuestionGrade = async (
   teacherId: string,
   examId: number,
   studentId: string,
+  examSlotRoomId: string,
   gradeData: GradeSubmissionRequest
 ): Promise<void> => {
   const response = await fetch(
-    `${API_BASE}/teacher/${teacherId}/exam/${examId}/student/${studentId}/grade`,
+    `${API_BASE}/teacher/${teacherId}/exam/${examId}/student/${studentId}/grade?examSlotRoomId=${examSlotRoomId}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

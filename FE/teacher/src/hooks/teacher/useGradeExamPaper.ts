@@ -15,7 +15,7 @@ import {
 } from "@/services/teacher/gradeExamPaperService";
 
 export const useGradeExamPaper = (
-  examSlotRoomId: string | string[],
+  examSlotRoomId: string,
   studentId: string | null
 ) => {
   const router = useRouter();
@@ -110,8 +110,8 @@ export const useGradeExamPaper = (
       if (!question) return;
 
       try {
-        await submitQuestionGrade(teacherId, examDetail.pracExamId, studentId, {
-          practiceExamHistoryId: question.practiceExamHistoryId,
+        await submitQuestionGrade(teacherId, examDetail.pracExamId,studentId,examSlotRoomId ,{
+          practiceExamHistoryId: question.practiceExamHistoryId,  
           practiceQuestionId: question.practiceQuestionId,
           gradedScore: value as number,
         });
